@@ -14,7 +14,239 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analyses: {
+        Row: {
+          created_at: string | null
+          dna_analysis: Json | null
+          id: string
+          instagram_url: string
+          performance_score: number | null
+          post_type: string | null
+          scraped_data: Json | null
+          source_account: string | null
+          source_caption: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dna_analysis?: Json | null
+          id?: string
+          instagram_url: string
+          performance_score?: number | null
+          post_type?: string | null
+          scraped_data?: Json | null
+          source_account?: string | null
+          source_caption?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dna_analysis?: Json | null
+          id?: string
+          instagram_url?: string
+          performance_score?: number | null
+          post_type?: string | null
+          scraped_data?: Json | null
+          source_account?: string | null
+          source_caption?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analyses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clones: {
+        Row: {
+          analysis_id: string
+          angle: string | null
+          angle_type: string | null
+          caption: string | null
+          created_at: string | null
+          cta: string | null
+          hook: string | null
+          id: string
+          story_structure: string | null
+          user_id: string
+          version_number: number
+          visual_direction: string | null
+        }
+        Insert: {
+          analysis_id: string
+          angle?: string | null
+          angle_type?: string | null
+          caption?: string | null
+          created_at?: string | null
+          cta?: string | null
+          hook?: string | null
+          id?: string
+          story_structure?: string | null
+          user_id: string
+          version_number: number
+          visual_direction?: string | null
+        }
+        Update: {
+          analysis_id?: string
+          angle?: string | null
+          angle_type?: string | null
+          caption?: string | null
+          created_at?: string | null
+          cta?: string | null
+          hook?: string | null
+          id?: string
+          story_structure?: string | null
+          user_id?: string
+          version_number?: number
+          visual_direction?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clones_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      multiplied_content: {
+        Row: {
+          analysis_id: string
+          content: string
+          created_at: string | null
+          format: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          analysis_id: string
+          content: string
+          created_at?: string | null
+          format: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          analysis_id?: string
+          content?: string
+          created_at?: string | null
+          format?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "multiplied_content_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "multiplied_content_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          analyses_limit: number | null
+          analyses_used: number | null
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          plan: Database["public"]["Enums"]["plan_type"] | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          analyses_limit?: number | null
+          analyses_used?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          plan?: Database["public"]["Enums"]["plan_type"] | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          analyses_limit?: number | null
+          analyses_used?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          plan?: Database["public"]["Enums"]["plan_type"] | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saved_projects: {
+        Row: {
+          analysis_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_projects_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +255,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      plan_type: "free" | "creator" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +383,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      plan_type: ["free", "creator", "pro"],
+    },
   },
 } as const
