@@ -1,0 +1,9 @@
+# IGCloner
+
+> Paste any Instagram URL. Discover why it works. Generate 5 original content clones in seconds.
+
+IGCloner analyzes Instagram posts to extract their Content DNA — the hook, structure, and psychological triggers that make them perform — then generates original clone variations creators can adapt to their own brand.
+
+## Pages
+
+- [Home](/): Overview of IGCloner, how analysis works, features, and pricing.

@@ -14,4 +14,13 @@ export const Route = createFileRoute("/_authenticated/admin")({
     if (profile?.role !== "admin") throw redirect({ to: "/app" });
   },
   component: AdminPage,
+  head: () => ({
+    meta: [
+      { title: "Admin — IGCloner" },
+      { name: "description", content: "Internal admin console for managing IGCloner users and content." },
+      { property: "og:title", content: "Admin — IGCloner" },
+      { property: "og:description", content: "Internal admin console for managing IGCloner users and content." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
 });

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /auth
+Disallow: /app
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /admin
+
+Sitemap: https://igcloner.lovable.app/sitemap.xml

@@ -144,13 +144,15 @@ export function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                  <span
+                  <button
+                    type="button"
                     className="field-icon"
                     onClick={() => setShowPw((s) => !s)}
-                    title="Show/hide password"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    aria-pressed={showPw}
                   >
                     {showPw ? "🙈" : "👁"}
-                  </span>
+                  </button>
                 </div>
               </div>
 
@@ -251,13 +253,15 @@ export function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                  <span
+                  <button
+                    type="button"
                     className="field-icon"
                     onClick={() => setShowPw((s) => !s)}
-                    title="Show/hide password"
+                    aria-label={showPw ? "Hide password" : "Show password"}
+                    aria-pressed={showPw}
                   >
                     {showPw ? "🙈" : "👁"}
-                  </span>
+                  </button>
                 </div>
               </div>
 

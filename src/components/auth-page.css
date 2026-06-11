@@ -93,6 +93,7 @@
   position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
   cursor: pointer; color: var(--auth-text3); font-size: 18px; transition: color .2s;
   user-select: none; line-height: 1; padding: 4px;
+  background: transparent; border: 0; font-family: inherit;
 }
 .auth-layout .field-icon:hover { color: var(--ig2); }
 
