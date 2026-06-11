@@ -1,23 +1,23 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Sparkles, ArrowRight, Check, Zap, Target, Copy, Star, Link } from "lucide-react";
+import landingHtml from "@/assets/landing.html?raw";
 
-const PLACEHOLDERS = [
-  "instagram.com/reel/...",
-  "instagram.com/p/...",
-  "instagram.com/carousel/...",
-];
+// Inject <base target="_top"> so links inside the iframe navigate the parent window.
+const srcDoc = landingHtml.replace(
+  /<head(\s[^>]*)?>/i,
+  (match) => `${match}\n<base target="_top">`,
+);
 
 export function LandingPage() {
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  return (
+    <iframe
+      title="IGCloner"
+      srcDoc={srcDoc}
+      style={{ border: "none", width: "100vw", height: "100vh", display: "block" }}
+    />
+  );
+}
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDERS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
+// Legacy markup retained below for reference (unused).
+function _Unused() {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
