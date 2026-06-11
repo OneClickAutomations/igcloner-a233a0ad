@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IGCloner — Steal The Strategy. Not The Content.</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ig1:#F58529;--ig2:#DD2A7B;--ig3:#8134AF;--ig4:#515BD4;
+  --grad:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF,#515BD4);
+  --bg:#FFFFFF;--bg2:#F9F7FF;--bg3:#F3F0FF;
+  --card:#FFFFFF;--border:rgba(129,52,175,0.12);
+  --text:#0F0A1E;--text2:#4A4060;--text3:#8A7FA0;
+  --shadow:0 4px 24px rgba(221,42,123,0.10);
+  --shadow2:0 2px 12px rgba(0,0,0,0.06);
+}
+[data-theme="dark"]{
+  --bg:#0D0B14;--bg2:#130F1F;--bg3:#1A1428;
+  --card:#1A1428;--border:rgba(129,52,175,0.25);
+  --text:#F5F0FF;--text2:#C5BAD8;--text3:#8A7FA0;
+  --shadow:0 4px 24px rgba(221,42,123,0.20);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);transition:background .3s,color .3s;line-height:1.6;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+.grad-text{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.btn-primary{background:var(--grad);color:#fff;border:none;padding:14px 32px;border-radius:100px;font-size:16px;font-weight:700;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(221,42,123,0.35)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(221,42,123,0.45)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text);padding:13px 28px;border-radius:100px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-ghost:hover{border-color:var(--ig2);color:var(--ig2)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.badge-ig{background:linear-gradient(135deg,rgba(245,133,41,.12),rgba(221,42,123,.12));color:var(--ig2);border:1px solid rgba(221,42,123,.2)}
+.section{padding:100px 0}
+.container{max-width:1140px;margin:0 auto;padding:0 24px}
+.section-label{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ig3);margin-bottom:16px}
+.section-title{font-size:clamp(32px,5vw,52px);font-weight:800;line-height:1.1;letter-spacing:-.03em;color:var(--text)}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:0 24px;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);transition:background .3s}
+[data-theme="dark"] nav{background:rgba(13,11,20,0.85)}
+.nav-inner{max-width:1140px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{font-size:22px;font-weight:900;letter-spacing:-.04em}
+.nav-links{display:flex;align-items:center;gap:32px}
+.nav-links a{font-size:14px;font-weight:500;color:var(--text2);transition:color .2s}
+.nav-links a:hover{color:var(--ig2)}
+.nav-right{display:flex;align-items:center;gap:16px}
+.theme-toggle{background:none;border:1.5px solid var(--border);width:38px;height:38px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:16px;transition:all .2s;line-height:1}
+.theme-toggle:hover{border-color:var(--ig2);color:var(--ig2)}
+.nav-cta{background:var(--grad);color:#fff;border:none;padding:10px 24px;border-radius:100px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(221,42,123,.3)}
+.hero{padding:160px 0 100px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;pointer-events:none}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18}
+.hero-blob-1{width:600px;height:600px;background:var(--ig1);top:-200px;right:-100px}
+.hero-blob-2{width:500px;height:500px;background:var(--ig2);bottom:-100px;left:-200px}
+.hero-blob-3{width:400px;height:400px;background:var(--ig3);top:50%;left:60%}
+.hero-content{position:relative;z-index:1;text-align:center;max-width:800px;margin:0 auto}
+.hero h1{font-size:clamp(42px,7vw,78px);font-weight:900;line-height:1.0;letter-spacing:-.04em;margin-bottom:24px}
+.hero-sub{font-size:clamp(17px,2.5vw,21px);color:var(--text2);max-width:580px;margin:0 auto 40px;line-height:1.6}
+.hero-ctas{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.hero-note{font-size:13px;color:var(--text3);margin-bottom:60px}
+.hero-social-proof{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:64px}
+.avatars{display:flex}
+.av{width:36px;height:36px;border-radius:50%;border:2.5px solid var(--bg);margin-left:-10px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+.av:first-child{margin-left:0}
+.proof-text{font-size:14px;color:var(--text2)}
+.proof-text strong{color:var(--ig2)}
+.hero-card{max-width:720px;margin:0 auto}
+.demo-card{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--shadow),0 20px 60px rgba(0,0,0,.12);overflow:hidden}
+.demo-card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.dc-dots{display:flex;gap:6px}
+.dc-dot{width:12px;height:12px;border-radius:50%}
+.dc-url-bar{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:13px;color:var(--text3);font-family:monospace}
+.demo-card-body{padding:24px}
+.demo-input-row{display:flex;gap:12px;margin-bottom:20px}
+.demo-input{flex:1;background:var(--bg2);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;font-size:14px;color:var(--text);outline:none;font-family:'Inter',sans-serif}
+.demo-analyze-btn{background:var(--grad);color:#fff;border:none;padding:14px 24px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.demo-type-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:linear-gradient(135deg,rgba(245,133,41,.15),rgba(221,42,123,.15));border-radius:100px;font-size:12px;font-weight:700;color:var(--ig2);margin-bottom:16px;opacity:0;transition:opacity .4s}
+.demo-type-badge.visible{opacity:1}
+.demo-results{display:none}
+.demo-results.visible{display:block}
+.dna-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.dna-chip{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px}
+.dna-chip-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.dna-chip-value{font-size:13px;font-weight:600;color:var(--text)}
+.score-bar{height:6px;border-radius:3px;background:var(--bg3);margin-top:6px;overflow:hidden}
+.score-fill{height:100%;border-radius:3px;background:var(--grad);transition:width 1s ease}
+.clone-preview{background:linear-gradient(135deg,rgba(245,133,41,.06),rgba(221,42,123,.06));border:1px solid rgba(221,42,123,.15);border-radius:12px;padding:14px}
+.clone-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+.clone-hook{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;min-height:40px}
+.typing-cursor{display:inline-block;width:2px;height:14px;background:var(--ig2);animation:blink .8s infinite;vertical-align:middle}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.progress-steps{display:flex;gap:8px;margin-bottom:16px}
+.p-step{flex:1;height:3px;border-radius:2px;background:var(--bg3)}
+.p-step.active{background:var(--grad)}
+.pain-section{background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.pain-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;margin-top:56px}
+.pain-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;overflow:hidden}
+.pain-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad);opacity:.6}
+.pain-icon{font-size:28px;margin-bottom:14px}
+.pain-card h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px}
+.pain-card p{font-size:14px;color:var(--text2);line-height:1.6}
+.pain-intro{max-width:640px;margin-top:20px}
+.pain-intro p{font-size:18px;color:var(--text2);line-height:1.7}
+.pain-intro p strong{color:var(--text)}
+.how-flow{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:64px}
+.how-step{text-align:center;padding:0 20px;position:relative}
+.how-step::after{content:'→';position:absolute;right:-10px;top:36px;font-size:22px;color:var(--ig2);opacity:.5}
+.how-step:last-child::after{display:none}
+.how-icon{width:72px;height:72px;border-radius:20px;background:var(--grad);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;box-shadow:0 8px 24px rgba(221,42,123,.3)}
+.how-step h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px}
+.how-step p{font-size:14px;color:var(--text2)}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:64px}
+.feature-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;transition:transform .2s,box-shadow .2s}
+.feature-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.feature-card.featured{background:linear-gradient(145deg,rgba(245,133,41,.06),rgba(221,42,123,.06));border-color:rgba(221,42,123,.25)}
+.f-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px}
+.f-icon-grad{background:var(--grad)}
+.f-icon-soft{background:var(--bg3)}
+.feature-card h3{font-size:19px;font-weight:700;color:var(--text);margin-bottom:10px}
+.feature-card p{font-size:14px;color:var(--text2);line-height:1.7}
+.feature-tag{display:inline-block;margin-top:16px;padding:4px 12px;border-radius:100px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:linear-gradient(135deg,rgba(245,133,41,.12),rgba(221,42,123,.12));color:var(--ig2)}
+.schedule-section{background:var(--bg2)}
+.schedule-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.schedule-text h2{font-size:clamp(28px,4vw,46px);font-weight:800;line-height:1.15;letter-spacing:-.03em;margin-bottom:20px}
+.schedule-text p{font-size:17px;color:var(--text2);line-height:1.7;margin-bottom:32px}
+.schedule-features{display:flex;flex-direction:column;gap:16px}
+.sf-item{display:flex;align-items:flex-start;gap:14px}
+.sf-check{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff;font-weight:700}
+.sf-text h4{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sf-text p{font-size:13px;color:var(--text2)}
+.schedule-visual{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow)}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.cal-title{font-size:16px;font-weight:700;color:var(--text)}
+.cal-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;background:linear-gradient(135deg,rgba(245,133,41,.15),rgba(221,42,123,.15));color:var(--ig2)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px}
+.cal-day-label{font-size:10px;font-weight:700;text-align:center;color:var(--text3);letter-spacing:.05em}
+.cal-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);background:var(--bg2);flex-direction:column;gap:1px}
+.cal-cell.has-post{background:linear-gradient(135deg,rgba(245,133,41,.15),rgba(221,42,123,.2));color:var(--ig2);font-weight:700}
+.cal-cell.today{background:var(--grad);color:#fff}
+.cal-cell .dot{width:4px;height:4px;border-radius:50%;background:var(--ig2)}
+.cal-cell.has-post .dot{background:var(--ig1)}
+.cal-cell.today .dot{background:rgba(255,255,255,.8)}
+.cal-cell.empty{background:none;color:var(--text3)}
+.ai-generating{margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px}
+.ai-gen-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ig2);margin-bottom:8px}
+.ai-gen-text{font-size:13px;color:var(--text2)}
+.ai-gen-bar{height:4px;border-radius:2px;background:var(--bg3);margin-top:10px;overflow:hidden}
+.ai-gen-fill{height:100%;border-radius:2px;background:var(--grad);animation:progress 3s ease-in-out infinite alternate}
+@keyframes progress{0%{width:30%}100%{width:95%}}
+.testimonials-section{overflow:hidden}
+.testimonials-track{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none;padding:8px 24px 16px;cursor:grab}
+.testimonials-track::-webkit-scrollbar{display:none}
+.testi-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;min-width:340px;max-width:340px;box-shadow:var(--shadow2)}
+.testi-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.testi-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;font-weight:700;color:#fff}
+.testi-name{font-size:15px;font-weight:700;color:var(--text)}
+.testi-handle{font-size:13px;color:var(--text3)}
+.testi-stars{margin-bottom:14px;font-size:14px;color:#F58529}
+.testi-quote{font-size:15px;color:var(--text2);line-height:1.65}
+.testi-quote strong{color:var(--text)}
+.testi-result{margin-top:16px;padding:12px 16px;border-radius:10px;background:linear-gradient(135deg,rgba(245,133,41,.08),rgba(221,42,123,.08));border:1px solid rgba(221,42,123,.12)}
+.testi-result-num{font-size:22px;font-weight:800;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.testi-result-label{font-size:12px;color:var(--text3)}
+.reel-mockup{width:80px;height:140px;border-radius:14px;display:flex;align-items:flex-end;padding:8px;position:relative;overflow:hidden;flex-shrink:0}
+.reel-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-60%);width:28px;height:28px;background:rgba(255,255,255,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.reel-info{width:100%;background:rgba(0,0,0,.5);border-radius:6px;padding:4px 6px}
+.reel-likes{font-size:9px;color:#fff;font-weight:700}
+.reel-views{font-size:9px;color:rgba(255,255,255,.7)}
+.comparison-section{background:var(--bg2)}
+.compare-table{margin-top:56px;border:1px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:var(--shadow2)}
+.compare-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;border-bottom:1px solid var(--border)}
+.compare-row:last-child{border-bottom:none}
+.compare-row.header{background:var(--bg3)}
+.compare-cell{padding:18px 20px;font-size:14px;color:var(--text2);display:flex;align-items:center}
+.compare-row.header .compare-cell{font-weight:700;color:var(--text);font-size:13px}
+.compare-cell.ig-col{background:linear-gradient(180deg,rgba(221,42,123,.05),rgba(245,133,41,.05));border-left:2px solid rgba(221,42,123,.3);border-right:2px solid rgba(221,42,123,.3)}
+.compare-row.header .ig-col{border-top:2px solid var(--ig2);color:var(--ig2)}
+.compare-row:last-child .ig-col{border-bottom:2px solid rgba(221,42,123,.3)}
+.compare-yes{color:var(--ig2);font-weight:700}
+.compare-no{color:var(--text3)}
+.compare-partial{color:#F59E0B;font-weight:600;font-size:13px}
+.stats-bar{background:var(--grad);padding:56px 0}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+.stat-num{font-size:44px;font-weight:900;color:#fff;line-height:1;letter-spacing:-.04em}
+.stat-label{font-size:14px;color:rgba(255,255,255,.75);margin-top:6px}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px}
+.price-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;position:relative;transition:transform .2s}
+.price-card:hover{transform:translateY(-4px)}
+.price-card.popular{border-color:transparent;box-shadow:0 0 0 2.5px rgba(221,42,123,.6),var(--shadow)}
+.popular-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);padding:5px 16px;border-radius:100px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;background:var(--grad);color:#fff;white-space:nowrap}
+.price-tier{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+.price-num{font-size:52px;font-weight:900;color:var(--text);letter-spacing:-.04em;line-height:1}
+.price-num span{font-size:20px;font-weight:500;color:var(--text3)}
+.price-period{font-size:14px;color:var(--text3);margin-bottom:28px}
+.price-divider{height:1px;background:var(--border);margin:24px 0}
+.price-features{display:flex;flex-direction:column;gap:12px;margin-bottom:28px}
+.pf{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2)}
+.pf-check{color:var(--ig2);font-weight:700}
+.pf-x{color:var(--text3)}
+.price-cta{width:100%;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.price-cta-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.price-cta-ghost:hover{border-color:var(--ig2);color:var(--ig2)}
+.price-cta-grad{background:var(--grad);border:none;color:#fff;box-shadow:0 4px 16px rgba(221,42,123,.35)}
+.idemo-section{background:var(--bg2)}
+.idemo-inner{display:flex;flex-direction:column;align-items:center}
+.idemo-tabs{display:flex;gap:8px;background:var(--bg3);border-radius:100px;padding:6px;margin-bottom:40px;border:1px solid var(--border)}
+.idemo-tab{padding:10px 22px;border-radius:100px;font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;transition:all .2s;border:none;background:transparent}
+.idemo-tab.active{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(221,42,123,.3)}
+.idemo-content{width:100%;max-width:800px}
+.idemo-panel{display:none}
+.idemo-panel.active{display:block}
+.idemo-window{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
+.idemo-titlebar{background:var(--bg2);padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.idemo-titlebar .dots{display:flex;gap:5px}
+.idemo-titlebar .dot{width:10px;height:10px;border-radius:50%}
+.idemo-title{font-size:12px;color:var(--text3);flex:1;text-align:center}
+.idemo-body{padding:24px}
+.dna-full{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dna-block{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px}
+.dna-block-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ig3);margin-bottom:12px}
+.emotion-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.eb-label{font-size:12px;color:var(--text2);width:80px;flex-shrink:0}
+.eb-track{flex:1;height:6px;border-radius:3px;background:var(--bg3);overflow:hidden}
+.eb-fill{height:100%;border-radius:3px;background:var(--grad)}
+.eb-val{font-size:11px;font-weight:700;color:var(--ig2);width:28px;text-align:right}
+.clone-versions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.cv-tab{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
+.cv-tab.active{background:var(--grad);border-color:transparent;color:#fff}
+.cv-content{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px}
+.cv-hook-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ig2);margin-bottom:8px}
+.cv-hook{font-size:15px;font-weight:600;color:var(--text);line-height:1.5;margin-bottom:12px}
+.cv-actions{display:flex;gap:8px}
+.cv-btn{padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.cv-btn.primary{background:var(--grad);border:none;color:#fff}
+.cal30-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.c30-day{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:8px;min-height:70px}
+.c30-num{font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px}
+.c30-post{border-radius:6px;padding:4px 6px;font-size:9px;font-weight:700;line-height:1.3;margin-bottom:3px;background:linear-gradient(135deg,rgba(245,133,41,.2),rgba(221,42,123,.2));color:var(--ig2)}
+.cta-section{background:var(--grad);padding:100px 0;text-align:center}
+.cta-section h2{font-size:clamp(32px,5vw,58px);font-weight:900;color:#fff;letter-spacing:-.03em;line-height:1.1;margin-bottom:20px}
+.cta-section p{font-size:18px;color:rgba(255,255,255,.8);max-width:560px;margin:0 auto 40px}
+.cta-white-btn{background:#fff;border:none;padding:16px 40px;border-radius:100px;font-size:17px;font-weight:800;color:var(--ig2);cursor:pointer;box-shadow:0 8px 32px rgba(0,0,0,.2);transition:all .2s}
+.cta-white-btn:hover{transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,.3)}
+.cta-note{font-size:13px;color:rgba(255,255,255,.6);margin-top:16px}
+footer{background:var(--bg);padding:56px 0;border-top:1px solid var(--border)}
+.footer-inner{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px}
+.footer-brand p{font-size:14px;color:var(--text3);margin-top:12px;line-height:1.6;max-width:240px}
+.footer-col h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:16px}
+.footer-col a{display:block;font-size:13px;color:var(--text3);margin-bottom:10px;transition:color .15s}
+.footer-col a:hover{color:var(--ig2)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.footer-bottom p{font-size:13px;color:var(--text3)}
+@media(max-width:900px){
+  .how-flow,.features-grid,.schedule-inner,.pricing-grid,.footer-inner{grid-template-columns:1fr}
+  .how-step::after{display:none}
+  .compare-table{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .dna-full{grid-template-columns:1fr}
+  .nav-links{display:none}
+  .pricing-grid{max-width:400px;margin:56px auto 0}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo"><span class="grad-text">IGCloner</span></a>
+    <div class="nav-links">
+      <a href="#pain">Why IGCloner</a>
+      <a href="#how">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" onclick="toggleTheme()">☀</button>
+      <a href="/auth"><button class="btn-ghost" style="padding:10px 20px;font-size:14px">Log In</button></a>
+      <a href="/auth"><button class="nav-cta">Start Free →</button></a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+    <div class="hero-blob hero-blob-3"></div>
+  </div>
+  <div class="container">
+    <div class="hero-content">
+      <div class="badge badge-ig" style="margin-bottom:24px">✦ The Content Intelligence Platform</div>
+      <h1>Steal The Strategy.<br><span class="grad-text">Not The Content.</span></h1>
+      <p class="hero-sub">Paste any Instagram Reel, Carousel, or Post URL. Watch AI reverse-engineer exactly why it performs. Get 5 original content variations — ready to post.</p>
+      <div class="hero-ctas">
+        <a href="/auth"><button class="btn-primary" style="font-size:17px;padding:16px 36px">Analyze Your First Post Free →</button></a>
+        <button class="btn-ghost" onclick="document.getElementById('idemo').scrollIntoView({behavior:'smooth'})">See It In Action</button>
+      </div>
+      <p class="hero-note">No credit card required · 3 free analyses · Cancel anytime</p>
+      <div class="hero-social-proof">
+        <div class="avatars"><div class="av">MJ</div><div class="av">SK</div><div class="av">AL</div><div class="av">PR</div><div class="av">+</div></div>
+        <p class="proof-text">Trusted by <strong>8,400+ creators</strong> growing on Instagram</p>
+      </div>
+    </div>
+    <div class="hero-card">
+      <div class="demo-card">
+        <div class="demo-card-header">
+          <div class="dc-dots"><div class="dc-dot" style="background:#FF5F57"></div><div class="dc-dot" style="background:#FFBD2E"></div><div class="dc-dot" style="background:#28C840"></div></div>
+          <div class="dc-url-bar">igcloner.app/analyze</div>
+        </div>
+        <div class="demo-card-body">
+          <div class="demo-input-row">
+            <input class="demo-input" id="demoInput" value="https://www.instagram.com/reel/C8mX..." readonly>
+            <button class="demo-analyze-btn" onclick="runDemo()">Analyze ✦</button>
+          </div>
+          <div class="demo-type-badge" id="typeBadge">📱 Reel Detected · 847K views</div>
+          <div class="progress-steps"><div class="p-step" id="ps1"></div><div class="p-step" id="ps2"></div><div class="p-step" id="ps3"></div><div class="p-step" id="ps4"></div></div>
+          <div class="demo-results" id="demoResults">
+            <div class="dna-grid">
+              <div class="dna-chip"><div class="dna-chip-label">Performance Score</div><div class="dna-chip-value">94 / 100</div><div class="score-bar"><div class="score-fill" id="sf1" style="width:0"></div></div></div>
+              <div class="dna-chip"><div class="dna-chip-label">Hook Type</div><div class="dna-chip-value">Curiosity Gap</div><div class="score-bar"><div class="score-fill" id="sf2" style="width:0"></div></div></div>
+              <div class="dna-chip"><div class="dna-chip-label">Content Category</div><div class="dna-chip-value">Educational</div></div>
+              <div class="dna-chip"><div class="dna-chip-label">Emotional Trigger</div><div class="dna-chip-value">FOMO + Curiosity</div></div>
+            </div>
+            <div class="clone-preview"><div class="clone-label">✦ CLONE VERSION 1 — Direct Improvement</div><div class="clone-hook" id="cloneText"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section pain-section" id="pain">
+  <div class="container">
+    <div class="section-label">The Creator's Dilemma</div>
+    <h2 class="section-title">You Watch Viral Posts.<br>But <span class="grad-text">You Can't Replicate</span> Their Magic.</h2>
+    <div class="pain-intro"><p>You spend hours studying top creators. You try to copy their energy. You post — and hear crickets. <strong>The problem isn't your content. It's that you can't see what's actually working underneath the surface.</strong></p></div>
+    <div class="pain-grid">
+      <div class="pain-card"><div class="pain-icon">😤</div><h3>You're Stuck in Guesswork</h3><p>You don't know if it's the hook, caption, audio, or edit speed that made a post go viral. So you guess — and mostly get it wrong.</p></div>
+      <div class="pain-card"><div class="pain-icon">⏱</div><h3>Content Takes All Day</h3><p>Writing scripts, captions, hooks, and CTAs from scratch is burning 3–5 hours a day. That's time you don't have.</p></div>
+      <div class="pain-card"><div class="pain-icon">📉</div><h3>Your Engagement Is Flat</h3><p>You're posting consistently but views plateau. You're missing the psychological mechanics that make people stop, watch, and share.</p></div>
+      <div class="pain-card"><div class="pain-icon">💸</div><h3>Agencies Charge $3,000/Month</h3><p>For what IGCloner gives you in seconds. Competitor analysis, content strategy, original hooks — at 1% of the cost.</p></div>
+      <div class="pain-card"><div class="pain-icon">🗓</div><h3>No Content Calendar</h3><p>You post when inspired, go silent when blocked. No system, no schedule, no 30-day plan holding your growth accountable.</p></div>
+      <div class="pain-card"><div class="pain-icon">🎯</div><h3>You Don't Know Your Niche's Formula</h3><p>Every niche has a proven content structure. IGCloner decodes it and hands you the playbook in seconds.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:16px"><div class="section-label">The Process</div></div>
+    <h2 class="section-title" style="text-align:center">Four Steps.<br><span class="grad-text">Infinite Content.</span></h2>
+    <p style="text-align:center;color:var(--text2);font-size:17px;max-width:480px;margin:16px auto 0">From URL to publish-ready content. No writing experience required.</p>
+    <div class="how-flow">
+      <div class="how-step"><div class="how-icon">🔗</div><h3>Paste Any URL</h3><p>Drop any Instagram Reel, Carousel, or Post link.</p></div>
+      <div class="how-step"><div class="how-icon">🧬</div><h3>AI Reads the DNA</h3><p>We decode the hook, psychology, structure, and emotional triggers.</p></div>
+      <div class="how-step"><div class="how-icon">⚡</div><h3>Get 5 Original Clones</h3><p>Five ready-to-post versions — each with a different angle, hook, and caption.</p></div>
+      <div class="how-step"><div class="how-icon">📤</div><h3>Schedule & Publish</h3><p>AI builds your 30-day content calendar and auto-posts to Instagram.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-label">What You Get</div>
+    <h2 class="section-title">Every Tool You Need.<br><span class="grad-text">Nothing You Don't.</span></h2>
+    <div class="features-grid">
+      <div class="feature-card featured"><div class="f-icon f-icon-grad" style="color:#fff">🧬</div><h3>Content DNA Engine</h3><p>Full anatomical breakdown of any Instagram post. Hook type, emotional triggers, story structure, caption psychology, visual style, CTA strategy — all in one report.</p><span class="feature-tag">Core Feature</span></div>
+      <div class="feature-card"><div class="f-icon f-icon-soft">⚡</div><h3>5-Version Clone Engine</h3><p>Five completely original content variations. Direct improvement, contrarian, storytelling, authority, and curiosity gap — each one fresh and publish-ready.</p></div>
+      <div class="feature-card"><div class="f-icon f-icon-soft">🔥</div><h3>Make It Better Engine</h3><p>One click. AI rewrites any clone with a stronger hook, higher shareability, better CTA, and maximum retention mechanics built in.</p></div>
+      <div class="feature-card"><div class="f-icon f-icon-soft">✍️</div><h3>Hook Lab — 40 Variations</h3><p>Generate 10 curiosity hooks, 10 contrarian hooks, 10 authority hooks, and 10 FOMO hooks from any source post. Never stare at a blank page again.</p></div>
+      <div class="feature-card"><div class="f-icon f-icon-soft">🔄</div><h3>Content Multiplier</h3><p>One Instagram post → 10 content formats. Reel script, carousel, LinkedIn, X thread, email hook, blog outline, TikTok script — all in one click.</p><span class="feature-tag">Pro Feature</span></div>
+      <div class="feature-card featured"><div class="f-icon f-icon-grad" style="color:#fff">🗓</div><h3>AI 30-Day Content Calendar</h3><p>Tell IGCloner your niche and goals. AI generates a complete 30-day posting schedule with hooks, captions, and formats — then publishes automatically.</p><span class="feature-tag">Pro Feature — New</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section schedule-section">
+  <div class="container">
+    <div class="schedule-inner">
+      <div class="schedule-text">
+        <div class="section-label">Auto-Scheduling</div>
+        <h2>Your Entire Month of Content.<br><span class="grad-text">Planned & Posted Automatically.</span></h2>
+        <p>Stop scrambling for content ideas every morning. IGCloner builds your 30-day Instagram strategy, writes every caption, picks every posting time, and publishes while you sleep.</p>
+        <div class="schedule-features">
+          <div class="sf-item"><div class="sf-check">✓</div><div class="sf-text"><h4>AI Generates Your Full Month's Content Plan</h4><p>Input your niche, goals, and audience. Get 30 post concepts with hooks and captions — done.</p></div></div>
+          <div class="sf-item"><div class="sf-check">✓</div><div class="sf-text"><h4>Optimal Posting Times Calculated Automatically</h4><p>AI analyzes your audience timezone and engagement windows — posts at peak hours.</p></div></div>
+          <div class="sf-item"><div class="sf-check">✓</div><div class="sf-text"><h4>Auto-Publish Directly to Instagram</h4><p>Connect your account once. IGCloner handles every post, caption, and hashtag set.</p></div></div>
+          <div class="sf-item"><div class="sf-check">✓</div><div class="sf-text"><h4>Intelligent Content Mix Across Post Types</h4><p>AI balances Reels, Carousels, and Posts based on what performs best in your niche.</p></div></div>
+        </div>
+      </div>
+      <div class="schedule-visual">
+        <div class="cal-header"><div class="cal-title">June 2025 — Auto-Schedule</div><div class="cal-badge">✦ AI Generated</div></div>
+        <div class="cal-grid">
+          <div class="cal-day-label">S</div><div class="cal-day-label">M</div><div class="cal-day-label">T</div><div class="cal-day-label">W</div><div class="cal-day-label">T</div><div class="cal-day-label">F</div><div class="cal-day-label">S</div>
+          <div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell has-post">1<div class="dot"></div></div>
+          <div class="cal-cell">2</div><div class="cal-cell has-post">3<div class="dot"></div></div><div class="cal-cell">4</div><div class="cal-cell has-post">5<div class="dot"></div></div><div class="cal-cell">6</div><div class="cal-cell has-post">7<div class="dot"></div></div><div class="cal-cell">8</div>
+          <div class="cal-cell has-post">9<div class="dot"></div></div><div class="cal-cell">10</div><div class="cal-cell today">11</div><div class="cal-cell has-post">12<div class="dot"></div></div><div class="cal-cell">13</div><div class="cal-cell has-post">14<div class="dot"></div></div><div class="cal-cell">15</div>
+          <div class="cal-cell">16</div><div class="cal-cell has-post">17<div class="dot"></div></div><div class="cal-cell">18</div><div class="cal-cell has-post">19<div class="dot"></div></div><div class="cal-cell">20</div><div class="cal-cell has-post">21<div class="dot"></div></div><div class="cal-cell">22</div>
+          <div class="cal-cell has-post">23<div class="dot"></div></div><div class="cal-cell">24</div><div class="cal-cell has-post">25<div class="dot"></div></div><div class="cal-cell">26</div><div class="cal-cell has-post">27<div class="dot"></div></div><div class="cal-cell">28</div><div class="cal-cell has-post">29<div class="dot"></div></div>
+          <div class="cal-cell">30</div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div>
+        </div>
+        <div class="ai-generating"><div class="ai-gen-label">✦ AI Writing Next Post</div><div class="ai-gen-text">"The one thing I wish someone told me about building a 6-figure brand on Instagram before I wasted 2 years doing it wrong..."</div><div class="ai-gen-bar"><div class="ai-gen-fill"></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-bar">
+  <div class="container">
+    <div class="stats-grid">
+      <div><div class="stat-num">8,400+</div><div class="stat-label">Creators Growing With IGCloner</div></div>
+      <div><div class="stat-num">2.1M</div><div class="stat-label">Posts Analyzed</div></div>
+      <div><div class="stat-num">47M</div><div class="stat-label">Content Clones Generated</div></div>
+      <div><div class="stat-num">3.4×</div><div class="stat-label">Average Engagement Increase</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section idemo-section" id="idemo">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:16px"><div class="section-label">Live Preview</div></div>
+    <h2 class="section-title" style="text-align:center">Try It Without Signing Up</h2>
+    <p style="text-align:center;color:var(--text2);font-size:17px;margin-bottom:40px">See exactly what the AI returns — before you create an account.</p>
+    <div class="idemo-inner">
+      <div class="idemo-tabs">
+        <button class="idemo-tab active" onclick="switchTab('dna',this)">Content DNA</button>
+        <button class="idemo-tab" onclick="switchTab('clones',this)">Clone Engine</button>
+        <button class="idemo-tab" onclick="switchTab('calendar',this)">30-Day Calendar</button>
+      </div>
+      <div class="idemo-content">
+        <div class="idemo-panel active" id="panel-dna">
+          <div class="idemo-window">
+            <div class="idemo-titlebar"><div class="dots"><div class="dot" style="background:#FF5F57"></div><div class="dot" style="background:#FFBD2E"></div><div class="dot" style="background:#28C840"></div></div><div class="idemo-title">Content DNA Analysis — @fitnesscoach_alex · Reel</div></div>
+            <div class="idemo-body">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border)">
+                <div class="reel-mockup" style="background:linear-gradient(180deg,#DD2A7B,#8134AF)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 847K</div><div class="reel-views">2.1M views</div></div></div>
+                <div>
+                  <div style="font-size:13px;color:var(--text3);margin-bottom:4px">@fitnesscoach_alex · Reel · Jun 8, 2025</div>
+                  <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">"I tried waking up at 5am for 30 days. Here's what nobody tells you..."</div>
+                  <span style="padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;background:linear-gradient(135deg,rgba(245,133,41,.15),rgba(221,42,123,.15));color:var(--ig2)">Performance: 94/100</span>
+                </div>
+              </div>
+              <div class="dna-full">
+                <div class="dna-block">
+                  <div class="dna-block-title">Emotional Architecture</div>
+                  <div class="emotion-bar-row"><span class="eb-label">Curiosity</span><div class="eb-track"><div class="eb-fill" style="width:96%"></div></div><span class="eb-val">96</span></div>
+                  <div class="emotion-bar-row"><span class="eb-label">FOMO</span><div class="eb-track"><div class="eb-fill" style="width:81%"></div></div><span class="eb-val">81</span></div>
+                  <div class="emotion-bar-row"><span class="eb-label">Trust</span><div class="eb-track"><div class="eb-fill" style="width:74%"></div></div><span class="eb-val">74</span></div>
+                  <div class="emotion-bar-row"><span class="eb-label">Relatability</span><div class="eb-track"><div class="eb-fill" style="width:88%"></div></div><span class="eb-val">88</span></div>
+                  <div class="emotion-bar-row"><span class="eb-label">Urgency</span><div class="eb-track"><div class="eb-fill" style="width:62%"></div></div><span class="eb-val">62</span></div>
+                </div>
+                <div class="dna-block">
+                  <div class="dna-block-title">Why This Works</div>
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="font-size:13px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--ig2);font-weight:700;flex-shrink:0">✦</span>"Nobody tells you" creates instant curiosity gap</div>
+                    <div style="font-size:13px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--ig2);font-weight:700;flex-shrink:0">✦</span>30-day challenge signals transformation story</div>
+                    <div style="font-size:13px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--ig2);font-weight:700;flex-shrink:0">✦</span>Personal experiment = proof, not just advice</div>
+                    <div style="font-size:13px;color:var(--text2);display:flex;gap:8px"><span style="color:var(--ig2);font-weight:700;flex-shrink:0">✦</span>Universal topic reaches widest possible audience</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="idemo-panel" id="panel-clones">
+          <div class="idemo-window">
+            <div class="idemo-titlebar"><div class="dots"><div class="dot" style="background:#FF5F57"></div><div class="dot" style="background:#FFBD2E"></div><div class="dot" style="background:#28C840"></div></div><div class="idemo-title">Clone Engine — 5 Original Versions</div></div>
+            <div class="idemo-body">
+              <div class="clone-versions">
+                <button class="cv-tab active" onclick="switchClone(0,this)">V1 — Direct</button>
+                <button class="cv-tab" onclick="switchClone(1,this)">V2 — Contrarian</button>
+                <button class="cv-tab" onclick="switchClone(2,this)">V3 — Story</button>
+                <button class="cv-tab" onclick="switchClone(3,this)">V4 — Authority</button>
+                <button class="cv-tab" onclick="switchClone(4,this)">V5 — Curiosity</button>
+              </div>
+              <div class="cv-content">
+                <div class="cv-hook-label">✦ Hook</div>
+                <div class="cv-hook" id="cvHook">I tracked every hour of my day for 30 days. The results destroyed every productivity myth I believed. Here's what the data actually showed...</div>
+                <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ig2);margin:12px 0 6px">✦ Caption</div>
+                <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px" id="cvCaption">Most productivity advice is designed for people with no real life. Here's the honest breakdown of what actually moved the needle when I tracked everything for 30 days straight... [Save this. You'll come back to it.]</div>
+                <div class="cv-actions"><button class="cv-btn">Copy All</button><button class="cv-btn primary">Save Version</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="idemo-panel" id="panel-calendar">
+          <div class="idemo-window">
+            <div class="idemo-titlebar"><div class="dots"><div class="dot" style="background:#FF5F57"></div><div class="dot" style="background:#FFBD2E"></div><div class="dot" style="background:#28C840"></div></div><div class="idemo-title">30-Day AI Content Calendar — Auto-Schedule</div></div>
+            <div class="idemo-body">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div style="font-size:13px;color:var(--text2)">Niche: <strong style="color:var(--text)">Fitness / Wellness</strong> · <strong style="color:var(--ig2)">16 posts scheduled</strong></div>
+                <button class="cv-btn primary" style="font-size:12px;padding:6px 14px">Auto-Publish ON ✦</button>
+              </div>
+              <div class="cal30-grid">
+                <div class="c30-day"><div class="c30-num" style="color:var(--ig2)">Jun 11</div><div class="c30-post">🎬 Reel: 5am myth bust</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 12</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 13</div><div class="c30-post">📊 Carousel: Sleep hacks</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 14</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 15</div><div class="c30-post">🎬 Reel: Gym mistake</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 16</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 17</div><div class="c30-post">📝 Post: Motivation lie</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 18</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 19</div><div class="c30-post">📊 Carousel: Meal prep</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 20</div></div>
+                <div class="c30-day"><div class="c30-num">Jun 21</div><div class="c30-post">🎬 Reel: 30-day results</div></div>
+              </div>
+              <div style="margin-top:16px;padding:14px;background:linear-gradient(135deg,rgba(245,133,41,.08),rgba(221,42,123,.08));border:1px solid rgba(221,42,123,.2);border-radius:12px">
+                <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ig2);margin-bottom:6px">✦ Next Auto-Post</div>
+                <div style="font-size:13px;color:var(--text2)"><strong style="color:var(--text)">Today at 6:00 PM EST</strong> · Reel · Caption pre-written · 27 hashtags ready</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section testimonials-section">
+  <div class="container">
+    <div class="section-label" style="text-align:center">Real Creators. Real Results.</div>
+    <h2 class="section-title" style="text-align:center"><span class="grad-text">They Stopped Guessing.</span><br>Their Engagement Proved It.</h2>
+    <p style="text-align:center;font-size:17px;color:var(--text2);margin:16px 0 56px">What happens when creators finally understand why content performs.</p>
+  </div>
+  <div class="testimonials-track" id="testiTrack">
+    <div style="width:40px;flex-shrink:0"></div>
+    <div class="testi-card"><div class="testi-header"><div class="testi-avatar" style="background:linear-gradient(135deg,#F58529,#DD2A7B)">MJ</div><div><div class="testi-name">Maya Johnson</div><div class="testi-handle">@mayalifts · 127K followers</div></div><div class="reel-mockup" style="margin-left:auto;background:linear-gradient(180deg,#DD2A7B,#8134AF)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 22K</div><div class="reel-views">480K views</div></div></div></div><div class="testi-stars">★★★★★</div><p class="testi-quote">I was posting 6 days a week and barely hitting 3K views. <strong>First week using IGCloner I finally understood I was using the wrong hook type for my niche.</strong> Changed one thing. 48K views on the next reel.</p><div class="testi-result"><div class="testi-result-num">16× engagement</div><div class="testi-result-label">in 30 days after switching strategies</div></div></div>
+    <div class="testi-card"><div class="testi-header"><div class="testi-avatar" style="background:linear-gradient(135deg,#8134AF,#515BD4)">SK</div><div><div class="testi-name">Samuel Kim</div><div class="testi-handle">@samkimfinance · 89K followers</div></div><div class="reel-mockup" style="margin-left:auto;background:linear-gradient(180deg,#515BD4,#8134AF)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 34K</div><div class="reel-views">1.2M views</div></div></div></div><div class="testi-stars">★★★★★</div><p class="testi-quote">The 30-day auto-schedule alone is worth 10× the price. <strong>I was spending 4 hours a day on content. Now I approve the AI's plan in 20 minutes and it runs itself.</strong></p><div class="testi-result"><div class="testi-result-num">4 hrs → 20 min</div><div class="testi-result-label">daily content time saved</div></div></div>
+    <div class="testi-card"><div class="testi-header"><div class="testi-avatar" style="background:linear-gradient(135deg,#F58529,#8134AF)">AL</div><div><div class="testi-name">Alicia Reyes</div><div class="testi-handle">@aliciareyes.travel · 204K followers</div></div><div class="reel-mockup" style="margin-left:auto;background:linear-gradient(180deg,#F58529,#DD2A7B)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 67K</div><div class="reel-views">2.8M views</div></div></div></div><div class="testi-stars">★★★★★</div><p class="testi-quote">IGCloner showed me in 10 seconds what I'd missed for 2 years. <strong>My competitors used a "FOMO + secret reveal" structure on 80% of their viral posts.</strong> Now I do too.</p><div class="testi-result"><div class="testi-result-num">+204K</div><div class="testi-result-label">followers gained using cloned strategy</div></div></div>
+    <div class="testi-card"><div class="testi-header"><div class="testi-avatar" style="background:linear-gradient(135deg,#DD2A7B,#F58529)">PR</div><div><div class="testi-name">Patrick Reynolds</div><div class="testi-handle">@patrickbuilds · 52K followers</div></div><div class="reel-mockup" style="margin-left:auto;background:linear-gradient(180deg,#22C55E,#515BD4)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 11K</div><div class="reel-views">390K views</div></div></div></div><div class="testi-stars">★★★★★</div><p class="testi-quote">As a small business owner, I can't afford a social media team. <strong>IGCloner is basically a senior strategist on call 24/7.</strong> The emotional architecture breakdown changed how I think about every piece of content.</p><div class="testi-result"><div class="testi-result-num">$12K MRR</div><div class="testi-result-label">driven directly from Instagram content</div></div></div>
+    <div class="testi-card"><div class="testi-header"><div class="testi-avatar" style="background:linear-gradient(135deg,#515BD4,#DD2A7B)">JL</div><div><div class="testi-name">Jasmine Lee</div><div class="testi-handle">@jasminebeauty · 341K followers</div></div><div class="reel-mockup" style="margin-left:auto;background:linear-gradient(180deg,#DD2A7B,#515BD4)"><div class="reel-play">▶</div><div class="reel-info"><div class="reel-likes">❤ 91K</div><div class="reel-views">3.4M views</div></div></div></div><div class="testi-stars">★★★★★</div><p class="testi-quote">The Content Multiplier is insane. <strong>I take one viral concept and turn it into a Reel, a Carousel, an email, and a TikTok — in 4 minutes.</strong></p><div class="testi-result"><div class="testi-result-num">7× output</div><div class="testi-result-label">same time, 7 platform formats</div></div></div>
+    <div style="width:40px;flex-shrink:0"></div>
+  </div>
+</section>
+
+<section class="section comparison-section">
+  <div class="container">
+    <div class="section-label">How We Stack Up</div>
+    <h2 class="section-title">Why Creators Choose IGCloner<br><span class="grad-text">Over Everything Else</span></h2>
+    <div class="compare-table">
+      <div class="compare-row header"><div class="compare-cell">Feature</div><div class="compare-cell ig-col" style="justify-content:center"><span class="grad-text" style="font-weight:900;font-size:16px">IGCloner</span></div><div class="compare-cell" style="justify-content:center">Other AI Tools</div><div class="compare-cell" style="justify-content:center">Manual Research</div></div>
+      <div class="compare-row"><div class="compare-cell">Full Content DNA Breakdown</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">✦ Deep AI Analysis</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-partial">Basic metrics only</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">2–4 hrs per post</span></div></div>
+      <div class="compare-row"><div class="compare-cell">Generate 5 Original Content Variations</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">✦ Instantly</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div></div>
+      <div class="compare-row"><div class="compare-cell">Hook Lab — 40 Variations</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">✦ Included</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">Hire a copywriter</span></div></div>
+      <div class="compare-row"><div class="compare-cell">30-Day AI Content Calendar</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">✦ Auto-generated</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div></div>
+      <div class="compare-row"><div class="compare-cell">Auto-Publish to Instagram</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">✦ Fully automated</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-partial">Some tools</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">✗ No</span></div></div>
+      <div class="compare-row"><div class="compare-cell">Price</div><div class="compare-cell ig-col" style="justify-content:center"><span class="compare-yes">From $19/mo</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-partial">$79–$299/mo</span></div><div class="compare-cell" style="justify-content:center"><span class="compare-no">$3,000+/mo agency</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing">
+  <div class="container">
+    <div style="text-align:center"><div class="section-label">Pricing</div><h2 class="section-title">Start Free. Scale When Ready.</h2><p style="color:var(--text2);font-size:17px;margin-top:12px">No credit card required. Cancel anytime.</p></div>
+    <div class="pricing-grid">
+      <div class="price-card"><div class="price-tier">Free</div><div class="price-num"><span>$</span>0</div><div class="price-period">forever free · no card needed</div><div class="price-divider"></div><div class="price-features"><div class="pf"><span class="pf-check">✦</span>3 total analyses</div><div class="pf"><span class="pf-check">✦</span>1 clone version</div><div class="pf"><span class="pf-check">✦</span>Basic DNA breakdown</div><div class="pf"><span class="pf-x">✗</span><span style="color:var(--text3)">30-Day Calendar</span></div><div class="pf"><span class="pf-x">✗</span><span style="color:var(--text3)">Auto-publish</span></div></div><button class="price-cta price-cta-ghost">Start Free</button></div>
+      <div class="price-card popular"><div class="popular-badge">Most Popular</div><div class="price-tier">Creator</div><div class="price-num"><span>$</span>19</div><div class="price-period">per month</div><div class="price-divider"></div><div class="price-features"><div class="pf"><span class="pf-check">✦</span>50 analyses/month</div><div class="pf"><span class="pf-check">✦</span>5 clone versions</div><div class="pf"><span class="pf-check">✦</span>Full DNA breakdown</div><div class="pf"><span class="pf-check">✦</span>Hook Lab — 40 variations</div><div class="pf"><span class="pf-check">✦</span>Save projects + PDF export</div><div class="pf"><span class="pf-x">✗</span><span style="color:var(--text3)">Auto-publish</span></div></div><button class="price-cta price-cta-grad">Start Creating →</button></div>
+      <div class="price-card"><div class="price-tier">Pro</div><div class="price-num"><span>$</span>49</div><div class="price-period">per month</div><div class="price-divider"></div><div class="price-features"><div class="pf"><span class="pf-check">✦</span>Unlimited analyses</div><div class="pf"><span class="pf-check">✦</span>5 clones + Make It Better</div><div class="pf"><span class="pf-check">✦</span>Content Multiplier</div><div class="pf"><span class="pf-check">✦</span>30-Day AI Calendar</div><div class="pf"><span class="pf-check">✦</span>Auto-publish to Instagram</div><div class="pf"><span class="pf-check">✦</span>Priority AI + all exports</div></div><button class="price-cta price-cta-ghost">Go Pro</button></div>
+    </div>
+    <p style="text-align:center;margin-top:32px;font-size:14px;color:var(--text3)">All plans include a 7-day money-back guarantee. No questions asked.</p>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <div class="badge" style="margin-bottom:24px;background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)">✦ 3 Free Analyses. No Card Required.</div>
+    <h2>Stop Posting Into the Void.<br>Start Cloning What Actually Works.</h2>
+    <p>Every day you post without understanding content psychology is a day your competitors get further ahead. Start today — for free.</p>
+    <button class="cta-white-btn" onclick="window.location.href='/auth'">Analyze Your First Post Free →</button>
+    <p class="cta-note">Join 8,400+ creators · Set up in under 2 minutes</p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand"><div class="logo"><span class="grad-text">IGCloner</span></div><p>The AI content intelligence platform for Instagram creators who want to grow smarter, not harder.</p></div>
+      <div class="footer-col"><h4>Product</h4><a href="#">Content DNA</a><a href="#">Clone Engine</a><a href="#">30-Day Calendar</a><a href="#">Pricing</a></div>
+      <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Contact</a></div>
+      <div class="footer-col"><h4>Legal</h4><a href="#">Privacy Policy</a><a href="#">Terms of Service</a></div>
+    </div>
+    <div class="footer-bottom"><p>© 2025 IGCloner. All rights reserved.</p><p style="color:var(--ig2);font-weight:600">Steal the strategy. Not the content. ✦</p></div>
+  </div>
+</footer>
+
+<script>
+function toggleTheme(){
+  const b=document.body;
+  if(b.getAttribute('data-theme')==='dark'){b.removeAttribute('data-theme');document.querySelector('.theme-toggle').textContent='☀';}
+  else{b.setAttribute('data-theme','dark');document.querySelector('.theme-toggle').textContent='🌙';}
+}
+let demoRan=false;
+function runDemo(){
+  if(demoRan)return;demoRan=true;
+  document.getElementById('typeBadge').classList.add('visible');
+  let step=0;
+  const ps=[1,2,3,4].map(i=>document.getElementById('ps'+i));
+  const si=setInterval(()=>{if(step<4){ps[step].classList.add('active');step++;}else{clearInterval(si);showDemoResults();}},600);
+}
+function showDemoResults(){
+  document.getElementById('demoResults').classList.add('visible');
+  setTimeout(()=>{document.getElementById('sf1').style.width='94%';},100);
+  setTimeout(()=>{document.getElementById('sf2').style.width='86%';},200);
+  const hook="Stop relying on motivation. I tracked 847 hours of content creation over 30 days and found the one system that actually makes you consistent — no willpower required.";
+  let i=0;const el=document.getElementById('cloneText');
+  el.innerHTML='<span class="typing-cursor"></span>';
+  const ti=setInterval(()=>{if(i<hook.length){el.innerHTML=hook.slice(0,i+1)+'<span class="typing-cursor"></span>';i++;}else{el.innerHTML=hook;clearInterval(ti);}},22);
+}
+setTimeout(()=>{if(!demoRan)runDemo();},2000);
+function switchTab(id,btn){
+  document.querySelectorAll('.idemo-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.idemo-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  if(btn)btn.classList.add('active');
+}
+const clones=[
+  {hook:"I tracked every hour of my day for 30 days. The results destroyed every productivity myth I believed.",caption:"Most productivity advice is designed for people with no real life. Here's the honest breakdown of what actually moved the needle when I tracked everything for 30 days straight... [Save this. You'll come back to it.]"},
+  {hook:"Hot take: Waking up at 5am is NOT the secret to success. I did it for 30 days and my results prove the gurus are lying to you.",caption:"Every influencer tells you to wake up at 5am. I tried it. Here's why it's the wrong advice for most people — and what actually works instead."},
+  {hook:"Day 1 I was excited. Day 7 I wanted to quit. Day 30 I understood something about myself I never expected...",caption:"This is a story about what happens when you push through something uncomfortable for 30 days. Not for the outcome. For what it reveals about who you actually are."},
+  {hook:"After studying 500 viral fitness creators, I found the one structural pattern in 87% of their best-performing reels. Here it is.",caption:"I've analyzed thousands of Instagram reels in the fitness niche. This is the exact psychological framework that separates 100K-view creators from 10M-view creators."},
+  {hook:"There's a reason you keep waking up tired no matter how early you sleep. Nobody is talking about this — but the research is clear.",caption:"What if the problem isn't how early you wake up — it's what you do in the first 17 minutes? The science here completely changed my routine. Save this."}
+];
+function switchClone(i,el){
+  document.querySelectorAll('.cv-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cvHook').textContent=clones[i].hook;
+  document.getElementById('cvCaption').textContent=clones[i].caption;
+}
+const track=document.getElementById('testiTrack');
+let isDown=false,startX,scrollLeft;
+track.addEventListener('mousedown',e=>{isDown=true;startX=e.pageX-track.offsetLeft;scrollLeft=track.scrollLeft;});
+track.addEventListener('mouseleave',()=>{isDown=false;});
+track.addEventListener('mouseup',()=>{isDown=false;});
+track.addEventListener('mousemove',e=>{if(!isDown)return;e.preventDefault();track.scrollLeft=scrollLeft-(e.pageX-track.offsetLeft-startX)*2;});
+let auto=setInterval(()=>{track.scrollLeft+=1;if(track.scrollLeft>=track.scrollWidth-track.clientWidth)track.scrollLeft=0;},20);
+track.addEventListener('mouseenter',()=>clearInterval(auto));
+track.addEventListener('mouseleave',()=>{auto=setInterval(()=>{track.scrollLeft+=1;if(track.scrollLeft>=track.scrollWidth-track.clientWidth)track.scrollLeft=0;},20);});
+</script>
+</body>
+</html>
