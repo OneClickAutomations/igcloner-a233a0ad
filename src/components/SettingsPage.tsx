@@ -36,12 +36,7 @@ export function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     if (!confirm("This will permanently delete your account and all data. Are you sure?")) return;
-    const { error } = await supabase.rpc("delete_user");
-    if (error) toast.error("Failed to delete account");
-    else {
-      toast.success("Account deleted");
-      navigate({ to: "/" });
-    }
+    toast.error("Account deletion is not available. Please contact support.");
   };
 
   return (

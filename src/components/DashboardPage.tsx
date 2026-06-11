@@ -8,10 +8,10 @@ import { Sparkles, Trash2, ExternalLink, Loader2 } from "lucide-react";
 interface AnalysisItem {
   id: string;
   instagram_url: string;
-  post_type: string;
-  source_account: string;
-  performance_score: number;
-  created_at: string;
+  post_type: string | null;
+  source_account: string | null;
+  performance_score: number | null;
+  created_at: string | null;
 }
 
 export function DashboardPage() {

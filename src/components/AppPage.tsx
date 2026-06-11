@@ -391,7 +391,7 @@ export function AppPage() {
               {/* Emotional Architecture */}
               <DNA_card title="Emotional Architecture">
                 <div className="space-y-3">
-                  {Object.entries(dna.emotionalArchitecture).map(([key, value], i) => (
+                  {Object.entries(dna.emotionalArchitecture as Record<string, number>).map(([key, value], i) => (
                     <div key={key} className="flex items-center gap-3">
                       <span className="w-20 text-xs font-medium uppercase tracking-wide text-muted-foreground">{key}</span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
