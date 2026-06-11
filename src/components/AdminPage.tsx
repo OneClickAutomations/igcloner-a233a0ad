@@ -20,7 +20,7 @@ export function AdminPage() {
     // Use service role via server function in production; for now use client with RLS
     const { data: allUsers } = await supabase.from("profiles").select("*");
     const { data: allAnalyses } = await supabase.from("analyses").select("created_at");
-    const today = allAnalyses?.filter((a) => new Date(a.created_at).toDateString() === new Date().toDateString()).length || 0;
+    const today = allAnalyses?.filter((a) => a.created_at && new Date(a.created_at).toDateString() === new Date().toDateString()).length || 0;
 
     setUsers(allUsers || []);
     setStats({
