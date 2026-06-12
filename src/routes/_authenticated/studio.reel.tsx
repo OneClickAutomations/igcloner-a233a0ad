@@ -1,9 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { StudioComingSoon } from "@/components/StudioComingSoon";
+import { ReelStudio } from "@/components/ReelStudio";
 
 export const Route = createFileRoute("/_authenticated/studio/reel")({
   validateSearch: z.object({ projectId: z.string().uuid().optional() }),
-  head: () => ({ meta: [{ title: "Reel Studio — IGCloner" }, { name: "robots", content: "noindex" }] }),
-  component: () => <StudioComingSoon format="reel" />,
+  head: () => ({
+    meta: [
+      { title: "Video Production Studio — IGCloner" },
+      {
+        name: "description",
+        content: "Generate a short-form video script and an optimized Google VEO 3 prompt from any analyzed Instagram post.",
+      },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: ReelStudio,
 });
