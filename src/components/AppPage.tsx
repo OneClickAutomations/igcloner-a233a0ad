@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle } from "lucide-react";
+import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   analyzeInstagramPost,
@@ -13,7 +13,11 @@ import {
   makeItBetter,
   generateHooks,
   multiplyContent,
+  regenerateClonesWithPreferences,
 } from "@/lib/analyze.functions";
+import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
+import { PreferencePanel, type UserPreferences } from "@/components/PreferencePanel";
+import { PostThisModal, type CloneForPost } from "@/components/PostThisModal";
 
 const PLACEHOLDERS = [
   "instagram.com/reel/...",
@@ -38,6 +42,7 @@ export function AppPage() {
   const improveFn = useServerFn(makeItBetter);
   const hooksFn = useServerFn(generateHooks);
   const multiplyFn = useServerFn(multiplyContent);
+  const regenFn = useServerFn(regenerateClonesWithPreferences);
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
@@ -60,6 +65,12 @@ export function AppPage() {
   const [hooksLoading, setHooksLoading] = useState(false);
   const [multiplyLoading, setMultiplyLoading] = useState<string | null>(null);
   const [multiplied, setMultiplied] = useState<Record<string, string>>({});
+  const [scraped, setScraped] = useState<any>(null);
+  const [instagramUrl, setInstagramUrl] = useState<string>("");
+  const [showPreferences, setShowPreferences] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [activePreferences, setActivePreferences] = useState<UserPreferences | null>(null);
+  const [postModal, setPostModal] = useState<CloneForPost | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
@@ -92,6 +103,8 @@ export function AppPage() {
         const res = await loadFn({ data: { id } });
         setDna(res.dna);
         setClones(res.clones);
+        setScraped((res as any).scraped ?? null);
+        setInstagramUrl((res as any).instagramUrl ?? "");
         setAnalysisId(res.analysisId);
         setSavedBadge(res.createdAt ? new Date(res.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Saved");
         setPhase("results");
@@ -161,9 +174,13 @@ export function AppPage() {
       setStepLabel("Complete");
       setDna(payload?.dna ?? null);
       setClones(payload?.clones ?? []);
+      setScraped(payload?.scraped ?? null);
+      setInstagramUrl(payload?.instagramUrl ?? url);
       setAnalysisId(payload?.analysisId ?? null);
       setFallbackMode(Boolean(payload?.fallback));
       setPhase("results");
+      setShowPreferences(true);
+      setActivePreferences(null);
       toast.success("Saved to your dashboard");
       refreshUsage();
     } catch (err: any) {
