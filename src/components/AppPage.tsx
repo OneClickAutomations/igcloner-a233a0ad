@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send, Plus } from "lucide-react";
+import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send, Plus, Rocket } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   analyzeInstagramPost,
@@ -414,9 +414,19 @@ export function AppPage() {
             <div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-xl font-bold tracking-tight gradient-text">Analysis</h2>
-              <Button
-                size="sm"
-                onClick={() => {
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!analysisId}
+                  onClick={() => analysisId && navigate({ to: "/studio", search: { analysisId } } as any)}
+                  className="gap-1.5"
+                >
+                  <Rocket className="h-4 w-4" /> Create Content
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
                   setUrl("");
                   setDna(null);
                   setClones([]);
@@ -429,9 +439,10 @@ export function AppPage() {
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
                 className="gap-1.5"
-              >
-                <Plus className="h-4 w-4" /> New Analysis
-              </Button>
+                >
+                  <Plus className="h-4 w-4" /> New Analysis
+                </Button>
+              </div>
             </div>
 
               {/* Channel intelligence header (media + account intel) */}
