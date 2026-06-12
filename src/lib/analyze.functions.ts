@@ -326,6 +326,9 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         ms: Date.now() - aiStarted,
       });
 
+      // Viral score (deterministic, derived from scraped metrics)
+      const viral = computeViralScore(scraped);
+
       // Persist
       const { data: analysis, error: aErr } = await supabase
         .from("analyses")
@@ -338,6 +341,9 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
           performance_score: dna?.performanceScore ?? null,
           scraped_data: (scraped ?? null) as any,
           dna_analysis: dna as any,
+          viral_score: viral.score,
+          viral_band: viral.band,
+          viral_factors: viral.factors as any,
         })
         .select()
         .single();
@@ -384,6 +390,7 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
           scraped: scraped ?? null,
           instagramUrl: data.url,
           fallback,
+          viral,
         },
       };
     } catch (err: any) {
@@ -421,10 +428,15 @@ export const getAnalysisById = createServerFn({ method: "POST" })
       .order("version_number", { ascending: true });
 
     const dna = analysis.dna_analysis as any;
+    // Recompute viral score on read so older rows without persisted score still display one.
+    const viral = computeViralScore((analysis as any).scraped_data ?? null);
     return {
       analysisId: analysis.id,
       createdAt: analysis.created_at,
       dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
+      scraped: (analysis as any).scraped_data ?? null,
+      instagramUrl: analysis.instagram_url,
+      viral,
       clones: (clones ?? []).map((c: any) => ({
         versionNumber: c.version_number,
         angleType: c.angle_type,
