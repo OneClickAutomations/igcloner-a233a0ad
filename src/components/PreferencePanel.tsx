@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Sparkles, Loader2, X } from "lucide-react";
 
 export type UserPreferences = {
@@ -130,12 +137,13 @@ export function PreferencePanel({
       </div>
 
       <Section label="Your niche / content category">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {NICHES.map((n) => (
-            <Pill key={n} active={niche === n} onClick={() => setNiche(n)}>{n}</Pill>
-          ))}
-          <Pill active={niche === "Other"} onClick={() => setNiche("Other")}>Other</Pill>
-        </div>
+        <Select value={niche} onValueChange={setNiche}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Select a niche" /></SelectTrigger>
+          <SelectContent>
+            {NICHES.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+            <SelectItem value="Other">Other (specify)</SelectItem>
+          </SelectContent>
+        </Select>
         {niche === "Other" && (
           <Input
             className="mt-2"
@@ -147,11 +155,12 @@ export function PreferencePanel({
       </Section>
 
       <Section label="Your content goal">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {GOALS.map((g) => (
-            <Pill key={g} active={contentGoal === g} onClick={() => setContentGoal(g)}>{g}</Pill>
-          ))}
-        </div>
+        <Select value={contentGoal} onValueChange={setContentGoal}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Select a goal" /></SelectTrigger>
+          <SelectContent>
+            {GOALS.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </Section>
 
       <Section label="Content angle (select all that apply)">
@@ -192,19 +201,21 @@ export function PreferencePanel({
       </Section>
 
       <Section label="Tone of voice">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {TONES.map((t) => (
-            <Pill key={t} active={toneOfVoice === t} onClick={() => setToneOfVoice(t)}>{t}</Pill>
-          ))}
-        </div>
+        <Select value={toneOfVoice} onValueChange={setToneOfVoice}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Pick a tone" /></SelectTrigger>
+          <SelectContent>
+            {TONES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </Section>
 
       <Section label="Content format to generate">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {FORMATS.map((f) => (
-            <Pill key={f} active={contentFormat === f} onClick={() => setContentFormat(f)}>{f}</Pill>
-          ))}
-        </div>
+        <Select value={contentFormat} onValueChange={setContentFormat}>
+          <SelectTrigger className="h-11"><SelectValue placeholder="Pick a format" /></SelectTrigger>
+          <SelectContent>
+            {FORMATS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </Section>
 
       <Button

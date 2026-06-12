@@ -14,7 +14,15 @@ import {
   generateHooks,
   multiplyContent,
   regenerateClonesWithPreferences,
+  generateVisuals,
 } from "@/lib/analyze.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { PreferencePanel, type UserPreferences } from "@/components/PreferencePanel";
 import { PostThisModal, type CloneForPost } from "@/components/PostThisModal";
@@ -43,6 +51,7 @@ export function AppPage() {
   const hooksFn = useServerFn(generateHooks);
   const multiplyFn = useServerFn(multiplyContent);
   const regenFn = useServerFn(regenerateClonesWithPreferences);
+  const visualsFn = useServerFn(generateVisuals);
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
@@ -71,6 +80,9 @@ export function AppPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [activePreferences, setActivePreferences] = useState<UserPreferences | null>(null);
   const [postModal, setPostModal] = useState<CloneForPost | null>(null);
+  const [createFormat, setCreateFormat] = useState<"image" | "carousel" | "reel">("image");
+  const [visualsLoading, setVisualsLoading] = useState(false);
+  const [visualsMap, setVisualsMap] = useState<Record<number, { format: string; images: string[]; script: string | null }>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
@@ -274,6 +286,21 @@ export function AppPage() {
       toast.error(e?.message || "Multiplier failed");
     } finally {
       setMultiplyLoading(null);
+    }
+  };
+
+  const handleCreateVisuals = async () => {
+    if (!analysisId || !clones[activeVersion]) return;
+    const versionNumber = clones[activeVersion].versionNumber;
+    setVisualsLoading(true);
+    try {
+      const res = await visualsFn({ data: { analysisId, versionNumber, format: createFormat } });
+      setVisualsMap((m) => ({ ...m, [versionNumber]: { format: res.format, images: res.images, script: res.script } }));
+      toast.success(`${createFormat === "image" ? "Image" : createFormat === "carousel" ? "Carousel" : "Reel cover"} created`);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't create visuals");
+    } finally {
+      setVisualsLoading(false);
     }
   };
 
@@ -661,6 +688,40 @@ export function AppPage() {
                       >
                         <Send className="h-3.5 w-3.5" /> Post This
                       </Button>
+                    </div>
+
+                    {/* Create real visuals */}
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-accent-primary">🎨 Create the actual content</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Select value={createFormat} onValueChange={(v) => setCreateFormat(v as any)}>
+                          <SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="image">Single Image (1:1)</SelectItem>
+                            <SelectItem value="carousel">Carousel (4 slides)</SelectItem>
+                            <SelectItem value="reel">Reel cover + script</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" onClick={handleCreateVisuals} disabled={visualsLoading || !analysisId} className="gap-1.5">
+                          {visualsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                          {visualsLoading ? "Creating…" : "Create"}
+                        </Button>
+                      </div>
+                      {visualsMap[clones[activeVersion].versionNumber] && (
+                        <div className="mt-3 space-y-2">
+                          <div className={visualsMap[clones[activeVersion].versionNumber].format === "carousel" ? "grid grid-cols-2 gap-2" : "grid grid-cols-1 gap-2"}>
+                            {visualsMap[clones[activeVersion].versionNumber].images.map((src, i) => (
+                              <a key={i} href={src} download={`igcloner-${clones[activeVersion].versionNumber}-${i + 1}.png`} className="block overflow-hidden rounded-lg border border-border bg-card">
+                                <img src={src} alt={`Generated visual ${i + 1}`} className="block w-full" />
+                              </a>
+                            ))}
+                          </div>
+                          {visualsMap[clones[activeVersion].versionNumber].script && (
+                            <Textarea readOnly value={visualsMap[clones[activeVersion].versionNumber].script!} className="min-h-[140px] resize-y bg-background text-xs" />
+                          )}
+                          <p className="text-[11px] text-muted-foreground">Tap any image to download.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

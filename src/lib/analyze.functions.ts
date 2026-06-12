@@ -937,3 +937,133 @@ export const deleteCalendarItem = createServerFn({ method: "POST" })
     if (error) throw new Error("Failed to delete");
     return { ok: true };
   });
+
+// ============================================================
+// Visual generation — create image / carousel / reel cover
+// via Lovable AI Gateway's image-capable model.
+// ============================================================
+
+async function generateImageViaGateway(prompt: string): Promise<string> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash-image-preview",
+      messages: [{ role: "user", content: prompt }],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (res.status === 429) throw new Error("Rate limit — try again shortly.");
+  if (res.status === 402) throw new Error("Out of AI credits. Add credits in Settings.");
+  if (!res.ok) {
+    const t = await res.text();
+    console.error("[visuals] gateway error", res.status, t);
+    throw new Error("Image generation failed");
+  }
+  const json = await res.json();
+  const msg = json?.choices?.[0]?.message;
+  const imageUrl: string | undefined =
+    msg?.images?.[0]?.image_url?.url ??
+    msg?.images?.[0]?.url ??
+    (Array.isArray(msg?.content)
+      ? msg.content.find((c: any) => c?.image_url?.url)?.image_url?.url
+      : undefined);
+  if (!imageUrl) {
+    console.error("[visuals] no image in response", JSON.stringify(json).slice(0, 400));
+    throw new Error("Model returned no image");
+  }
+  return imageUrl;
+}
+
+export const generateVisuals = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        analysisId: z.string().uuid(),
+        versionNumber: z.number().int().min(1).max(5),
+        format: z.enum(["image", "carousel", "reel"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: analysis } = await supabase
+      .from("analyses")
+      .select("dna_analysis")
+      .eq("id", data.analysisId)
+      .eq("user_id", userId)
+      .single();
+    if (!analysis) throw new Error("Analysis not found");
+
+    const { data: clone } = await supabase
+      .from("clones")
+      .select("hook, caption, visual_direction, story_structure, cta")
+      .eq("analysis_id", data.analysisId)
+      .eq("version_number", data.versionNumber)
+      .eq("user_id", userId)
+      .single();
+    if (!clone) throw new Error("Clone not found");
+
+    const dna: any = analysis.dna_analysis;
+    const mood = dna?.visualStyle?.colorMood ?? "vibrant, on-brand";
+    const composition = dna?.visualStyle?.composition ?? "centered, balanced";
+    const baseStyle = `Visual style: ${mood}. Composition: ${composition}. Polished, professional, Instagram-ready. NO text or watermark on the image.`;
+
+    if (data.format === "image") {
+      const prompt = `Create a single 1:1 square Instagram post image (1080x1080).
+Hook concept: ${clone.hook}
+Visual direction: ${clone.visual_direction}
+${baseStyle}`;
+      const img = await generateImageViaGateway(prompt);
+      return { format: "image" as const, images: [img], script: null as string | null };
+    }
+
+    if (data.format === "carousel") {
+      const slides = 4;
+      const beats = [
+        `Slide 1 — Hook frame: "${clone.hook}". Bold, attention-grabbing.`,
+        `Slide 2 — Setup / problem: visual that reinforces the hook.`,
+        `Slide 3 — Key insight or step from: ${clone.story_structure}`,
+        `Slide 4 — Payoff / CTA frame: "${clone.cta}". Inviting, clean.`,
+      ];
+      const images: string[] = [];
+      for (let i = 0; i < slides; i++) {
+        const prompt = `Create a 4:5 portrait Instagram carousel slide ${i + 1} of ${slides}.
+${beats[i]}
+Visual direction: ${clone.visual_direction}
+${baseStyle}
+Keep consistent color palette across all slides.`;
+        images.push(await generateImageViaGateway(prompt));
+      }
+      return { format: "carousel" as const, images, script: null as string | null };
+    }
+
+    // reel — single 9:16 cover + structured shot list
+    const prompt = `Create a single 9:16 vertical Instagram Reel COVER frame (1080x1920).
+Hook concept: "${clone.hook}"
+Visual direction: ${clone.visual_direction}
+${baseStyle}`;
+    const cover = await generateImageViaGateway(prompt);
+    const script = `🎬 REEL SCRIPT — ${clone.hook}
+
+HOOK (0–3s): ${clone.hook}
+
+BEATS:
+${clone.story_structure}
+
+CAPTION:
+${clone.caption}
+
+CTA:
+${clone.cta}`;
+    return { format: "reel" as const, images: [cover], script };
+  });
