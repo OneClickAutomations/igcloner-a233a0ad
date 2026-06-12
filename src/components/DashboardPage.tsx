@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Sparkles, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { Sparkles, Trash2, ExternalLink } from "lucide-react";
 
 interface AnalysisItem {
   id: string;
@@ -128,35 +128,8 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-8">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold tracking-tight">IGCloner</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/app" })}>
-            Analyze
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/settings" })}>
-            Settings
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              supabase.auth.signOut();
-              navigate({ to: "/" });
-            }}
-          >
-            Sign Out
-          </Button>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
+    <div className="min-h-full">
+      <div className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
         <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
         <p className="text-sm text-muted-foreground mb-8">Your analysis history and usage</p>
 
@@ -236,7 +209,7 @@ export function DashboardPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }
