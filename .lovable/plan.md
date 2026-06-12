@@ -1,140 +1,63 @@
-## Goal
+## What the spec asks for
 
-Reshape the app so it mirrors the actual workflow: **discover → score → decide → clone → generate video → publish via 3rd-party scheduler**. Replace the URL-only entry point with a multi-source discovery surface, add an objective viral score that drives a Go/Skip recommendation, wire a real video generation provider into the reel pipeline, and integrate Blotato (or similar) for scheduling.
+A full **Production Studio** layered on top of the existing analyzer:
 
----
+1. After analysis, user picks a format (Reel, Carousel, Voiceover, Caption, Image).
+2. Each format opens a dedicated studio at `/studio/<format>` that auto-imports the analyzed post's DNA, hooks, thumbnail, and user preferences as a saved "Project".
+3. Reel Studio = script generator + AI video prompt generator for VEO/Kling/Sora (no API calls — copy/paste).
+4. Carousel Studio = N-slide generator with per-slide editor, design brief, caption.
+5. Voiceover Studio = ElevenLabs TTS with voice picker, settings, audio player, download.
+6. Caption flow gets a "Post This" modal.
+7. Sidebar gains Projects + studio shortcuts.
 
-## 1. Discovery — `/discover` (new page)
+## Honest assessment before we build
 
-Replace "paste URL only" as the primary entry. Three tabs:
+- **Scope is large** (~1,100 lines of spec). Building it all in one pass will produce broken-but-impressive UI and burn credits. I will ship it in 4 vertical slices that each leave the app working.
+- **Conflicts with the current plan.md** (`/discover`, viral scoring stages B/C, Blotato scheduler, Kling/Veo direct video generation). I will pause that roadmap and replace it with this studio roadmap. Stage A (viral score + Decision Card) we just shipped stays — the Decision Card's "Generate clones" button will route into the format picker.
+- **Stack mismatch in the spec**: it shows Supabase Edge Functions in Deno. Our app is TanStack Start — server functions live in `src/lib/*.functions.ts` and call Lovable AI Gateway. I will translate every "edge function" in the spec to a TanStack server function. Functionality is identical.
+- **ElevenLabs** is not in our AI Gateway — needs a user-supplied `ELEVENLABS_API_KEY` secret. I will add it via the secrets tool **only when we reach Stage 3 (Voiceover)** so you aren't blocked on the early stages.
+- **Pexels** stock footage is optional polish — skipping in v1.
+- **VEO/Kling/Sora**: spec explicitly says copy-prompt + link-out, not direct API. Matches what we can ship today without extra keys.
 
-- **Paste URL** — current behavior, kept for power users.
-- **Saved creators** — user adds IG handles (`@handle`). For each handle we fetch the last ~12 posts via Apify's Instagram profile actor, rank by engagement, and show a feed of cards. Click a card → goes into the existing analyze flow with that post URL prefilled.
-- **Hashtag / keyword** — user enters `#niche` or a keyword. Apify hashtag actor returns top posts. Same card grid → click to analyze.
+## Build plan — 4 stages
 
-Each card shows: thumbnail, @handle, likes, comments, views (if reel), and the new **viral score badge**. Cards are deduped across sessions.
+### Stage 1 — Foundation (ship first, ~1 turn)
+- Migration: `projects` table (+ GRANTs, RLS), `project_assets` table, storage bucket `project-assets` (public read, owner write).
+- New page **`/studio`** = format picker (5 cards: Reel, Carousel, Voiceover, Caption, Image). Reached from the Decision Card "Generate clones" button → renamed **"Create Content ▼"** dropdown on the analyze screen.
+- Server fns: `createProject`, `listProjects`, `getProject`, `updateProject`.
+- Sidebar gets a **Projects** entry. Dashboard gets a "My Projects" grid.
+- Caption / Image formats just route into the existing clone flow with the project ID attached. No new generation yet.
 
-New tables:
-- `saved_creators (id, user_id, handle, added_at)`
-- `discovered_posts (id, user_id, source, source_value, instagram_url, thumbnail_url, owner_username, likes, comments, views, followers, viral_score, scored_at)` — cache so we don't re-scrape on every visit. Cache TTL: 6 hours per (source, source_value).
+### Stage 2 — Carousel Studio (highest user value, no new secrets)
+- Route `/studio/carousel?projectId=…`, two-column layout.
+- Server fn `generateCarousel(projectId, settings)` calls Lovable AI Gateway with the spec's exact JSON schema (slides, design system, caption, hashtags, hook variations). Persists to `projects.project_data`.
+- Slide editor: list of slides on the left, per-slide form on the right (headline, body, visual direction, regenerate). Auto-save on edit.
+- Export: copy all headlines / copy caption+hashtags / download design brief as TXT / open Canva link.
 
-Apify cost note: each handle scrape ≈ 1 credit, each hashtag scrape ≈ 1–3. Discovery hits will dominate Apify usage — we surface remaining credits and rate-limit to 20 discovery scrapes / user / day.
+### Stage 3 — Voiceover Studio (needs ElevenLabs key)
+- Ask for `ELEVENLABS_API_KEY` via the secrets tool at the start of this stage.
+- Route `/studio/voiceover?projectId=…`.
+- Server fns: `generateVoiceoverScript` (AI Gateway, returns hook/body/cta segments + estimated duration) and `generateVoiceover` (calls ElevenLabs `/v1/text-to-speech/{voiceId}/stream`, uploads MP3 to `project-assets` storage, inserts `project_assets` row).
+- UI: script editor on the left, voice picker (6 prebuilt voices) + stability/similarity/style sliders + speed selector on the right, audio player with download.
 
-## 2. Viral score (used on cards AND analysis screen)
+### Stage 4 — Reel Studio + Caption "Post This" modal
+- Route `/studio/reel?projectId=…`, three-column layout.
+- Server fns: `generateReelScript` (hook + scenes + CTA + 5 hook variations) and `generateVideoPrompts` (master + veoPrompt + klingPrompt + soraPrompt + per-scene prompts).
+- Center panel: video engine picker (VEO / Kling / Sora / Script Only), settings (format/duration/style/pace), script blocks (editable), prompts blocks, caption + hashtags.
+- Right panel: copy/export actions + open-in-tool links (VEO, Kling, Sora, CapCut, Canva).
+- Upgrade existing clone cards with the "Post This →" modal.
+- **Skipping in v1**: stock-footage search (Pexels), voice-cloning upload, calendar integration. Easy follow-ups.
 
-Single formula computed server-side, returned with every scraped post:
+## Technical translation notes (non-technical reader can skip)
 
-```text
-engagementRate = (likes + comments * 3 + saves * 5) / followers
-velocity       = engagementRate / max(hoursSincePosted, 1)    // engagement per hour
-reachMultiplier = views ? min(views / followers, 10) : 1       // reels only
-baseScore      = log10(velocity * reachMultiplier * 1000) * 25
-score          = clamp(round(baseScore), 0, 100)
-```
+- All "edge functions" in the spec → TanStack server functions in `src/lib/*.functions.ts`, auth-gated with `requireSupabaseAuth`. The AI provider is Lovable AI Gateway (no per-user OpenAI/Anthropic key).
+- All `projects.user_id` references `auth.users(id)` directly (we don't have a `profiles` table). RLS scopes everything to `auth.uid()`.
+- The Decision Card's existing "Generate clones" button becomes "Create Content" and opens the format picker instead of running the clone generator immediately.
+- Storage bucket policies follow Lovable Cloud conventions (folder = user id), per the spec.
 
-Bands & recommendation shown on the analysis screen:
-- 80–100 → "Clone this now" (green, primary CTA enabled)
-- 60–79 → "Worth cloning" (amber, primary CTA enabled)
-- 40–59 → "Marginal — only if it fits your brand" (neutral, CTA still enabled with a confirm modal)
-- 0–39 → "Skip" (CTA disabled by default, override link "Clone anyway")
+## What I'm asking you
 
-The score and band are persisted on `analyses.viral_score` and `analyses.viral_band`.
+Confirm the staging and I'll start Stage 1 right away. Two small choices to confirm before I migrate:
 
-## 3. Analyze screen updates
-
-Above the clone list, add a **Decision Card**: score gauge, band label, top contributing factor ("8.4% engagement, posted 6h ago, 12× views/followers"), and the Go/Skip CTA. The existing clone generation only fires after the user clicks Go (or Override). Removes the current "auto-generate everything" behavior.
-
-## 4. Video generation (reels)
-
-Add real video output to the reel format. Provider abstraction in `src/lib/video.functions.ts`:
-
-```text
-generateReelVideo({ cloneId, provider, prompt, aspectRatio: '9:16', durationSec: 8 })
-  → returns { videoUrl, jobId, provider, costEstimate }
-```
-
-Supported providers behind one interface (user picks per generation, default = whichever has credits):
-- **Kling AI** (`kling-v1-pro`, text-to-video, 5s or 10s) — needs `KLING_ACCESS_KEY` + `KLING_SECRET_KEY` (JWT signed).
-- **Google Veo 3** via Lovable AI Gateway if available; fallback to direct Veo API if user supplies `VEO_API_KEY`.
-- **Runway Gen-3** — needs `RUNWAY_API_KEY`.
-
-User flow on reel format:
-1. Click "Generate reel" → modal asks which provider, shows estimated credit cost.
-2. We submit job, poll status (Kling/Runway are async, 30s–4min). UI shows progress bar.
-3. On completion: store URL in `clones.video_url`, render `<video>` inline with download button.
-
-Storage: Supabase Storage bucket `generated-videos` (new, public read, authed write). Videos pulled from provider and re-hosted so they don't expire.
-
-Required secrets to ask the user for **one at a time, only when they pick that provider**: `KLING_ACCESS_KEY` + `KLING_SECRET_KEY`, `RUNWAY_API_KEY`, `VEO_API_KEY`.
-
-## 5. Publishing — Blotato integration
-
-Replace the "copy & open IG" Post This modal with a real scheduler.
-
-- New page `/schedule` showing connected scheduler + a calendar of queued posts (read from Blotato API).
-- "Send to Blotato" button on every generated clone — opens a small modal: caption (prefilled from clone), hashtags, media attachment (image/carousel/video already in our storage), date/time picker (default = next optimal time per Blotato).
-- Server fn `scheduleToBlotato({ cloneId, scheduledAt, caption, hashtags })` POSTs to Blotato's `/v1/posts` endpoint, returns the scheduled post id, stores it in new table `scheduled_posts (id, user_id, clone_id, provider, provider_post_id, scheduled_at, status, created_at)`.
-- Provider abstraction so SocialPilot, Buffer, Later can be added later — same `scheduleToProvider()` signature.
-
-Required secret: `BLOTATO_API_KEY` — asked when the user first opens `/schedule`.
-
-We do **not** touch Instagram Graph API directly. Blotato handles the OAuth, posting, and Reels upload.
-
-## 6. Dashboard updates
-
-- Add Discover entry to sidebar (top of list, above Analyze).
-- Add Schedule entry below Analyze.
-- Dashboard history cards already show thumbnail + DNA — add viral score badge and Go/Skip outcome.
-
-## 7. What we are NOT doing in this pass
-
-- No auto-niche detection ("what's my niche?") — user picks handles/hashtags themselves.
-- No direct IG Graph API — Blotato/SocialPilot covers it.
-- No CapCut/Canva automation — user still finalizes there if they want.
-
----
-
-## Technical details
-
-**New files:**
-- `src/components/DiscoverPage.tsx`, `src/routes/_authenticated/discover.tsx`
-- `src/components/SchedulePage.tsx`, `src/routes/_authenticated/schedule.tsx`
-- `src/components/ViralScoreBadge.tsx`, `src/components/DecisionCard.tsx`
-- `src/components/VideoGenerationModal.tsx`, `src/components/ScheduleModal.tsx`
-- `src/lib/discovery.functions.ts` — `addCreator`, `removeCreator`, `listCreators`, `fetchCreatorTopPosts`, `searchHashtag`
-- `src/lib/scoring.server.ts` — `computeViralScore(scraped, post)` (pure, unit-testable)
-- `src/lib/video.functions.ts` + `src/lib/video-providers/{kling,veo,runway}.server.ts`
-- `src/lib/schedule.functions.ts` + `src/lib/schedule-providers/blotato.server.ts`
-
-**Edited files:**
-- `src/components/AppPage.tsx` — add Decision Card + Go/Skip gate, add video output rendering, swap Post This → Schedule To Blotato.
-- `src/components/AppSidebar.tsx` — add Discover + Schedule nav items.
-- `src/components/DashboardPage.tsx` — viral score badge on cards.
-- `src/lib/analyze.functions.ts` — compute & persist viral score; stop auto-generating clones until user clicks Go.
-
-**Migrations (one batch):**
-- `saved_creators`, `discovered_posts`, `scheduled_posts` tables (all with GRANTs + RLS scoped to `auth.uid()`).
-- `analyses.viral_score INT`, `analyses.viral_band TEXT`.
-- `clones.video_url TEXT`, `clones.video_provider TEXT`, `clones.video_job_id TEXT`.
-- Storage bucket `generated-videos` (public read, authed insert).
-
-**Secrets to add (ask when needed, not upfront):**
-- `BLOTATO_API_KEY` — at first visit to /schedule
-- `KLING_ACCESS_KEY` + `KLING_SECRET_KEY` — when user picks Kling
-- `RUNWAY_API_KEY` — when user picks Runway
-- `VEO_API_KEY` — only if Lovable AI Gateway doesn't expose Veo
-
----
-
-## Suggested build order (3 stages so you can review along the way)
-
-**Stage A — Scoring + Decision Gate (smallest, highest signal):**
-Migration for `viral_score` columns + `scoring.server.ts` + Decision Card on AppPage + Go/Skip gate that controls clone generation. Ship & test against a few real URLs.
-
-**Stage B — Discovery:**
-`saved_creators` / `discovered_posts` tables, Apify handle + hashtag actors, `/discover` page with three tabs, score badges on cards, sidebar nav item.
-
-**Stage C — Video + Publishing:**
-Start with **one** video provider (Kling — best price/quality for reels) and Blotato. Add Veo/Runway/SocialPilot in follow-ups once the wiring is proven.
-
-Confirm the build order (or change it) and tell me which video provider you want first, and I'll start with Stage A.
+1. **Replace the current plan.md `/discover` + Blotato roadmap** with this studio roadmap? (My recommendation: yes — the studio is what your spec actually demands; Discover/Scheduling can be Phase 2 after the studios ship.)
+2. **Keep the analyze screen's existing single-call "generate 5 clones" behavior intact**, with the format picker offered as an *additional* path (so nothing the user has today regresses)? Or fully replace it with the format-picker gate?
