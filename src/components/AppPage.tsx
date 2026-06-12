@@ -471,14 +471,29 @@ export function AppPage() {
                     <CloneField icon="👁" label="VISUAL DIRECTION" text={clones[activeVersion].visualDirection} />
                     <CloneField icon="📣" label="CTA" text={clones[activeVersion].cta} />
 
-                    <div className="flex gap-2 pt-2">
+                    {improvedMap[clones[activeVersion].versionNumber] && (
+                      <div className="rounded-lg border border-accent-primary/30 bg-accent-primary/5 p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent-primary">✦ What changed</p>
+                        <ul className="space-y-1 text-xs text-secondary-foreground">
+                          {improvedMap[clones[activeVersion].versionNumber].improvements.map((s, i) => (
+                            <li key={i}>• {s}</li>
+                          ))}
+                        </ul>
+                        <div className="mt-2 flex gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <span>Shareability <span className="font-mono text-accent-primary">{improvedMap[clones[activeVersion].versionNumber].shareabilityScore}</span></span>
+                          <span>Save Potential <span className="font-mono text-accent-primary">{improvedMap[clones[activeVersion].versionNumber].savePotentialScore}</span></span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 pt-2">
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopy(clones[activeVersion].caption)}>
                         {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         Copy All
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSave}>
-                        <Save className="h-3.5 w-3.5" />
-                        Save
+                      <Button size="sm" className="gap-1.5" onClick={handleMakeBetter} disabled={improving || !analysisId}>
+                        {improving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                        Make It Better
                       </Button>
                     </div>
                   </div>
@@ -488,6 +503,10 @@ export function AppPage() {
           </div>
         )}
       </main>
+
+      {showUpgrade && (
+        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings" }); }} />
+      )}
     </div>
   );
 }
