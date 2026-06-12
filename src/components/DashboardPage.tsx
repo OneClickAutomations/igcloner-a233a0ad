@@ -12,6 +12,7 @@ interface AnalysisItem {
   source_account: string | null;
   performance_score: number | null;
   created_at: string | null;
+  scraped_data: any;
 }
 
 function timeAgo(iso: string | null): string {
@@ -84,7 +85,7 @@ export function DashboardPage() {
 
     const { data, error } = await supabase
       .from("analyses")
-      .select("id, instagram_url, post_type, source_account, performance_score, created_at")
+      .select("id, instagram_url, post_type, source_account, performance_score, created_at, scraped_data")
       .eq("user_id", uid)
       .order("created_at", { ascending: false });
 
@@ -176,6 +177,18 @@ export function DashboardPage() {
                 key={a.id}
                 className="rounded-xl border border-border bg-card p-4 transition-all hover:border-border-default hover:-translate-y-0.5"
               >
+                {(() => {
+                  const t = a.scraped_data?.displayUrl || a.scraped_data?.thumbnailUrl;
+                  return t ? (
+                    <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg bg-muted">
+                      <img src={t} alt={`@${a.source_account ?? ""} post`} className="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                  ) : (
+                    <div className="mb-3 flex aspect-[4/3] items-center justify-center rounded-lg gradient-card text-3xl">
+                      {a.post_type === "Reel" ? "🎬" : a.post_type === "Carousel" ? "🎴" : "📸"}
+                    </div>
+                  );
+                })()}
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="min-w-0 flex-1">
                     <span className="rounded-md bg-accent-secondary/10 px-1.5 py-0.5 text-xs font-medium text-accent-secondary">
