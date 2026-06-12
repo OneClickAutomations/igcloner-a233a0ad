@@ -26,6 +26,9 @@ export type Database = {
           source_account: string | null
           source_caption: string | null
           user_id: string
+          viral_band: string | null
+          viral_factors: Json | null
+          viral_score: number | null
         }
         Insert: {
           created_at?: string | null
@@ -38,6 +41,9 @@ export type Database = {
           source_account?: string | null
           source_caption?: string | null
           user_id: string
+          viral_band?: string | null
+          viral_factors?: Json | null
+          viral_score?: number | null
         }
         Update: {
           created_at?: string | null
@@ -50,6 +56,9 @@ export type Database = {
           source_account?: string | null
           source_caption?: string | null
           user_id?: string
+          viral_band?: string | null
+          viral_factors?: Json | null
+          viral_score?: number | null
         }
         Relationships: [
           {
