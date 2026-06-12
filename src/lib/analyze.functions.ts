@@ -21,8 +21,28 @@ type ScrapedPost = {
   type: string;
   url: string;
   displayUrl?: string;
+  thumbnailUrl?: string;
   videoUrl?: string;
   productType?: string;
+  timestamp?: string;
+  locationName?: string;
+  isSponsored?: boolean;
+  firstComment?: string;
+  musicInfo?: any;
+  owner?: {
+    username?: string;
+    fullName?: string;
+    followersCount?: number;
+    followingCount?: number;
+    mediaCount?: number;
+    verified?: boolean;
+    isBusinessAccount?: boolean;
+    biography?: string;
+    externalUrl?: string;
+    profilePicUrl?: string;
+    businessCategoryName?: string;
+    isPrivate?: boolean;
+  };
 };
 
 function detectPostType(url: string): string {
@@ -167,6 +187,18 @@ const AnalyzeSchema = z.object({
     }),
     engagementDrivers: z.array(z.string()),
     monetizationPotential: z.string(),
+    channelIntelligence: z
+      .object({
+        primaryNiche: z.string().optional(),
+        audienceLanguage: z.string().optional(),
+        isLikelyMonetized: z.boolean().optional(),
+        estimatedMonthlyViews: z.string().optional(),
+        estimatedMonthlyRevenue: z.string().optional(),
+        postingFrequency: z.string().optional(),
+        engagementRate: z.number().optional(),
+        contentStrengths: z.array(z.string()).optional(),
+      })
+      .optional(),
   }),
   clones: z.array(CloneSchema).length(5),
 });
@@ -198,7 +230,17 @@ async function analyzePostCombined(
     "captionDNA": { "structure": "Micro"|"Standard"|"Long-form", "tone": string, "persuasionStyle": "Problem-Agitate-Solve"|"Story"|"List"|"Direct"|"Curiosity", "ctaType": "Soft"|"Hard"|"Engagement"|"None", "score": number },
     "visualStyle": { "colorMood": string, "composition": string, "textOverlay": "None"|"Subtle"|"Heavy", "editStyle": string, "score": number },
     "engagementDrivers": string[],
-    "monetizationPotential": string
+    "monetizationPotential": string,
+    "channelIntelligence": {
+      "primaryNiche": string,
+      "audienceLanguage": string (e.g. "English", "English / Japanese"),
+      "isLikelyMonetized": boolean,
+      "estimatedMonthlyViews": string (range like "2M-4M"),
+      "estimatedMonthlyRevenue": string (range like "$1,200-$3,800" if monetized, else ""),
+      "postingFrequency": string (e.g. "4-5x/week"),
+      "engagementRate": number,
+      "contentStrengths": string[]
+    }
   },
   "clones": [
     { "versionNumber": 1, "angleType": "direct", "angleLabel": "Direct Improvement", "hook": string, "angle": string, "storyStructure": string, "caption": string, "visualDirection": string, "cta": string },
@@ -211,6 +253,10 @@ async function analyzePostCombined(
 
 URL: ${url}
 Account: @${scraped?.ownerUsername ?? "unknown"}
+Followers: ${scraped?.owner?.followersCount ?? "unknown"}
+Total posts: ${scraped?.owner?.mediaCount ?? "unknown"}
+Category: ${scraped?.owner?.businessCategoryName ?? "unknown"}
+Verified: ${scraped?.owner?.verified ?? false}
 Caption: "${scraped?.caption ?? "Not available"}"
 Likes: ${scraped?.likesCount ?? "Unknown"}
 Comments: ${scraped?.commentsCount ?? "Unknown"}
