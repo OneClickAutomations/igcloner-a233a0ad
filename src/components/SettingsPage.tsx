@@ -92,12 +92,12 @@ export function SettingsPage() {
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Analyses used</span>
-                  <span className="font-medium">{profile?.analyses_used || 0} / {profile?.analyses_limit || 3}</span>
+                  <span className="font-medium">{profile?.analyses_used || 0} / {profile?.analyses_limit || 10}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-accent-primary transition-all"
-                    style={{ width: `${Math.min(((profile?.analyses_used || 0) / (profile?.analyses_limit || 3)) * 100, 100)}%` }}
+                    style={{ width: `${Math.min(((profile?.analyses_used || 0) / (profile?.analyses_limit || 10)) * 100, 100)}%` }}
                   />
                 </div>
               </div>
