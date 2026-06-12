@@ -355,6 +355,11 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       const combined = await analyzePostCombined(scraped, data.url, postType);
       const dna = combined.dna as any;
       const clones = combined.clones as any[];
+      const forensics = (combined as any).forensics ?? null;
+      if (forensics) {
+        // Co-locate forensics inside the dna_analysis JSON so studios get it for free.
+        dna.forensics = forensics;
+      }
       console.log("[analyze] AI complete", {
         clones: clones?.length ?? 0,
         ms: Date.now() - aiStarted,
