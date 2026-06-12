@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Wand2,
   Save,
+  Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import {
   saveCarousel,
   type CarouselDoc,
 } from "@/lib/carousel.functions";
+import { SlidePreviewDialog } from "@/components/SlidePreviewDialog";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -98,6 +100,7 @@ export function CarouselStudio() {
   const [regenBusy, setRegenBusy] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [regenInstr, setRegenInstr] = useState("");
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (project?.project_data) {
@@ -106,6 +109,7 @@ export function CarouselStudio() {
   }, [project?.id]);
 
   const active = useMemo(() => doc?.slides.find((s) => s.index === activeIdx) ?? null, [doc, activeIdx]);
+  const cloneMode = (project?.user_preferences as any)?.cloneMode === "inspired" ? "inspired" : "exact";
 
   if (!projectId) {
     return (
@@ -201,6 +205,11 @@ export function CarouselStudio() {
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
               {doc?.title || project?.title || "Carousel Studio"}
             </h1>
+          {project && (
+            <Badge variant="secondary" className="ml-2 text-[10px] uppercase tracking-wide">
+              {cloneMode === "inspired" ? "Inspired" : "Exact Duplicate"}
+            </Badge>
+          )}
           </div>
           {project?.source_account && (
             <p className="mt-1 text-xs text-muted-foreground">
@@ -307,25 +316,41 @@ export function CarouselStudio() {
             </div>
             <div className="space-y-2">
               {doc.slides.map((s) => (
-                <button
+                <div
                   key={s.index}
-                  onClick={() => setActiveIdx(s.index)}
-                  className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  className={`group relative flex w-full items-start gap-3 rounded-xl border p-3 transition-colors ${
                     activeIdx === s.index
                       ? "border-accent-primary bg-accent-primary/5"
                       : "border-border bg-card hover:border-strong"
                   }`}
                 >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
-                    {s.index}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className="text-[10px]">{s.role}</Badge>
+                  <button
+                    type="button"
+                    onClick={() => setActiveIdx(s.index)}
+                    className="flex flex-1 items-start gap-3 text-left"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
+                      {s.index}
                     </div>
-                    <p className="mt-1 line-clamp-2 text-sm font-medium">{s.headline}</p>
-                  </div>
-                </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="secondary" className="text-[10px]">{s.role}</Badge>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm font-medium">{s.headline}</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewIdx(s.index);
+                    }}
+                    aria-label={`Enlarge slide ${s.index}`}
+                    className="rounded-md p-1.5 text-muted-foreground opacity-0 transition hover:bg-muted hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+                  >
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ))}
             </div>
           </aside>
@@ -342,6 +367,14 @@ export function CarouselStudio() {
                     <h2 className="text-lg font-semibold">Edit slide</h2>
                   </div>
                   <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPreviewIdx(active.index)}
+                      title="Enlarge slide preview"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" /> Enlarge
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -476,6 +509,13 @@ export function CarouselStudio() {
           </section>
         </div>
       )}
+
+      <SlidePreviewDialog
+        doc={doc}
+        openIndex={previewIdx}
+        onOpenChange={(o) => !o && setPreviewIdx(null)}
+        onIndexChange={setPreviewIdx}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ const CreateInput = z.object({
   analysisId: z.string().uuid().optional().nullable(),
   format: z.enum(FORMATS),
   title: z.string().min(1).max(200).optional(),
+  cloneMode: z.enum(["exact", "inspired"]).optional(),
 });
 
 export const createProject = createServerFn({ method: "POST" })
@@ -40,6 +41,11 @@ export const createProject = createServerFn({ method: "POST" })
       data.title ??
       `${formatLabel(data.format)}${ownerHandle ? ` — @${ownerHandle}` : ""}`;
 
+    const userPrefs = {
+      ...(analysis?.user_preferences ?? {}),
+      cloneMode: data.cloneMode ?? "exact",
+    };
+
     const insert = {
       user_id: userId,
       analysis_id: data.analysisId ?? null,
@@ -49,8 +55,8 @@ export const createProject = createServerFn({ method: "POST" })
       source_url: analysis?.instagram_url ?? null,
       source_thumbnail: thumbnail,
       source_account: ownerHandle,
-      dna_analysis: analysis?.dna_data ?? null,
-      user_preferences: analysis?.user_preferences ?? null,
+      dna_analysis: analysis?.dna_analysis ?? null,
+      user_preferences: userPrefs,
       project_data: null,
     };
 

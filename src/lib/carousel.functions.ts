@@ -60,14 +60,36 @@ export const generateCarousel = createServerFn({ method: "POST" })
     if (!project) throw new Error("Project not found");
 
     const dna = (project.dna_analysis as any) ?? {};
+    const prefs = (project.user_preferences as any) ?? {};
+    const cloneMode: "exact" | "inspired" = prefs.cloneMode === "inspired" ? "inspired" : "exact";
+    const forensics = (dna.forensics?.carouselForensics ?? dna.forensics ?? null) as any;
     const sourceAccount = project.source_account ?? "unknown";
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
 
-    const system = `You are a world-class Instagram carousel designer and copywriter. Produce a fully-edited carousel that adapts the source post's DNA to a fresh, brand-original execution. Return ONLY a single JSON object — no prose, no markdown fences.`;
+    const system = `You are IGCloner's elite carousel engine. Operate as a forensic content analyst + creative director + conversion copywriter. Extract the source formula, then rebuild it for a new niche. Return ONLY a single JSON object — no prose, no markdown fences. Every slide must be 100% complete — no placeholders or "add your text here".`;
 
-    const prompt = `Generate a ${data.slideCount}-slide Instagram carousel that recreates the *winning DNA* of the source post in a brand-new execution.
+    const forensicsBlock = forensics
+      ? `\nCAROUSEL FORENSICS (source formula extracted):
+- Overall: ${JSON.stringify(forensics.overall ?? {})}
+- Slide 1 hook: ${JSON.stringify(forensics.slide1 ?? {})}
+- Middle slide pattern: ${JSON.stringify((forensics.middleSlides ?? [])[0] ?? {})}
+- Final/CTA slide: ${JSON.stringify(forensics.finalSlide ?? {})}
+- Design system: ${JSON.stringify(forensics.designSystem ?? {})}
+- Content strategy: ${JSON.stringify(forensics.contentStrategy ?? {})}\n`
+      : "";
+
+    const modeBlock =
+      cloneMode === "exact"
+        ? `\nMODE: EXACT DUPLICATE.
+Apply the EXACT formula above to a new carousel in the user's niche. Keep identical: layout system, hook mechanism, slide-by-slide structure, design system, CTA type. Change topic, subject matter, all text content — adapted to the new niche. "Exact duplicate" = identical formula, different subject. Never identical words.`
+        : `\nMODE: INSPIRED VERSION.
+Preserve the source's psychological mechanics (hook power, save-worthiness driver, narrative arc, value-delivery timing). Take a completely different creative direction visually and topically. The result should NOT look like the source.`;
+
+    const prompt = `Generate a ${data.slideCount}-slide Instagram carousel.
+${modeBlock}
+${forensicsBlock}
 
 Return JSON of exact shape:
 {
@@ -98,6 +120,10 @@ Source DNA snapshot (use as inspiration; never copy):
 - Hook type: ${dna.hookBreakdown?.type ?? ""}
 - Caption tone: ${dna.captionDNA?.tone ?? ""}
 - Visual style: color=${dna.visualStyle?.colorMood ?? ""}; composition=${dna.visualStyle?.composition ?? ""}; text=${dna.visualStyle?.textOverlay ?? ""}
+- User niche: ${prefs.niche ?? "general"}
+- User tone: ${prefs.toneOfVoice ?? ""}
+- User audience: ${prefs.targetAudience ?? ""}
+- Keywords: ${(prefs.keywords ?? []).join(", ")}
 ${data.angle ? `\nUser angle / topic to emphasize: ${data.angle}` : ""}
 
 Output the full JSON object only.`;

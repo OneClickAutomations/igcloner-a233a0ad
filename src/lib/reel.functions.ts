@@ -63,14 +63,35 @@ export const generateReel = createServerFn({ method: "POST" })
 
     const dna = (project.dna_analysis as any) ?? {};
     const prefs = (project.user_preferences as any) ?? {};
+    const cloneMode: "exact" | "inspired" = prefs.cloneMode === "inspired" ? "inspired" : "exact";
+    const forensics = (dna.forensics?.videoForensics ?? dna.forensics ?? null) as any;
     const settings = SettingsSchema.parse(data.settings ?? {});
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
 
-    const system = `You are a world-class short-form video director and copywriter. Write a complete Instagram Reel / TikTok script ready to shoot. Return ONLY a single JSON object — no prose, no fences.`;
+    const system = `You are IGCloner's elite short-form video director. Operate as a forensic video analyst + film editor + copywriter. Extract the source's video formula and rebuild it for a new niche. Return ONLY a single JSON object — no prose, no fences. Every line must be 100% production-ready — no placeholders.`;
+
+    const forensicsBlock = forensics
+      ? `\nVIDEO FORENSICS (source formula extracted):
+- Hook: ${JSON.stringify(forensics.hook ?? {})}
+- Pacing: ${JSON.stringify(forensics.pacing ?? {})}
+- Visual: ${JSON.stringify(forensics.visual ?? {})}
+- Audio: ${JSON.stringify(forensics.audio ?? {})}
+- Structure: ${JSON.stringify(forensics.structure ?? {})}
+- Performance triggers: ${JSON.stringify(forensics.performance ?? {})}\n`
+      : "";
+
+    const modeBlock =
+      cloneMode === "exact"
+        ? `\nMODE: EXACT DUPLICATE.
+Apply the EXACT video formula above to a new script in the user's niche. Keep identical: hook type, pacing, structure, audio strategy, editing style. Change subject matter and messaging only.`
+        : `\nMODE: INSPIRED VERSION.
+Preserve the source's psychological mechanics (hook power, retention loop, share/comment triggers). Take a completely different creative angle — the result should not look or sound like the source.`;
 
     const prompt = `Write a ${settings.duration}-second ${settings.format} short-form video script. Pace: ${settings.pace}. Style: ${settings.style}.
+${modeBlock}
+${forensicsBlock}
 
 Return JSON of exact shape:
 {

@@ -201,6 +201,7 @@ const AnalyzeSchema = z.object({
       })
       .optional(),
   }),
+  forensics: z.any().optional(),
   clones: z.array(CloneSchema).length(5),
 });
 
@@ -216,7 +217,37 @@ async function analyzePostCombined(
 
   const system = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs, then generate 5 distinct original variations. Be specific, tactical, actionable. Return ONLY a single JSON object with no prose, no markdown fences.`;
 
-  const prompt = `Analyze this Instagram ${postType} and produce a DNA report plus 5 clone versions. Return ONLY valid JSON matching this exact shape (no markdown, no commentary):
+  const forensicsBlock =
+    postType === "Reel"
+      ? `"videoForensics": {
+      "hook": { "type": string, "element": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
+      "pacing": { "overall": "very-fast"|"fast"|"medium"|"slow", "averageCutDuration": number, "transitionTypes": string, "rhythmSynced": boolean, "bRollUsage": "heavy"|"moderate"|"minimal"|"none" },
+      "visual": { "shootingStyle": string, "cameraMovements": string, "shotTypes": string, "colorGrade": string, "productionQuality": string },
+      "audio": { "musicType": string, "musicEnergy": string, "voiceover": string, "audioVisualSync": string },
+      "structure": { "type": string, "act1": string, "act2": string, "act3": string, "cta": string },
+      "performance": { "replayValue": number, "saveValue": number, "shareTrigger": string, "commentTrigger": string, "loopQuality": number }
+    }`
+      : postType === "Carousel"
+      ? `"carouselForensics": {
+      "overall": { "totalSlides": number, "carouselType": string, "narrativeArc": string, "contentDensity": string, "visualConsistency": string },
+      "slide1": { "hookMechanism": string, "layout": string, "colorScheme": string, "typography": string, "firstImpressionScore": number },
+      "middleSlides": [{ "purpose": string, "informationDensity": string, "visualType": string, "layoutTemplate": string, "microHook": string }],
+      "finalSlide": { "ctaType": string, "urgencyElement": string, "brandElement": string },
+      "designSystem": { "colorPalette": string, "fontSystem": string, "gridSystem": string, "iconStyle": string, "whiteSpaceUsage": string },
+      "contentStrategy": { "saveWorthiness": number, "valueDelivery": string, "educationalDepth": string }
+    }`
+      : `"imageForensics": {
+      "subject": { "primary": string, "position": string, "actionPose": string, "expression": string },
+      "composition": { "technique": string, "foreground": string, "background": string, "depthOfField": string, "visualWeight": string },
+      "color": { "dominant": string, "paletteType": string, "temperature": string, "saturation": string, "contrast": string, "mood": string, "hex": string[] },
+      "lighting": { "source": string, "direction": string, "shadowQuality": string, "overallExposure": string },
+      "text": { "present": boolean, "position": string, "style": string },
+      "editing": { "filterStyle": string, "sharpness": string, "grain": string },
+      "categorySignals": { "aspirationalLevel": string, "authenticityLevel": string },
+      "psychology": { "primaryVisualHook": string, "emotionalResponse": string, "saveWorthinessElements": string, "shareWorthiness": string }
+    }`;
+
+  const prompt = `Analyze this Instagram ${postType} and produce a DNA report, a forensic extraction, and 5 clone versions. Return ONLY valid JSON matching this exact shape (no markdown, no commentary):
 
 {
   "dna": {
@@ -249,7 +280,8 @@ async function analyzePostCombined(
     { "versionNumber": 3, "angleType": "story", "angleLabel": "Storytelling Angle", ... },
     { "versionNumber": 4, "angleType": "authority", "angleLabel": "Authority Angle", ... },
     { "versionNumber": 5, "angleType": "curiosity", "angleLabel": "Curiosity Gap", ... }
-  ]
+  ],
+  "forensics": { ${forensicsBlock} }
 }
 
 URL: ${url}
@@ -264,7 +296,9 @@ Comments: ${scraped?.commentsCount ?? "Unknown"}
 ${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
 Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
 
-Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".`;
+Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".
+
+The "forensics" object is REQUIRED. Be specific and surgical — these data points will be used to recreate the exact formula or generate inspired versions in downstream studios.`;
 
   // Hard timeout so we never silently exceed the dev/edge HTTP window.
   const controller = new AbortController();
@@ -321,6 +355,11 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       const combined = await analyzePostCombined(scraped, data.url, postType);
       const dna = combined.dna as any;
       const clones = combined.clones as any[];
+      const forensics = (combined as any).forensics ?? null;
+      if (forensics) {
+        // Co-locate forensics inside the dna_analysis JSON so studios get it for free.
+        dna.forensics = forensics;
+      }
       console.log("[analyze] AI complete", {
         clones: clones?.length ?? 0,
         ms: Date.now() - aiStarted,

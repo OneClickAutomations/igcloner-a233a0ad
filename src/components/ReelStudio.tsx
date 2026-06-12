@@ -141,6 +141,11 @@ export function ReelStudio() {
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Film className="h-5 w-5 text-accent-primary" />
               Video Production Studio
+              {project.data?.user_preferences?.cloneMode && (
+                <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                  {project.data.user_preferences.cloneMode === "inspired" ? "Inspired" : "Exact Duplicate"}
+                </Badge>
+              )}
             </h1>
             <p className="text-xs text-muted-foreground">
               {project.data?.title ?? "Reel project"}

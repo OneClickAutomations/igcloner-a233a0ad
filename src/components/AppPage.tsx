@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send, Plus, Rocket } from "lucide-react";
+import { ContentFormulaCard } from "@/components/ContentFormulaCard";
 import { useServerFn } from "@tanstack/react-start";
 import {
   analyzeInstagramPost,
@@ -447,6 +448,17 @@ export function AppPage() {
 
               {/* Channel intelligence header (media + account intel) */}
               <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
+
+              {/* Content Formula summary — dual CTAs jump into Studio with mode pre-picked */}
+              <ContentFormulaCard
+                dna={dna}
+                scraped={scraped}
+                postType={(dna as any)?.postType ?? "Post"}
+                onPick={(mode) =>
+                  analysisId &&
+                  navigate({ to: "/studio", search: { analysisId, mode } } as any)
+                }
+              />
 
               {/* Viral score + Go/Skip recommendation */}
               {viral && (
