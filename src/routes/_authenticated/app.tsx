@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { AppPage } from "@/components/AppPage";
 
 export const Route = createFileRoute("/_authenticated/app")({
+  validateSearch: z.object({
+    analysisId: z.string().uuid().optional(),
+  }),
   head: () => ({
     meta: [
       { title: "Analyze a Post — IGCloner" },
