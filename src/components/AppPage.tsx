@@ -26,6 +26,8 @@ import {
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { PreferencePanel, type UserPreferences } from "@/components/PreferencePanel";
 import { PostThisModal, type CloneForPost } from "@/components/PostThisModal";
+import { DecisionCard } from "@/components/DecisionCard";
+import type { ViralScoreResult } from "@/lib/scoring";
 
 const PLACEHOLDERS = [
   "instagram.com/reel/...",
@@ -83,6 +85,7 @@ export function AppPage() {
   const [createFormat, setCreateFormat] = useState<"image" | "carousel" | "reel">("image");
   const [visualsLoading, setVisualsLoading] = useState(false);
   const [visualsMap, setVisualsMap] = useState<Record<number, { format: string; images: string[]; script: string | null }>>({});
+  const [viral, setViral] = useState<ViralScoreResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
@@ -118,6 +121,7 @@ export function AppPage() {
         setScraped((res as any).scraped ?? null);
         setInstagramUrl((res as any).instagramUrl ?? "");
         setAnalysisId(res.analysisId);
+        setViral((res as any).viral ?? null);
         setSavedBadge(res.createdAt ? new Date(res.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Saved");
         setPhase("results");
       } catch (e: any) {
@@ -189,6 +193,7 @@ export function AppPage() {
       setScraped(payload?.scraped ?? null);
       setInstagramUrl(payload?.instagramUrl ?? url);
       setAnalysisId(payload?.analysisId ?? null);
+      setViral(payload?.viral ?? null);
       setFallbackMode(Boolean(payload?.fallback));
       setPhase("results");
       setShowPreferences(true);
@@ -431,6 +436,31 @@ export function AppPage() {
 
               {/* Channel intelligence header (media + account intel) */}
               <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
+
+              {/* Viral score + Go/Skip recommendation */}
+              {viral && (
+                <DecisionCard
+                  score={viral.score}
+                  band={viral.band}
+                  bandLabel={viral.bandLabel}
+                  recommendation={viral.recommendation}
+                  topFactor={viral.factors?.topFactor}
+                  hasClones={clones.length > 0}
+                  onSkip={() => {
+                    setUrl("");
+                    setDna(null);
+                    setClones([]);
+                    setScraped(null);
+                    setAnalysisId(null);
+                    setViral(null);
+                    setActivePreferences(null);
+                    setShowPreferences(true);
+                    setPhase("input");
+                    navigate({ to: "/app", search: {} });
+                    setTimeout(() => inputRef.current?.focus(), 50);
+                  }}
+                />
+              )}
 
               {/* Post Header Card */}
               <div className="rounded-xl border border-border bg-card p-5">
