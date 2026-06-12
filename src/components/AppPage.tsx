@@ -14,7 +14,15 @@ import {
   generateHooks,
   multiplyContent,
   regenerateClonesWithPreferences,
+  generateVisuals,
 } from "@/lib/analyze.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { PreferencePanel, type UserPreferences } from "@/components/PreferencePanel";
 import { PostThisModal, type CloneForPost } from "@/components/PostThisModal";
@@ -43,6 +51,7 @@ export function AppPage() {
   const hooksFn = useServerFn(generateHooks);
   const multiplyFn = useServerFn(multiplyContent);
   const regenFn = useServerFn(regenerateClonesWithPreferences);
+  const visualsFn = useServerFn(generateVisuals);
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
@@ -71,6 +80,9 @@ export function AppPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [activePreferences, setActivePreferences] = useState<UserPreferences | null>(null);
   const [postModal, setPostModal] = useState<CloneForPost | null>(null);
+  const [createFormat, setCreateFormat] = useState<"image" | "carousel" | "reel">("image");
+  const [visualsLoading, setVisualsLoading] = useState(false);
+  const [visualsMap, setVisualsMap] = useState<Record<number, { format: string; images: string[]; script: string | null }>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
@@ -274,6 +286,21 @@ export function AppPage() {
       toast.error(e?.message || "Multiplier failed");
     } finally {
       setMultiplyLoading(null);
+    }
+  };
+
+  const handleCreateVisuals = async () => {
+    if (!analysisId || !clones[activeVersion]) return;
+    const versionNumber = clones[activeVersion].versionNumber;
+    setVisualsLoading(true);
+    try {
+      const res = await visualsFn({ data: { analysisId, versionNumber, format: createFormat } });
+      setVisualsMap((m) => ({ ...m, [versionNumber]: { format: res.format, images: res.images, script: res.script } }));
+      toast.success(`${createFormat === "image" ? "Image" : createFormat === "carousel" ? "Carousel" : "Reel cover"} created`);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't create visuals");
+    } finally {
+      setVisualsLoading(false);
     }
   };
 
