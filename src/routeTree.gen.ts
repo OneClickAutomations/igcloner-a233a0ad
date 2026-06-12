@@ -13,11 +13,16 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
+import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
+import { Route as AuthenticatedStudioCarouselRouteImport } from './routes/_authenticated/studio.carousel'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -38,9 +43,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -63,6 +78,23 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedStudioVoiceoverRoute =
+  AuthenticatedStudioVoiceoverRouteImport.update({
+    id: '/voiceover',
+    path: '/voiceover',
+    getParentRoute: () => AuthenticatedStudioRoute,
+  } as any)
+const AuthenticatedStudioReelRoute = AuthenticatedStudioReelRouteImport.update({
+  id: '/reel',
+  path: '/reel',
+  getParentRoute: () => AuthenticatedStudioRoute,
+} as any)
+const AuthenticatedStudioCarouselRoute =
+  AuthenticatedStudioCarouselRouteImport.update({
+    id: '/carousel',
+    path: '/carousel',
+    getParentRoute: () => AuthenticatedStudioRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,7 +104,12 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/studio': typeof AuthenticatedStudioRouteWithChildren
+  '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/studio/reel': typeof AuthenticatedStudioReelRoute
+  '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +119,12 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/projects': typeof AuthenticatedProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/studio': typeof AuthenticatedStudioRouteWithChildren
+  '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/studio/reel': typeof AuthenticatedStudioReelRoute
+  '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +136,12 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/studio': typeof AuthenticatedStudioRouteWithChildren
+  '/_authenticated/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
+  '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,7 +153,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/calendar'
     | '/dashboard'
+    | '/projects'
     | '/settings'
+    | '/studio'
+    | '/studio/carousel'
+    | '/studio/reel'
+    | '/studio/voiceover'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -116,7 +168,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/calendar'
     | '/dashboard'
+    | '/projects'
     | '/settings'
+    | '/studio'
+    | '/studio/carousel'
+    | '/studio/reel'
+    | '/studio/voiceover'
   id:
     | '__root__'
     | '/'
@@ -127,7 +184,12 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
+    | '/_authenticated/projects'
     | '/_authenticated/settings'
+    | '/_authenticated/studio'
+    | '/_authenticated/studio/carousel'
+    | '/_authenticated/studio/reel'
+    | '/_authenticated/studio/voiceover'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -167,11 +229,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/studio': {
+      id: '/_authenticated/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -202,15 +278,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/studio/voiceover': {
+      id: '/_authenticated/studio/voiceover'
+      path: '/voiceover'
+      fullPath: '/studio/voiceover'
+      preLoaderRoute: typeof AuthenticatedStudioVoiceoverRouteImport
+      parentRoute: typeof AuthenticatedStudioRoute
+    }
+    '/_authenticated/studio/reel': {
+      id: '/_authenticated/studio/reel'
+      path: '/reel'
+      fullPath: '/studio/reel'
+      preLoaderRoute: typeof AuthenticatedStudioReelRouteImport
+      parentRoute: typeof AuthenticatedStudioRoute
+    }
+    '/_authenticated/studio/carousel': {
+      id: '/_authenticated/studio/carousel'
+      path: '/carousel'
+      fullPath: '/studio/carousel'
+      preLoaderRoute: typeof AuthenticatedStudioCarouselRouteImport
+      parentRoute: typeof AuthenticatedStudioRoute
+    }
   }
 }
+
+interface AuthenticatedStudioRouteChildren {
+  AuthenticatedStudioCarouselRoute: typeof AuthenticatedStudioCarouselRoute
+  AuthenticatedStudioReelRoute: typeof AuthenticatedStudioReelRoute
+  AuthenticatedStudioVoiceoverRoute: typeof AuthenticatedStudioVoiceoverRoute
+}
+
+const AuthenticatedStudioRouteChildren: AuthenticatedStudioRouteChildren = {
+  AuthenticatedStudioCarouselRoute: AuthenticatedStudioCarouselRoute,
+  AuthenticatedStudioReelRoute: AuthenticatedStudioReelRoute,
+  AuthenticatedStudioVoiceoverRoute: AuthenticatedStudioVoiceoverRoute,
+}
+
+const AuthenticatedStudioRouteWithChildren =
+  AuthenticatedStudioRoute._addFileChildren(AuthenticatedStudioRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStudioRoute: typeof AuthenticatedStudioRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -218,7 +332,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStudioRoute: AuthenticatedStudioRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

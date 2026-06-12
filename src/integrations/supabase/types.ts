@@ -256,6 +256,112 @@ export type Database = {
         }
         Relationships: []
       }
+      project_assets: {
+        Row: {
+          asset_type: string
+          created_at: string
+          filename: string | null
+          id: string
+          metadata: Json | null
+          project_id: string
+          source: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string
+          filename?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          source: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string
+          filename?: string | null
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          source?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          analysis_id: string | null
+          created_at: string
+          dna_analysis: Json | null
+          exports: Json
+          format: string
+          id: string
+          project_data: Json | null
+          source_account: string | null
+          source_thumbnail: string | null
+          source_url: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          user_preferences: Json | null
+        }
+        Insert: {
+          analysis_id?: string | null
+          created_at?: string
+          dna_analysis?: Json | null
+          exports?: Json
+          format: string
+          id?: string
+          project_data?: Json | null
+          source_account?: string | null
+          source_thumbnail?: string | null
+          source_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          user_preferences?: Json | null
+        }
+        Update: {
+          analysis_id?: string | null
+          created_at?: string
+          dna_analysis?: Json | null
+          exports?: Json
+          format?: string
+          id?: string
+          project_data?: Json | null
+          source_account?: string | null
+          source_thumbnail?: string | null
+          source_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          user_preferences?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_projects: {
         Row: {
           analysis_id: string
