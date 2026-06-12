@@ -61,6 +61,48 @@ export type Database = {
           },
         ]
       }
+      calendar_items: {
+        Row: {
+          caption: string | null
+          created_at: string
+          hook: string | null
+          id: string
+          niche: string | null
+          post_type: string | null
+          scheduled_for: string
+          status: string
+          updated_at: string
+          user_id: string
+          visual_idea: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          hook?: string | null
+          id?: string
+          niche?: string | null
+          post_type?: string | null
+          scheduled_for: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          visual_idea?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          hook?: string | null
+          id?: string
+          niche?: string | null
+          post_type?: string | null
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          visual_idea?: string | null
+        }
+        Relationships: []
+      }
       clones: {
         Row: {
           analysis_id: string
