@@ -83,7 +83,7 @@ export function AdminPage() {
                     <tr key={u.id} className="border-b border-border/50">
                       <td className="py-2">{u.full_name || "—"}</td>
                       <td className="py-2 capitalize">{u.plan || "free"}</td>
-                      <td className="py-2">{u.analyses_used ?? 0} / {u.analyses_limit ?? 3}</td>
+                      <td className="py-2">{u.analyses_used ?? 0} / {u.analyses_limit ?? 10}</td>
                       <td className="py-2 capitalize">{u.role || "user"}</td>
                       <td className="py-2 text-muted-foreground">{u.created_at ? new Date(u.created_at).toLocaleDateString() : "—"}</td>
                     </tr>
