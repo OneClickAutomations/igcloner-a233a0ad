@@ -73,7 +73,7 @@
   --ig4: #515BD4;
 
   /* IGCloner Light Theme — Instagram identity */
-  --background: #FAFAFA;
+  --background: #FFFFFF;
   --foreground: #0F0A1E;
   --card: #FFFFFF;
   --card-foreground: #0F0A1E;
@@ -81,11 +81,11 @@
   --popover-foreground: #0F0A1E;
   --primary: #8134AF;
   --primary-foreground: #FFFFFF;
-  --secondary: #F3F0FF;
+  --secondary: #F9F7FF;
   --secondary-foreground: #0F0A1E;
-  --muted: #F3F0FF;
+  --muted: #F9F7FF;
   --muted-foreground: #8A7FA0;
-  --accent: #F7F5FF;
+  --accent: #F9F7FF;
   --accent-foreground: #0F0A1E;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
@@ -103,7 +103,7 @@
   --sidebar-foreground: #0F0A1E;
   --sidebar-primary: #8134AF;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F7F5FF;
+  --sidebar-accent: #F9F7FF;
   --sidebar-accent-foreground: #0F0A1E;
   --sidebar-border: rgba(129, 52, 175, 0.12);
   --sidebar-ring: rgba(221, 42, 123, 0.40);
