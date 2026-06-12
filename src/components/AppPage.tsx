@@ -469,7 +469,7 @@ export function AppPage() {
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
-                      V{c.versionNumber}
+                      V{c.versionNumber}{c.improved ? " ✦" : ""}
                     </button>
                   ))}
                 </div>
