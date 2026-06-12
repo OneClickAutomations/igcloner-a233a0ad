@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send } from "lucide-react";
+import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X, Zap, Shuffle, Send, Plus } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   analyzeInstagramPost,
@@ -380,6 +380,27 @@ export function AppPage() {
           <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             {/* LEFT: DNA Panel */}
             <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-bold tracking-tight gradient-text">Analysis</h2>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setUrl("");
+                  setDna(null);
+                  setClones([]);
+                  setScraped(null);
+                  setAnalysisId(null);
+                  setActivePreferences(null);
+                  setShowPreferences(true);
+                  setPhase("input");
+                  navigate({ to: "/app" });
+                }}
+                className="gap-1.5"
+              >
+                <Plus className="h-4 w-4" /> New Analysis
+              </Button>
+            </div>
+
               {/* Channel intelligence header (media + account intel) */}
               <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
