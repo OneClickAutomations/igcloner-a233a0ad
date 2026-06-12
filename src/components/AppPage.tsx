@@ -393,7 +393,8 @@ export function AppPage() {
                   setActivePreferences(null);
                   setShowPreferences(true);
                   setPhase("input");
-                  navigate({ to: "/app" });
+                  navigate({ to: "/app", search: {} });
+                  setTimeout(() => inputRef.current?.focus(), 50);
                 }}
                 className="gap-1.5"
               >
