@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { generateText, Output } from "ai";
+import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const InputSchema = z.object({
   url: z.string().url().refine((u) => u.includes("instagram.com"), {
@@ -112,10 +114,76 @@ function parseJsonish<T = any>(text: string): T {
   }
 }
 
-const DNA_SYSTEM = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs. Be specific, tactical, actionable. Return ONLY valid JSON — no markdown, no preamble, no trailing text.`;
+// ============= Combined analyze schema (single Lovable AI call) =============
+const CloneSchema = z.object({
+  versionNumber: z.number(),
+  angleType: z.enum(["direct", "contrarian", "story", "authority", "curiosity"]),
+  angleLabel: z.string(),
+  hook: z.string(),
+  angle: z.string(),
+  storyStructure: z.string(),
+  caption: z.string(),
+  visualDirection: z.string(),
+  cta: z.string(),
+});
 
-async function analyzeDNA(scraped: ScrapedPost | null, url: string, postType: string) {
-  const user = `Analyze this Instagram ${postType}:
+const AnalyzeSchema = z.object({
+  dna: z.object({
+    contentSummary: z.string(),
+    contentCategory: z.string(),
+    performanceScore: z.number(),
+    whyItWorks: z.array(z.string()),
+    targetAudience: z.object({ who: z.string(), desire: z.string(), trigger: z.string() }),
+    hookBreakdown: z.object({
+      type: z.string(),
+      score: z.number(),
+      whatWorks: z.string(),
+      improvement: z.string(),
+    }),
+    emotionalArchitecture: z.object({
+      curiosity: z.number(),
+      fomo: z.number(),
+      trust: z.number(),
+      relatability: z.number(),
+      urgency: z.number(),
+      inspiration: z.number(),
+    }),
+    storyStructure: z.array(
+      z.object({ section: z.string(), timing: z.string(), purpose: z.string() }),
+    ),
+    captionDNA: z.object({
+      structure: z.string(),
+      tone: z.string(),
+      persuasionStyle: z.string(),
+      ctaType: z.string(),
+      score: z.number(),
+    }),
+    visualStyle: z.object({
+      colorMood: z.string(),
+      composition: z.string(),
+      textOverlay: z.string(),
+      editStyle: z.string(),
+      score: z.number(),
+    }),
+    engagementDrivers: z.array(z.string()),
+    monetizationPotential: z.string(),
+  }),
+  clones: z.array(CloneSchema).length(5),
+});
+
+async function analyzePostCombined(
+  scraped: ScrapedPost | null,
+  url: string,
+  postType: string,
+) {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+  const gateway = createLovableAiGatewayProvider(apiKey);
+  const model = gateway("google/gemini-3-flash-preview");
+
+  const system = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs, then generate 5 distinct original variations. Be specific, tactical, actionable.`;
+
+  const prompt = `Analyze this Instagram ${postType} and produce a DNA report plus 5 clone versions.
 
 URL: ${url}
 Account: @${scraped?.ownerUsername ?? "unknown"}
@@ -125,51 +193,31 @@ Comments: ${scraped?.commentsCount ?? "Unknown"}
 ${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
 Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
 
-Return this exact JSON structure:
-{
-  "contentSummary": "string",
-  "contentCategory": "Educational|Storytelling|Motivational|Entertainment|Business|Lifestyle",
-  "performanceScore": 0-100,
-  "whyItWorks": ["string","string","string","string","string"],
-  "targetAudience": { "who":"string","desire":"string","trigger":"string" },
-  "hookBreakdown": { "type":"Question|Shocking Stat|Bold Claim|Pattern Interrupt|Story Open|Curiosity Gap|FOMO","score":0-10,"whatWorks":"string","improvement":"string" },
-  "emotionalArchitecture": { "curiosity":0-100,"fomo":0-100,"trust":0-100,"relatability":0-100,"urgency":0-100,"inspiration":0-100 },
-  "storyStructure": [ { "section":"string","timing":"string","purpose":"string" } ],
-  "captionDNA": { "structure":"Micro|Standard|Long-form","tone":"string","persuasionStyle":"Problem-Agitate-Solve|Story|List|Direct|Curiosity","ctaType":"Soft|Hard|Engagement|None","score":0-10 },
-  "visualStyle": { "colorMood":"string","composition":"string","textOverlay":"None|Subtle|Heavy","editStyle":"string","score":0-10 },
-  "engagementDrivers": ["string","string","string"],
-  "monetizationPotential": "string"
-}`;
+Rules for the 5 clones (in this exact order):
+1. angleType "direct" / angleLabel "Direct Improvement"
+2. angleType "contrarian" / angleLabel "Contrarian Angle"
+3. angleType "story" / angleLabel "Storytelling Angle"
+4. angleType "authority" / angleLabel "Authority Angle"
+5. angleType "curiosity" / angleLabel "Curiosity Gap"
+Each clone needs a compelling hook, a unique angle, a beat-by-beat story structure, a ready-to-post caption with natural line breaks/emojis and CTA, a visual direction, and a CTA. Never copy source content — use inspiration only.
 
-  const text = await callClaude({ system: DNA_SYSTEM, user, maxTokens: 4000 });
-  return parseJsonish(text);
-}
+For DNA: hookBreakdown.type should be one of "Question","Shocking Stat","Bold Claim","Pattern Interrupt","Story Open","Curiosity Gap","FOMO". contentCategory should be one of "Educational","Storytelling","Motivational","Entertainment","Business","Lifestyle". captionDNA.structure one of "Micro","Standard","Long-form". captionDNA.persuasionStyle one of "Problem-Agitate-Solve","Story","List","Direct","Curiosity". captionDNA.ctaType one of "Soft","Hard","Engagement","None". visualStyle.textOverlay one of "None","Subtle","Heavy". Scores 0-10 or 0-100 as named.`;
 
-const CLONES_SYSTEM = `You are an expert Instagram content creator and conversion copywriter. Generate 5 completely original content variations inspired by the analyzed post. Each must be distinctly different in angle, hook, and strategy. Never copy the source content — use inspiration only. Return ONLY a valid JSON array.`;
-
-async function generateCloneSet(dna: any) {
-  const user = `Based on this content DNA analysis:
-${JSON.stringify(dna, null, 2)}
-
-Generate exactly 5 clone versions. Return a JSON array with this structure for each:
-[
-  {
-    "versionNumber": 1,
-    "angleType": "direct",
-    "angleLabel": "Direct Improvement",
-    "hook": "Opening hook (1-2 sentences, extremely compelling)",
-    "angle": "Unique positioning in one sentence",
-    "storyStructure": "Setup → tension → payoff → CTA — describe each beat in 1 line",
-    "caption": "Full ready-to-post caption with line breaks, natural emojis, and CTA at end",
-    "visualDirection": "What to film, design, or show visually (2-3 sentences)",
-    "cta": "Specific call to action text only"
+  // Hard timeout so we never silently exceed the dev/edge HTTP window.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const { experimental_output } = await generateText({
+      model,
+      system,
+      prompt,
+      experimental_output: Output.object({ schema: AnalyzeSchema }),
+      abortSignal: controller.signal,
+    });
+    return experimental_output;
+  } finally {
+    clearTimeout(timer);
   }
-]
-
-Angles in order: direct improvement, contrarian, storytelling, authority, curiosity gap. Use angleType values: "direct","contrarian","story","authority","curiosity" and matching angleLabel values.`;
-
-  const text = await callClaude({ system: CLONES_SYSTEM, user, maxTokens: 6000 });
-  return parseJsonish<any[]>(text);
 }
 
 export const analyzeInstagramPost = createServerFn({ method: "POST" })
@@ -205,11 +253,15 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         fallback = true;
       }
 
-      console.log("[analyze] DNA analysis…");
-      const dna = await analyzeDNA(scraped, data.url, postType);
-      console.log("[analyze] generating clones…");
-      const clones = await generateCloneSet(dna);
-      console.log("[analyze] AI complete", { clones: clones?.length ?? 0 });
+      console.log("[analyze] combined AI call…");
+      const aiStarted = Date.now();
+      const combined = await analyzePostCombined(scraped, data.url, postType);
+      const dna = combined.dna as any;
+      const clones = combined.clones as any[];
+      console.log("[analyze] AI complete", {
+        clones: clones?.length ?? 0,
+        ms: Date.now() - aiStarted,
+      });
 
       // Persist
       const { data: analysis, error: aErr } = await supabase
@@ -271,10 +323,14 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       };
     } catch (err: any) {
       console.error("[analyze] unhandled error:", err);
+      const message =
+        err?.name === "AbortError"
+          ? "Analysis timed out. Please try again."
+          : err?.message || "Analysis failed";
       return {
         ok: false as const,
         limitReached: false as const,
-        error: err?.message || "Analysis failed",
+        error: message,
         data: null,
       };
     }
