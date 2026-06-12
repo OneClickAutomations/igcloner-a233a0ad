@@ -4,12 +4,34 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Sparkles, ArrowLeft, Users, BarChart3, Activity, CreditCard } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { checkApifyConfig, checkConfig } from "@/lib/check-config.functions";
 
 export function AdminPage() {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ users: 0, mrr: 0, today: 0, credits: 0 });
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const apifyFn = useServerFn(checkApifyConfig);
+  const cfgFn = useServerFn(checkConfig);
+  const [diag, setDiag] = useState<any>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+
+  async function runDiagnostics() {
+    setDiagLoading(true);
+    try {
+      const [cfg, apify] = await Promise.all([cfgFn(), apifyFn({ data: {} })]);
+      const result = { config: cfg, apify };
+      console.log("[diagnostics]", result);
+      setDiag(result);
+      if (apify?.ok) toast.success(`APIfy OK (${apify.itemCount} item, ${apify.elapsedMs}ms)`);
+      else toast.error(`APIfy failed: ${apify?.error || apify?.status}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Diagnostics failed");
+    } finally {
+      setDiagLoading(false);
+    }
+  }
 
   useEffect(() => {
     loadAdminData();
@@ -46,6 +68,23 @@ export function AdminPage() {
 
       <main className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
         <h1 className="text-2xl font-bold mb-8">Admin Dashboard</h1>
+
+        <div className="rounded-xl border border-border bg-card p-5 mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">API diagnostics</h2>
+            <Button size="sm" onClick={runDiagnostics} disabled={diagLoading}>
+              {diagLoading ? "Running..." : "Run check"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Verifies ANTHROPIC and APIFY secrets are present and performs a live APIfy scrape against a public Instagram URL.
+          </p>
+          {diag && (
+            <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+{JSON.stringify(diag, null, 2)}
+            </pre>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {[
