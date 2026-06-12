@@ -1031,7 +1031,7 @@ ${baseStyle}`;
       const slides = 4;
       const beats = [
         `Slide 1 — Hook frame: "${clone.hook}". Bold, attention-grabbing.`,
-        `Slide 2 — Setup / problem: visual that reinforces ${clone.angle ?? "the angle"}.`,
+        `Slide 2 — Setup / problem: visual that reinforces the hook.`,
         `Slide 3 — Key insight or step from: ${clone.story_structure}`,
         `Slide 4 — Payoff / CTA frame: "${clone.cta}". Inviting, clean.`,
       ];
