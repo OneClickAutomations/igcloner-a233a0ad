@@ -139,11 +139,16 @@ export function AppPage() {
     try {
       const result = await analyzeFn({ data: { url } });
       clearInterval(progressTimer);
+      if ((result as any).limitReached) {
+        setShowUpgrade(true);
+        setPhase("input");
+        return;
+      }
       setProgress(100);
       setStepLabel("Complete");
       setDna(result.dna);
-      setClones(result.clones);
-      setAnalysisId(result.analysisId);
+      setClones(result.clones ?? []);
+      setAnalysisId(result.analysisId ?? null);
       setFallbackMode(Boolean((result as any).fallback));
       setPhase("results");
       toast.success("Saved to your dashboard");
