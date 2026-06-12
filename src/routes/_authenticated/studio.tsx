@@ -6,6 +6,7 @@ export const Route = createFileRoute("/_authenticated/studio")({
   validateSearch: z.object({
     analysisId: z.string().uuid().optional(),
     projectId: z.string().uuid().optional(),
+    mode: z.enum(["exact", "inspired"]).optional(),
   }),
   head: () => ({
     meta: [
