@@ -57,7 +57,7 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   return items[0];
 }
 
-const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
 
 async function callClaude(opts: {
   system?: string;
