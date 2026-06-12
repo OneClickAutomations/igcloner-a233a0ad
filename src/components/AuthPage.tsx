@@ -101,7 +101,7 @@ export function AuthPage() {
             <form className="form-page active" onSubmit={handleLogin}>
               <h1 className="form-headline">Welcome back. 👋<br />Ready to clone smarter?</h1>
               <p className="form-sub">
-                Your content strategy is waiting. Sign in and <strong>keep growing.</strong>
+                Sign in and <strong>keep growing.</strong>
               </p>
 
               <button type="button" className="btn-google" onClick={handleGoogle}>
