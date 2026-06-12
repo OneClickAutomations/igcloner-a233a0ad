@@ -225,6 +225,13 @@ export function AppPage() {
         </div>
       </header>
 
+      {usage && usage.remaining > 0 && usage.remaining <= 5 && !dismissedWarning && (
+        <div className="flex items-center justify-between gap-3 border-b border-status-warning/30 bg-status-warning/10 px-4 py-2 text-sm text-status-warning lg:px-8">
+          <span>⚡ {usage.remaining} analyses left this month · <button onClick={() => navigate({ to: "/settings" })} className="underline underline-offset-2">Upgrade for more →</button></span>
+          <button onClick={() => setDismissedWarning(true)} aria-label="Dismiss" className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
+        </div>
+      )}
+
       <main className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
         {phase === "input" && (
           <div className="flex flex-col items-center justify-center py-20">
