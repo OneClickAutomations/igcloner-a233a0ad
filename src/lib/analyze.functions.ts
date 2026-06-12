@@ -33,7 +33,7 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("APIFY_TOKEN not configured");
 
-  const endpoint = `https://api.apify.com/v2/acts/apify~instagram-post-scraper/run-sync-get-dataset-items?token=${token}`;
+  const endpoint = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}`;
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -57,7 +57,7 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   return items[0];
 }
 
-const CLAUDE_MODEL = "claude-3-5-sonnet-20241022";
+const CLAUDE_MODEL = "claude-sonnet-4-5";
 
 async function callClaude(opts: {
   system?: string;
