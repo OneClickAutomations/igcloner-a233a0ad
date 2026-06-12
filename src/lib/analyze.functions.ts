@@ -185,7 +185,7 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       .eq("id", userId)
       .single();
     if (prof && (prof.analyses_limit ?? 0) - (prof.analyses_used ?? 0) <= 0) {
-      throw new Error("LIMIT_REACHED");
+      return { limitReached: true as const };
     }
 
     // Scrape (graceful fallback if APIFY missing/private)
