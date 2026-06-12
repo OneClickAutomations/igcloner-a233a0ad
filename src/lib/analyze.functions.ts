@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const InputSchema = z.object({
@@ -181,9 +181,33 @@ async function analyzePostCombined(
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-3-flash-preview");
 
-  const system = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs, then generate 5 distinct original variations. Be specific, tactical, actionable.`;
+  const system = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs, then generate 5 distinct original variations. Be specific, tactical, actionable. Return ONLY a single JSON object with no prose, no markdown fences.`;
 
-  const prompt = `Analyze this Instagram ${postType} and produce a DNA report plus 5 clone versions.
+  const prompt = `Analyze this Instagram ${postType} and produce a DNA report plus 5 clone versions. Return ONLY valid JSON matching this exact shape (no markdown, no commentary):
+
+{
+  "dna": {
+    "contentSummary": string,
+    "contentCategory": "Educational"|"Storytelling"|"Motivational"|"Entertainment"|"Business"|"Lifestyle",
+    "performanceScore": number (0-100),
+    "whyItWorks": string[],
+    "targetAudience": { "who": string, "desire": string, "trigger": string },
+    "hookBreakdown": { "type": "Question"|"Shocking Stat"|"Bold Claim"|"Pattern Interrupt"|"Story Open"|"Curiosity Gap"|"FOMO", "score": number, "whatWorks": string, "improvement": string },
+    "emotionalArchitecture": { "curiosity": number, "fomo": number, "trust": number, "relatability": number, "urgency": number, "inspiration": number },
+    "storyStructure": [{ "section": string, "timing": string, "purpose": string }],
+    "captionDNA": { "structure": "Micro"|"Standard"|"Long-form", "tone": string, "persuasionStyle": "Problem-Agitate-Solve"|"Story"|"List"|"Direct"|"Curiosity", "ctaType": "Soft"|"Hard"|"Engagement"|"None", "score": number },
+    "visualStyle": { "colorMood": string, "composition": string, "textOverlay": "None"|"Subtle"|"Heavy", "editStyle": string, "score": number },
+    "engagementDrivers": string[],
+    "monetizationPotential": string
+  },
+  "clones": [
+    { "versionNumber": 1, "angleType": "direct", "angleLabel": "Direct Improvement", "hook": string, "angle": string, "storyStructure": string, "caption": string, "visualDirection": string, "cta": string },
+    { "versionNumber": 2, "angleType": "contrarian", "angleLabel": "Contrarian Angle", ... },
+    { "versionNumber": 3, "angleType": "story", "angleLabel": "Storytelling Angle", ... },
+    { "versionNumber": 4, "angleType": "authority", "angleLabel": "Authority Angle", ... },
+    { "versionNumber": 5, "angleType": "curiosity", "angleLabel": "Curiosity Gap", ... }
+  ]
+}
 
 URL: ${url}
 Account: @${scraped?.ownerUsername ?? "unknown"}
@@ -193,28 +217,20 @@ Comments: ${scraped?.commentsCount ?? "Unknown"}
 ${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
 Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
 
-Rules for the 5 clones (in this exact order):
-1. angleType "direct" / angleLabel "Direct Improvement"
-2. angleType "contrarian" / angleLabel "Contrarian Angle"
-3. angleType "story" / angleLabel "Storytelling Angle"
-4. angleType "authority" / angleLabel "Authority Angle"
-5. angleType "curiosity" / angleLabel "Curiosity Gap"
-Each clone needs a compelling hook, a unique angle, a beat-by-beat story structure, a ready-to-post caption with natural line breaks/emojis and CTA, a visual direction, and a CTA. Never copy source content — use inspiration only.
-
-For DNA: hookBreakdown.type should be one of "Question","Shocking Stat","Bold Claim","Pattern Interrupt","Story Open","Curiosity Gap","FOMO". contentCategory should be one of "Educational","Storytelling","Motivational","Entertainment","Business","Lifestyle". captionDNA.structure one of "Micro","Standard","Long-form". captionDNA.persuasionStyle one of "Problem-Agitate-Solve","Story","List","Direct","Curiosity". captionDNA.ctaType one of "Soft","Hard","Engagement","None". visualStyle.textOverlay one of "None","Subtle","Heavy". Scores 0-10 or 0-100 as named.`;
+Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".`;
 
   // Hard timeout so we never silently exceed the dev/edge HTTP window.
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25000);
   try {
-    const { experimental_output } = await generateText({
+    const { text } = await generateText({
       model,
       system,
       prompt,
-      experimental_output: Output.object({ schema: AnalyzeSchema }),
       abortSignal: controller.signal,
     });
-    return experimental_output;
+    const parsed = parseJsonish<z.infer<typeof AnalyzeSchema>>(text);
+    return AnalyzeSchema.parse(parsed);
   } finally {
     clearTimeout(timer);
   }
