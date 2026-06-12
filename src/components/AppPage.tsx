@@ -1,12 +1,17 @@
-import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Link, Sparkles, Copy, Check, Save, Loader2, Link2 } from "lucide-react";
+import { Sparkles, Copy, Check, Loader2, Link2, AlertCircle, Wand2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { analyzeInstagramPost } from "@/lib/analyze.functions";
+import {
+  analyzeInstagramPost,
+  getAnalysisById,
+  getUsage,
+  makeItBetter,
+} from "@/lib/analyze.functions";
 
 const PLACEHOLDERS = [
   "instagram.com/reel/...",
@@ -24,7 +29,11 @@ function detectPostType(url: string): string | null {
 
 export function AppPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
+  const loadFn = useServerFn(getAnalysisById);
+  const usageFn = useServerFn(getUsage);
+  const improveFn = useServerFn(makeItBetter);
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
@@ -34,14 +43,22 @@ export function AppPage() {
   const [clones, setClones] = useState<any[]>([]);
   const [activeVersion, setActiveVersion] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [credits, setCredits] = useState(12);
-  const [user, setUser] = useState<any>(null);
+  const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number; plan: string } | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [dismissedWarning, setDismissedWarning] = useState(false);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [savedBadge, setSavedBadge] = useState<string | null>(null);
+  const [fallbackMode, setFallbackMode] = useState(false);
+  const [improving, setImproving] = useState(false);
+  const [improvedMap, setImprovedMap] = useState<Record<number, { improvements: string[]; shareabilityScore: number; savePotentialScore: number }>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user));
-  }, []);
+  const refreshUsage = useCallback(async () => {
+    try { setUsage(await usageFn()); } catch {}
+  }, [usageFn]);
+
+  useEffect(() => { refreshUsage(); }, [refreshUsage]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -55,27 +72,51 @@ export function AppPage() {
     setPostType(type);
   }, [url]);
 
+  useEffect(() => {
+    const id = (search as any)?.analysisId as string | undefined;
+    if (!id || id === analysisId) return;
+    (async () => {
+      try {
+        setPhase("analyzing");
+        setProgress(60);
+        setStepLabel("Loading saved analysis...");
+        const res = await loadFn({ data: { id } });
+        setDna(res.dna);
+        setClones(res.clones);
+        setAnalysisId(res.analysisId);
+        setSavedBadge(res.createdAt ? new Date(res.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Saved");
+        setPhase("results");
+      } catch (e: any) {
+        toast.error(e?.message || "Couldn't load that analysis");
+        setPhase("input");
+      }
+    })();
+  }, [search, analysisId, loadFn]);
+
   const handleAnalyze = async () => {
     if (!url.includes("instagram.com")) {
       toast.error("Please enter a valid Instagram URL");
       return;
     }
-    if (credits <= 0) {
-      toast.error("No credits remaining. Upgrade to continue.");
+    if (usage && usage.remaining <= 0) {
+      setShowUpgrade(true);
       return;
     }
 
     setPhase("analyzing");
     setProgress(0);
-    setStepLabel("Detecting post type...");
+    setStepLabel("Reading post URL...");
+    setSavedBadge(null);
+    setFallbackMode(false);
+    setImprovedMap({});
 
-    // Animate progress while the real request runs
     const steps = [
-      { pct: 15, label: "Detecting post type..." },
-      { pct: 35, label: "Scraping Instagram post..." },
-      { pct: 55, label: "Analyzing hook structure..." },
-      { pct: 75, label: "Deconstructing content DNA..." },
-      { pct: 90, label: "Generating clone versions..." },
+      { pct: 12, label: "Reading post URL..." },
+      { pct: 28, label: "Fetching post data..." },
+      { pct: 48, label: "Analyzing hook structure..." },
+      { pct: 66, label: "Mapping emotional architecture..." },
+      { pct: 82, label: "Generating DNA report..." },
+      { pct: 94, label: "Building your clones..." },
     ];
     let stepIdx = 0;
     const progressTimer = setInterval(() => {
@@ -93,13 +134,17 @@ export function AppPage() {
       setStepLabel("Complete");
       setDna(result.dna);
       setClones(result.clones);
+      setAnalysisId(result.analysisId);
+      setFallbackMode(Boolean((result as any).fallback));
       setPhase("results");
-      setCredits((c) => c - 1);
-      toast.success("Analysis complete");
+      toast.success("Saved to your dashboard");
+      refreshUsage();
     } catch (err: any) {
       clearInterval(progressTimer);
+      const msg: string = err?.message || "Analysis failed. Please try again.";
       console.error(err);
-      toast.error(err?.message || "Analysis failed. Please try again.");
+      if (/LIMIT_REACHED/.test(msg)) setShowUpgrade(true);
+      else toast.error(msg);
       setPhase("input");
     }
     return;
@@ -112,8 +157,32 @@ export function AppPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleSave = async () => {
-    toast.success("Analysis saved!");
+  const handleMakeBetter = async () => {
+    if (!analysisId || !clones[activeVersion]) return;
+    setImproving(true);
+    try {
+      const versionNumber = clones[activeVersion].versionNumber;
+      const res = await improveFn({ data: { analysisId, versionNumber } });
+      const imp = res.improved;
+      setClones((prev) => prev.map((c, i) =>
+        i === activeVersion
+          ? { ...c, hook: imp.improvedHook, caption: imp.improvedCaption, cta: imp.improvedCta, improved: true }
+          : c,
+      ));
+      setImprovedMap((m) => ({
+        ...m,
+        [versionNumber]: {
+          improvements: imp.improvements || [],
+          shareabilityScore: imp.shareabilityScore ?? 0,
+          savePotentialScore: imp.savePotentialScore ?? 0,
+        },
+      }));
+      toast.success("Upgraded");
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't improve this version");
+    } finally {
+      setImproving(false);
+    }
   };
 
   const emotionColor = (key: string) => {
@@ -139,9 +208,11 @@ export function AppPage() {
           <span className="text-lg font-bold tracking-tight">IGCloner</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground sm:flex">
-            {credits} analyses left
-          </div>
+          {usage && (
+            <div className="hidden rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground sm:flex">
+              {usage.remaining} / {usage.limit} left
+            </div>
+          )}
           <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/dashboard" })}>
             History
           </Button>
@@ -153,6 +224,13 @@ export function AppPage() {
           </Button>
         </div>
       </header>
+
+      {usage && usage.remaining > 0 && usage.remaining <= 5 && !dismissedWarning && (
+        <div className="flex items-center justify-between gap-3 border-b border-status-warning/30 bg-status-warning/10 px-4 py-2 text-sm text-status-warning lg:px-8">
+          <span>⚡ {usage.remaining} analyses left this month · <button onClick={() => navigate({ to: "/settings" })} className="underline underline-offset-2">Upgrade for more →</button></span>
+          <button onClick={() => setDismissedWarning(true)} aria-label="Dismiss" className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
+        </div>
+      )}
 
       <main className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
         {phase === "input" && (
@@ -193,9 +271,11 @@ export function AppPage() {
               )}
             </div>
 
-            <p className="mt-6 text-sm text-muted-foreground">
-              You have <span className="font-medium text-foreground">{credits}</span> analyses remaining
-            </p>
+            {usage && (
+              <p className="mt-6 text-sm text-muted-foreground">
+                You have <span className="font-medium text-foreground">{usage.remaining}</span> of <span className="font-medium text-foreground">{usage.limit}</span> remaining
+              </p>
+            )}
           </div>
         )}
 
@@ -240,6 +320,9 @@ export function AppPage() {
                           {dna.contentCategory}
                         </span>
                         <span>{dna.postType || "Reel"}</span>
+                        {savedBadge && (
+                          <span className="rounded-md bg-muted px-1.5 py-0.5 text-xs">Saved · {savedBadge}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -248,6 +331,12 @@ export function AppPage() {
                     <div className="text-xs text-muted-foreground">Performance Score</div>
                   </div>
                 </div>
+                {fallbackMode && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-2 text-xs text-muted-foreground">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    Limited data mode — analysis based on URL pattern.
+                  </div>
+                )}
               </div>
 
               {/* Content Summary */}
@@ -380,7 +469,7 @@ export function AppPage() {
                           : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
-                      V{c.versionNumber}
+                      V{c.versionNumber}{c.improved ? " ✦" : ""}
                     </button>
                   ))}
                 </div>
@@ -398,14 +487,29 @@ export function AppPage() {
                     <CloneField icon="👁" label="VISUAL DIRECTION" text={clones[activeVersion].visualDirection} />
                     <CloneField icon="📣" label="CTA" text={clones[activeVersion].cta} />
 
-                    <div className="flex gap-2 pt-2">
+                    {improvedMap[clones[activeVersion].versionNumber] && (
+                      <div className="rounded-lg border border-accent-primary/30 bg-accent-primary/5 p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent-primary">✦ What changed</p>
+                        <ul className="space-y-1 text-xs text-secondary-foreground">
+                          {improvedMap[clones[activeVersion].versionNumber].improvements.map((s, i) => (
+                            <li key={i}>• {s}</li>
+                          ))}
+                        </ul>
+                        <div className="mt-2 flex gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
+                          <span>Shareability <span className="font-mono text-accent-primary">{improvedMap[clones[activeVersion].versionNumber].shareabilityScore}</span></span>
+                          <span>Save Potential <span className="font-mono text-accent-primary">{improvedMap[clones[activeVersion].versionNumber].savePotentialScore}</span></span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2 pt-2">
                       <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopy(clones[activeVersion].caption)}>
                         {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         Copy All
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSave}>
-                        <Save className="h-3.5 w-3.5" />
-                        Save
+                      <Button size="sm" className="gap-1.5" onClick={handleMakeBetter} disabled={improving || !analysisId}>
+                        {improving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+                        Make It Better
                       </Button>
                     </div>
                   </div>
@@ -415,6 +519,10 @@ export function AppPage() {
           </div>
         )}
       </main>
+
+      {showUpgrade && (
+        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings" }); }} />
+      )}
     </div>
   );
 }
@@ -442,6 +550,41 @@ function CloneField({ icon, label, text }: { icon: string; label: string; text: 
     <div>
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{icon} {label}</p>
       <p className="text-sm leading-relaxed text-secondary-foreground whitespace-pre-line">{text}</p>
+    </div>
+  );
+}
+
+function UpgradeModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">You've used all your free analyses.</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Upgrade to keep deconstructing what works.</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { name: "Creator", price: "$19", note: "50 analyses / month", features: ["Full DNA analysis", "5 clones per post", "Hook Lab", "Save & history"] },
+            { name: "Pro", price: "$49", note: "Unlimited analyses", features: ["Everything in Creator", "Content Multiplier", "30-day Calendar", "Priority generation"] },
+          ].map((p) => (
+            <div key={p.name} className="rounded-xl border border-border bg-muted/20 p-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{p.name}</p>
+              <p className="mt-1 text-2xl font-bold">{p.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+              <p className="text-xs text-muted-foreground">{p.note}</p>
+              <ul className="my-3 space-y-1 text-xs text-secondary-foreground">
+                {p.features.map((f) => <li key={f}>• {f}</li>)}
+              </ul>
+              <Button size="sm" className="w-full" onClick={onUpgrade}>Upgrade Now</Button>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 text-center">
+          <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">Maybe Later</button>
+        </div>
+      </div>
     </div>
   );
 }

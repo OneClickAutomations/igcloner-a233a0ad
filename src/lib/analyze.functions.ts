@@ -38,8 +38,9 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      username: [url],
+      directUrls: [url],
       resultsLimit: 1,
+      resultsType: "posts",
     }),
   });
 
@@ -56,97 +57,118 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   return items[0];
 }
 
-const ANALYSIS_SYSTEM_PROMPT = `You are an elite Instagram content strategist. Given the raw scraped data of a viral Instagram post, deconstruct exactly WHY it works and generate 5 original cloned versions a creator can publish as their own.
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
 
-Return ONLY valid JSON matching this exact schema (no markdown, no commentary):
-{
-  "dna": {
-    "contentSummary": "string - 1-2 sentence summary of what this post is",
-    "contentCategory": "Educational | Entertainment | Inspirational | Promotional | Story",
-    "performanceScore": number 0-100,
-    "whyItWorks": ["5 specific bullet points"],
-    "targetAudience": { "who": "string", "desire": "string", "trigger": "string" },
-    "hookBreakdown": { "type": "string", "score": number 1-10, "whatWorks": "string", "improvement": "string" },
-    "emotionalArchitecture": { "curiosity": 0-100, "fomo": 0-100, "trust": 0-100, "relatability": 0-100, "urgency": 0-100, "inspiration": 0-100 },
-    "storyStructure": [{ "section": "string", "timing": "string", "purpose": "string" }],
-    "captionDNA": { "structure": "string", "tone": "string", "persuasionStyle": "string", "ctaType": "string", "score": 1-10 },
-    "visualStyle": { "colorMood": "string", "composition": "string", "textOverlay": "string", "editStyle": "string", "score": 1-10 },
-    "engagementDrivers": ["3 bullet points"],
-    "monetizationPotential": "string"
-  },
-  "clones": [
-    {
-      "versionNumber": 1,
-      "angleType": "direct",
-      "angleLabel": "Direct Improvement",
-      "hook": "string",
-      "angle": "string explaining the strategic angle",
-      "storyStructure": "string",
-      "caption": "full publishable caption with line breaks and hashtags",
-      "visualDirection": "string",
-      "cta": "string"
-    }
-    // ... 5 total: direct, contrarian, story, authority, curiosity
-  ]
-}
+async function callClaude(opts: {
+  system?: string;
+  user: string;
+  maxTokens?: number;
+}): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-Principle: Steal the strategy. Never the content. Each clone must be ORIGINAL — different hook, different framing, different examples — while keeping the underlying structural pattern that made the original work.`;
-
-async function analyzeWithAI(scraped: ScrapedPost, postType: string) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-
-  const userPrompt = `Analyze this Instagram ${postType} and generate 5 original clones.
-
-SOURCE DATA:
-- Account: @${scraped.ownerUsername}
-- Type: ${scraped.type} (${postType})
-- Likes: ${scraped.likesCount?.toLocaleString() ?? "?"}
-- Comments: ${scraped.commentsCount?.toLocaleString() ?? "?"}
-- Views: ${(scraped.videoViewCount ?? scraped.videoPlayCount)?.toLocaleString() ?? "n/a"}
-- Hashtags: ${(scraped.hashtags ?? []).join(", ") || "none"}
-
-CAPTION:
-"""
-${scraped.caption ?? "(no caption)"}
-"""
-
-Return the JSON exactly as specified.`;
-
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: ANALYSIS_SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
+      model: CLAUDE_MODEL,
+      max_tokens: opts.maxTokens ?? 4000,
+      ...(opts.system ? { system: opts.system } : {}),
+      messages: [{ role: "user", content: opts.user }],
     }),
   });
 
   if (res.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-  if (res.status === 402) throw new Error("AI credits depleted. Please add credits to continue.");
+  if (res.status === 401) throw new Error("Claude API key invalid.");
   if (!res.ok) {
     const text = await res.text();
-    console.error("[AI] error:", res.status, text);
-    throw new Error("AI analysis failed");
+    console.error("[Claude] error:", res.status, text);
+    throw new Error("AI request failed");
   }
-
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty AI response");
+  const text = data?.content?.[0]?.text;
+  if (!text) throw new Error("Empty AI response");
+  return text;
+}
 
+function parseJsonish<T = any>(text: string): T {
+  const cleaned = text.replace(/```json|```/g, "").trim();
+  // Try to locate a JSON object/array if Claude prepended any prose.
+  const firstBrace = Math.min(
+    ...["{", "["]
+      .map((c) => cleaned.indexOf(c))
+      .filter((i) => i >= 0),
+  );
+  const candidate = isFinite(firstBrace) && firstBrace > 0 ? cleaned.slice(firstBrace) : cleaned;
   try {
-    return JSON.parse(content);
-  } catch (e) {
-    console.error("[AI] parse error:", content);
+    return JSON.parse(candidate);
+  } catch {
     throw new Error("AI returned malformed JSON");
   }
+}
+
+const DNA_SYSTEM = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs. Be specific, tactical, actionable. Return ONLY valid JSON — no markdown, no preamble, no trailing text.`;
+
+async function analyzeDNA(scraped: ScrapedPost | null, url: string, postType: string) {
+  const user = `Analyze this Instagram ${postType}:
+
+URL: ${url}
+Account: @${scraped?.ownerUsername ?? "unknown"}
+Caption: "${scraped?.caption ?? "Not available"}"
+Likes: ${scraped?.likesCount ?? "Unknown"}
+Comments: ${scraped?.commentsCount ?? "Unknown"}
+${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
+Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
+
+Return this exact JSON structure:
+{
+  "contentSummary": "string",
+  "contentCategory": "Educational|Storytelling|Motivational|Entertainment|Business|Lifestyle",
+  "performanceScore": 0-100,
+  "whyItWorks": ["string","string","string","string","string"],
+  "targetAudience": { "who":"string","desire":"string","trigger":"string" },
+  "hookBreakdown": { "type":"Question|Shocking Stat|Bold Claim|Pattern Interrupt|Story Open|Curiosity Gap|FOMO","score":0-10,"whatWorks":"string","improvement":"string" },
+  "emotionalArchitecture": { "curiosity":0-100,"fomo":0-100,"trust":0-100,"relatability":0-100,"urgency":0-100,"inspiration":0-100 },
+  "storyStructure": [ { "section":"string","timing":"string","purpose":"string" } ],
+  "captionDNA": { "structure":"Micro|Standard|Long-form","tone":"string","persuasionStyle":"Problem-Agitate-Solve|Story|List|Direct|Curiosity","ctaType":"Soft|Hard|Engagement|None","score":0-10 },
+  "visualStyle": { "colorMood":"string","composition":"string","textOverlay":"None|Subtle|Heavy","editStyle":"string","score":0-10 },
+  "engagementDrivers": ["string","string","string"],
+  "monetizationPotential": "string"
+}`;
+
+  const text = await callClaude({ system: DNA_SYSTEM, user, maxTokens: 4000 });
+  return parseJsonish(text);
+}
+
+const CLONES_SYSTEM = `You are an expert Instagram content creator and conversion copywriter. Generate 5 completely original content variations inspired by the analyzed post. Each must be distinctly different in angle, hook, and strategy. Never copy the source content — use inspiration only. Return ONLY a valid JSON array.`;
+
+async function generateCloneSet(dna: any) {
+  const user = `Based on this content DNA analysis:
+${JSON.stringify(dna, null, 2)}
+
+Generate exactly 5 clone versions. Return a JSON array with this structure for each:
+[
+  {
+    "versionNumber": 1,
+    "angleType": "direct",
+    "angleLabel": "Direct Improvement",
+    "hook": "Opening hook (1-2 sentences, extremely compelling)",
+    "angle": "Unique positioning in one sentence",
+    "storyStructure": "Setup → tension → payoff → CTA — describe each beat in 1 line",
+    "caption": "Full ready-to-post caption with line breaks, natural emojis, and CTA at end",
+    "visualDirection": "What to film, design, or show visually (2-3 sentences)",
+    "cta": "Specific call to action text only"
+  }
+]
+
+Angles in order: direct improvement, contrarian, storytelling, authority, curiosity gap. Use angleType values: "direct","contrarian","story","authority","curiosity" and matching angleLabel values.`;
+
+  const text = await callClaude({ system: CLONES_SYSTEM, user, maxTokens: 6000 });
+  return parseJsonish<any[]>(text);
 }
 
 export const analyzeInstagramPost = createServerFn({ method: "POST" })
@@ -156,13 +178,28 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const postType = detectPostType(data.url);
 
-    // Scrape
-    const scraped = await scrapeInstagram(data.url);
+    // Usage gate
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("analyses_used, analyses_limit")
+      .eq("id", userId)
+      .single();
+    if (prof && (prof.analyses_limit ?? 0) - (prof.analyses_used ?? 0) <= 0) {
+      throw new Error("LIMIT_REACHED");
+    }
 
-    // Analyze with AI
-    const ai = await analyzeWithAI(scraped, postType);
-    const dna = ai.dna;
-    const clones = ai.clones ?? [];
+    // Scrape (graceful fallback if APIFY missing/private)
+    let scraped: ScrapedPost | null = null;
+    let fallback = false;
+    try {
+      scraped = await scrapeInstagram(data.url);
+    } catch (e) {
+      console.warn("[Apify] fallback:", (e as Error).message);
+      fallback = true;
+    }
+
+    const dna = await analyzeDNA(scraped, data.url, postType);
+    const clones = await generateCloneSet(dna);
 
     // Persist
     const { data: analysis, error: aErr } = await supabase
@@ -171,10 +208,10 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         user_id: userId,
         instagram_url: data.url,
         post_type: postType,
-        source_account: scraped.ownerUsername,
-        source_caption: scraped.caption,
+        source_account: scraped?.ownerUsername ?? null,
+        source_caption: scraped?.caption ?? null,
         performance_score: dna?.performanceScore ?? null,
-        scraped_data: scraped as any,
+        scraped_data: (scraped ?? null) as any,
         dna_analysis: dna as any,
       })
       .select()
@@ -202,9 +239,161 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       if (cErr) console.error("[DB] clones insert error:", cErr);
     }
 
+    // Increment usage
+    if (prof) {
+      await supabase
+        .from("profiles")
+        .update({ analyses_used: (prof.analyses_used ?? 0) + 1 })
+        .eq("id", userId);
+    }
+
     return {
       analysisId: analysis.id,
-      dna: { ...dna, sourceAccount: scraped.ownerUsername, postType },
+      dna: { ...dna, sourceAccount: scraped?.ownerUsername ?? null, postType },
       clones,
+      fallback,
     };
+  });
+
+export const getAnalysisById = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: analysis, error } = await supabase
+      .from("analyses")
+      .select("*")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !analysis) throw new Error("Analysis not found");
+
+    const { data: clones } = await supabase
+      .from("clones")
+      .select("*")
+      .eq("analysis_id", analysis.id)
+      .order("version_number", { ascending: true });
+
+    const dna = analysis.dna_analysis as any;
+    return {
+      analysisId: analysis.id,
+      createdAt: analysis.created_at,
+      dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
+      clones: (clones ?? []).map((c: any) => ({
+        versionNumber: c.version_number,
+        angleType: c.angle_type,
+        angleLabel: angleLabelFor(c.angle_type),
+        hook: c.hook,
+        angle: c.angle,
+        storyStructure: c.story_structure,
+        caption: c.caption,
+        visualDirection: c.visual_direction,
+        cta: c.cta,
+      })),
+    };
+  });
+
+function angleLabelFor(t: string | null): string {
+  switch (t) {
+    case "direct": return "Direct Improvement";
+    case "contrarian": return "Contrarian Angle";
+    case "story": return "Storytelling Angle";
+    case "authority": return "Authority Angle";
+    case "curiosity": return "Curiosity Gap";
+    default: return "Variation";
+  }
+}
+
+export const getUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("plan, analyses_used, analyses_limit")
+      .eq("id", userId)
+      .single();
+    if (error || !data) throw new Error("Profile not found");
+    return {
+      plan: data.plan as string,
+      used: data.analyses_used ?? 0,
+      limit: data.analyses_limit ?? 0,
+      remaining: Math.max(0, (data.analyses_limit ?? 0) - (data.analyses_used ?? 0)),
+    };
+  });
+
+export const makeItBetter = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        analysisId: z.string().uuid(),
+        versionNumber: z.number().int().min(1).max(5),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: analysis } = await supabase
+      .from("analyses")
+      .select("dna_analysis")
+      .eq("id", data.analysisId)
+      .eq("user_id", userId)
+      .single();
+    if (!analysis) throw new Error("Analysis not found");
+
+    const { data: clone } = await supabase
+      .from("clones")
+      .select("*")
+      .eq("analysis_id", data.analysisId)
+      .eq("version_number", data.versionNumber)
+      .eq("user_id", userId)
+      .single();
+    if (!clone) throw new Error("Clone not found");
+
+    const dna: any = analysis.dna_analysis;
+    const prompt = `You are an elite Instagram copywriter. Take this content version and make it significantly better. Increase hook strength, shareability, and conversion potential. Return ONLY JSON.
+
+Current version:
+${JSON.stringify(
+  {
+    hook: clone.hook,
+    angle: clone.angle,
+    storyStructure: clone.story_structure,
+    caption: clone.caption,
+    cta: clone.cta,
+  },
+  null,
+  2,
+)}
+
+Original DNA context:
+Performance score: ${dna?.performanceScore}
+Hook type: ${dna?.hookBreakdown?.type}
+Top engagement drivers: ${(dna?.engagementDrivers ?? []).join(", ")}
+
+Return:
+{
+  "improvedHook": "string",
+  "improvedCaption": "string",
+  "improvedCta": "string",
+  "improvements": ["string","string","string"],
+  "shareabilityScore": 0-100,
+  "savePotentialScore": 0-100
+}`;
+
+    const text = await callClaude({ user: prompt, maxTokens: 2000 });
+    const improved = parseJsonish<any>(text);
+
+    // Persist into the clone row
+    await supabase
+      .from("clones")
+      .update({
+        hook: improved.improvedHook,
+        caption: improved.improvedCaption,
+        cta: improved.improvedCta,
+      })
+      .eq("id", clone.id);
+
+    return { improved };
   });
