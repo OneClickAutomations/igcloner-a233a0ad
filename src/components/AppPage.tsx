@@ -229,6 +229,27 @@ export function AppPage() {
     }
   };
 
+  const handleGeneratePreferences = async (prefs: UserPreferences) => {
+    if (!analysisId) {
+      toast.error("No analysis to attach preferences to");
+      return;
+    }
+    setRegenerating(true);
+    try {
+      const res = await regenFn({ data: { analysisId, preferences: prefs } });
+      setClones(res.clones);
+      setActiveVersion(0);
+      setActivePreferences(prefs);
+      setShowPreferences(false);
+      setRightTab("clones");
+      toast.success(`Generated ${res.clones.length} clones for ${prefs.niche}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't generate tailored clones");
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   const handleGenerateHooks = async () => {
     if (!analysisId) return;
     setHooksLoading(true);
@@ -359,6 +380,9 @@ export function AppPage() {
           <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             {/* LEFT: DNA Panel */}
             <div className="space-y-4">
+              {/* Channel intelligence header (media + account intel) */}
+              <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
+
               {/* Post Header Card */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center justify-between">
