@@ -98,22 +98,25 @@ export function AppPage() {
       toast.error("Please enter a valid Instagram URL");
       return;
     }
-    if (credits <= 0) {
-      toast.error("No credits remaining. Upgrade to continue.");
+    if (usage && usage.remaining <= 0) {
+      setShowUpgrade(true);
       return;
     }
 
     setPhase("analyzing");
     setProgress(0);
-    setStepLabel("Detecting post type...");
+    setStepLabel("Reading post URL...");
+    setSavedBadge(null);
+    setFallbackMode(false);
+    setImprovedMap({});
 
-    // Animate progress while the real request runs
     const steps = [
-      { pct: 15, label: "Detecting post type..." },
-      { pct: 35, label: "Scraping Instagram post..." },
-      { pct: 55, label: "Analyzing hook structure..." },
-      { pct: 75, label: "Deconstructing content DNA..." },
-      { pct: 90, label: "Generating clone versions..." },
+      { pct: 12, label: "Reading post URL..." },
+      { pct: 28, label: "Fetching post data..." },
+      { pct: 48, label: "Analyzing hook structure..." },
+      { pct: 66, label: "Mapping emotional architecture..." },
+      { pct: 82, label: "Generating DNA report..." },
+      { pct: 94, label: "Building your clones..." },
     ];
     let stepIdx = 0;
     const progressTimer = setInterval(() => {
