@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Film, LayoutGrid, Mic, Type, Image as ImageIcon, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { Film, LayoutGrid, Mic, Type, Image as ImageIcon, ArrowRight, Loader2, Sparkles, Copy, Wand2 } from "lucide-react";
 import { createProject, type ProjectFormat } from "@/lib/projects.functions";
 
 type FormatCard = {
@@ -51,8 +51,12 @@ export function StudioPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/studio" });
   const analysisId = (search as any)?.analysisId as string | undefined;
+  const initialMode = ((search as any)?.mode as "exact" | "inspired" | undefined) ?? "exact";
   const createFn = useServerFn(createProject);
   const [loading, setLoading] = useState<ProjectFormat | null>(null);
+  const [cloneMode, setCloneMode] = useState<"exact" | "inspired">(initialMode);
+
+  useMemo(() => setCloneMode(initialMode), [initialMode]);
 
   useEffect(() => {
     if (!analysisId) {
@@ -65,7 +69,7 @@ export function StudioPage() {
   const handlePick = async (format: ProjectFormat) => {
     setLoading(format);
     try {
-      const res = await createFn({ data: { analysisId: analysisId ?? null, format } });
+      const res = await createFn({ data: { analysisId: analysisId ?? null, format, cloneMode } });
       const projectId = (res as any).project?.id as string;
       const routes: Record<ProjectFormat, string> = {
         reel: "/studio/reel",
@@ -98,6 +102,50 @@ export function StudioPage() {
         <p className="text-muted-foreground">
           Your source post and DNA will be imported into the studio automatically.
         </p>
+      </div>
+
+      {/* Clone mode selector */}
+      <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-ig">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold">Clone mode</h2>
+            <p className="text-xs text-muted-foreground">
+              How should the AI reuse the source post?
+            </p>
+          </div>
+          <span className="rounded-full bg-accent-primary/10 px-2 py-0.5 text-[10px] font-semibold text-accent-primary uppercase tracking-wide">
+            {cloneMode === "exact" ? "Exact" : "Inspired"}
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            { id: "exact", icon: Copy, label: "Exact Duplicate", blurb: "Same structure, same formula — different subject, brand, face." },
+            { id: "inspired", icon: Wand2, label: "Inspired Version", blurb: "Same psychological mechanics — different angle, story, spin." },
+          ].map((m) => {
+            const Icon = m.icon;
+            const active = cloneMode === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setCloneMode(m.id as "exact" | "inspired")}
+                className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                  active
+                    ? "border-accent-primary bg-accent-primary/5"
+                    : "border-border bg-card hover:border-strong"
+                }`}
+              >
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? "gradient-accent text-white" : "bg-muted text-foreground"}`}>
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold">{m.label}</div>
+                  <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{m.blurb}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
