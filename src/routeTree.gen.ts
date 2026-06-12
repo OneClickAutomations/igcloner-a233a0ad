@@ -22,6 +22,7 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/ap
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
+import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
 import { Route as AuthenticatedStudioCarouselRouteImport } from './routes/_authenticated/studio.carousel'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -89,6 +90,12 @@ const AuthenticatedStudioReelRoute = AuthenticatedStudioReelRouteImport.update({
   path: '/reel',
   getParentRoute: () => AuthenticatedStudioRoute,
 } as any)
+const AuthenticatedStudioImageRoute =
+  AuthenticatedStudioImageRouteImport.update({
+    id: '/image',
+    path: '/image',
+    getParentRoute: () => AuthenticatedStudioRoute,
+  } as any)
 const AuthenticatedStudioCarouselRoute =
   AuthenticatedStudioCarouselRouteImport.update({
     id: '/carousel',
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/studio': typeof AuthenticatedStudioRouteWithChildren
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/studio/image': typeof AuthenticatedStudioImageRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/studio': typeof AuthenticatedStudioRouteWithChildren
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/studio/image': typeof AuthenticatedStudioImageRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
@@ -140,6 +149,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRouteWithChildren
   '/_authenticated/studio/carousel': typeof AuthenticatedStudioCarouselRoute
+  '/_authenticated/studio/image': typeof AuthenticatedStudioImageRoute
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
 }
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/studio'
     | '/studio/carousel'
+    | '/studio/image'
     | '/studio/reel'
     | '/studio/voiceover'
   fileRoutesByTo: FileRoutesByTo
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/studio'
     | '/studio/carousel'
+    | '/studio/image'
     | '/studio/reel'
     | '/studio/voiceover'
   id:
@@ -188,6 +200,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/studio'
     | '/_authenticated/studio/carousel'
+    | '/_authenticated/studio/image'
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
   fileRoutesById: FileRoutesById
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioReelRouteImport
       parentRoute: typeof AuthenticatedStudioRoute
     }
+    '/_authenticated/studio/image': {
+      id: '/_authenticated/studio/image'
+      path: '/image'
+      fullPath: '/studio/image'
+      preLoaderRoute: typeof AuthenticatedStudioImageRouteImport
+      parentRoute: typeof AuthenticatedStudioRoute
+    }
     '/_authenticated/studio/carousel': {
       id: '/_authenticated/studio/carousel'
       path: '/carousel'
@@ -304,12 +324,14 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedStudioRouteChildren {
   AuthenticatedStudioCarouselRoute: typeof AuthenticatedStudioCarouselRoute
+  AuthenticatedStudioImageRoute: typeof AuthenticatedStudioImageRoute
   AuthenticatedStudioReelRoute: typeof AuthenticatedStudioReelRoute
   AuthenticatedStudioVoiceoverRoute: typeof AuthenticatedStudioVoiceoverRoute
 }
 
 const AuthenticatedStudioRouteChildren: AuthenticatedStudioRouteChildren = {
   AuthenticatedStudioCarouselRoute: AuthenticatedStudioCarouselRoute,
+  AuthenticatedStudioImageRoute: AuthenticatedStudioImageRoute,
   AuthenticatedStudioReelRoute: AuthenticatedStudioReelRoute,
   AuthenticatedStudioVoiceoverRoute: AuthenticatedStudioVoiceoverRoute,
 }

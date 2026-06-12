@@ -10,6 +10,7 @@ const CreateInput = z.object({
   format: z.enum(FORMATS),
   title: z.string().min(1).max(200).optional(),
   cloneMode: z.enum(["exact", "inspired"]).optional(),
+  userPreferences: z.record(z.any()).optional(),
 });
 
 export const createProject = createServerFn({ method: "POST" })
@@ -43,6 +44,7 @@ export const createProject = createServerFn({ method: "POST" })
 
     const userPrefs = {
       ...(analysis?.user_preferences ?? {}),
+      ...(data.userPreferences ?? {}),
       cloneMode: data.cloneMode ?? "exact",
     };
 

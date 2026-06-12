@@ -2,9 +2,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Construction, ArrowLeft } from "lucide-react";
 
-export function StudioComingSoon({ format }: { format: "reel" | "carousel" | "voiceover" }) {
+export function StudioComingSoon({ format }: { format: "reel" | "carousel" | "voiceover" | "image" }) {
   const navigate = useNavigate();
-  const label = format === "reel" ? "Video Production Studio" : format === "carousel" ? "Carousel Studio" : "Voiceover Studio";
+  const label =
+    format === "reel" ? "Video Production Studio" :
+    format === "carousel" ? "Carousel Studio" :
+    format === "image" ? "Image Studio" :
+    "Voiceover Studio";
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-20 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-accent text-white shadow-ig">
