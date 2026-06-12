@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Menu } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -25,9 +24,7 @@ function AuthenticatedLayout() {
             <SidebarTrigger
               aria-label="Open menu"
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-ig hover:bg-accent lg:h-9 lg:w-9"
-            >
-              <Menu className="h-5 w-5" />
-            </SidebarTrigger>
+            />
             <div className="flex items-center gap-2">
               <span className="hidden text-sm font-semibold gradient-text sm:inline">IGCloner</span>
               <ThemeToggle />
