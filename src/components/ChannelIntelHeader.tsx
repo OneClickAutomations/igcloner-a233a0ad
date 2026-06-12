@@ -1,4 +1,4 @@
-import { ExternalLink, Play, BadgeCheck, Link as LinkIcon, TrendingUp } from "lucide-react";
+import { ExternalLink, Play, BadgeCheck, Link as LinkIcon, TrendingUp, Image as ImageIcon } from "lucide-react";
 
 function fmt(n: number | null | undefined): string {
   if (n == null) return "—";
@@ -41,30 +41,43 @@ export function ChannelIntelHeader({
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-ig">
       <div className="h-1 gradient-accent" />
-      <div className="grid gap-5 p-5 md:grid-cols-[200px_1fr]">
-        {/* Media preview */}
+      <div className="grid gap-5 p-5 md:grid-cols-[180px_1fr]">
+        {/* Media preview — Instagram 4:5 portrait, gradient ring */}
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="group relative block aspect-square overflow-hidden rounded-xl bg-muted"
+          className="group relative block aspect-[4/5] w-full max-w-[180px] overflow-hidden rounded-xl p-[2px] gradient-accent shadow-ig transition-transform hover:-translate-y-0.5 hover:shadow-ig-hover"
         >
-          {thumb ? (
-            <img src={thumb} alt={`@${username} post`} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center gradient-card">
-              <span className="text-4xl">📸</span>
-            </div>
-          )}
-          {scraped?.videoUrl && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-lg">
-                <Play className="h-5 w-5 text-accent-primary" fill="currentColor" />
+          <div className="relative h-full w-full overflow-hidden rounded-[10px] bg-card">
+            {thumb ? (
+              <img
+                src={thumb}
+                alt={`@${username} post`}
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gradient-card text-muted-foreground">
+                <ImageIcon className="h-8 w-8 opacity-50" />
+                <span className="mt-1 text-[11px] font-medium uppercase tracking-wider">No preview</span>
               </div>
+            )}
+            {/* Bottom gradient scrim for legibility */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
+            {scraped?.videoUrl && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-lg backdrop-blur transition-transform group-hover:scale-110">
+                  <Play className="h-5 w-5 text-accent-secondary" fill="currentColor" />
+                </div>
+              </div>
+            )}
+            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] font-semibold text-white">
+              <span className="truncate">@{username}</span>
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-white/15 px-1.5 py-0.5 backdrop-blur opacity-0 transition-opacity group-hover:opacity-100">
+                <ExternalLink className="h-3 w-3" /> Open
+              </span>
             </div>
-          )}
-          <div className="absolute right-2 top-2 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100">
-            <ExternalLink className="inline h-3 w-3" /> Open
           </div>
         </a>
 
