@@ -137,31 +137,39 @@ export function AppPage() {
     }, 1500);
 
     try {
-      const result = await analyzeFn({ data: { url } });
+      console.log("[analyze] calling server fn", { url });
+      const result: any = await analyzeFn({ data: { url } });
+      console.log("[analyze] server fn response", result);
       clearInterval(progressTimer);
       if (!result) {
         toast.error("Analysis failed. Please try again.");
         setPhase("input");
         return;
       }
-      if ((result as any).limitReached) {
+      if (result?.limitReached) {
         setShowUpgrade(true);
         setPhase("input");
         return;
       }
+      if (result?.ok === false || !result?.data) {
+        toast.error(result?.error || "Analysis failed. Please try again.");
+        setPhase("input");
+        return;
+      }
+      const payload = result.data;
       setProgress(100);
       setStepLabel("Complete");
-      setDna(result.dna);
-      setClones(result.clones ?? []);
-      setAnalysisId(result.analysisId ?? null);
-      setFallbackMode(Boolean((result as any).fallback));
+      setDna(payload?.dna ?? null);
+      setClones(payload?.clones ?? []);
+      setAnalysisId(payload?.analysisId ?? null);
+      setFallbackMode(Boolean(payload?.fallback));
       setPhase("results");
       toast.success("Saved to your dashboard");
       refreshUsage();
     } catch (err: any) {
       clearInterval(progressTimer);
       const msg: string = err?.message || "Analysis failed. Please try again.";
-      console.error(err);
+      console.error("[analyze] threw", err);
       if (/LIMIT_REACHED/.test(msg)) setShowUpgrade(true);
       else toast.error(msg);
       setPhase("input");
