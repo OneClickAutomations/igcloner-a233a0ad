@@ -97,7 +97,6 @@ async function callClaude(opts: {
 
 function parseJsonish<T = any>(text: string): T {
   const cleaned = text.replace(/```json|```/g, "").trim();
-  // Try to locate a JSON object/array if Claude prepended any prose.
   const firstBrace = Math.min(
     ...["{", "["]
       .map((c) => cleaned.indexOf(c))
@@ -106,7 +105,9 @@ function parseJsonish<T = any>(text: string): T {
   const candidate = isFinite(firstBrace) && firstBrace > 0 ? cleaned.slice(firstBrace) : cleaned;
   try {
     return JSON.parse(candidate);
-  } catch {
+  } catch (e) {
+    console.error("[AI] JSON parse failed. First 400 chars:", candidate.slice(0, 400));
+    console.error("[AI] Last 200 chars:", candidate.slice(-200));
     throw new Error("AI returned malformed JSON");
   }
 }
