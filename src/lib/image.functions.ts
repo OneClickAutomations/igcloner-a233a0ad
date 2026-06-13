@@ -3,6 +3,7 @@ import { z } from "zod";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { fetchVisionImage, buildSourceContextBlock, extractSourceText } from "@/lib/source-context";
 
 const StyleEnum = z.enum([
   "photorealistic",
@@ -49,14 +50,23 @@ const ASPECT_DIMS: Record<string, string> = {
   "16:9": "landscape 1920x1080",
 };
 
-function buildPrompt(input: z.infer<typeof GenInput>, project: any): string {
+function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any, hasRefImage: boolean): string {
   const prefs = (project?.user_preferences as any) ?? {};
   const dna = (project?.dna_analysis as any) ?? {};
   const visual = dna.visualStyle ?? {};
   const lines: string[] = [];
   lines.push(`Generate a single Instagram post image (${ASPECT_DIMS[input.aspect]}).`);
+  if (hasRefImage) {
+    lines.push(
+      "A REFERENCE IMAGE is attached — it is the original viral post we are cloning. Match its composition, framing, lighting style, and visual mood. Do NOT copy faces, logos, or text verbatim — swap the subject for the user's niche.",
+    );
+  }
   lines.push(`Concept: ${input.concept}`);
   if (prefs.angle) lines.push(`Headline angle: "${prefs.angle}"`);
+  if (prefs.angleConcept) lines.push(`Angle concept: ${prefs.angleConcept}`);
+  if (scraped?.caption) lines.push(`Source post caption (for tone/topic context): "${String(scraped.caption).slice(0, 400)}"`);
+  const ocr = extractSourceText(dna);
+  if (ocr) lines.push(`Source post on-image text: "${ocr}"`);
   lines.push(`Style: ${STYLE_DESCRIPTIONS[input.style] ?? input.style}`);
   if (visual.colorMood) lines.push(`Color mood inspiration: ${visual.colorMood}`);
   if (visual.composition) lines.push(`Composition cue: ${visual.composition}`);
@@ -120,7 +130,29 @@ export const generateProjectImage = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     if (!project) throw new Error("Project not found");
 
-    const prompt = buildPrompt(data, project);
+    // Pull the original source post (caption, OCR, image) so the model
+    // generates something that visually echoes the viral reference.
+    let scraped: any = null;
+    if (project.analysis_id) {
+      const { data: analysis } = await supabase
+        .from("analyses")
+        .select("scraped_data")
+        .eq("id", project.analysis_id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      scraped = (analysis as any)?.scraped_data ?? null;
+    }
+    const refImage = scraped ? await fetchVisionImage(scraped) : null;
+    const prompt = buildPrompt(data, project, scraped, !!refImage);
+
+    const userContent: any[] = [{ type: "text", text: prompt }];
+    if (refImage) {
+      const b64 = btoa(String.fromCharCode(...refImage.image));
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:${refImage.mediaType};base64,${b64}` },
+      });
+    }
 
     const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -132,7 +164,7 @@ export const generateProjectImage = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-image",
         modalities: ["image", "text"],
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: userContent }],
       }),
     });
 
