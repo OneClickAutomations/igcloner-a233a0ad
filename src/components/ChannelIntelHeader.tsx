@@ -1,4 +1,5 @@
 import { ExternalLink, Play, BadgeCheck, Link as LinkIcon, TrendingUp, Image as ImageIcon } from "lucide-react";
+import { proxiedImg } from "@/lib/img-proxy";
 
 function fmt(n: number | null | undefined): string {
   if (n == null) return "—";
@@ -25,7 +26,7 @@ export function ChannelIntelHeader({
   const comments = scraped?.commentsCount ?? null;
   const views = scraped?.videoViewCount ?? scraped?.videoPlayCount ?? null;
   const verified = owner.verified ?? false;
-  const thumb = scraped?.displayUrl || scraped?.thumbnailUrl || null;
+  const thumb = proxiedImg(scraped?.displayUrl || scraped?.thumbnailUrl || null);
   const externalUrl = owner.externalUrl || scraped?.externalUrl || null;
   const category = owner.businessCategoryName || dna?.contentCategory || null;
   const isPrivate = owner.isPrivate ?? false;
