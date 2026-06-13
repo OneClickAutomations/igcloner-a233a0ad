@@ -277,11 +277,7 @@ const AnalyzeSchema = z.object({
   clones: z.array(CloneSchema).length(5),
 });
 
-async function analyzePostCombined(
-  scraped: ScrapedPost | null,
-  url: string,
-  postType: string,
-) {
+async function analyzePostCombined(scraped: ScrapedPost | null, url: string, postType: string) {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
   const gateway = createLovableAiGatewayProvider(apiKey);
@@ -388,7 +384,15 @@ The "forensics" object is REQUIRED. Be specific and surgical — these data poin
   const timer = setTimeout(() => controller.abort(), 25000);
   try {
     const messages: ModelMessage[] | undefined = visionImage
-      ? [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image", image: visionImage.image, mediaType: visionImage.mediaType }] }]
+      ? [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image", image: visionImage.image, mediaType: visionImage.mediaType },
+            ],
+          },
+        ]
       : undefined;
     const { text } = await generateText({
       model,
