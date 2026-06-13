@@ -27,6 +27,7 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
   const [customNiche, setCustomNiche] = useState("");
   const [angles, setAngles] = useState<Angle[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [openingFormat, setOpeningFormat] = useState<string | null>(null);
 
@@ -44,6 +45,13 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
       formatRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [selectedIdx]);
+
+  useEffect(() => {
+    if (!loading) return;
+    setLoadingStep(0);
+    const id = setInterval(() => setLoadingStep((s) => (s < 4 ? s + 1 : s)), 1800);
+    return () => clearInterval(id);
+  }, [loading]);
 
   const fetchAngles = async (n: string) => {
     setLoading(true);
@@ -144,11 +152,7 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
       </div>
 
       {loading && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl border border-border bg-muted/40" />
-          ))}
-        </div>
+        <AnglesLoading step={loadingStep} niche={niche} />
       )}
 
       {angles && (
