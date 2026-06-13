@@ -20,6 +20,7 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedStudioIndexRouteImport } from './routes/_authenticated/studio.index'
+import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
@@ -80,6 +81,11 @@ const AuthenticatedStudioIndexRoute =
     path: '/studio/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
+  id: '/api/public/img',
+  path: '/api/public/img',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStudioVoiceoverRoute =
   AuthenticatedStudioVoiceoverRouteImport.update({
     id: '/studio/voiceover',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/studio/image': typeof AuthenticatedStudioImageRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/img': typeof ApiPublicImgRoute
   '/studio/': typeof AuthenticatedStudioIndexRoute
 }
 export interface FileRoutesByTo {
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/studio/image': typeof AuthenticatedStudioImageRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/img': typeof ApiPublicImgRoute
   '/studio': typeof AuthenticatedStudioIndexRoute
 }
 export interface FileRoutesById {
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/_authenticated/studio/image': typeof AuthenticatedStudioImageRoute
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/img': typeof ApiPublicImgRoute
   '/_authenticated/studio/': typeof AuthenticatedStudioIndexRoute
 }
 export interface FileRouteTypes {
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/studio/image'
     | '/studio/reel'
     | '/studio/voiceover'
+    | '/api/public/img'
     | '/studio/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/studio/image'
     | '/studio/reel'
     | '/studio/voiceover'
+    | '/api/public/img'
     | '/studio'
   id:
     | '__root__'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/image'
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
+    | '/api/public/img'
     | '/_authenticated/studio/'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicImgRoute: typeof ApiPublicImgRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/img': {
+      id: '/api/public/img'
+      path: '/api/public/img'
+      fullPath: '/api/public/img'
+      preLoaderRoute: typeof ApiPublicImgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/studio/voiceover': {
       id: '/_authenticated/studio/voiceover'
       path: '/studio/voiceover'
@@ -360,7 +380,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicImgRoute: ApiPublicImgRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
