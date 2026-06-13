@@ -31,6 +31,7 @@ import {
 import { SlidePreviewDialog } from "@/components/SlidePreviewDialog";
 import { PostScheduleModal } from "@/components/PostScheduleModal";
 import { Send } from "lucide-react";
+import { EnhanceButton } from "@/components/EnhanceButton";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -439,6 +440,12 @@ export function CarouselStudio() {
                       value={regenInstr}
                       onChange={(e) => setRegenInstr(e.target.value)}
                       placeholder="Optional: 'punchier hook', 'add a stat', etc."
+                    />
+                    <EnhanceButton
+                      value={regenInstr}
+                      onChange={setRegenInstr}
+                      kind="carousel-slide"
+                      context={`Slide ${active.index} — ${active.headline}\n${active.body}`}
                     />
                     <Button onClick={handleRegen} disabled={regenBusy === active.index}>
                       {regenBusy === active.index ? (
