@@ -629,13 +629,28 @@ export function ReelStudio() {
                   <Input value={style} onChange={(e) => setStyle(e.target.value)} className="mt-1" />
                 </div>
               </div>
-              <Button onClick={handleGenerate} disabled={busy} className="w-full">
+              <Button
+                onClick={handleGenerate}
+                disabled={busy}
+                size="lg"
+                className="w-full gradient-accent text-white border-0 hover:opacity-95"
+              >
                 {busy ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Writing your script…</>
                 ) : (
                   <><Sparkles className="h-4 w-4" /> {doc?.hook ? "Regenerate Script" : "Generate Script"}</>
                 )}
               </Button>
+              {doc?.hook && (
+                <Button
+                  onClick={() => setTab("video")}
+                  size="lg"
+                  variant="outline"
+                  className="w-full gap-1.5 border-2 border-accent-primary text-accent-primary hover:bg-accent-primary/5"
+                >
+                  Next: Generate Video <ArrowRight className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
