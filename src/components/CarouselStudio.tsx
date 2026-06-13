@@ -372,9 +372,17 @@ export function CarouselStudio() {
                     onClick={() => setActiveIdx(s.index)}
                     className="flex flex-1 items-start gap-3 text-left"
                   >
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
-                      {s.index}
-                    </div>
+                    {s.imageUrl ? (
+                      <img
+                        src={s.imageUrl}
+                        alt={`Slide ${s.index}`}
+                        className="h-10 w-10 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
+                        {s.index}
+                      </div>
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <Badge variant="secondary" className="text-[10px]">{s.role}</Badge>
