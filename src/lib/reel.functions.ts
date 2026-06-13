@@ -43,16 +43,25 @@ const VisualDirectionSchema = z.object({
 
 export type VisualDirection = z.infer<typeof VisualDirectionSchema>;
 
+/** Coerce null/undefined/non-string to "" so the AI's null values never break parsing. */
+const safeStr = z
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((v) => (v == null ? "" : String(v)));
+const safeStrRequired = (fallback = "") =>
+  z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((v) => (v == null || v === "" ? fallback : String(v)));
+
 const SceneSchema = z.object({
   index: z.number(),
   durationSec: z.number(),
-  visualNote: z.string(),
-  voiceover: z.string().default(""),
-  onScreenText: z.string().default(""),
-  backgroundNote: z.string().default(""),
-  colorNote: z.string().default(""),
-  animationNote: z.string().default(""),
-  transitionNote: z.string().default(""),
+  visualNote: safeStr,
+  voiceover: safeStr,
+  onScreenText: safeStr,
+  backgroundNote: safeStr,
+  colorNote: safeStr,
+  animationNote: safeStr,
+  transitionNote: safeStr,
 });
 
 const VeoScenePromptSchema = z.object({
@@ -84,28 +93,32 @@ const VeoPromptsSchema = z.object({
 });
 
 const ReelSchema = z.object({
-  title: z.string(),
-  visualSummary: z.string().default(""),
+  title: safeStrRequired("Untitled"),
+  visualSummary: safeStr,
   hook: z.object({
-    text: z.string(),
-    visualNote: z.string(),
-    onScreenText: z.string().default(""),
-    animationNote: z.string().default(""),
+    text: safeStr,
+    visualNote: safeStr,
+    onScreenText: safeStr,
+    animationNote: safeStr,
   }),
   scenes: z.array(SceneSchema).min(2).max(8),
   cta: z.union([
     z.string(),
     z.object({
-      text: z.string(),
-      visualNote: z.string().default(""),
-      onScreenText: z.string().default(""),
+      text: safeStr,
+      visualNote: safeStr,
+      onScreenText: safeStr,
     }),
   ]),
-  caption: z.string(),
-  hashtags: z.array(z.string()),
-  hookVariations: z.array(z.string()).default([]),
-  musicMood: z.string().default(""),
-  directorNotes: z.string().default(""),
+  caption: safeStr,
+  hashtags: z.array(z.string()).default([]),
+  hookVariations: z
+    .union([z.array(z.any()), z.null(), z.undefined()])
+    .transform((arr) =>
+      Array.isArray(arr) ? arr.filter((x) => x != null).map((x) => String(x)) : [],
+    ),
+  musicMood: safeStr,
+  directorNotes: safeStr,
 });
 
 export type ReelDoc = z.infer<typeof ReelSchema> & {
@@ -124,6 +137,56 @@ const SettingsSchema = z.object({
 import { extractJson } from "./json-extract";
 function parseJsonish<T = any>(text: string): T {
   return extractJson<T>(text);
+}
+
+/** Recursively replace null/undefined string-likes with "" before Zod parsing. */
+function sanitizeReelJson(raw: any): any {
+  if (raw == null || typeof raw !== "object") return raw;
+  const s = (v: any) => (v == null ? "" : typeof v === "string" ? v : String(v));
+  const out: any = { ...raw };
+  out.title = s(raw.title) || "Untitled";
+  out.visualSummary = s(raw.visualSummary);
+  out.caption = s(raw.caption);
+  out.musicMood = s(raw.musicMood);
+  out.directorNotes = s(raw.directorNotes);
+  if (raw.hook && typeof raw.hook === "object") {
+    out.hook = {
+      ...raw.hook,
+      text: s(raw.hook.text) || s(raw.hook.onScreenText),
+      visualNote: s(raw.hook.visualNote),
+      onScreenText: s(raw.hook.onScreenText) || s(raw.hook.text),
+      animationNote: s(raw.hook.animationNote),
+    };
+  }
+  if (Array.isArray(raw.scenes)) {
+    out.scenes = raw.scenes.map((sc: any, i: number) => ({
+      index: typeof sc?.index === "number" ? sc.index : i + 1,
+      durationSec: typeof sc?.durationSec === "number" ? sc.durationSec : 3,
+      visualNote: s(sc?.visualNote),
+      voiceover: s(sc?.voiceover),
+      onScreenText: s(sc?.onScreenText),
+      backgroundNote: s(sc?.backgroundNote),
+      colorNote: s(sc?.colorNote),
+      animationNote: s(sc?.animationNote),
+      transitionNote: s(sc?.transitionNote),
+    }));
+  }
+  if (raw.cta && typeof raw.cta === "object") {
+    out.cta = {
+      text: s(raw.cta.text),
+      visualNote: s(raw.cta.visualNote),
+      onScreenText: s(raw.cta.onScreenText) || s(raw.cta.text),
+    };
+  } else if (typeof raw.cta === "string") {
+    out.cta = raw.cta;
+  }
+  out.hashtags = Array.isArray(raw.hashtags)
+    ? raw.hashtags.filter((h: any) => h != null).map((h: any) => String(h))
+    : [];
+  out.hookVariations = Array.isArray(raw.hookVariations)
+    ? raw.hookVariations.filter((h: any) => h != null).map((h: any) => String(h))
+    : [];
+  return out;
 }
 
 /* ---------- Derive visual direction from videoVisualDNA ---------- */
@@ -373,8 +436,11 @@ ${effectiveAngle ? `- Chosen angle: ${effectiveAngle}` : ""}
 Rules:
 1. Every scene's visualDescription MUST match the visual direction. If subject=text-graphic, NO people/environments — only typography on background.
 2. If textStyle.present is true, every scene includes exact text-on-screen copy.
-3. voiceover is null when contentFormat is text-on-screen-only.
-4. Scene count: 3-6; durations sum ≈ ${settings.duration}s.
+3. NEVER return null for ANY string field. If voiceover does not apply (text-on-screen-only / music-only formats), return "" (empty string).
+4. hook.text MUST be a non-empty string (the spoken hook OR the on-screen text — never null).
+5. Every scene.voiceover MUST be a string ("" if no voiceover in this format).
+6. Every scene.onScreenText MUST be a string ("" if none).
+7. Scene count: 3-6; durations sum ≈ ${settings.duration}s.
 
 Return JSON of EXACT shape:
 {
@@ -411,7 +477,7 @@ Output the JSON object only.`;
       system: scriptSystem,
       ...(messages ? { messages } : { prompt: scriptPrompt }),
     });
-    const parsed = ReelSchema.parse(parseJsonish(scriptText));
+    const parsed = ReelSchema.parse(sanitizeReelJson(parseJsonish(scriptText)));
 
     /* ----- Pass 2: VEO 3 prompt package, visual-DNA-grounded ----- */
     const negative = buildNegativePrompt(visualDirection);
