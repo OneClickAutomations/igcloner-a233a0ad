@@ -68,6 +68,20 @@ export function ReelStudio() {
       const r = await getProjectFn({ data: { id: projectId! } });
       const p: any = (r as any).project;
       if (p?.project_data) setDoc(p.project_data as ReelDoc);
+      // Pre-fill the angle textarea from the viral angle the user picked
+      // (or the source post's DNA) so the field is never empty.
+      if (!angle) {
+        const prefs = p?.user_preferences ?? {};
+        const dna = p?.dna_analysis ?? {};
+        const seeded = [
+          prefs.angle,
+          prefs.angleConcept,
+          !prefs.angle && !prefs.angleConcept ? dna?.hookBreakdown?.whatWorks : null,
+        ]
+          .filter(Boolean)
+          .join("\n\n");
+        if (seeded) setAngle(seeded);
+      }
       return p;
     },
   });
@@ -164,6 +178,37 @@ export function ReelStudio() {
           </div>
         )}
       </div>
+
+      {project.data && (project.data.source_thumbnail || project.data.user_preferences?.angle) && (
+        <div className="mb-5 flex items-start gap-3 rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-3">
+          {project.data.source_thumbnail && (
+            <img
+              src={`/api/public/img?u=${encodeURIComponent(project.data.source_thumbnail)}`}
+              alt="Source post"
+              className="h-16 w-16 shrink-0 rounded-lg object-cover border border-border"
+              onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+            />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-accent-primary">
+              Cloning from {project.data.source_account ? `@${project.data.source_account}` : "source post"}
+            </div>
+            {project.data.user_preferences?.angle && (
+              <div className="mt-0.5 text-sm font-medium line-clamp-2">
+                {project.data.user_preferences.angle}
+              </div>
+            )}
+            {project.data.user_preferences?.angleConcept && (
+              <div className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                {project.data.user_preferences.angleConcept}
+              </div>
+            )}
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              The source post's image, caption, and on-image text are sent to the AI as the reference for your script and VEO 3 prompt.
+            </div>
+          </div>
+        </div>
+      )}
 
       {doc && (
         <PostScheduleModal
