@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
+import { generateText, type ModelMessage } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { computeViralScore } from "@/lib/scoring";
 
@@ -78,6 +78,63 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
     throw new Error("No data returned for this Instagram URL. It may be private or invalid.");
   }
   return items[0];
+}
+
+function collectImageUrls(scraped: any): string[] {
+  const urls = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value === "string" && /^https?:\/\//i.test(value)) urls.add(value);
+  };
+  add(scraped?.displayUrl);
+  add(scraped?.thumbnailUrl);
+  add(scraped?.imageUrl);
+  for (const r of scraped?.displayResources ?? []) add(r?.src);
+  for (const child of scraped?.childPosts ?? scraped?.children ?? []) {
+    add(child?.displayUrl);
+    add(child?.thumbnailUrl);
+    add(child?.imageUrl);
+    for (const r of child?.displayResources ?? []) add(r?.src);
+  }
+  return Array.from(urls).slice(0, 4);
+}
+
+async function fetchVisionImage(scraped: ScrapedPost | null): Promise<{ image: Uint8Array; mediaType: string; sourceUrl: string } | null> {
+  for (const sourceUrl of collectImageUrls(scraped)) {
+    try {
+      const res = await fetch(sourceUrl, {
+        headers: {
+          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          Referer: "https://www.instagram.com/",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+        },
+      });
+      const mediaType = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+      if (!res.ok || !mediaType.startsWith("image/")) continue;
+      const buffer = await res.arrayBuffer();
+      if (buffer.byteLength === 0 || buffer.byteLength > 8 * 1024 * 1024) continue;
+      return { image: new Uint8Array(buffer), mediaType, sourceUrl };
+    } catch (e) {
+      console.warn("[analyze] source image fetch failed:", (e as Error).message);
+    }
+  }
+  return null;
+}
+
+function sourceEvidence(scraped: any, visionImageUrl?: string | null): string {
+  return JSON.stringify(
+    {
+      imageAttachedForVision: Boolean(visionImageUrl),
+      visionImageUrl: visionImageUrl ?? null,
+      caption: scraped?.caption ?? null,
+      altText: scraped?.alt ?? scraped?.accessibilityCaption ?? null,
+      firstComment: scraped?.firstComment ?? null,
+      hashtags: scraped?.hashtags ?? [],
+      location: scraped?.locationName ?? null,
+      accountBio: scraped?.owner?.biography ?? null,
+    },
+    null,
+    2,
+  );
 }
 
 const CLAUDE_MODEL = "claude-sonnet-4-5";
