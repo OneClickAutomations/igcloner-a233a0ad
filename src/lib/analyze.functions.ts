@@ -297,7 +297,7 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
   const forensicsBlock =
     postType === "Reel"
       ? `"videoForensics": {
-      "hook": { "type": string, "element": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
+      "hook": { "type": string, "element": string, "exactVisibleText": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
       "pacing": { "overall": "very-fast"|"fast"|"medium"|"slow", "averageCutDuration": number, "transitionTypes": string, "rhythmSynced": boolean, "bRollUsage": "heavy"|"moderate"|"minimal"|"none" },
       "visual": { "shootingStyle": string, "cameraMovements": string, "shotTypes": string, "colorGrade": string, "productionQuality": string },
       "audio": { "musicType": string, "musicEnergy": string, "voiceover": string, "audioVisualSync": string },
@@ -307,7 +307,7 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
       : postType === "Carousel"
       ? `"carouselForensics": {
       "overall": { "totalSlides": number, "carouselType": string, "narrativeArc": string, "contentDensity": string, "visualConsistency": string },
-      "slide1": { "hookMechanism": string, "layout": string, "colorScheme": string, "typography": string, "firstImpressionScore": number },
+      "slide1": { "hookMechanism": string, "exactVisibleText": string, "layout": string, "colorScheme": string, "typography": string, "firstImpressionScore": number },
       "middleSlides": [{ "purpose": string, "informationDensity": string, "visualType": string, "layoutTemplate": string, "microHook": string }],
       "finalSlide": { "ctaType": string, "urgencyElement": string, "brandElement": string },
       "designSystem": { "colorPalette": string, "fontSystem": string, "gridSystem": string, "iconStyle": string, "whiteSpaceUsage": string },
