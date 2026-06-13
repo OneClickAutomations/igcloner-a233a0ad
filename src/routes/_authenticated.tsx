@@ -26,7 +26,7 @@ function AuthenticatedLayout() {
               className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-foreground shadow-ig hover:bg-accent lg:h-9 lg:w-9"
             />
             <div className="flex items-center gap-2">
-              <span className="hidden text-sm font-semibold gradient-text sm:inline">IGCloner</span>
+              <span className="hidden text-sm font-semibold gradient-text sm:inline">IG-Cloner</span>
               <ThemeToggle />
             </div>
           </header>

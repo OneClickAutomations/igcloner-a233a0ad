@@ -70,7 +70,7 @@ export const generateReel = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
 
-    const system = `You are IGCloner's elite short-form video director. Operate as a forensic video analyst + film editor + copywriter. Extract the source's video formula and rebuild it for a new niche. Return ONLY a single JSON object — no prose, no fences. Every line must be 100% production-ready — no placeholders.`;
+    const system = `You are IG-Cloner's elite short-form video director. Operate as a forensic video analyst + film editor + copywriter. Extract the source's video formula and rebuild it for a new niche. Return ONLY a single JSON object — no prose, no fences. Every line must be 100% production-ready — no placeholders.`;
 
     const forensicsBlock = forensics
       ? `\nVIDEO FORENSICS (source formula extracted):

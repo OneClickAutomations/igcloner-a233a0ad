@@ -38,7 +38,7 @@ export function AppSidebar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-accent shrink-0 shadow-ig">
             <span className="text-sm font-black text-white">IG</span>
           </div>
-          {!collapsed && <span className="text-base font-extrabold tracking-tight gradient-text">IGCloner</span>}
+          {!collapsed && <span className="text-base font-extrabold tracking-tight gradient-text">IG-Cloner</span>}
         </Link>
       </SidebarHeader>
       <SidebarContent>

@@ -16,10 +16,10 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
   head: () => ({
     meta: [
-      { title: "Admin — IGCloner" },
-      { name: "description", content: "Internal admin console for managing IGCloner users and content." },
-      { property: "og:title", content: "Admin — IGCloner" },
-      { property: "og:description", content: "Internal admin console for managing IGCloner users and content." },
+      { title: "Admin — IG-Cloner" },
+      { name: "description", content: "Internal admin console for managing IG-Cloner users and content." },
+      { property: "og:title", content: "Admin — IG-Cloner" },
+      { property: "og:description", content: "Internal admin console for managing IG-Cloner users and content." },
       { name: "robots", content: "noindex" },
     ],
   }),

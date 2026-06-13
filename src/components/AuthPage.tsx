@@ -75,10 +75,10 @@ export function AuthPage() {
       <div className="panel-left">
         <div className="panel-left-inner">
           <Link to="/" className="back-home">
-            <span className="back-arrow">←</span> Back to IGCloner
+            <span className="back-arrow">←</span> Back to IG-Cloner
           </Link>
 
-          <div className="auth-logo"><span className="grad-text">IGCloner</span></div>
+          <div className="auth-logo"><span className="grad-text">IG-Cloner</span></div>
 
           <div className="auth-toggle" style={{ marginTop: 16 }}>
             <button
@@ -157,7 +157,7 @@ export function AuthPage() {
               </div>
 
               <button type="submit" className={`btn-primary ${loading ? "loading" : ""}`} disabled={loading}>
-                {loading ? "Signing in…" : "Sign In to IGCloner →"}
+                {loading ? "Signing in…" : "Sign In to IG-Cloner →"}
               </button>
 
               <div className="switch-link">
@@ -294,7 +294,7 @@ export function AuthPage() {
             {isSignin ? (
               <>Your content calendar is scheduled, your clones are ready. <strong>Pick up right where you left off.</strong></>
             ) : (
-              <>Creators using IGCloner don't just grow faster — they <strong>get paid more</strong>. More engagement means more brand deals, more sales, more freedom.</>
+              <>Creators using IG-Cloner don't just grow faster — they <strong>get paid more</strong>. More engagement means more brand deals, more sales, more freedom.</>
             )}
           </p>
 

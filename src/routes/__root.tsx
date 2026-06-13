@@ -79,11 +79,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "author", content: "IGCloner" },
+      { name: "author", content: "IG-Cloner" },
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "IGCloner" },
+      { property: "og:site_name", content: "IG-Cloner" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@IGCloner" },
+      { name: "twitter:site", content: "@IG-Cloner" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -97,8 +97,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Organization",
-          name: "IGCloner",
-          url: "https://igcloner.lovable.app",
+          name: "IG-Cloner",
+          url: "https://www.igcloner.com",
         }),
       },
       {
@@ -106,8 +106,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "IGCloner",
-          url: "https://igcloner.lovable.app",
+          name: "IG-Cloner",
+          url: "https://www.igcloner.com",
           description: "Paste any Instagram URL. Discover why it works. Generate 5 original content clones in seconds.",
         }),
       },

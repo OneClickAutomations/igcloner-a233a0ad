@@ -49,7 +49,7 @@ export function LandingPage() {
   return (
     <iframe
       ref={ref}
-      title="IGCloner"
+      title="IG-Cloner"
       srcDoc={srcDoc}
       style={{ border: "none", width: "100vw", height: "100vh", display: "block" }}
     />

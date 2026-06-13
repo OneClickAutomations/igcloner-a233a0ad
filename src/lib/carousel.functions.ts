@@ -68,7 +68,7 @@ export const generateCarousel = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-3-flash-preview");
 
-    const system = `You are IGCloner's elite carousel engine. Operate as a forensic content analyst + creative director + conversion copywriter. Extract the source formula, then rebuild it for a new niche. Return ONLY a single JSON object — no prose, no markdown fences. Every slide must be 100% complete — no placeholders or "add your text here".`;
+    const system = `You are IG-Cloner's elite carousel engine. Operate as a forensic content analyst + creative director + conversion copywriter. Extract the source formula, then rebuild it for a new niche. Return ONLY a single JSON object — no prose, no markdown fences. Every slide must be 100% complete — no placeholders or "add your text here".`;
 
     const forensicsBlock = forensics
       ? `\nCAROUSEL FORENSICS (source formula extracted):

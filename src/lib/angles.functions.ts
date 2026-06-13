@@ -124,7 +124,7 @@ export const generateAngles = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const system = `You are IGCloner's viral content strategist.
+    const system = `You are IG-Cloner's viral content strategist.
 Your job is to reverse-engineer exactly what made a specific post go viral,
 then show the user how to recreate that EXACT concept in their own niche.
 

@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authenticated/studio/")({
   }),
   head: () => ({
     meta: [
-      { title: "Production Studio — IGCloner" },
+      { title: "Production Studio — IG-Cloner" },
       { name: "description", content: "Pick a format and turn any analyzed Instagram post into a reel, carousel, voiceover, caption, or image." },
       { name: "robots", content: "noindex" },
     ],

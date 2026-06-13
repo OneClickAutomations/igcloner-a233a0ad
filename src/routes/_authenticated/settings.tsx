@@ -4,10 +4,10 @@ import { SettingsPage } from "@/components/SettingsPage";
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — IGCloner" },
-      { name: "description", content: "Manage your IGCloner account, plan, and Instagram connections." },
-      { property: "og:title", content: "Settings — IGCloner" },
-      { property: "og:description", content: "Manage your IGCloner account, plan, and Instagram connections." },
+      { title: "Settings — IG-Cloner" },
+      { name: "description", content: "Manage your IG-Cloner account, plan, and Instagram connections." },
+      { property: "og:title", content: "Settings — IG-Cloner" },
+      { property: "og:description", content: "Manage your IG-Cloner account, plan, and Instagram connections." },
       { name: "robots", content: "noindex" },
     ],
   }),
