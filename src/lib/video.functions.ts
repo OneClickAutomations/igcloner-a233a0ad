@@ -62,24 +62,34 @@ export const submitVideoJob = createServerFn({ method: "POST" })
       throw new Error(`fal.ai submit failed (${res.status}): ${text.slice(0, 400)}`);
     }
     const j = JSON.parse(text) as { request_id: string };
-    return { requestId: j.request_id, modelSlug: slug };
+    const j2 = JSON.parse(text) as {
+      request_id: string;
+      status_url?: string;
+      response_url?: string;
+    };
+    return {
+      requestId: j.request_id,
+      modelSlug: slug,
+      statusUrl: j2.status_url ?? `${FAL_BASE}/${slug}/requests/${j.request_id}/status`,
+      responseUrl: j2.response_url ?? `${FAL_BASE}/${slug}/requests/${j.request_id}`,
+    };
   });
 
 const PollInput = z.object({
   requestId: z.string().min(1),
   modelSlug: z.string().min(1),
+  statusUrl: z.string().url(),
+  responseUrl: z.string().url(),
 });
 
 export const pollVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PollInput.parse(d))
   .handler(async ({ data }) => {
-    const statusRes = await fetch(
-      `${FAL_BASE}/${data.modelSlug}/requests/${data.requestId}/status`,
-      { headers: authHeader() },
-    );
+    const statusRes = await fetch(data.statusUrl, { headers: authHeader() });
     if (!statusRes.ok) {
-      throw new Error(`status check failed (${statusRes.status})`);
+      const t = await statusRes.text().catch(() => "");
+      throw new Error(`status check failed (${statusRes.status}): ${t.slice(0, 200)}`);
     }
     const status = (await statusRes.json()) as {
       status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED";
@@ -95,10 +105,7 @@ export const pollVideoJob = createServerFn({ method: "POST" })
       };
     }
 
-    const resultRes = await fetch(
-      `${FAL_BASE}/${data.modelSlug}/requests/${data.requestId}`,
-      { headers: authHeader() },
-    );
+    const resultRes = await fetch(data.responseUrl, { headers: authHeader() });
     if (!resultRes.ok) {
       throw new Error(`result fetch failed (${resultRes.status})`);
     }

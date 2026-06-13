@@ -85,7 +85,7 @@ export function ReelStudio() {
     setVideoError(null);
     setQueuePos(null);
     try {
-      const { requestId, modelSlug }: any = await submitVideoFn({
+      const { requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
         data: {
           prompt: doc.veoPrompt,
           model: videoModel,
@@ -99,7 +99,7 @@ export function ReelStudio() {
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
-        const s: any = await pollVideoFn({ data: { requestId, modelSlug } });
+        const s: any = await pollVideoFn({ data: { requestId, modelSlug, statusUrl, responseUrl } });
         setVideoStatus(s.status);
         setQueuePos(s.queuePosition ?? null);
         if (s.status === "COMPLETED") {
