@@ -427,6 +427,22 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
       "postingFrequency": string (e.g. "4-5x/week"),
       "engagementRate": number,
       "contentStrengths": string[]
+    },
+    "videoVisualDNA": {
+      "subjectType": "person-lifestyle"|"person-athlete"|"person-celebrity"|"person-business"|"text-graphic"|"product"|"animal"|"landscape"|"abstract"|"mixed",
+      "subjectDescription": string,
+      "backgroundType": "solid-color"|"gradient"|"blurred-bokeh"|"urban-city"|"nature-outdoor"|"gym-fitness"|"office-professional"|"home-lifestyle"|"studio-clean"|"abstract-dark"|"text-overlay-only"|"mixed",
+      "backgroundDescription": string,
+      "colorPalette": { "dominant": string, "secondary": string, "accent": string, "mood": "warm"|"cool"|"neutral"|"high-contrast"|"monochromatic"|"vibrant"|"muted", "approximateHex": string[] },
+      "textStyle": { "present": boolean, "placement": "center"|"top"|"bottom"|"overlay"|"none", "fontStyle": "bold-sans-serif"|"thin-minimal"|"script"|"handwritten"|"display"|"mixed", "fontSize": "large-dominant"|"medium-balanced"|"small-subtle", "color": "white"|"black"|"colored"|"gradient", "animation": "static"|"fade-in"|"typewriter"|"none"|"unknown" },
+      "lightingStyle": "bright-high-key"|"dark-moody"|"golden-hour"|"blue-hour"|"neon"|"natural-daylight"|"studio-clean"|"low-key-dramatic"|"backlit-silhouette"|"no-lighting-text-only",
+      "editingStyle": "raw-unedited"|"minimal-clean"|"cinematic-graded"|"high-contrast"|"vintage-film"|"bright-airy"|"dark-moody"|"text-motion-graphics"|"none",
+      "paceAndEnergy": "slow-emotional"|"medium-storytelling"|"fast-energetic"|"very-fast-hype"|"static-no-movement"|"text-scroll-only",
+      "contentFormat": "talking-head"|"b-roll-voiceover"|"text-on-screen-only"|"text-with-background"|"person-with-text-overlay"|"product-showcase"|"cinematic-no-person"|"mixed",
+      "audioStyle": "energetic-music"|"emotional-music"|"lo-fi-ambient"|"voice-only"|"voice-plus-music"|"silence"|"trending-sound",
+      "productionLevel": "iphone-casual-ugc"|"produced-ugc"|"semi-professional"|"professional-studio"|"motion-graphics-only"|"ai-generated",
+      "platformAesthetic": string (one-sentence director brief),
+      "recreationInstructions": string (3-5 numbered concrete instructions)
     }
   },
   "clones": [
