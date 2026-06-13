@@ -55,6 +55,11 @@ export function ChannelIntelHeader({
                 src={thumb}
                 alt={`@${username} post`}
                 loading="lazy"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
               />
             ) : (
