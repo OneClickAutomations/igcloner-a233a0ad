@@ -240,20 +240,69 @@ async function callClaude(opts: {
 }
 
 function parseJsonish<T = any>(text: string): T {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  const firstBrace = Math.min(
-    ...["{", "["]
-      .map((c) => cleaned.indexOf(c))
-      .filter((i) => i >= 0),
-  );
-  const candidate = isFinite(firstBrace) && firstBrace > 0 ? cleaned.slice(firstBrace) : cleaned;
-  try {
-    return JSON.parse(candidate);
-  } catch (e) {
-    console.error("[AI] JSON parse failed. First 400 chars:", candidate.slice(0, 400));
-    console.error("[AI] Last 200 chars:", candidate.slice(-200));
+  const cleaned = text.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  const startIdx = cleaned.search(/[\{\[]/);
+  if (startIdx === -1) {
+    console.error("[AI] No JSON found. First 400 chars:", cleaned.slice(0, 400));
     throw new Error("AI returned malformed JSON");
   }
+  const openChar = cleaned[startIdx];
+  const closeChar = openChar === "[" ? "]" : "}";
+  const lastIdx = cleaned.lastIndexOf(closeChar);
+  let candidate =
+    lastIdx > startIdx ? cleaned.slice(startIdx, lastIdx + 1) : cleaned.slice(startIdx);
+
+  const attempts: Array<(s: string) => string> = [
+    (s) => s,
+    (s) =>
+      s
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ""),
+    (s) => {
+      // Try to repair truncated JSON by balancing braces/brackets
+      let opens = 0,
+        closes = 0,
+        sqOpens = 0,
+        sqCloses = 0,
+        inStr = false,
+        esc = false;
+      for (const ch of s) {
+        if (esc) {
+          esc = false;
+          continue;
+        }
+        if (ch === "\\") {
+          esc = true;
+          continue;
+        }
+        if (ch === '"') inStr = !inStr;
+        if (inStr) continue;
+        if (ch === "{") opens++;
+        else if (ch === "}") closes++;
+        else if (ch === "[") sqOpens++;
+        else if (ch === "]") sqCloses++;
+      }
+      let repaired = s.replace(/,\s*$/, "");
+      if (inStr) repaired += '"';
+      repaired += "]".repeat(Math.max(0, sqOpens - sqCloses));
+      repaired += "}".repeat(Math.max(0, opens - closes));
+      return repaired;
+    },
+  ];
+
+  let lastErr: unknown;
+  for (const fix of attempts) {
+    try {
+      return JSON.parse(fix(candidate));
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  console.error("[AI] JSON parse failed. First 400 chars:", candidate.slice(0, 400));
+  console.error("[AI] Last 400 chars:", candidate.slice(-400));
+  console.error("[AI] Parse error:", lastErr);
+  throw new Error("AI returned malformed JSON");
 }
 
 // ============= Combined analyze schema (single Lovable AI call) =============

@@ -121,10 +121,9 @@ const SettingsSchema = z.object({
   pace: z.enum(["fast", "medium", "slow"]).default("fast"),
 });
 
+import { extractJson } from "./json-extract";
 function parseJsonish<T = any>(text: string): T {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  return JSON.parse(start > 0 ? cleaned.slice(start) : cleaned);
+  return extractJson<T>(text);
 }
 
 /* ---------- Derive visual direction from videoVisualDNA ---------- */

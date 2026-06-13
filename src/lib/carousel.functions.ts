@@ -30,11 +30,9 @@ const CarouselSchema = z.object({
 
 export type CarouselDoc = z.infer<typeof CarouselSchema>;
 
+import { extractJson } from "./json-extract";
 function parseJsonish(text: string): any {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  const candidate = start > 0 ? cleaned.slice(start) : cleaned;
-  return JSON.parse(candidate);
+  return extractJson(text);
 }
 
 const GenInput = z.object({
