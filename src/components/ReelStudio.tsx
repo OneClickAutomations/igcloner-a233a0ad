@@ -34,6 +34,7 @@ import {
   saveReel,
   type ReelDoc,
 } from "@/lib/reel.functions";
+import { submitVideoJob, pollVideoJob } from "@/lib/video.functions";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -49,6 +50,8 @@ export function ReelStudio() {
   const genFn = useServerFn(generateReel);
   const saveFn = useServerFn(saveReel);
   const veoFn = useServerFn(regenerateVeoPrompt);
+  const submitVideoFn = useServerFn(submitVideoJob);
+  const pollVideoFn = useServerFn(pollVideoJob);
 
   const [angle, setAngle] = useState("");
   const [duration, setDuration] = useState(20);
@@ -60,6 +63,59 @@ export function ReelStudio() {
   const [doc, setDoc] = useState<ReelDoc | null>(null);
   const [veoInstruction, setVeoInstruction] = useState("");
   const [postOpen, setPostOpen] = useState(false);
+
+  // In-app video generation state
+  const [videoModel, setVideoModel] = useState<"veo3-fast" | "veo3" | "kling-2.1">("veo3-fast");
+  const [videoDuration, setVideoDuration] = useState<5 | 8 | 10>(8);
+  const [videoAudio, setVideoAudio] = useState(true);
+  const [videoStatus, setVideoStatus] = useState<
+    "idle" | "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | "FAILED"
+  >("idle");
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [queuePos, setQueuePos] = useState<number | null>(null);
+
+  async function handleGenerateVideo() {
+    if (!doc?.veoPrompt) {
+      toast.error("Generate the script first");
+      return;
+    }
+    setVideoStatus("IN_QUEUE");
+    setVideoUrl(null);
+    setVideoError(null);
+    setQueuePos(null);
+    try {
+      const { requestId, modelSlug }: any = await submitVideoFn({
+        data: {
+          prompt: doc.veoPrompt,
+          model: videoModel,
+          aspect_ratio: format,
+          duration: videoDuration,
+          generate_audio: videoAudio,
+        },
+      });
+      toast.success("Video job queued. This usually takes 30–90s.");
+      // Poll every 4s, up to ~5 minutes
+      const started = Date.now();
+      while (Date.now() - started < 5 * 60 * 1000) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const s: any = await pollVideoFn({ data: { requestId, modelSlug } });
+        setVideoStatus(s.status);
+        setQueuePos(s.queuePosition ?? null);
+        if (s.status === "COMPLETED") {
+          setVideoUrl(s.videoUrl);
+          toast.success("Video ready");
+          return;
+        }
+      }
+      setVideoStatus("FAILED");
+      setVideoError("Timed out waiting for the video. Try again.");
+    } catch (e: any) {
+      setVideoStatus("FAILED");
+      setVideoError(e?.message || "Generation failed");
+      toast.error(e?.message || "Generation failed");
+    }
+  }
 
   const project = useQuery({
     queryKey: ["project", projectId],
@@ -406,6 +462,99 @@ export function ReelStudio() {
             <>
               <div className="rounded-lg border border-strong bg-muted/40 p-3 text-sm leading-relaxed whitespace-pre-wrap">
                 {doc.veoPrompt}
+              </div>
+
+              {/* In-app video generation via fal.ai */}
+              <div className="rounded-xl border-2 border-accent-primary/40 bg-accent-primary/5 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-widest text-accent-primary">
+                      Generate video in-app
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Powered by fal.ai
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px]">Beta</Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Model</Label>
+                    <Select value={videoModel} onValueChange={(v) => setVideoModel(v as any)}>
+                      <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="veo3-fast">VEO 3 Fast (~$0.40/s)</SelectItem>
+                        <SelectItem value="veo3">VEO 3 (~$0.75/s)</SelectItem>
+                        <SelectItem value="kling-2.1">Kling 2.1 (~$0.10/s)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Length</Label>
+                    <Select value={String(videoDuration)} onValueChange={(v) => setVideoDuration(Number(v) as any)}>
+                      <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5s</SelectItem>
+                        <SelectItem value="8">8s</SelectItem>
+                        <SelectItem value="10">10s</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {videoModel !== "kling-2.1" && (
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={videoAudio}
+                      onChange={(e) => setVideoAudio(e.target.checked)}
+                    />
+                    Generate native audio (VEO 3)
+                  </label>
+                )}
+
+                <Button
+                  className="w-full gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
+                  onClick={handleGenerateVideo}
+                  disabled={videoStatus === "IN_QUEUE" || videoStatus === "IN_PROGRESS"}
+                >
+                  {videoStatus === "IN_QUEUE" || videoStatus === "IN_PROGRESS" ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> {videoStatus === "IN_QUEUE" ? `Queued${queuePos != null ? ` (#${queuePos})` : ""}…` : "Rendering video…"}</>
+                  ) : (
+                    <><Film className="h-4 w-4" /> {videoUrl ? "Regenerate Video" : "Generate Video"}</>
+                  )}
+                </Button>
+
+                {(videoStatus === "IN_QUEUE" || videoStatus === "IN_PROGRESS") && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Video models typically take 30–90 seconds. You can leave this tab open.
+                  </p>
+                )}
+
+                {videoError && (
+                  <p className="text-[11px] text-destructive">{videoError}</p>
+                )}
+
+                {videoUrl && (
+                  <div className="space-y-2">
+                    <video
+                      src={videoUrl}
+                      controls
+                      playsInline
+                      className="w-full rounded-lg border border-border bg-black"
+                    />
+                    <Button size="sm" variant="outline" className="w-full" asChild>
+                      <a href={videoUrl} target="_blank" rel="noreferrer" download>
+                        <ExternalLink className="h-3.5 w-3.5" /> Download / Open
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground pt-2">
+                Or render externally
               </div>
 
               <div className="flex flex-col gap-2">
