@@ -24,10 +24,9 @@ export type Angle = z.infer<typeof AngleSchema>;
 
 const AnglesSchema = z.object({ angles: z.array(AngleSchema).length(5) });
 
+import { extractJson } from "./json-extract";
 function parseJsonish(text: string): any {
-  const cleaned = text.replace(/```json|```/g, "").trim();
-  const start = cleaned.indexOf("{");
-  return JSON.parse(start > 0 ? cleaned.slice(start) : cleaned);
+  return extractJson(text);
 }
 
 const PrefsSchema = z
