@@ -1,68 +1,64 @@
-## Goal
+# IGCloner — Linear Flow Rebuild
 
-Upgrade IGCloner's generation quality per the Deep Cloning Engine spec, in a focused, shippable way that fits the current code (Gemini via Lovable AI Gateway, TanStack Start, existing Carousel + Reel studios). Plus the small UI ask: an "enlarge" icon on generated carousel slides.
+This is a large rebuild. To ship it safely I'll execute in phases, each phase leaving the app in a working state. I'll build straight through phases 1–3 first (the core flow), then ask before starting phase 4 (image studio — requires a new API key) and phase 5 (voiceover — requires ElevenLabs key).
 
-## Scope (what I'll build now)
+## Scope decisions (please flag any you disagree with)
 
-1. **Forensics extraction in `analyze.functions.ts`**
-   - Extend the single Gemini call to also return a `forensics` object whose shape depends on `postType`:
-     - `imageForensics` for Post
-     - `videoForensics` for Reel
-     - `carouselForensics` for Carousel
-   - Store it inside the existing `dna_analysis` JSONB (additive, no migration).
-   - Pass it through `getAnalysisById` so studios can read it.
+- **AI provider**: keep Claude for DNA analysis (already working). Use **Lovable AI Gemini** for angles, scripts, carousel, post copy, and 30-day plan — no new key needed.
+- **Image studio**: spec calls for Nano Banana. Lovable AI already exposes `google/gemini-2.5-flash-image` ("Nano Banana") with no extra key. I'll use that instead of a separate `NANO_BANANA_API_KEY`.
+- **Voiceover**: requires `ELEVENLABS_API_KEY` (new secret). I'll request this only when we reach Phase 5.
+- **Instagram direct posting**: out of scope (requires Meta Graph API app review). I'll keep the "copy caption / open Instagram" flow from the spec and the schedule-for-later DB record, but not auto-publish.
+- **30-day plan**: I'll wire the generator + calendar grid, but Path B (full from-scratch wizard) is built as a single combined form rather than 7 separate screens to keep scope sane. Same outputs.
 
-2. **Clone mode (Exact Duplicate / Inspired Version)**
-   - New `cloneMode: 'exact' | 'inspired'` on every studio.
-   - Default = `exact`. Persist on `projects.user_preferences.cloneMode` so it round-trips.
-   - Surface a 2-option toggle on Studio format picker AND inside each studio's pre-generation panel.
+## Phase 1 — Core flow rewrite (URL → Angles → Format picker)
 
-3. **Carousel generator upgrade (`carousel.functions.ts`)**
-   - Accept `cloneMode` + receive forensics from analysis.
-   - Use the two prompt templates from the spec (exact = formula recreation; inspired = mechanics-only).
-   - Keep current output schema (`CarouselDoc`) so the editor keeps working; the prompts simply produce higher-fidelity slides + design brief.
+- Rewrite `AppPage.tsx` into the new linear layout: URL input → Intelligence Card + collapsible DNA → 5 Angles → Format picker.
+- New server fn `generateAngles` in `src/lib/angles.functions.ts` (Lovable AI Gemini, returns 5 angle objects with hook, why-it-performs, recommended format, viral score).
+- New `AnglesGrid` + `FormatPicker` + `IntelligenceCard` components.
+- Niche quick-set chips inline above angles (skip if already saved on profile).
+- On format select: create `projects` row (status `in_progress`, stores `angle` + `format`) and navigate to the right studio with `?projectId`.
+- Delete the old `PostAnalysisFlow`, V1–V5 clone auto-gen, and pre-format preferences panel paths.
 
-4. **Reel generator upgrade (`reel.functions.ts`)**
-   - Same: accept `cloneMode`, feed videoForensics into the Gemini prompt, produce a stronger script + VEO 3 prompt.
-   - Keep current output schema.
+## Phase 2 — Reel Studio upgrade (already 80% there)
 
-5. **Content Formula summary card on /app**
-   - New `ContentFormulaCard` shown above the existing DNA results.
-   - Renders 3 tiles (Format / Psychology / Metrics) populated from forensics + scraped stats.
-   - Two CTAs: "Create Exact Duplicate" and "Create Inspired Version" → navigate to `/studio?analysisId=…&mode=exact|inspired`.
-   - `/studio` reads `mode` from search and pre-selects the toggle when creating the project.
+- Convert existing `ReelStudio` to the 4-tab layout: Script · VEO Prompts · Voiceover · Post Copy.
+- Tabs 1, 2, 4 wire to existing/extended `reel.functions.ts` (already produces script + veoPrompt; I'll add per-scene VEO prompts + post copy regen).
+- Tab 3 (Voiceover) shows a "Connect ElevenLabs" empty state until Phase 5.
+- Add Post Now / Schedule modal (universal — shared component).
 
-6. **Carousel slide enlarge viewer (UI request)**
-   - Add a Maximize2 icon button on each slide in the carousel editor + on the active slide header.
-   - Click → opens a Dialog with a full 1080×1080-styled preview using the slide's headline/body + design brief palette so the user can eyeball the layout.
-   - Keyboard ← / → to navigate slides inside the modal.
+## Phase 3 — Carousel Studio upgrade
 
-## Out of scope for this turn (called out in spec, deferred)
+- Convert `CarouselStudio` to side-by-side layout: settings + slide nav (left) / slide editor + Canva instructions + post copy (right).
+- Extend `carousel.functions.ts` to also return per-slide Canva build instructions (font/size/hex/positions).
+- Wire Post Now / Schedule modal.
 
-- Image Studio (the spec's "Image Cloner Engine"). The app has no Image studio yet; building it is its own stage. Forensics are still captured so it slots in cleanly later.
-- Midjourney/DALL-E/Lightroom export buttons — depend on the Image studio.
-- PDF design-brief export — current text export already covers Canva; PDF needs a Worker-safe renderer (separate task).
-- Drag-to-reorder slides + "+ Add Slide" inside carousel editor (not currently supported; spec mentions but app's regenerate flow doesn't allow it yet).
+## Phase 4 — Image Studio (asks first)
 
-## Technical notes (for reviewer)
+- New `/studio/image` route + `ImageStudio.tsx` with the two-column layout from the spec.
+- New server route `src/routes/api/generate-image.ts` streaming `google/gemini-2.5-flash-image` via the AI gateway, with prompt builder from concept + style + text overlay + brand.
+- New Supabase storage bucket `project-assets` (private, RLS-scoped to `user_id`) for generated PNGs.
+- Post copy via shared `generatePostCopy` fn.
 
-- All AI work stays on `google/gemini-3-flash-preview` via the existing `createLovableAiGatewayProvider`. Claude is retained only for the parts of `analyze.functions.ts` that already use it (none right now — the file already migrated to Gemini).
-- Forensics schema is added as `z.object({ ... }).partial().optional()` so older saved analyses still parse.
-- `cloneMode` flows: `/app` CTA → `/studio?mode=…` → `createProject({ userPreferences: { cloneMode } })` → studio reads `project.user_preferences.cloneMode` → generator server fn reads it from the project row (no extra param plumbing).
-- Enlarge viewer is pure client (shadcn Dialog + the existing palette tokens), no server work.
+## Phase 5 — Voiceover + 30-Day Plan (asks first)
 
-## Files touched
+- ElevenLabs voiceover edge function (requires `ELEVENLABS_API_KEY` — I'll request it at this phase).
+- `generate30DayPlan` server fn + `/calendar/generate` route with calendar grid, CSV/PDF export.
+- Path A (from project) and Path B (combined questionnaire).
 
-- `src/lib/analyze.functions.ts` — forensics extraction + return
-- `src/lib/carousel.functions.ts` — exact/inspired prompts, read forensics + cloneMode
-- `src/lib/reel.functions.ts` — exact/inspired prompts, read forensics + cloneMode
-- `src/lib/projects.functions.ts` — accept `cloneMode` on create
-- `src/components/StudioPage.tsx` — clone-mode toggle, pass through on create
-- `src/components/CarouselStudio.tsx` — clone-mode badge, slide enlarge dialog
-- `src/components/ReelStudio.tsx` — clone-mode badge, exact/inspired indicator
-- `src/components/AppPage.tsx` — mount new ContentFormulaCard with dual CTAs
-- `src/components/ContentFormulaCard.tsx` *(new)*
-- `src/components/SlidePreviewDialog.tsx` *(new)*
-- `src/routes/_authenticated/studio.tsx` — add `mode` to validateSearch
+## Technical notes
 
-Say "go" to build it. If you'd rather I trim or add anything (e.g. include the Image Studio now, or skip the Content Formula card), tell me and I'll adjust before writing code.
+- All new AI calls go through `createLovableAiGatewayProvider` (already in `src/lib/ai-gateway.server.ts`) — no new keys for text generation.
+- New tables: none for Phase 1–3. Phase 5 adds `calendar_plans` (id, user_id, source_project_id, items jsonb, created_at) with the standard GRANT + RLS block.
+- Existing `calendar_items` table reused for scheduling.
+- Universal `PostScheduleModal` component shared by all studios.
+- Mobile: every studio collapses to stacked single-column at <768px.
+
+## What gets deleted
+
+- `src/components/PostAnalysisFlow.tsx` (replaced by inline angles + format picker in `AppPage`)
+- Auto-generated clone tabs / `clones` table reads on the app page (the table stays for now in case dashboard uses it)
+- The pre-format preferences panel — preferences now live inside each studio
+
+## Ready to start?
+
+Reply "go" and I'll execute Phases 1–3 straight through, then check in before Phase 4 (image studio) since it adds a storage bucket and a new AI surface.
