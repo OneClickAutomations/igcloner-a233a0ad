@@ -3,15 +3,16 @@ import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  Sparkles, Loader2, Check, Film, LayoutGrid, ImageIcon, ChevronRight,
-  Copy, Wand2, Upload, X, FileText,
+  Sparkles, Loader2, Check, Film, LayoutGrid, ImageIcon,
+  Upload, X, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
 
-type IntentId = "A1" | "A2" | "A3" | "B1" | "B2" | "B3";
+type CloneMethod = "A1" | "A2" | "A3";
+type OutputFormat = "image" | "reel" | "carousel";
 
 const NICHES = [
   "Fitness & Health", "Business & Finance", "Beauty & Fashion", "Food & Cooking",
@@ -30,49 +31,22 @@ const TONES = [
   "Vulnerable & personal", "Bold & provocative",
 ];
 
-const PATH_A: { id: IntentId; title: string; blurb: string }[] = [
-  { id: "A1", title: "Clone the image exactly — different words", blurb: "Same visual style, composition and aesthetic. New caption, hook, and message." },
-  { id: "A2", title: "Clone the text — use a different image", blurb: "Same hook, caption structure and message. New visual concept and image." },
-  { id: "A3", title: "Use the theme — generate original content", blurb: "Same concept, genre and emotional mechanic. Completely original execution in your niche." },
-];
-const PATH_B: { id: IntentId; title: string; blurb: string }[] = [
-  { id: "B1", title: "Generate an Image", blurb: "AI-generated image post with caption" },
-  { id: "B2", title: "Generate a Reel", blurb: "Video script + VEO 3 prompts + voiceover" },
-  { id: "B3", title: "Generate a Carousel", blurb: "Full slide deck with design brief" },
+const CLONE_METHODS: { id: CloneMethod; title: string; blurb: string }[] = [
+  { id: "A1", title: "Clone the image exactly with different words", blurb: "Keep the same visual style, composition, colors, and aesthetic. Change the caption, hook, and message." },
+  { id: "A2", title: "Clone the text — use a different image", blurb: "Keep the same hook, caption structure, and message format. Use a completely new visual concept." },
+  { id: "A3", title: "Use the theme and generate original content", blurb: "Same concept, emotional genre, and niche. Completely original execution in your style." },
 ];
 
-const INTENT_SPECIFIC: Record<IntentId, { label: string; options: string[] } | null> = {
-  A1: { label: "Visual faithfulness", options: [
-    "Exact clone — same composition, colors, lighting, aesthetic. Only the text/message changes.",
-    "Close adaptation — same style and mood. Slight creative differences.",
-    "Same format — same type of image (handwritten, portrait, flat lay, etc.) but visually distinct.",
-  ]},
-  A2: { label: "Image direction", options: [
-    "Show a person (lifestyle, portrait, action)",
-    "Product or object flat lay",
-    "Abstract or conceptual",
-    "Text-only graphic / quote card",
-    "Before & after",
-    "AI will decide based on the content",
-  ]},
-  A3: { label: "Originality level", options: [
-    "Heavily inspired — clearly connected to the source theme",
-    "Loosely inspired — same emotional genre, very different angle",
-    "Fully original — just use the source as a spark, create freely",
-  ]},
-  B1: { label: "Inspiration direction", options: [
-    "The emotional tone / feeling", "The visual style or aesthetic",
-    "The concept or message", "The format (handwritten, interview, testimonial, etc.)",
-    "The hook / opening line", "The audience it speaks to",
-  ]},
-  B2: { label: "Inspiration direction", options: [
-    "The emotional tone / feeling", "The visual style or aesthetic",
-    "The concept or message", "The format", "The hook / opening line", "The audience",
-  ]},
-  B3: { label: "Inspiration direction", options: [
-    "The emotional tone / feeling", "The visual style or aesthetic",
-    "The concept or message", "The format", "The hook / opening line", "The audience",
-  ]},
+const OUTPUT_FORMATS: { id: OutputFormat; title: string; icon: React.ReactNode; desc: string }[] = [
+  { id: "image", title: "Image", icon: <ImageIcon className="h-5 w-5" />, desc: "Single image post with caption" },
+  { id: "reel", title: "Reel", icon: <Film className="h-5 w-5" />, desc: "Short video script + VEO 3 + voiceover" },
+  { id: "carousel", title: "Carousel", icon: <LayoutGrid className="h-5 w-5" />, desc: "Slide deck ready to build in Canva" },
+];
+
+const CLONE_SUMMARY: Record<CloneMethod, string> = {
+  A1: "Clone the source post's visual style; deliver a new message.",
+  A2: "Clone the caption/hook structure; pair it with a new visual.",
+  A3: "Use the source as inspiration; create something fully original.",
 };
 
 const STORAGE_KEY = "igcloner.preferences.v1";
@@ -90,11 +64,12 @@ export function IntentFlow({ analysisId }: Props) {
   const uploadFn = useServerFn(uploadReferenceImage);
 
   const [intent, setIntent] = useState<IntentId | null>(null);
+  const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A1");
+  const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
   const [niche, setNiche] = useState<string | null>(null);
   const [customNiche, setCustomNiche] = useState("");
   const [goal, setGoal] = useState<string | null>(null);
   const [tone, setTone] = useState<string | null>(null);
-  const [intentSpecific, setIntentSpecific] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [audience, setAudience] = useState("");
@@ -111,7 +86,6 @@ export function IntentFlow({ analysisId }: Props) {
 
   const prefsRef = useRef<HTMLDivElement>(null);
   const anglesRef = useRef<HTMLDivElement>(null);
-  const formatRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Restore saved prefs
@@ -129,20 +103,15 @@ export function IntentFlow({ analysisId }: Props) {
   }, []);
 
   useEffect(() => {
-    if (intent && prefsRef.current) {
+    if (cloneMethod && outputFormat && prefsRef.current) {
       prefsRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [intent]);
+  }, [cloneMethod, outputFormat]);
   useEffect(() => {
     if (angles && anglesRef.current) {
       anglesRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [angles]);
-  useEffect(() => {
-    if (selectedIdx !== null && formatRef.current) {
-      formatRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [selectedIdx]);
   useEffect(() => {
     if (!loading) return;
     setLoadingStep(0);
@@ -151,7 +120,7 @@ export function IntentFlow({ analysisId }: Props) {
   }, [loading]);
 
   const selectedNiche = niche === "__custom__" ? customNiche.trim() : niche;
-  const canGenerate = !!intent && !!selectedNiche && !!goal && !loading;
+  const canGenerate = !!cloneMethod && !!outputFormat && !!selectedNiche && !!goal && !loading;
 
   const addKeyword = () => {
     const k = keywordInput.trim();
@@ -193,7 +162,7 @@ export function IntentFlow({ analysisId }: Props) {
   };
 
   const generate = async () => {
-    if (!intent || !selectedNiche || !goal) return;
+    if (!cloneMethod || !outputFormat || !selectedNiche || !goal) return;
     setLoading(true);
     setAngles(null);
     setSelectedIdx(null);
@@ -201,7 +170,7 @@ export function IntentFlow({ analysisId }: Props) {
       // persist prefs for next session
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          niche, goal, tone, keywords, audience,
+          niche, goal, tone, keywords, audience, cloneMethod, outputFormat,
         }));
       } catch {}
       const docText = uploadedDocs.length
@@ -211,14 +180,14 @@ export function IntentFlow({ analysisId }: Props) {
         data: {
           analysisId,
           niche: selectedNiche,
-          intent,
+          intent: cloneMethod,
+          outputFormat,
           preferences: {
             contentGoal: goal,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
             userDescription: description || undefined,
-            intentSpecificOption: intentSpecific ?? undefined,
             uploadedImageUrls: uploadedImages.map((i) => i.url),
             uploadedDocumentText: docText,
           },
@@ -233,8 +202,9 @@ export function IntentFlow({ analysisId }: Props) {
     }
   };
 
-  const openStudio = async (format: "reel" | "carousel" | "image") => {
-    if (selectedIdx === null || !angles) return;
+  const openStudio = async () => {
+    if (selectedIdx === null || !angles || !outputFormat) return;
+    const format = outputFormat;
     const angle = angles[selectedIdx];
     setOpeningFormat(format);
     const target = format === "reel" ? "/studio/reel" : format === "carousel" ? "/studio/carousel" : "/studio/image";
@@ -245,14 +215,15 @@ export function IntentFlow({ analysisId }: Props) {
           format,
           title: `${angle.angleName} — ${angle.hookLine.slice(0, 60)}`,
           userPreferences: {
-            intent,
+            intent: cloneMethod,
+            cloneMethod,
+            outputFormat,
             niche: selectedNiche ?? undefined,
             contentGoal: goal ?? undefined,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
             userDescription: description || undefined,
-            intentSpecificOption: intentSpecific ?? undefined,
             uploadedImageUrls: uploadedImages.map((i) => i.url),
             angle: angle.hookLine,
             angleName: angle.angleName,
@@ -276,44 +247,89 @@ export function IntentFlow({ analysisId }: Props) {
     setAngles(null);
     setSelectedIdx(null);
   };
-  const changeIntent = () => {
-    setAngles(null);
-    setSelectedIdx(null);
-    setIntent(null);
-  };
 
   return (
     <div className="space-y-6">
-      {/* STEP 3: INTENT SELECTION */}
+      {/* CONNECTED PREFERENCE PANEL */}
       {!angles && (
-        <div className="space-y-5">
+        <div ref={prefsRef} className="scroll-mt-4 rounded-2xl border border-border bg-card p-5 shadow-ig space-y-5">
+          {/* STEP 1 — clone method */}
           <div>
-            <h2 className="text-xl font-bold tracking-tight">What do you want to do with this content?</h2>
-            <p className="text-sm text-muted-foreground">Pick a path, then set your preferences below.</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 1 of 2</p>
+            <h2 className="mt-1 text-lg font-bold tracking-tight">How do you want to clone this content?</h2>
+            <div className="mt-3 space-y-2">
+              {CLONE_METHODS.map((m) => {
+                const active = cloneMethod === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setCloneMethod(m.id)}
+                    className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all ${
+                      active ? "border-transparent ring-2 ring-accent-primary bg-accent-primary/5" : "border-border bg-card hover:border-strong"
+                    }`}
+                  >
+                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-accent-primary" : "border-muted-foreground/40"}`}>
+                      {active && <span className="h-2 w-2 rounded-full bg-accent-primary" />}
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold">
+                        <span className="mr-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold">{m.id}</span>
+                        {m.title}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{m.blurb}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PathCard label="PATH A" title="Clone This Content" icon="🧬"
-              blurb="Recreate this exact post in a way that is likely to go viral. Choose how closely to follow the original."
-              options={PATH_A} selected={intent} onSelect={(id) => { setIntent(id); setIntentSpecific(null); }} />
-            <PathCard label="PATH B" title="Use as Inspiration" icon="✦"
-              blurb="This content sparked an idea. Use it as a starting point and create something original in your niche."
-              options={PATH_B} selected={intent} onSelect={(id) => { setIntent(id); setIntentSpecific(null); }} />
-          </div>
-        </div>
-      )}
+          <div className="border-t border-border" />
 
-      {/* STEP 4: PREFERENCE PANEL */}
-      {intent && !angles && (
-        <div ref={prefsRef} className="scroll-mt-4 animate-in fade-in slide-in-from-top-2 rounded-2xl border border-border bg-card p-5 shadow-ig">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-accent-primary">
-              Setting up your {intent} preferences
-            </p>
-            <button onClick={changeIntent} className="text-xs text-muted-foreground hover:text-foreground">
-              ← Change intent
-            </button>
+          {/* STEP 2 — output format */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 2 of 2</p>
+            <h2 className="mt-1 text-lg font-bold tracking-tight">What do you want to create?</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              {OUTPUT_FORMATS.map((f) => {
+                const active = outputFormat === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setOutputFormat(f.id)}
+                    className={`relative rounded-xl border p-4 text-left transition-all ${
+                      active ? "border-transparent ring-2 ring-accent-primary bg-accent-primary/5" : "border-border bg-card hover:border-strong"
+                    }`}
+                  >
+                    {active && (
+                      <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent-primary text-primary-foreground">
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                      {f.icon}
+                    </div>
+                    <p className="text-sm font-semibold">{f.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
+
+          {/* Creative brief summary */}
+          {cloneMethod && outputFormat && (
+            <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-3 text-xs leading-relaxed">
+              <p className="font-semibold uppercase tracking-widest text-[10px] text-accent-primary">Your creative brief</p>
+              <p className="mt-1.5 text-foreground">
+                <span className="font-semibold">{cloneMethod} + {OUTPUT_FORMATS.find(f => f.id === outputFormat)?.title}</span> — {CLONE_SUMMARY[cloneMethod]} Output: {outputFormat}.
+              </p>
+            </div>
+          )}
+
+          <div className="border-t border-border" />
 
           {/* Niche */}
           <Section title="Your niche" required>
@@ -341,17 +357,6 @@ export function IntentFlow({ analysisId }: Props) {
           <Section title="Tone of voice">
             <ChipGrid options={TONES} selected={tone} onSelect={setTone} />
           </Section>
-
-          {/* Intent-specific */}
-          {INTENT_SPECIFIC[intent] && (
-            <Section title={INTENT_SPECIFIC[intent]!.label}>
-              <ChipGrid
-                options={INTENT_SPECIFIC[intent]!.options}
-                selected={intentSpecific}
-                onSelect={setIntentSpecific}
-              />
-            </Section>
-          )}
 
           {/* Keywords */}
           <Section title="Keywords & topics (optional)">
@@ -445,18 +450,19 @@ export function IntentFlow({ analysisId }: Props) {
               className="h-12 w-full gap-2 text-base font-semibold"
             >
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-              Generate My 5 Viral Angles
+              Generate My 5 Viral {outputFormat ? OUTPUT_FORMATS.find(f => f.id === outputFormat)?.title : ""} Angles
             </Button>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
+              Clone: {cloneMethod} ✓{"  ·  "}
+              Format: {outputFormat ? <span>{outputFormat} ✓</span> : <span className="text-status-error">format required</span>}{"  ·  "}
               {selectedNiche ? `Niche: ${selectedNiche} ✓` : <span className="text-status-error">Niche required</span>}{"  ·  "}
-              {goal ? `Goal: ${goal} ✓` : <span className="text-status-error">Goal required</span>}{"  ·  "}
-              Intent: {intent} ✓
+              {goal ? `Goal: ${goal} ✓` : <span className="text-status-error">Goal required</span>}
             </p>
           </div>
         </div>
       )}
 
-      {loading && <AnglesLoading step={loadingStep} niche={selectedNiche} intent={intent} />}
+      {loading && <AnglesLoading step={loadingStep} niche={selectedNiche} intent={cloneMethod} />}
 
       {/* STEP 5: ANGLES */}
       {angles && (
@@ -464,9 +470,9 @@ export function IntentFlow({ analysisId }: Props) {
           <div className="flex items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-bold tracking-tight">
-                5 viral angles for your <span className="gradient-text">{selectedNiche}</span> content
+                5 viral {outputFormat} angles for your <span className="gradient-text">{selectedNiche}</span> content
               </h2>
-              <p className="text-xs text-muted-foreground">Based on intent {intent}. Select the one that resonates most.</p>
+              <p className="text-xs text-muted-foreground">Clone method {cloneMethod} · Format {outputFormat}. Pick one to open the studio.</p>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={restart}>← Change preferences</Button>
@@ -517,7 +523,7 @@ export function IntentFlow({ analysisId }: Props) {
                   <p className="mt-2 text-[11px] text-muted-foreground">{a.whyItWillPerform}</p>
                   <div className="mt-3 flex items-center justify-between text-[11px]">
                     <span className="rounded-md bg-accent-secondary/10 px-1.5 py-0.5 font-medium text-accent-secondary capitalize">
-                      Best: {a.recommendedFormat}
+                      Format: {outputFormat}
                     </span>
                     <span className="text-muted-foreground">{a.hookType}</span>
                   </div>
@@ -526,29 +532,16 @@ export function IntentFlow({ analysisId }: Props) {
             })}
           </div>
 
-          {selectedIdx !== null && (
-            <div ref={formatRef} className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4 scroll-mt-4">
-              <p className="mb-3 text-sm font-semibold">Now choose your format:</p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {(() => {
-                  const rec = angles[selectedIdx].recommendedFormat;
-                  const locked: Record<IntentId, "image" | "reel" | "carousel" | null> = {
-                    A1: null, A2: null, A3: null, B1: "image", B2: "reel", B3: "carousel",
-                  };
-                  const lock = intent ? locked[intent] : null;
-                  const formats: ("image" | "reel" | "carousel")[] = lock ? [lock] : ["image", "reel", "carousel"];
-                  return formats.map((f) => (
-                    <FormatCard
-                      key={f}
-                      icon={f === "image" ? <ImageIcon className="h-5 w-5" /> : f === "reel" ? <Film className="h-5 w-5" /> : <LayoutGrid className="h-5 w-5" />}
-                      title={f === "image" ? "Image" : f === "reel" ? "Reel" : "Carousel"}
-                      desc={f === "image" ? "AI-generated image with caption" : f === "reel" ? "Script + VEO 3 prompt + voiceover" : "Full slide deck with design brief"}
-                      recommended={rec === f}
-                      loading={openingFormat === f}
-                      onClick={() => openStudio(f)}
-                    />
-                  ));
-                })()}
+          {selectedIdx !== null && outputFormat && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm">
+                  <p className="font-semibold">Ready to build "{angles[selectedIdx].angleName}"</p>
+                  <p className="text-xs text-muted-foreground">Opens the {outputFormat} studio with this angle and your preferences pre-loaded.</p>
+                </div>
+                <Button onClick={openStudio} disabled={!!openingFormat} className="gap-2">
+                  {openingFormat ? <><Loader2 className="h-4 w-4 animate-spin" /> Opening…</> : <>Open {outputFormat} Studio <Sparkles className="h-4 w-4" /></>}
+                </Button>
               </div>
             </div>
           )}
@@ -613,84 +606,6 @@ function ChipGrid({ options, selected, onSelect }: { options: string[]; selected
   );
 }
 
-function PathCard({
-  label, title, icon, blurb, options, selected, onSelect,
-}: {
-  label: string; title: string; icon: string; blurb: string;
-  options: { id: IntentId; title: string; blurb: string }[];
-  selected: IntentId | null; onSelect: (id: IntentId) => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-ig">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
-      <h3 className="mt-1 flex items-center gap-2 text-lg font-bold tracking-tight">
-        <span aria-hidden>{icon}</span>{title}
-      </h3>
-      <p className="mt-1 text-xs text-muted-foreground">{blurb}</p>
-      <div className="mt-3 space-y-2">
-        {options.map((o) => {
-          const active = selected === o.id;
-          const dimmed = selected && selected !== o.id;
-          return (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => onSelect(o.id)}
-              className={`relative block w-full rounded-xl border p-3 text-left transition-all ${
-                active
-                  ? "border-transparent bg-accent-primary/5 ring-2 ring-accent-primary"
-                  : dimmed
-                    ? "border-border bg-card opacity-60 hover:opacity-100"
-                    : "border-border bg-card hover:border-strong"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-bold text-foreground">{o.id}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-semibold">{o.title}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{o.blurb}</p>
-                </div>
-                {active && <Check className="h-4 w-4 text-accent-primary" />}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function FormatCard({
-  icon, title, desc, recommended, loading, onClick,
-}: {
-  icon: React.ReactNode; title: string; desc: string;
-  recommended: boolean; loading: boolean; onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={`group relative rounded-xl border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent-primary hover:shadow-md disabled:opacity-60 ${
-        recommended ? "border-accent-primary" : "border-border"
-      }`}
-    >
-      {recommended && (
-        <span className="absolute -top-2 right-3 rounded-full bg-accent-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest text-primary-foreground">
-          Recommended
-        </span>
-      )}
-      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
-        {icon}
-      </div>
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
-      <div className="mt-3 flex items-center gap-1 text-xs font-medium text-accent-primary">
-        {loading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Opening…</> : <>Open Studio <ChevronRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" /></>}
-      </div>
-    </button>
-  );
-}
-
 function AnglesLoading({ step, niche, intent }: { step: number; niche: string | null; intent: string | null }) {
   const steps = [
     "Re-reading the source post…",
@@ -721,6 +636,3 @@ function AnglesLoading({ step, niche, intent }: { step: number; niche: string | 
     </div>
   );
 }
-
-// silence unused-import lint for Copy/Wand2 (kept for potential future use)
-void Copy; void Wand2;
