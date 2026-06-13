@@ -121,7 +121,7 @@ export const generateAngles = createServerFn({ method: "POST" })
     }
 
     const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-pro");
+    const model = gateway("google/gemini-2.5-flash");
 
     const system = `You are IGCloner's source-grounded viral strategist. Generate niche-adapted ideas by translating the source post's exact message, visible text, visual metaphor, and emotional mechanism — never by making generic ideas for the user's niche. If the source content and chosen niche are far apart, bridge them explicitly. Return ONLY a JSON object — no prose, no fences.`;
 
