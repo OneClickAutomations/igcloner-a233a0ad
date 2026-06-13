@@ -232,6 +232,15 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
           </div>
         </div>
       )}
+
+      {openingFormat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-8 py-6 shadow-xl">
+            <Loader2 className="h-8 w-8 animate-spin text-accent-primary" />
+            <p className="text-sm font-medium">Opening {openingFormat} studio…</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
