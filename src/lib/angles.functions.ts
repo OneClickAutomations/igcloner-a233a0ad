@@ -62,20 +62,28 @@ export const generateAngles = createServerFn({ method: "POST" })
     }
 
     const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
+    const model = gateway("google/gemini-2.5-pro");
 
-    const system = `You are IGCloner's viral content strategist. Analyze a high-performing Instagram post and generate 5 viral content angles tailored to the user's niche. Return ONLY a JSON object — no prose, no fences.`;
+    const system = `You are IGCloner's source-grounded viral strategist. Generate niche-adapted ideas by translating the source post's exact message, visible text, visual metaphor, and emotional mechanism — never by making generic ideas for the user's niche. If the source content and chosen niche are far apart, bridge them explicitly. Return ONLY a JSON object — no prose, no fences.`;
 
     const topEmotion = Object.entries((dna.emotionalArchitecture ?? {}) as Record<string, number>)
       .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0] ?? "curiosity";
 
-    const prompt = `Generate 5 viral angles for new content in the niche: "${niche}", inspired by this source post's DNA.
+    const sourceForensics = dna.forensics?.imageForensics ?? dna.forensics?.carouselForensics ?? dna.forensics?.videoForensics ?? dna.forensics ?? {};
+    const sourceText = sourceForensics?.text?.exactVisibleText ?? sourceForensics?.text?.visibleText ?? sourceForensics?.textOverlay ?? "";
+
+    const prompt = `Generate 5 viral angles for new content in the niche: "${niche}", adapted from this source post's actual image/text context.
 
 SOURCE POST:
 - Account: @${scraped.ownerUsername ?? "unknown"}
+- Caption: ${scraped.caption ?? "none"}
 - Category: ${dna.contentCategory ?? "unknown"}
+- Source summary: ${dna.contentSummary ?? "unknown"}
+- Visible image text / OCR: ${sourceText || "none extracted"}
+- Visual forensics: ${JSON.stringify(sourceForensics).slice(0, 2500)}
 - Performance score: ${dna.performanceScore ?? "?"} / 100
 - Hook type: ${dna.hookBreakdown?.type ?? "?"}
+- Hook evidence: ${dna.hookBreakdown?.whatWorks ?? ""}
 - Top emotion: ${topEmotion}
 - Why it works: ${(dna.whyItWorks ?? []).slice(0, 4).join(" | ")}
 - Target audience: ${dna.targetAudience?.who ?? ""} — wants ${dna.targetAudience?.desire ?? ""}
@@ -85,9 +93,12 @@ USER NICHE: ${niche}
 Generate exactly 5 angles. Each angle MUST:
 1. Use a different psychological mechanism (direct, contrarian, story, authority/data, curiosity gap)
 2. Be immediately usable — provide a ready-to-post hook line
-3. Be adapted to ${niche} (NOT the source niche)
-4. Explain (2 sentences) why it will perform, citing the source's mechanics
+3. Be adapted to ${niche}, BUT preserve the source post's core message / tension / emotional promise. Do not ignore religious or visual context if present.
+4. Explain (2 sentences) why it will perform, citing specific source evidence (visible text, visual subject, caption, layout, emotion)
 5. Recommend best format: reel | carousel | image
+6. Fail closed: if the source evidence is sparse, say so in the concept and use only the evidence available; never hallucinate unrelated angles.
+
+Example standard: If the source image is about God and the user chooses Finance, generate finance angles that translate the faith/trust/provision message into money behavior — not random investing tips.
 
 Return ONLY this exact JSON shape:
 {
