@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { proxiedImg } from "@/lib/img-proxy";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Film, LayoutGrid, Mic, Type, Image as ImageIcon, Loader2, Trash2, Plus } from "lucide-react";
