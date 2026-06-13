@@ -7,7 +7,7 @@ import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp 
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeInstagramPost, getAnalysisById, getUsage } from "@/lib/analyze.functions";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
-import { AnglesGrid } from "@/components/AnglesGrid";
+import { IntentFlow } from "@/components/IntentFlow";
 import { DecisionCard } from "@/components/DecisionCard";
 import type { ViralScoreResult } from "@/lib/scoring";
 
@@ -313,10 +313,8 @@ export function AppPage() {
               )}
             </div>
 
-            {/* THE MAIN OUTPUT — 5 Viral Angles + Format picker */}
-            {analysisId && (
-              <AnglesGrid analysisId={analysisId} />
-            )}
+            {/* THE MAIN OUTPUT — Intent → Preferences → 5 Viral Angles → Format */}
+            {analysisId && <IntentFlow analysisId={analysisId} />}
 
             {viral && (
               <DecisionCard
