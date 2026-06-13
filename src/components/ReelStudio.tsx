@@ -369,6 +369,17 @@ export function ReelStudio() {
           </Button>
           {doc && (
             <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                navigate({ to: "/studio/voiceover", search: { projectId: project.data!.id } })
+              }
+            >
+              <Sparkles className="h-3.5 w-3.5" /> Voiceover
+            </Button>
+          )}
+          {doc && (
+            <Button
               size="sm"
               className="gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
               onClick={() => setPostOpen(true)}
