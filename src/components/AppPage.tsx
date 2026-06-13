@@ -276,9 +276,14 @@ export function AppPage() {
               </button>
               {dnaOpen && (
                 <div className="border-t border-border p-4 space-y-4 animate-in fade-in">
-                  <Section title="Content Summary">
-                    <p className="text-sm text-secondary-foreground">{dna.contentSummary}</p>
-                  </Section>
+                  <div className="rounded-lg border border-accent-primary/30 bg-accent-primary/5 p-4">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-accent-primary">
+                      What This Post Is
+                    </p>
+                    <p className="text-sm leading-relaxed text-secondary-foreground">
+                      {dna.contentSummary}
+                    </p>
+                  </div>
                   <Section title="Why This Works">
                     <ul className="space-y-1.5">
                       {(dna.whyItWorks ?? []).map((p: string, i: number) => (

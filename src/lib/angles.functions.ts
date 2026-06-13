@@ -9,6 +9,7 @@ const AngleSchema = z.object({
   angleName: z.string(),
   angleType: z.string(),
   hookLine: z.string(),
+  sourceConnection: z.string(),
   concept: z.string(),
   whyItWillPerform: z.string(),
   recommendedFormat: z.enum(["reel", "carousel", "image"]),
@@ -123,7 +124,25 @@ export const generateAngles = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const system = `You are IGCloner's source-grounded viral strategist. Generate niche-adapted ideas by translating the source post's exact message, visible text, visual metaphor, and emotional mechanism — never by making generic ideas for the user's niche. If the source content and chosen niche are far apart, bridge them explicitly. Return ONLY a JSON object — no prose, no fences.`;
+    const system = `You are IGCloner's viral content strategist.
+Your job is to reverse-engineer exactly what made a specific post go viral,
+then show the user how to recreate that EXACT concept in their own niche.
+
+THE GOLDEN RULE:
+Every angle must be a direct translation of the source post's specific concept.
+The user must be able to look at the source post and immediately understand
+how each angle connects to it.
+
+WRONG approach: User's niche is Fitness + source post is a love note →
+Generate generic fitness motivation content.
+
+RIGHT approach: User's niche is Fitness + source post is a love note →
+Generate "I love my amazing [fitness thing]" content that uses the exact
+same format, aesthetic, emotional tone, and concept as the love note.
+
+The TOPIC changes. The CONCEPT, FORMAT, and EMOTIONAL MECHANIC stay identical.
+
+Return ONLY a JSON object — no prose, no code fences.`;
 
     const topEmotion =
       Object.entries((dna.emotionalArchitecture ?? {}) as Record<string, number>).sort(
@@ -142,53 +161,71 @@ export const generateAngles = createServerFn({ method: "POST" })
       sourceForensics?.textOverlay ??
       "";
 
-    const prompt = `Generate 5 viral angles for new content in the niche: "${niche}", adapted from this source post's actual image/text context.
+    const prompt = `Analyze this Instagram post and generate 5 viral angles for the user's niche.
 
-SOURCE POST:
-- Account: @${scraped.ownerUsername ?? "unknown"}
-- Caption: ${scraped.caption ?? "none"}
-- Category: ${dna.contentCategory ?? "unknown"}
-- Source summary: ${dna.contentSummary ?? "unknown"}
-- Visible image text / OCR: ${sourceText || "none extracted"}
-- Visual forensics: ${JSON.stringify(sourceForensics).slice(0, 2500)}
-- Attached image: ${visionImage ? "YES — inspect it directly; it overrides weak or missing OCR above" : "NO — use only scraped evidence above"}
-- Performance score: ${dna.performanceScore ?? "?"} / 100
-- Hook type: ${dna.hookBreakdown?.type ?? "?"}
-- Hook evidence: ${dna.hookBreakdown?.whatWorks ?? ""}
-- Top emotion: ${topEmotion}
-- Why it works: ${(dna.whyItWorks ?? []).slice(0, 4).join(" | ")}
-- Target audience: ${dna.targetAudience?.who ?? ""} — wants ${dna.targetAudience?.desire ?? ""}
+SOURCE POST DETAILS:
+Account: @${scraped.ownerUsername ?? "unknown"}
+Caption: "${scraped.caption ?? "not available"}"
+Post type: ${scraped.type ?? scraped.__typename ?? "post"}
+Likes: ${scraped.likesCount ?? scraped.likes ?? "unknown"}
+Comments: ${scraped.commentsCount ?? scraped.comments ?? "unknown"}
+Visible image text / OCR: ${sourceText || "none extracted"}
+Attached image: ${visionImage ? "YES — inspect it directly; it overrides weak or missing OCR above" : "NO"}
 
-USER NICHE: ${niche}
+CONTENT DNA:
+What the post shows/is: ${dna.contentSummary ?? "unknown"}
+Why it performed: ${(dna.whyItWorks ?? []).join(" | ")}
+Hook type: ${dna.hookBreakdown?.type ?? "?"}
+Core emotional mechanic: ${dna.hookBreakdown?.whatWorks ?? ""}
+Visual style: ${dna.visualStyle?.colorMood ?? "?"}, ${dna.visualStyle?.composition ?? "?"}
+Content format: ${dna.captionDNA?.structure ?? "?"}
+Top emotion: ${topEmotion}
 
-Generate exactly 5 angles. Each angle MUST:
-1. Use a different psychological mechanism (direct, contrarian, story, authority/data, curiosity gap)
-2. Be immediately usable — provide a ready-to-post hook line
-3. Be adapted to ${niche}, BUT preserve the source post's core message / tension / emotional promise. Do not ignore religious or visual context if present.
-4. Explain (2 sentences) why it will perform, citing specific source evidence (visible text, visual subject, caption, layout, emotion)
-5. Recommend best format: reel | carousel | image
-6. Fail closed: if the source evidence is sparse, say so in the concept and use only the evidence available; never hallucinate unrelated angles.
+USER'S NICHE: ${niche}
 
-Example standard: If the source image is about God and the user chooses Finance, generate finance angles that translate the faith/trust/provision message into money behavior — not random investing tips.
+STEP 1 — Identify the SPECIFIC CONCEPT of the source post:
+Ask yourself: What is this post SPECIFICALLY about?
+Not the general topic — the specific idea, format, aesthetic, and emotional beat.
+Example: "I love my amazing WIFE ♥" is specifically:
+- A raw, handwritten personal declaration
+- Directed at a specific person/thing the creator loves
+- Simple, unproduced, authentic
+- Emotionally vulnerable and direct
+- The power is in the specificity of who/what is loved
 
-Return ONLY this exact JSON shape:
+STEP 2 — Translate that SPECIFIC CONCEPT into the user's niche:
+Do not make generic niche content.
+Make the EXACT SAME concept but swap the subject for something in the user's niche.
+Example translation to Fitness:
+- "I love my amazing GAINS ♥" — same handwritten format, same declaration structure
+- "I love my amazing 5AM ♥" — same raw love note, different subject
+- "I love my amazing REST DAY ♥" — contrarian twist on same concept
+
+STEP 3 — For each angle, explain the direct connection to the source post.
+The user should be able to see EXACTLY how angle 1 came from the source post.
+
+Generate exactly 5 angles. Each must:
+1. Be a DIRECT translation of the source post's specific concept to the user's niche
+2. Have an immediately obvious connection to the source post
+3. Preserve the source post's FORMAT and EMOTIONAL MECHANIC
+4. Include a ready-to-use hook/caption line that mirrors the source post's structure
+5. Explain the direct connection in one sentence
+
+Return ONLY this JSON object (no prose, no fences):
 {
   "angles": [
     {
       "angleNumber": 1,
-      "angleName": "Direct Improvement",
-      "angleType": "direct",
-      "hookLine": "ready-to-post opening line",
-      "concept": "one sentence describing the content",
-      "whyItWillPerform": "two sentences citing source DNA mechanics",
-      "recommendedFormat": "reel",
-      "viralPotential": 82,
-      "hookType": "Bold Claim"
-    },
-    { "angleNumber": 2, "angleName": "Contrarian Take", "angleType": "contrarian", ... },
-    { "angleNumber": 3, "angleName": "Personal Story", "angleType": "story", ... },
-    { "angleNumber": 4, "angleName": "Authority / Data-Driven", "angleType": "authority", ... },
-    { "angleNumber": 5, "angleName": "Curiosity Gap", "angleType": "curiosity", ... }
+      "angleName": "2-4 words describing the angle",
+      "angleType": "direct|contrarian|story|authority|curiosity",
+      "hookLine": "The exact opening line or caption — directly mirrors source post structure adapted to user niche",
+      "sourceConnection": "One sentence: 'This takes the [specific element] from the source post and applies it to [niche element]'",
+      "concept": "One sentence describing what this content piece is",
+      "whyItWillPerform": "One sentence: why this works based on the source post's proven emotional mechanic",
+      "recommendedFormat": "reel|carousel|image",
+      "viralPotential": 85,
+      "hookType": "Bold Claim|Curiosity Gap|Question|Story|Contrarian|FOMO|Authority|Personal Declaration|Pattern Interrupt"
+    }
   ]
 }`;
 

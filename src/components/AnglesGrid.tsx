@@ -179,6 +179,12 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
                   </span>
                 </div>
                 <p className="text-sm font-semibold leading-snug">"{a.hookLine}"</p>
+                {(a as any).sourceConnection && (
+                  <div className="mt-2 rounded-md border border-accent-primary/20 bg-accent-primary/5 px-2 py-1.5 text-[11px] leading-snug text-secondary-foreground">
+                    <span className="font-semibold text-accent-primary">💡 FROM SOURCE: </span>
+                    {(a as any).sourceConnection}
+                  </div>
+                )}
                 <p className="mt-2 text-xs text-muted-foreground">{a.whyItWillPerform}</p>
                 <div className="mt-3 flex items-center justify-between text-[11px]">
                   <span className="rounded-md bg-accent-secondary/10 px-1.5 py-0.5 font-medium text-accent-secondary capitalize">
