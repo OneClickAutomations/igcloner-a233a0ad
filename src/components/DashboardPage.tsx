@@ -178,7 +178,8 @@ export function DashboardPage() {
                 className="rounded-xl border border-border bg-card p-4 transition-all hover:border-border-default hover:-translate-y-0.5"
               >
                 {(() => {
-                  const t = a.scraped_data?.displayUrl || a.scraped_data?.thumbnailUrl;
+                  const raw = a.scraped_data?.displayUrl || a.scraped_data?.thumbnailUrl;
+                  const t = proxiedImg(raw);
                   return t ? (
                     <div className="mb-3 aspect-[4/3] overflow-hidden rounded-lg bg-muted">
                       <img src={t} alt={`@${a.source_account ?? ""} post`} className="h-full w-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
