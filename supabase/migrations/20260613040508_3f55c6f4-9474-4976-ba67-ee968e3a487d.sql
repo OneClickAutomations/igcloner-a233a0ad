@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN analyses_limit SET DEFAULT 50;
