@@ -6,9 +6,12 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { computeViralScore } from "@/lib/scoring";
 
 const InputSchema = z.object({
-  url: z.string().url().refine((u) => u.includes("instagram.com"), {
-    message: "Must be an Instagram URL",
-  }),
+  url: z
+    .string()
+    .url()
+    .refine((u) => u.includes("instagram.com"), {
+      message: "Must be an Instagram URL",
+    }),
 });
 
 type ScrapedPost = {
@@ -80,32 +83,42 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   return items[0];
 }
 
-function collectImageUrls(scraped: any): string[] {
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function collectImageUrls(scraped: unknown): string[] {
   const urls = new Set<string>();
   const add = (value: unknown) => {
     if (typeof value === "string" && /^https?:\/\//i.test(value)) urls.add(value);
   };
-  add(scraped?.displayUrl);
-  add(scraped?.thumbnailUrl);
-  add(scraped?.imageUrl);
-  for (const r of scraped?.displayResources ?? []) add(r?.src);
-  for (const child of scraped?.childPosts ?? scraped?.children ?? []) {
-    add(child?.displayUrl);
-    add(child?.thumbnailUrl);
-    add(child?.imageUrl);
-    for (const r of child?.displayResources ?? []) add(r?.src);
+  const post = asRecord(scraped);
+  add(post.displayUrl);
+  add(post.thumbnailUrl);
+  add(post.imageUrl);
+  for (const r of Array.isArray(post.displayResources) ? post.displayResources : []) add(asRecord(r).src);
+  const children = Array.isArray(post.childPosts) ? post.childPosts : Array.isArray(post.children) ? post.children : [];
+  for (const childValue of children) {
+    const child = asRecord(childValue);
+    add(child.displayUrl);
+    add(child.thumbnailUrl);
+    add(child.imageUrl);
+    for (const r of Array.isArray(child.displayResources) ? child.displayResources : []) add(asRecord(r).src);
   }
   return Array.from(urls).slice(0, 4);
 }
 
-async function fetchVisionImage(scraped: ScrapedPost | null): Promise<{ image: Uint8Array; mediaType: string; sourceUrl: string } | null> {
+async function fetchVisionImage(
+  scraped: ScrapedPost | null,
+): Promise<{ image: Uint8Array; mediaType: string; sourceUrl: string } | null> {
   for (const sourceUrl of collectImageUrls(scraped)) {
     try {
       const res = await fetch(sourceUrl, {
         headers: {
           Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
           Referer: "https://www.instagram.com/",
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
         },
       });
       const mediaType = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
@@ -120,17 +133,19 @@ async function fetchVisionImage(scraped: ScrapedPost | null): Promise<{ image: U
   return null;
 }
 
-function sourceEvidence(scraped: any, visionImageUrl?: string | null): string {
+function sourceEvidence(scraped: unknown, visionImageUrl?: string | null): string {
+  const post = asRecord(scraped);
+  const owner = asRecord(post.owner);
   return JSON.stringify(
     {
       imageAttachedForVision: Boolean(visionImageUrl),
       visionImageUrl: visionImageUrl ?? null,
-      caption: scraped?.caption ?? null,
-      altText: scraped?.alt ?? scraped?.accessibilityCaption ?? null,
-      firstComment: scraped?.firstComment ?? null,
-      hashtags: scraped?.hashtags ?? [],
-      location: scraped?.locationName ?? null,
-      accountBio: scraped?.owner?.biography ?? null,
+      caption: post.caption ?? null,
+      altText: post.alt ?? post.accessibilityCaption ?? null,
+      firstComment: post.firstComment ?? null,
+      hashtags: post.hashtags ?? [],
+      location: post.locationName ?? null,
+      accountBio: owner.biography ?? null,
     },
     null,
     2,
