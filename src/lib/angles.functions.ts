@@ -46,6 +46,7 @@ const Input = z.object({
   analysisId: z.string().uuid(),
   niche: z.string().min(1).max(120).optional(),
   intent: z.enum(["A1", "A2", "A3", "B1", "B2", "B3"]).optional(),
+  outputFormat: z.enum(["image", "reel", "carousel"]).optional(),
   preferences: PrefsSchema,
 });
 
@@ -94,7 +95,7 @@ export const generateAngles = createServerFn({ method: "POST" })
 
     const prefs = data.preferences ?? {};
     const intent = data.intent ?? "A3";
-    const lockedFormat = INTENT_LOCKED_FORMAT[intent];
+    const lockedFormat = data.outputFormat ?? INTENT_LOCKED_FORMAT[intent];
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
