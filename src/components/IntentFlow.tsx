@@ -63,7 +63,6 @@ export function IntentFlow({ analysisId }: Props) {
   const createFn = useServerFn(createProject);
   const uploadFn = useServerFn(uploadReferenceImage);
 
-  const [intent, setIntent] = useState<IntentId | null>(null);
   const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A1");
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
   const [niche, setNiche] = useState<string | null>(null);
