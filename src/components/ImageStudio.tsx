@@ -24,6 +24,7 @@ import {
   listProjectImages,
 } from "@/lib/image.functions";
 import { PostScheduleModal } from "@/components/PostScheduleModal";
+import { EnhanceButton } from "@/components/EnhanceButton";
 
 const STYLES: { id: string; label: string; emoji: string }[] = [
   { id: "photorealistic", label: "Photorealistic", emoji: "📸" },
@@ -68,6 +69,8 @@ export function ImageStudio() {
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [captionLoading, setCaptionLoading] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenPrompt, setRegenPrompt] = useState("");
 
   useEffect(() => {
     if (!projectId) {
@@ -111,7 +114,7 @@ export function ImageStudio() {
     }
   }, [aspect]);
 
-  const generate = async () => {
+  const generate = async (extraOverride?: string) => {
     if (!projectId) return;
     if (concept.trim().length < 5) {
       toast.error("Describe your image concept first");
@@ -120,8 +123,11 @@ export function ImageStudio() {
     setGenerating(true);
     setActiveUrl(null);
     try {
+      const mergedExtra = extraOverride
+        ? [extra, extraOverride].filter(Boolean).join(" — ")
+        : extra;
       const res: any = await genFn({
-        data: { projectId, concept, style: style as any, aspect, textOverlay, brandColor, extra },
+        data: { projectId, concept, style: style as any, aspect, textOverlay, brandColor, extra: mergedExtra },
       });
       setActiveUrl(res.signedUrl);
       setImages((prev) => [res.asset, ...prev]);
@@ -330,7 +336,7 @@ export function ImageStudio() {
                     <Download className="h-3.5 w-3.5" /> Download
                   </a>
                 </Button>
-                <Button size="sm" variant="outline" onClick={generate} disabled={generating}>
+                <Button size="sm" variant="outline" onClick={() => setRegenOpen((o) => !o)} disabled={generating}>
                   <RefreshCw className="h-3.5 w-3.5" /> Regenerate
                 </Button>
                 <Button
@@ -341,6 +347,47 @@ export function ImageStudio() {
                 >
                   <Send className="h-3.5 w-3.5" /> Post to Instagram
                 </Button>
+              </div>
+            )}
+
+            {activeUrl && regenOpen && (
+              <div className="mt-3 rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide">
+                  What should change? <span className="font-normal normal-case text-muted-foreground">(optional)</span>
+                </Label>
+                <Textarea
+                  value={regenPrompt}
+                  onChange={(e) => setRegenPrompt(e.target.value)}
+                  placeholder="e.g. 'warmer lighting', 'wider shot, more negative space', 'add a coffee cup on the table'"
+                  className="mt-1.5 min-h-[70px] text-sm"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <EnhanceButton
+                    value={regenPrompt}
+                    onChange={setRegenPrompt}
+                    kind="image"
+                    context={`Concept: ${concept}\nStyle: ${style}\nAspect: ${aspect}`}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      await generate(regenPrompt.trim() || undefined);
+                      setRegenOpen(false);
+                      setRegenPrompt("");
+                    }}
+                    disabled={generating}
+                  >
+                    {generating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    )}
+                    Regenerate now
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setRegenOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
             )}
 
