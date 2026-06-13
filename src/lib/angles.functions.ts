@@ -151,6 +151,7 @@ SOURCE POST:
 - Source summary: ${dna.contentSummary ?? "unknown"}
 - Visible image text / OCR: ${sourceText || "none extracted"}
 - Visual forensics: ${JSON.stringify(sourceForensics).slice(0, 2500)}
+- Attached image: ${visionImage ? "YES — inspect it directly; it overrides weak or missing OCR above" : "NO — use only scraped evidence above"}
 - Performance score: ${dna.performanceScore ?? "?"} / 100
 - Hook type: ${dna.hookBreakdown?.type ?? "?"}
 - Hook evidence: ${dna.hookBreakdown?.whatWorks ?? ""}
