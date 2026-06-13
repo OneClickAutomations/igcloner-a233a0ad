@@ -290,7 +290,7 @@ export function ImageStudio() {
           </div>
 
           <Button
-            onClick={generate}
+            onClick={() => generate()}
             disabled={generating || concept.trim().length < 5}
             className="w-full gap-2"
             size="lg"
