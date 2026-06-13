@@ -270,7 +270,7 @@ async function analyzePostCombined(
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
   const gateway = createLovableAiGatewayProvider(apiKey);
-  const model = gateway("google/gemini-3-flash-preview");
+  const model = gateway("google/gemini-2.5-pro");
   const visionImage = await fetchVisionImage(scraped);
 
   const system = `You are IGCloner's forensic Instagram analyst. First extract the literal evidence from the post image/video thumbnail: visible text/OCR, subject, symbols, setting, objects, emotions, and visual hierarchy. Then infer why it works and create variations. Never invent a topic from the URL alone. If the user later chooses a different niche, downstream ideas must preserve the source post's core message, emotional mechanism, and visual metaphor while translating it into that niche. Return ONLY a single JSON object with no prose, no markdown fences.`;
@@ -299,7 +299,7 @@ async function analyzePostCombined(
       "composition": { "technique": string, "foreground": string, "background": string, "depthOfField": string, "visualWeight": string },
       "color": { "dominant": string, "paletteType": string, "temperature": string, "saturation": string, "contrast": string, "mood": string, "hex": string[] },
       "lighting": { "source": string, "direction": string, "shadowQuality": string, "overallExposure": string },
-      "text": { "present": boolean, "position": string, "style": string },
+      "text": { "present": boolean, "exactVisibleText": string, "position": string, "style": string, "hierarchy": string },
       "editing": { "filterStyle": string, "sharpness": string, "grain": string },
       "categorySignals": { "aspirationalLevel": string, "authenticityLevel": string },
       "psychology": { "primaryVisualHook": string, "emotionalResponse": string, "saveWorthinessElements": string, "shareWorthiness": string }
