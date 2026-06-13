@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { analyzeInstagramPost, getAnalysisById, getUsage } from "@/lib/analyze.functions";
+import { listProjects } from "@/lib/projects.functions";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { IntentFlow } from "@/components/IntentFlow";
 import { DecisionCard } from "@/components/DecisionCard";
@@ -31,6 +32,7 @@ export function AppPage() {
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
   const usageFn = useServerFn(getUsage);
+  const listProjectsFn = useServerFn(listProjects);
 
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
@@ -50,6 +52,7 @@ export function AppPage() {
   const [dismissedWarning, setDismissedWarning] = useState(false);
 
   const [dnaOpen, setDnaOpen] = useState(false);
+  const [analysisProjects, setAnalysisProjects] = useState<any[]>([]);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +60,17 @@ export function AppPage() {
     try { setUsage(await usageFn()); } catch {}
   }, [usageFn]);
   useEffect(() => { refreshUsage(); }, [refreshUsage]);
+
+  useEffect(() => {
+    if (!analysisId) { setAnalysisProjects([]); return; }
+    (async () => {
+      try {
+        const res: any = await listProjectsFn();
+        const all = res?.projects ?? [];
+        setAnalysisProjects(all.filter((p: any) => p.analysis_id === analysisId));
+      } catch {}
+    })();
+  }, [analysisId, listProjectsFn]);
 
   useEffect(() => {
     const t = setInterval(() => setPlaceholderIndex((i) => (i + 1) % PLACEHOLDERS.length), 3000);
@@ -314,6 +328,57 @@ export function AppPage() {
             </div>
 
             {/* THE MAIN OUTPUT — Intent → Preferences → 5 Viral Angles → Format */}
+            {analysisProjects.length > 0 && (
+              <div className="rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">
+                      Your content from this post
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Pick up where you left off — or scroll down to start a new angle.
+                    </p>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/projects" })}>
+                    All projects →
+                  </Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {analysisProjects.slice(0, 6).map((p: any) => {
+                    const route =
+                      p.format === "reel"
+                        ? "/studio/reel"
+                        : p.format === "carousel"
+                          ? "/studio/carousel"
+                          : p.format === "image"
+                            ? "/studio/image"
+                            : p.format === "voiceover"
+                              ? "/studio/voiceover"
+                              : "/app";
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => navigate({ to: route as any, search: { projectId: p.id } as any })}
+                        className="group flex items-center gap-3 rounded-xl border border-border bg-card p-2.5 text-left transition hover:border-strong hover:shadow-sm"
+                      >
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted">
+                          {p.latest_asset_url && (
+                            <img src={p.latest_asset_url} alt="" className="h-full w-full object-cover" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-1 text-sm font-semibold">{p.title}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            {p.format} · {p.status?.replace("_", " ")}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {analysisId && <IntentFlow analysisId={analysisId} />}
 
             {viral && (

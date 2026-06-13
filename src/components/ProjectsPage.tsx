@@ -20,7 +20,7 @@ const STUDIO_ROUTE: Record<ProjectFormat, string> = {
   carousel: "/studio/carousel",
   voiceover: "/studio/voiceover",
   caption: "/app",
-  image: "/app",
+  image: "/studio/image",
 };
 
 export function ProjectsPage() {
@@ -57,7 +57,7 @@ export function ProjectsPage() {
 
   const open = (p: any) => {
     const route = STUDIO_ROUTE[p.format as ProjectFormat];
-    if (p.format === "caption" || p.format === "image") {
+    if (p.format === "caption") {
       navigate({ to: route, search: { analysisId: p.analysis_id } } as any);
     } else {
       navigate({ to: route, search: { projectId: p.id } } as any);
@@ -106,9 +106,15 @@ export function ProjectsPage() {
                     {p.status?.replace("_", " ")}
                   </span>
                 </div>
-                {p.source_thumbnail && (
+                {(p.latest_asset_url || p.source_thumbnail) && (
                   <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                    <img src={proxiedImg(p.source_thumbnail) ?? p.source_thumbnail} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                    <img
+                      src={p.latest_asset_url ?? (proxiedImg(p.source_thumbnail) ?? p.source_thumbnail)}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
                   </div>
                 )}
                 <div>

@@ -80,7 +80,38 @@ export const listProjects = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return { projects: data ?? [] };
+    const projects = data ?? [];
+    if (projects.length === 0) return { projects };
+
+    // Attach the most recent generated asset per project so the Projects
+    // grid shows the user's actual output, not just the source thumbnail.
+    const ids = projects.map((p) => p.id);
+    const { data: assets } = await context.supabase
+      .from("project_assets")
+      .select("project_id, filename, url, created_at, asset_type")
+      .in("project_id", ids)
+      .order("created_at", { ascending: false });
+
+    const latestByProject = new Map<string, any>();
+    for (const a of assets ?? []) {
+      if (!latestByProject.has(a.project_id)) latestByProject.set(a.project_id, a);
+    }
+
+    const enriched = await Promise.all(
+      projects.map(async (p) => {
+        const a = latestByProject.get(p.id);
+        if (!a) return { ...p, latest_asset_url: null };
+        let url = a.url as string | null;
+        if (a.filename) {
+          const { data: signed } = await context.supabase.storage
+            .from("project-assets")
+            .createSignedUrl(a.filename, 60 * 60 * 24 * 7);
+          if (signed?.signedUrl) url = signed.signedUrl;
+        }
+        return { ...p, latest_asset_url: url };
+      }),
+    );
+    return { projects: enriched };
   });
 
 const IdInput = z.object({ id: z.string().uuid() });

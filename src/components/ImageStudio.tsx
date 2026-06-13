@@ -71,6 +71,30 @@ export function ImageStudio() {
   const [postOpen, setPostOpen] = useState(false);
   const [regenOpen, setRegenOpen] = useState(false);
   const [regenPrompt, setRegenPrompt] = useState("");
+  const [downloading, setDownloading] = useState(false);
+
+  const downloadActive = async () => {
+    if (!activeUrl) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(activeUrl);
+      if (!res.ok) throw new Error(`Download failed (${res.status})`);
+      const blob = await res.blob();
+      const ext = (blob.type.split("/")[1] || "png").split(";")[0];
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `igcloner-${Date.now()}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't download image");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!projectId) {
@@ -331,10 +355,13 @@ export function ImageStudio() {
 
             {activeUrl && (
               <div className="mt-3 flex flex-wrap justify-center gap-2">
-                <Button size="sm" variant="outline" asChild>
-                  <a href={activeUrl} target="_blank" rel="noreferrer" download>
-                    <Download className="h-3.5 w-3.5" /> Download
-                  </a>
+                <Button size="sm" variant="outline" onClick={downloadActive} disabled={downloading}>
+                  {downloading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  Download
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setRegenOpen((o) => !o)} disabled={generating}>
                   <RefreshCw className="h-3.5 w-3.5" /> Regenerate
