@@ -107,7 +107,7 @@ export function ProjectsPage() {
                 </div>
                 {p.source_thumbnail && (
                   <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                    <img src={p.source_thumbnail} alt="" className="h-full w-full object-cover" />
+                    <img src={p.source_thumbnail} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                   </div>
                 )}
                 <div>
