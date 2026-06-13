@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Loader2, Check, Film, LayoutGrid, ImageIcon, ChevronRight } from "lucide-react";
@@ -30,6 +30,21 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [openingFormat, setOpeningFormat] = useState<string | null>(null);
 
+  const anglesRef = useRef<HTMLDivElement>(null);
+  const formatRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (angles && anglesRef.current) {
+      anglesRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [angles]);
+
+  useEffect(() => {
+    if (selectedIdx !== null && formatRef.current) {
+      formatRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [selectedIdx]);
+
   const fetchAngles = async (n: string) => {
     setLoading(true);
     setAngles(null);
@@ -54,6 +69,8 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
     if (selectedIdx === null || !angles) return;
     const angle = angles[selectedIdx];
     setOpeningFormat(format);
+    const target =
+      format === "reel" ? "/studio/reel" : format === "carousel" ? "/studio/carousel" : "/studio/image";
     try {
       const res: any = await createFn({
         data: {
@@ -70,8 +87,6 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
         },
       });
       const projectId = res.project.id;
-      const target =
-        format === "reel" ? "/studio/reel" : format === "carousel" ? "/studio/carousel" : "/studio/image";
       navigate({ to: target as any, search: { projectId } as any });
     } catch (e: any) {
       toast.error(e?.message || "Couldn't open studio");
@@ -137,7 +152,7 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
       )}
 
       {angles && (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div ref={anglesRef} className="grid gap-3 sm:grid-cols-2 scroll-mt-4">
           {angles.map((a, i) => {
             const isSelected = selectedIdx === i;
             return (
@@ -187,7 +202,7 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
       )}
 
       {selectedIdx !== null && angles && (
-        <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+        <div ref={formatRef} className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4 scroll-mt-4">
           <p className="mb-3 text-sm font-semibold">Now choose your format:</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <FormatCard
@@ -214,6 +229,15 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
               loading={openingFormat === "carousel"}
               onClick={() => openStudio("carousel")}
             />
+          </div>
+        </div>
+      )}
+
+      {openingFormat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card px-8 py-6 shadow-xl">
+            <Loader2 className="h-8 w-8 animate-spin text-accent-primary" />
+            <p className="text-sm font-medium">Opening {openingFormat} studio…</p>
           </div>
         </div>
       )}
