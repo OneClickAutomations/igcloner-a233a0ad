@@ -66,11 +66,22 @@ export const generateAngles = createServerFn({ method: "POST" })
 
     const system = `You are IGCloner's source-grounded viral strategist. Generate niche-adapted ideas by translating the source post's exact message, visible text, visual metaphor, and emotional mechanism — never by making generic ideas for the user's niche. If the source content and chosen niche are far apart, bridge them explicitly. Return ONLY a JSON object — no prose, no fences.`;
 
-    const topEmotion = Object.entries((dna.emotionalArchitecture ?? {}) as Record<string, number>)
-      .sort(([, a], [, b]) => (b as number) - (a as number))[0]?.[0] ?? "curiosity";
+    const topEmotion =
+      Object.entries((dna.emotionalArchitecture ?? {}) as Record<string, number>).sort(
+        ([, a], [, b]) => (b as number) - (a as number),
+      )[0]?.[0] ?? "curiosity";
 
-    const sourceForensics = dna.forensics?.imageForensics ?? dna.forensics?.carouselForensics ?? dna.forensics?.videoForensics ?? dna.forensics ?? {};
-    const sourceText = sourceForensics?.text?.exactVisibleText ?? sourceForensics?.text?.visibleText ?? sourceForensics?.textOverlay ?? "";
+    const sourceForensics =
+      dna.forensics?.imageForensics ??
+      dna.forensics?.carouselForensics ??
+      dna.forensics?.videoForensics ??
+      dna.forensics ??
+      {};
+    const sourceText =
+      sourceForensics?.text?.exactVisibleText ??
+      sourceForensics?.text?.visibleText ??
+      sourceForensics?.textOverlay ??
+      "";
 
     const prompt = `Generate 5 viral angles for new content in the niche: "${niche}", adapted from this source post's actual image/text context.
 
@@ -124,7 +135,12 @@ Return ONLY this exact JSON shape:
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     try {
-      const { text } = await generateText({ model, system, prompt, abortSignal: controller.signal });
+      const { text } = await generateText({
+        model,
+        system,
+        prompt,
+        abortSignal: controller.signal,
+      });
       const parsed = AnglesSchema.parse(parseJsonish(text));
       return { angles: parsed.angles, niche };
     } finally {
