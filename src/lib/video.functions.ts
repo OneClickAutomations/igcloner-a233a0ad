@@ -92,10 +92,15 @@ export const pollVideoJob = createServerFn({ method: "POST" })
       throw new Error(`status check failed (${statusRes.status}): ${t.slice(0, 200)}`);
     }
     const status = (await statusRes.json()) as {
-      status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED";
+      status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "ERROR";
       queue_position?: number;
       logs?: Array<{ message: string }>;
     };
+
+    if (status.status === "FAILED" || status.status === "ERROR") {
+      const lastLog = status.logs?.slice(-1)[0]?.message;
+      throw new Error(`Video generation failed${lastLog ? `: ${lastLog}` : ""}`);
+    }
 
     if (status.status !== "COMPLETED") {
       return {
