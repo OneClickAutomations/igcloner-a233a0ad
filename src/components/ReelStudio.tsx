@@ -224,7 +224,7 @@ export function ReelStudio() {
     setDirection(approved);
     try {
       await saveDirFn({ data: { projectId, visualDirection: approved } });
-      toast.success("Visual direction approved");
+      toast.success("Visual direction locked in");
       setTab("script");
     } catch (e: any) {
       toast.error(e?.message || "Couldn't save direction");
@@ -248,7 +248,8 @@ export function ReelStudio() {
         },
       });
       setDoc(r.reel);
-      toast.success("Script generated — visually faithful to source");
+      toast.success("Script ready — next: generate the video");
+      setTab("video");
     } catch (e: any) {
       toast.error(e?.message || "Generation failed");
     } finally {
