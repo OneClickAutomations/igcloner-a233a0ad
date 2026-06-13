@@ -96,14 +96,22 @@ function collectImageUrls(scraped: unknown): string[] {
   add(post.displayUrl);
   add(post.thumbnailUrl);
   add(post.imageUrl);
-  for (const r of Array.isArray(post.displayResources) ? post.displayResources : []) add(asRecord(r).src);
-  const children = Array.isArray(post.childPosts) ? post.childPosts : Array.isArray(post.children) ? post.children : [];
+  for (const r of Array.isArray(post.displayResources) ? post.displayResources : []) {
+    add(asRecord(r).src);
+  }
+  const children = Array.isArray(post.childPosts)
+    ? post.childPosts
+    : Array.isArray(post.children)
+      ? post.children
+      : [];
   for (const childValue of children) {
     const child = asRecord(childValue);
     add(child.displayUrl);
     add(child.thumbnailUrl);
     add(child.imageUrl);
-    for (const r of Array.isArray(child.displayResources) ? child.displayResources : []) add(asRecord(r).src);
+    for (const r of Array.isArray(child.displayResources) ? child.displayResources : []) {
+      add(asRecord(r).src);
+    }
   }
   return Array.from(urls).slice(0, 4);
 }
