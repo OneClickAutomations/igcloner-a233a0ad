@@ -26,6 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getProject } from "@/lib/projects.functions";
+import { PostScheduleModal } from "@/components/PostScheduleModal";
+import { Send } from "lucide-react";
 import {
   generateReel,
   regenerateVeoPrompt,
@@ -57,6 +59,7 @@ export function ReelStudio() {
   const [veoBusy, setVeoBusy] = useState(false);
   const [doc, setDoc] = useState<ReelDoc | null>(null);
   const [veoInstruction, setVeoInstruction] = useState("");
+  const [postOpen, setPostOpen] = useState(false);
 
   const project = useQuery({
     queryKey: ["project", projectId],
@@ -153,11 +156,24 @@ export function ReelStudio() {
           </div>
         </div>
         {doc && (
-          <Button variant="outline" size="sm" onClick={handleSave}>
-            Save
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleSave}>Save</Button>
+            <Button size="sm" className="gap-1.5 gradient-accent text-white border-0 hover:opacity-95" onClick={() => setPostOpen(true)}>
+              <Send className="h-3.5 w-3.5" /> Post Now
+            </Button>
+          </div>
         )}
       </div>
+
+      {doc && (
+        <PostScheduleModal
+          open={postOpen}
+          onOpenChange={setPostOpen}
+          caption={doc.caption}
+          hashtags={doc.hashtags}
+          format="reel"
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr_1fr]">
         {/* LEFT: settings */}

@@ -29,6 +29,8 @@ import {
   type CarouselDoc,
 } from "@/lib/carousel.functions";
 import { SlidePreviewDialog } from "@/components/SlidePreviewDialog";
+import { PostScheduleModal } from "@/components/PostScheduleModal";
+import { Send } from "lucide-react";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -101,6 +103,7 @@ export function CarouselStudio() {
   const [saving, setSaving] = useState(false);
   const [regenInstr, setRegenInstr] = useState("");
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
+  const [postOpen, setPostOpen] = useState(false);
 
   useEffect(() => {
     if (project?.project_data) {
@@ -232,9 +235,26 @@ export function CarouselStudio() {
             >
               <Download className="h-3.5 w-3.5" /> Export
             </Button>
+            <Button
+              size="sm"
+              className="gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
+              onClick={() => setPostOpen(true)}
+            >
+              <Send className="h-3.5 w-3.5" /> Post Now
+            </Button>
           </div>
         )}
       </div>
+
+      {doc && (
+        <PostScheduleModal
+          open={postOpen}
+          onOpenChange={setPostOpen}
+          caption={doc.caption}
+          hashtags={doc.hashtags}
+          format="carousel"
+        />
+      )}
 
       {!doc ? (
         // ============ Initial Generate panel ============
