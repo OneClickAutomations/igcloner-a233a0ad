@@ -220,6 +220,7 @@ export type Database = {
           analyses_used: number | null
           avatar_url: string | null
           created_at: string | null
+          default_niche: string | null
           full_name: string | null
           id: string
           plan: Database["public"]["Enums"]["plan_type"] | null
@@ -233,6 +234,7 @@ export type Database = {
           analyses_used?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          default_niche?: string | null
           full_name?: string | null
           id: string
           plan?: Database["public"]["Enums"]["plan_type"] | null
@@ -246,6 +248,7 @@ export type Database = {
           analyses_used?: number | null
           avatar_url?: string | null
           created_at?: string | null
+          default_niche?: string | null
           full_name?: string | null
           id?: string
           plan?: Database["public"]["Enums"]["plan_type"] | null
