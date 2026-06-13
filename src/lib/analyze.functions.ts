@@ -271,8 +271,9 @@ async function analyzePostCombined(
   if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-3-flash-preview");
+  const visionImage = await fetchVisionImage(scraped);
 
-  const system = `You are a world-class Instagram content strategist and conversion copywriter. Reverse-engineer WHY content performs, then generate 5 distinct original variations. Be specific, tactical, actionable. Return ONLY a single JSON object with no prose, no markdown fences.`;
+  const system = `You are IGCloner's forensic Instagram analyst. First extract the literal evidence from the post image/video thumbnail: visible text/OCR, subject, symbols, setting, objects, emotions, and visual hierarchy. Then infer why it works and create variations. Never invent a topic from the URL alone. If the user later chooses a different niche, downstream ideas must preserve the source post's core message, emotional mechanism, and visual metaphor while translating it into that niche. Return ONLY a single JSON object with no prose, no markdown fences.`;
 
   const forensicsBlock =
     postType === "Reel"
@@ -341,6 +342,9 @@ async function analyzePostCombined(
   "forensics": { ${forensicsBlock} }
 }
 
+SOURCE EVIDENCE — ground every field in this before strategy:
+${sourceEvidence(scraped, visionImage?.sourceUrl)}
+
 URL: ${url}
 Account: @${scraped?.ownerUsername ?? "unknown"}
 Followers: ${scraped?.owner?.followersCount ?? "unknown"}
@@ -353,6 +357,13 @@ Comments: ${scraped?.commentsCount ?? "Unknown"}
 ${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
 Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
 
+Critical grounding rules:
+- If an image is attached, read it directly and include the actual visible words in contentSummary / hookBreakdown / forensics. Do not summarize around them.
+- If the image contains religious, spiritual, financial, health, or other domain-specific text, preserve that source message as the anchor even when cloning into another niche later.
+- contentSummary must name the exact visible text/message and the main visual subject/context, not a generic category.
+- whyItWorks must cite concrete source evidence: visible words, visual subject, contrast, emotion, layout, caption, or account context.
+- Clones must transform the source's MECHANISM and MESSAGE; they must not become generic content for a niche.
+
 Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".
 
 The "forensics" object is REQUIRED. Be specific and surgical — these data points will be used to recreate the exact formula or generate inspired versions in downstream studios.`;
@@ -361,10 +372,13 @@ The "forensics" object is REQUIRED. Be specific and surgical — these data poin
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 25000);
   try {
+    const messages: ModelMessage[] | undefined = visionImage
+      ? [{ role: "user", content: [{ type: "text", text: prompt }, { type: "image", image: visionImage.image, mediaType: visionImage.mediaType }] }]
+      : undefined;
     const { text } = await generateText({
       model,
       system,
-      prompt,
+      ...(messages ? { messages } : { prompt }),
       abortSignal: controller.signal,
     });
     const parsed = parseJsonish<z.infer<typeof AnalyzeSchema>>(text);
