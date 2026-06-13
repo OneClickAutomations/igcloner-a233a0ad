@@ -50,16 +50,12 @@ export const generateAngles = createServerFn({ method: "POST" })
     const dna = (analysis.dna_analysis as any) ?? {};
     const scraped = (analysis.scraped_data as any) ?? {};
 
-    // Pull niche: arg > stored prefs > profile > fallback
+    // Pull niche: arg > profile default > fallback
     let niche = data.niche;
-    if (!niche) {
-      const prefs = (analysis.user_preferences as any) ?? {};
-      niche = prefs.niche;
-    }
     if (!niche) {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("default_niche")
+        .select("*")
         .eq("id", userId)
         .maybeSingle();
       niche = (prof as any)?.default_niche ?? "general";
