@@ -110,6 +110,8 @@ export function CarouselStudio() {
   const [postOpen, setPostOpen] = useState(false);
   const [imgBusy, setImgBusy] = useState<number | null>(null);
   const [imgDirection, setImgDirection] = useState("");
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
 
   useEffect(() => {
     if (project?.project_data) {
@@ -184,6 +186,44 @@ export function CarouselStudio() {
     } finally {
       setImgBusy(null);
     }
+  };
+
+  const handleGenerateAllImages = async () => {
+    if (!doc) return;
+    const missing = doc.slides.filter((s) => !s.imageUrl);
+    const targets = missing.length > 0 ? missing : doc.slides;
+    if (targets.length === 0) return;
+    const confirmMsg =
+      missing.length === 0
+        ? `Regenerate ALL ${targets.length} slide images? This will overwrite existing images.`
+        : `Generate ${targets.length} slide image${targets.length === 1 ? "" : "s"}? This runs one slide at a time and may take a few minutes.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setBatchBusy(true);
+    setBatchProgress({ done: 0, total: targets.length });
+    let failures = 0;
+    for (let i = 0; i < targets.length; i++) {
+      const slide = targets[i];
+      setImgBusy(slide.index);
+      setActiveIdx(slide.index);
+      try {
+        const res: any = await slideImageFn({
+          data: { projectId, slideIndex: slide.index, extraDirection: imgDirection || undefined },
+        });
+        const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
+        if (updated) setDoc(updated);
+      } catch (e: any) {
+        failures++;
+        toast.error(`Slide ${slide.index}: ${e?.message || "failed"}`);
+      } finally {
+        setBatchProgress({ done: i + 1, total: targets.length });
+      }
+    }
+    setImgBusy(null);
+    setBatchBusy(false);
+    if (failures === 0) toast.success(`All ${targets.length} slides generated — ready to post`);
+    else toast.warning(`${targets.length - failures}/${targets.length} slides generated. Retry the failed ones.`);
+    setTimeout(() => setBatchProgress(null), 4000);
   };
 
   const updateSlideField = (field: "headline" | "body" | "visualNote", value: string) => {
