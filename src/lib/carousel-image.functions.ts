@@ -4,6 +4,11 @@ import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
+import {
+  buildImageMediumOpening,
+  mediumLabel,
+  type ContentMedium,
+} from "@/lib/medium";
 
 const Input = z.object({
   projectId: z.string().uuid(),
@@ -54,6 +59,13 @@ export const generateCarouselSlideImage = createServerFn({ method: "POST" })
     const slide = (doc.slides as any[]).find((s) => s.index === data.slideIndex);
     if (!slide) throw new Error("Slide not found");
     const brief = doc.designBrief ?? {};
+    const prefs: any = (project as any).user_preferences ?? {};
+    const cloneMethod: string | undefined = prefs.cloneMethod ?? prefs.intent;
+    const dna: any = (project as any).dna_analysis ?? {};
+    const sourceMedium: ContentMedium | null =
+      (dna.contentMedium as ContentMedium) ??
+      (brief.medium ? { primary: brief.medium, description: "" } : null);
+    const mediumCtx = buildImageMediumOpening(cloneMethod, sourceMedium);
 
     // Pull source reference image so the slide echoes the viral post's vibe.
     let scraped: any = null;
@@ -72,17 +84,35 @@ export const generateCarouselSlideImage = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const promptModel = gateway("google/gemini-3-flash-preview");
 
-    const enhanceSystem = `You are a world-class Instagram carousel art director and prompt engineer. You translate rough slide notes into a single, dense, image-generation prompt that an expert designer would brief out. The output is one paragraph (max 180 words), no preamble, no bullet points, no markdown. It must specify: exact composition and layout, where the on-image text sits and how it's typeset, color palette with hex usage, lighting/material/texture, mood, and any iconography or shapes.
-
-TEXT LEGIBILITY RULES (NON-NEGOTIABLE — the slide must be readable on a phone):
+    const legibilityBlock = mediumCtx.allowDesignType
+      ? `TEXT LEGIBILITY RULES (NON-NEGOTIABLE — the slide must be readable on a phone):
 - Headline type must occupy AT LEAST 8% of the canvas height (≈ 86px+ on 1080). Body type at least 4% (≈ 44px+). NEVER tiny text.
 - Use a bold, geometric or modern sans-serif (e.g. Inter, Söhne, GT America, Neue Haas Grotesk) at 700+ weight for the headline.
 - Maintain WCAG AA contrast (≥ 4.5:1) between text and the area directly behind it. If the background is busy or low-contrast, place text on a solid panel, semi-transparent overlay (60-90% opacity), gradient scrim, or a dedicated color block — pick whichever fits the design system.
 - Keep generous padding: at least 80px safe margin from every edge. Never let text touch the canvas edge or other elements.
 - Set short, comfortable line-length (max ~28 characters per line for headlines). Use clear line breaks; do not let words crash into each other.
-- The text rendered on the slide MUST be EXACTLY the headline and body provided — never paraphrase, abbreviate, or translate them.
+- The text rendered on the slide MUST be EXACTLY the headline and body provided — never paraphrase, abbreviate, or translate them.`
+      : `MEDIUM-NATIVE LEGIBILITY RULES (this slide is in the source medium — DO NOT impose digital design typography):
+- Render the text the way the medium would naturally render it (real handwriting strokes, native screenshot system text, meme caption font, etc.).
+- Keep the writing large enough to read on a phone; the hand-lettered / native text should occupy a generous portion of the canvas with comfortable margins.
+- Maintain natural contrast through the medium itself (ink on paper, screenshot UI, etc.) — do NOT add design overlays, gradient scrims, or solid color panels.
+- The text rendered on the slide MUST be EXACTLY the headline and body provided — never paraphrase, abbreviate, or translate them.`;
 
-Always end with: "1:1 square, 1080x1080, Instagram-ready, no borders, no Instagram UI, no watermark, perfect spelling, large legible typography, high contrast text against background."`;
+    const mediumSystemHeader = mediumCtx.opening
+      ? `MEDIUM (NON-NEGOTIABLE — this slide MUST be in this medium): ${mediumCtx.opening}
+
+NEGATIVE — do NOT produce: ${mediumCtx.negatives || "any other medium"}.
+
+`
+      : "";
+
+    const enhanceSystem = `You are a world-class Instagram carousel art director and prompt engineer. You translate rough slide notes into a single, dense, image-generation prompt that an expert designer would brief out. The output is one paragraph (max 180 words), no preamble, no bullet points, no markdown. It must specify: exact composition and layout, where the on-image text sits and how it's typeset, color palette with hex usage, lighting/material/texture, mood, and any iconography or shapes.
+
+${mediumSystemHeader}${legibilityBlock}
+
+Always end with: "1:1 square, 1080x1080, Instagram-ready, no borders, no Instagram UI, no watermark, perfect spelling${
+      mediumCtx.allowDesignType ? ", large legible typography, high contrast text against background" : ""
+    }."`;
 
     const enhanceUser = `Carousel: "${doc.title}"
 Slide ${slide.index} of ${doc.slides.length} — role: ${slide.role}.
