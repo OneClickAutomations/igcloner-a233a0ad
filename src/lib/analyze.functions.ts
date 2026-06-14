@@ -470,6 +470,14 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
     "performanceScore": number (0-100),
     "whyItWorks": string[],
     "targetAudience": { "who": string, "desire": string, "trigger": string },
+    "contentMedium": {
+      "primary": "handwriting-on-paper"|"handwriting-on-surface"|"printed-text-photo"|"talking-head-video"|"broll-video"|"lifestyle-photo"|"studio-photo"|"product-photo"|"screenshot"|"digital-graphic"|"illustrated"|"meme-format"|"text-on-video"|"animation"|"ugc-authentic"|"mixed",
+      "secondary": (one of the same options, or null),
+      "description": string (1-2 sentences describing the literal physical/digital format — e.g. "Handwritten black ink on white paper, photographed flat-lay. The handwriting itself IS the content."),
+      "mediumIsTheMessage": boolean (true if the medium itself is what makes the post work — handwriting, screenshot, meme, UGC, etc.),
+      "replicationInstructions": string (concrete how-to recreate this exact medium — e.g. "Photograph real handwriting on paper, do not use digital fonts that simulate handwriting"),
+      "mediumSignals": string[] (2-4 reasons this medium works in feed)
+    },
     "hookBreakdown": { "type": "Question"|"Shocking Stat"|"Bold Claim"|"Pattern Interrupt"|"Story Open"|"Curiosity Gap"|"FOMO", "score": number, "whatWorks": string, "improvement": string },
     "emotionalArchitecture": { "curiosity": number, "fomo": number, "trust": number, "relatability": number, "urgency": number, "inspiration": number },
     "storyStructure": [{ "section": string, "timing": string, "purpose": string }],
@@ -535,6 +543,7 @@ Critical grounding rules:
 - contentSummary must name the exact visible text/message and the main visual subject/context, not a generic category.
 - whyItWorks must cite concrete source evidence: visible words, visual subject, contrast, emotion, layout, caption, or account context.
 - Clones must transform the source's MECHANISM and MESSAGE; they must not become generic content for a niche.
+- contentMedium MUST describe the LITERAL physical/digital format the post exists in (handwriting on paper, screenshot, talking-head video, digital graphic, etc.) — not the topic, not the niche, not the colors. If you see real human handwriting on real paper, the primary MUST be "handwriting-on-paper" and mediumIsTheMessage MUST be true. If you see a designed digital quote card, it is "digital-graphic". Be honest and literal — this field decides whether downstream studios preserve the format or abandon it.
 
 Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".
 
