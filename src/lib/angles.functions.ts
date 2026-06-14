@@ -4,6 +4,7 @@ import { generateText, type ModelMessage } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
+import { buildAnglesMediumConstraint, mediumLabel, type ContentMedium } from "@/lib/medium";
 
 const AngleSchema = z.object({
   angleNumber: z.number(),
@@ -19,6 +20,9 @@ const AngleSchema = z.object({
   recommendedFormat: z.enum(["reel", "carousel", "image"]),
   viralPotential: z.number().min(0).max(100),
   hookType: z.string(),
+  medium: z.string().optional().default(""),
+  mediumLabel: z.string().optional().default(""),
+  mediumIsSameAsSource: z.boolean().optional().default(true),
 });
 export type Angle = z.infer<typeof AngleSchema>;
 
@@ -138,6 +142,9 @@ Return ONLY a JSON object — no prose, no code fences.`;
 
     const ownerHandle = scraped.ownerUsername ?? "the source";
     const kw = prefs.keywords ?? [];
+    const sourceMedium: ContentMedium | null = (dna as any).contentMedium ?? null;
+    const mediumBlock = buildAnglesMediumConstraint(intent, sourceMedium);
+    const sourceMediumPrimary = sourceMedium?.primary ?? "unknown";
 
     const prompt = `Analyze this Instagram post and generate 5 viral angles.
 
@@ -167,6 +174,7 @@ USER PREFERENCES:
 - Keywords to weave in where natural: ${kw.join(", ") || "none"}
 - Intent-specific preference: ${prefs.intentSpecificOption ?? "not specified"}
 ${lockedFormat ? `- LOCKED FORMAT for every angle: "${lockedFormat}"` : ""}
+${mediumBlock}
 
 USER'S FREE-FORM INSTRUCTIONS:
 ${prefs.userDescription || "(none provided)"}
@@ -196,7 +204,10 @@ Return ONLY this JSON object:
       "recommendedFormat": "${lockedFormat ?? "reel|carousel|image"}",
       "hookType": "Personal Declaration|Curiosity Gap|Bold Claim|Contrarian|Question|Story Open|FOMO|Authority|Pattern Interrupt",
       "viralPotential": 0-100,
-      "keywordUsed": "Which user keyword is incorporated, or 'none'"
+      "keywordUsed": "Which user keyword is incorporated, or 'none'",
+      "medium": "${sourceMediumPrimary}" ${intent === "A1" ? "(MUST equal the source medium for every angle in A1 mode)" : "(may be the source medium or a different one)"},
+      "mediumLabel": "Short human label for the medium, e.g. '✍️ Handwriting on paper'",
+      "mediumIsSameAsSource": ${intent === "A1" ? "true" : "true|false"}
     }
   ]
 }`;
@@ -236,7 +247,13 @@ Return ONLY this JSON object:
         abortSignal: controller.signal,
       });
       const parsed = AnglesSchema.parse(parseJsonish(text));
-      return { angles: parsed.angles, niche, intent };
+      // Backfill medium label client-side so the UI always has a friendly tag.
+      const angles = parsed.angles.map((a) => ({
+        ...a,
+        mediumLabel: a.mediumLabel || mediumLabel(a.medium || sourceMediumPrimary),
+        medium: a.medium || String(sourceMediumPrimary),
+      }));
+      return { angles, niche, intent, sourceMedium };
     } finally {
       clearTimeout(timer);
     }
