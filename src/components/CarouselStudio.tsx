@@ -397,6 +397,32 @@ export function CarouselStudio() {
                 <RefreshCw className="h-3 w-3" /> Restart
               </Button>
             </div>
+            <Button
+              onClick={handleGenerateAllImages}
+              disabled={batchBusy || generating}
+              size="sm"
+              className="w-full gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
+            >
+              {batchBusy ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {batchProgress ? `Generating ${batchProgress.done}/${batchProgress.total}…` : "Generating…"}
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  {doc.slides.every((s) => s.imageUrl) ? "Regenerate all images" : "Generate all images"}
+                </>
+              )}
+            </Button>
+            {batchProgress && (
+              <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-accent-primary transition-all"
+                  style={{ width: `${(batchProgress.done / batchProgress.total) * 100}%` }}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               {doc.slides.map((s) => (
                 <div
