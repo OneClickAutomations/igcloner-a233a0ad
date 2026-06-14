@@ -11,9 +11,11 @@ import {
   AtSign,
   Music2,
   MapPin,
+  ZoomIn,
 } from "lucide-react";
 import { useState } from "react";
 import { proxiedImg } from "@/lib/img-proxy";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 /* ---------- helpers ---------- */
 
