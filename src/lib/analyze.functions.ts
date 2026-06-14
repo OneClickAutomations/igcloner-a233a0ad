@@ -325,6 +325,16 @@ const AnalyzeSchema = z.object({
     performanceScore: z.number(),
     whyItWorks: z.array(z.string()),
     targetAudience: z.object({ who: z.string(), desire: z.string(), trigger: z.string() }),
+    contentMedium: z
+      .object({
+        primary: z.string(),
+        secondary: z.string().nullable().optional(),
+        description: z.string().optional(),
+        mediumIsTheMessage: z.boolean().optional(),
+        replicationInstructions: z.string().optional(),
+        mediumSignals: z.array(z.string()).optional(),
+      })
+      .optional(),
     hookBreakdown: z.object({
       type: z.string(),
       score: z.number(),
