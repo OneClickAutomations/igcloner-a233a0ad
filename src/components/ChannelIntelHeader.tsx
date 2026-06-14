@@ -392,7 +392,18 @@ export function ChannelIntelHeader({
               {carouselSlides.slice(0, 10).map((s: any, i: number) => {
                 const sThumb = proxiedImg(s?.displayUrl || s?.thumbnailUrl || null);
                 return sThumb ? (
-                  <img key={i} src={sThumb} alt={`Slide ${i + 1}`} className="h-12 w-12 rounded-md object-cover" />
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setZoomSrc(sThumb)}
+                    aria-label={`Enlarge slide ${i + 1}`}
+                    className="group relative h-12 w-12 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                  >
+                    <img src={sThumb} alt={`Slide ${i + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <ZoomIn className="h-4 w-4 text-white" />
+                    </span>
+                  </button>
                 ) : (
                   <div key={i} className="h-12 w-12 rounded-md bg-muted" />
                 );
