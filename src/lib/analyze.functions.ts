@@ -426,6 +426,7 @@ const AnalyzeSchema = z.object({
           )
           .optional(),
       })
+      .nullable()
       .optional(),
   }),
   forensics: z.any().optional(),
