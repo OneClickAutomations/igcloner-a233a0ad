@@ -64,7 +64,8 @@ export function IntentFlow({ analysisId }: Props) {
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
   const [niche, setNiche] = useState<string | null>(null);
   const [customNiche, setCustomNiche] = useState("");
-  const [goal, setGoal] = useState<string | null>(null);
+  const [goal, setGoal] = useState<PostGoal | null>(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["instagram"]);
   const [tone, setTone] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
@@ -344,6 +345,36 @@ export function IntentFlow({ analysisId }: Props) {
             </button>
           )}
 
+          {/* Goal — always visible & required (drives copy direction) */}
+          <Section title="What is the goal of this post?" required>
+            <p className="mb-2 text-[11px] text-muted-foreground">
+              This shapes your captions, hooks, and CTAs to actually achieve it.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {POST_GOALS.map((g) => {
+                const active = goal === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => setGoal(g.id)}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      active
+                        ? "border-transparent bg-accent-primary/5 ring-2 ring-accent-primary"
+                        : "border-border bg-card hover:border-strong"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">
+                      <span className="mr-1.5">{g.emoji}</span>
+                      {g.label}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{g.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
           <div className={cloneMethod === "A1" && !advancedOpen ? "hidden" : "space-y-5"}>
           {/* Niche */}
           <Section title="Your niche" required>
@@ -360,11 +391,6 @@ export function IntentFlow({ analysisId }: Props) {
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
               />
             </div>
-          </Section>
-
-          {/* Goal */}
-          <Section title="Your content goal" required>
-            <ChipGrid options={GOALS} selected={goal} onSelect={setGoal} />
           </Section>
 
           {/* Tone */}
