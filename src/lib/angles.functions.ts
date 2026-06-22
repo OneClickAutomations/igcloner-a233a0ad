@@ -89,15 +89,18 @@ export const generateAngles = createServerFn({ method: "POST" })
     const scraped = (analysis.scraped_data as any) ?? {};
     const visionImage = await fetchVisionImage(scraped);
 
-    let niche = data.niche;
-    if (!niche) {
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-      niche = (prof as any)?.default_niche ?? "general";
-    }
+    // Niche is OPTIONAL. If the user did not explicitly provide one for this
+    // generation, do NOT fall back to a profile default and do NOT pass
+    // "general" — instead let the AI infer subject matter directly from the
+    // source post (image, OCR text, caption, hashtags). User-provided niche
+    // overrides AI inference.
+    const niche = data.niche?.trim() || null;
+    const nicheLine = niche
+      ? `- Niche (USER-SPECIFIED — overrides source inference): ${niche}`
+      : `- Niche: NOT SPECIFIED. Infer the subject domain directly from the source post (image content, visible text/OCR, caption, hashtags, account context). Stay in the SOURCE'S OWN subject domain — do NOT drift into an unrelated industry.`;
+    const ruleNiche = niche
+      ? `Stay on-niche (${niche})`
+      : `Stay in the SOURCE POST'S inferred subject domain (do not invent a different industry)`;
 
     const prefs = data.preferences ?? {};
     const intent = data.intent ?? "A3";
@@ -175,7 +178,7 @@ Top emotion: ${topEmotion}
 
 USER PREFERENCES:
 - Intent: ${intent} — ${INTENT_DESCRIPTIONS[intent]}
-- Niche: ${niche}
+${nicheLine}
 - Goal: ${prefs.contentGoal ?? "not specified"}
 - Tone: ${prefs.toneOfVoice ?? "not specified"}
 - Target audience: ${prefs.targetAudience ?? "not specified"}
@@ -193,7 +196,7 @@ ${(prefs.uploadedImageUrls ?? []).length > 0 ? `\nUSER REFERENCE IMAGES are atta
 RULES:
 1. Identify a SPECIFIC element from the source post (not vague — e.g. "the handwritten note format", "the over-the-shoulder phone shot").
 2. Show exactly HOW that element translates under the user's intent (${intent}).
-3. Stay on-niche (${niche}), on-tone (${prefs.toneOfVoice ?? "—"}), aimed at goal (${prefs.contentGoal ?? "—"}).
+3. ${ruleNiche}, on-tone (${prefs.toneOfVoice ?? "—"}), aimed at goal (${prefs.contentGoal ?? "—"}).
 4. Hook line must be specific and ready-to-post — never a template.
 5. Where natural, weave in a user keyword${kw.length ? ` (${kw.join(", ")})` : ""}.
 
