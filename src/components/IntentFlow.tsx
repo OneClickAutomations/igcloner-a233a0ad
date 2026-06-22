@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
+import { generateProjectImage } from "@/lib/image.functions";
+import { DEFAULT_BRANDING, loadBranding, saveBranding, POSITION_STYLES, type BrandingSettings } from "@/lib/branding";
 import { POST_GOALS, type PostGoal } from "@/lib/post-goals";
 import { PLATFORM_LIST, type SocialPlatform } from "@/lib/platform-voice";
 
@@ -59,6 +61,7 @@ export function IntentFlow({ analysisId }: Props) {
   const nicheFn = useServerFn(setDefaultNiche);
   const createFn = useServerFn(createProject);
   const uploadFn = useServerFn(uploadReferenceImage);
+  const genImageFn = useServerFn(generateProjectImage);
 
   const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A1");
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
@@ -81,6 +84,16 @@ export function IntentFlow({ analysisId }: Props) {
   const [loadingStep, setLoadingStep] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [openingFormat, setOpeningFormat] = useState<string | null>(null);
+
+  // A1 + image quick-generate (skip the studio)
+  const [quickHandle, setQuickHandle] = useState<string>("@yourbrand");
+  const [quickLogoUrl, setQuickLogoUrl] = useState<string | null>(null);
+  const [quickLogoUploading, setQuickLogoUploading] = useState(false);
+  const [quickOverlay, setQuickOverlay] = useState<string>("");
+  const [quickGenerating, setQuickGenerating] = useState(false);
+  const [quickImageUrl, setQuickImageUrl] = useState<string | null>(null);
+  const [quickProjectId, setQuickProjectId] = useState<string | null>(null);
+  const quickLogoInputRef = useRef<HTMLInputElement>(null);
 
   const prefsRef = useRef<HTMLDivElement>(null);
   const anglesRef = useRef<HTMLDivElement>(null);
@@ -110,6 +123,126 @@ export function IntentFlow({ analysisId }: Props) {
       anglesRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [angles]);
+  // Prefill quick-generate inputs whenever the user picks an angle.
+  useEffect(() => {
+    if (selectedIdx === null || !angles) return;
+    const a = angles[selectedIdx];
+    setQuickOverlay((cur) => cur || a.hookLine || "");
+    try {
+      const b = loadBranding("quick");
+      if (b?.handle) setQuickHandle((cur) => (cur === "@yourbrand" ? b.handle : cur));
+      if (b?.logoUrl) setQuickLogoUrl((cur) => cur ?? b.logoUrl);
+    } catch {}
+    setQuickImageUrl(null);
+    setQuickProjectId(null);
+  }, [selectedIdx, angles]);
+
+  const handleQuickLogo = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Logo must be an image"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Logo must be under 5MB"); return; }
+    setQuickLogoUploading(true);
+    try {
+      const b64 = await fileToBase64(file);
+      const res = await uploadFn({
+        data: { analysisId, filename: file.name, mediaType: file.type, dataBase64: b64 },
+      });
+      setQuickLogoUrl(res.url);
+    } catch (e: any) {
+      toast.error(e?.message || "Logo upload failed");
+    } finally {
+      setQuickLogoUploading(false);
+      if (quickLogoInputRef.current) quickLogoInputRef.current.value = "";
+    }
+  };
+
+  const quickGenerate = async () => {
+    if (selectedIdx === null || !angles) return;
+    const angle = angles[selectedIdx];
+    setQuickGenerating(true);
+    setQuickImageUrl(null);
+    try {
+      // Persist branding for reuse
+      try {
+        saveBranding("quick", {
+          ...DEFAULT_BRANDING,
+          handle: quickHandle || DEFAULT_BRANDING.handle,
+          showHandle: !!quickHandle,
+          showLogo: !!quickLogoUrl,
+          logoUrl: quickLogoUrl,
+        } as BrandingSettings);
+      } catch {}
+      let pid = quickProjectId;
+      if (!pid) {
+        const proj: any = await createFn({
+          data: {
+            analysisId,
+            format: "image",
+            title: `${angle.angleName} — ${angle.hookLine.slice(0, 60)}`,
+            userPreferences: {
+              intent: cloneMethod,
+              cloneMethod,
+              outputFormat: "image",
+              niche: selectedNiche ?? undefined,
+              contentGoal: goal ?? undefined,
+              goal: goal ?? undefined,
+              selectedPlatforms,
+              toneOfVoice: tone ?? undefined,
+              keywords,
+              targetAudience: audience || undefined,
+              userDescription: description || undefined,
+              uploadedImageUrls: uploadedImages.map((i) => i.url),
+              angle: angle.hookLine,
+              angleName: angle.angleName,
+              angleConcept: angle.concept,
+              angleType: angle.angleType,
+              hookType: angle.hookType,
+              specificSourceElement: angle.specificSourceElement,
+              sourceConnection: angle.sourceConnection,
+              contentDirection: angle.contentDirection,
+              quickBrandingHandle: quickHandle,
+              quickBrandingLogoUrl: quickLogoUrl,
+            },
+          },
+        });
+        pid = proj.project.id as string;
+        setQuickProjectId(pid);
+      }
+      const res: any = await genImageFn({
+        data: {
+          projectId: pid!,
+          concept: angle.concept || angle.hookLine,
+          style: "photorealistic" as any,
+          aspect: "4:5" as any,
+          textOverlay: quickOverlay || undefined,
+        },
+      });
+      setQuickImageUrl(res.signedUrl);
+      toast.success("Your cloned image is ready");
+    } catch (e: any) {
+      toast.error(e?.message || "Image generation failed");
+    } finally {
+      setQuickGenerating(false);
+    }
+  };
+
+  const downloadQuick = async () => {
+    if (!quickImageUrl) return;
+    try {
+      const r = await fetch(quickImageUrl);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `igcloner-${Date.now()}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e: any) {
+      toast.error(e?.message || "Download failed");
+    }
+  };
+
   useEffect(() => {
     if (!loading) return;
     setLoadingStep(0);
