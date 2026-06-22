@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
+import { generateProjectImage } from "@/lib/image.functions";
+import { DEFAULT_BRANDING, loadBranding, saveBranding, POSITION_STYLES, type BrandingSettings } from "@/lib/branding";
 import { POST_GOALS, type PostGoal } from "@/lib/post-goals";
 import { PLATFORM_LIST, type SocialPlatform } from "@/lib/platform-voice";
 
@@ -59,6 +61,7 @@ export function IntentFlow({ analysisId }: Props) {
   const nicheFn = useServerFn(setDefaultNiche);
   const createFn = useServerFn(createProject);
   const uploadFn = useServerFn(uploadReferenceImage);
+  const genImageFn = useServerFn(generateProjectImage);
 
   const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A1");
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
@@ -81,6 +84,16 @@ export function IntentFlow({ analysisId }: Props) {
   const [loadingStep, setLoadingStep] = useState(0);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [openingFormat, setOpeningFormat] = useState<string | null>(null);
+
+  // A1 + image quick-generate (skip the studio)
+  const [quickHandle, setQuickHandle] = useState<string>("@yourbrand");
+  const [quickLogoUrl, setQuickLogoUrl] = useState<string | null>(null);
+  const [quickLogoUploading, setQuickLogoUploading] = useState(false);
+  const [quickOverlay, setQuickOverlay] = useState<string>("");
+  const [quickGenerating, setQuickGenerating] = useState(false);
+  const [quickImageUrl, setQuickImageUrl] = useState<string | null>(null);
+  const [quickProjectId, setQuickProjectId] = useState<string | null>(null);
+  const quickLogoInputRef = useRef<HTMLInputElement>(null);
 
   const prefsRef = useRef<HTMLDivElement>(null);
   const anglesRef = useRef<HTMLDivElement>(null);
@@ -110,6 +123,126 @@ export function IntentFlow({ analysisId }: Props) {
       anglesRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [angles]);
+  // Prefill quick-generate inputs whenever the user picks an angle.
+  useEffect(() => {
+    if (selectedIdx === null || !angles) return;
+    const a = angles[selectedIdx];
+    setQuickOverlay((cur) => cur || a.hookLine || "");
+    try {
+      const b = loadBranding("quick");
+      if (b?.handle) setQuickHandle((cur) => (cur === "@yourbrand" ? b.handle : cur));
+      if (b?.logoUrl) setQuickLogoUrl((cur) => cur ?? b.logoUrl);
+    } catch {}
+    setQuickImageUrl(null);
+    setQuickProjectId(null);
+  }, [selectedIdx, angles]);
+
+  const handleQuickLogo = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Logo must be an image"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("Logo must be under 5MB"); return; }
+    setQuickLogoUploading(true);
+    try {
+      const b64 = await fileToBase64(file);
+      const res = await uploadFn({
+        data: { analysisId, filename: file.name, mediaType: file.type, dataBase64: b64 },
+      });
+      setQuickLogoUrl(res.url);
+    } catch (e: any) {
+      toast.error(e?.message || "Logo upload failed");
+    } finally {
+      setQuickLogoUploading(false);
+      if (quickLogoInputRef.current) quickLogoInputRef.current.value = "";
+    }
+  };
+
+  const quickGenerate = async () => {
+    if (selectedIdx === null || !angles) return;
+    const angle = angles[selectedIdx];
+    setQuickGenerating(true);
+    setQuickImageUrl(null);
+    try {
+      // Persist branding for reuse
+      try {
+        saveBranding("quick", {
+          ...DEFAULT_BRANDING,
+          handle: quickHandle || DEFAULT_BRANDING.handle,
+          showHandle: !!quickHandle,
+          showLogo: !!quickLogoUrl,
+          logoUrl: quickLogoUrl,
+        } as BrandingSettings);
+      } catch {}
+      let pid = quickProjectId;
+      if (!pid) {
+        const proj: any = await createFn({
+          data: {
+            analysisId,
+            format: "image",
+            title: `${angle.angleName} — ${angle.hookLine.slice(0, 60)}`,
+            userPreferences: {
+              intent: cloneMethod,
+              cloneMethod,
+              outputFormat: "image",
+              niche: selectedNiche ?? undefined,
+              contentGoal: goal ?? undefined,
+              goal: goal ?? undefined,
+              selectedPlatforms,
+              toneOfVoice: tone ?? undefined,
+              keywords,
+              targetAudience: audience || undefined,
+              userDescription: description || undefined,
+              uploadedImageUrls: uploadedImages.map((i) => i.url),
+              angle: angle.hookLine,
+              angleName: angle.angleName,
+              angleConcept: angle.concept,
+              angleType: angle.angleType,
+              hookType: angle.hookType,
+              specificSourceElement: angle.specificSourceElement,
+              sourceConnection: angle.sourceConnection,
+              contentDirection: angle.contentDirection,
+              quickBrandingHandle: quickHandle,
+              quickBrandingLogoUrl: quickLogoUrl,
+            },
+          },
+        });
+        pid = proj.project.id as string;
+        setQuickProjectId(pid);
+      }
+      const res: any = await genImageFn({
+        data: {
+          projectId: pid!,
+          concept: angle.concept || angle.hookLine,
+          style: "photorealistic" as any,
+          aspect: "4:5" as any,
+          textOverlay: quickOverlay || undefined,
+        },
+      });
+      setQuickImageUrl(res.signedUrl);
+      toast.success("Your cloned image is ready");
+    } catch (e: any) {
+      toast.error(e?.message || "Image generation failed");
+    } finally {
+      setQuickGenerating(false);
+    }
+  };
+
+  const downloadQuick = async () => {
+    if (!quickImageUrl) return;
+    try {
+      const r = await fetch(quickImageUrl);
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `igcloner-${Date.now()}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e: any) {
+      toast.error(e?.message || "Download failed");
+    }
+  };
+
   useEffect(() => {
     if (!loading) return;
     setLoadingStep(0);
@@ -635,24 +768,116 @@ export function IntentFlow({ analysisId }: Props) {
               </p>
             </div>
 
-            <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm">
-                  <p className="font-semibold">Ready to build "{angles[selectedIdx].angleName}"</p>
+            {cloneMethod === "A1" && outputFormat === "image" ? (
+              <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+                <div>
+                  <p className="text-sm font-semibold">One-click clone — "{angles[selectedIdx].angleName}"</p>
                   <p className="text-xs text-muted-foreground">
-                    Opens the {outputFormat} studio with {selectedPlatforms.length || 0} platform
-                    {selectedPlatforms.length === 1 ? "" : "s"} pre-loaded.
+                    Same image style as the source. Your text overlay and branding. No extra steps.
                   </p>
                 </div>
-                <Button
-                  onClick={openStudio}
-                  disabled={!!openingFormat || selectedPlatforms.length === 0}
-                  className="gap-2"
-                >
-                  {openingFormat ? <><Loader2 className="h-4 w-4 animate-spin" /> Opening…</> : <>Open {outputFormat} Studio <Sparkles className="h-4 w-4" /></>}
-                </Button>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Your @handle</label>
+                    <input
+                      value={quickHandle}
+                      onChange={(e) => setQuickHandle(e.target.value)}
+                      placeholder="@yourbrand"
+                      className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Logo (optional)</label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        ref={quickLogoInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleQuickLogo(e.target.files)}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => quickLogoInputRef.current?.click()}
+                        disabled={quickLogoUploading}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:border-strong disabled:opacity-60"
+                      >
+                        {quickLogoUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        {quickLogoUrl ? "Replace logo" : "Upload logo"}
+                      </button>
+                      {quickLogoUrl && (
+                        <>
+                          <img src={quickLogoUrl} alt="logo" className="h-6 w-6 rounded object-contain bg-background border border-border" />
+                          <button onClick={() => setQuickLogoUrl(null)} aria-label="remove" className="text-muted-foreground hover:text-foreground">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Text overlay</label>
+                  <textarea
+                    value={quickOverlay}
+                    onChange={(e) => setQuickOverlay(e.target.value.slice(0, 200))}
+                    placeholder="The text rendered on the image"
+                    className="mt-1 min-h-[60px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Button onClick={quickGenerate} disabled={quickGenerating} className="gap-2">
+                    {quickGenerating ? <><Loader2 className="h-4 w-4 animate-spin" /> Cloning image…</> : <><Sparkles className="h-4 w-4" /> Generate cloned image</>}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={openStudio} disabled={!!openingFormat}>
+                    {openingFormat ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Opening…</> : <>Advanced edit in studio <ChevronDown className="h-3.5 w-3.5 -rotate-90" /></>}
+                  </Button>
+                </div>
+
+                {quickImageUrl && (
+                  <div className="mt-2 rounded-xl border border-border bg-background p-3">
+                    <div className="relative mx-auto w-full max-w-sm overflow-hidden rounded-lg bg-muted aspect-[4/5]">
+                      <img src={quickImageUrl} alt="Generated" className="absolute inset-0 h-full w-full object-cover" />
+                      {(quickHandle || quickLogoUrl) && (
+                        <div className="absolute flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-white text-xs backdrop-blur-sm" style={POSITION_STYLES["bottom-right"] as any}>
+                          {quickLogoUrl && <img src={quickLogoUrl} alt="logo" className="h-4 w-4 rounded object-contain" />}
+                          {quickHandle && <span className="font-medium">{quickHandle}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 flex justify-center gap-2">
+                      <Button size="sm" onClick={downloadQuick} className="gap-1.5">Download</Button>
+                      <Button size="sm" variant="outline" onClick={quickGenerate} disabled={quickGenerating} className="gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5" /> Regenerate
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={openStudio} disabled={!!openingFormat}>Open in studio</Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-sm">
+                    <p className="font-semibold">Ready to build "{angles[selectedIdx].angleName}"</p>
+                    <p className="text-xs text-muted-foreground">
+                      Opens the {outputFormat} studio with {selectedPlatforms.length || 0} platform
+                      {selectedPlatforms.length === 1 ? "" : "s"} pre-loaded.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={openStudio}
+                    disabled={!!openingFormat || selectedPlatforms.length === 0}
+                    className="gap-2"
+                  >
+                    {openingFormat ? <><Loader2 className="h-4 w-4 animate-spin" /> Opening…</> : <>Open {outputFormat} Studio <Sparkles className="h-4 w-4" /></>}
+                  </Button>
+                </div>
+              </div>
+            )}
             </>
           )}
         </div>
