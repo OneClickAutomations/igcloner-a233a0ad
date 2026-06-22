@@ -76,6 +76,7 @@ export function IntentFlow({ analysisId }: Props) {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [angles, setAngles] = useState<Angle[] | null>(null);
   const [loading, setLoading] = useState(false);
