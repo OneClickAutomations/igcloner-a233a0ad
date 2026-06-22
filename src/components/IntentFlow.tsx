@@ -218,6 +218,8 @@ export function IntentFlow({ analysisId }: Props) {
             outputFormat,
             niche: selectedNiche ?? undefined,
             contentGoal: goal ?? undefined,
+            goal: goal ?? undefined,
+            selectedPlatforms,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
