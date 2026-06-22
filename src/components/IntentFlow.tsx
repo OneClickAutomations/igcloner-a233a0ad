@@ -182,6 +182,7 @@ export function IntentFlow({ analysisId }: Props) {
           outputFormat,
           preferences: {
             contentGoal: goal,
+            goal: goal ?? undefined,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
