@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,11 +15,13 @@ export function SlidePreviewDialog({
   openIndex,
   onOpenChange,
   onIndexChange,
+  onEdit,
 }: {
   doc: CarouselDoc | null;
   openIndex: number | null;
   onOpenChange: (open: boolean) => void;
   onIndexChange: (idx: number) => void;
+  onEdit?: (idx: number) => void;
 }) {
   const open = openIndex !== null && doc !== null;
   const slide = useMemo(
@@ -148,6 +150,21 @@ export function SlidePreviewDialog({
         <p className="mt-3 text-center text-[11px] text-white/70 drop-shadow">
           Use ← / → to flip through slides
         </p>
+
+        {onEdit && (
+          <div className="mt-3 flex justify-center">
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => {
+                onEdit(slide.index);
+                onOpenChange(false);
+              }}
+            >
+              <Pencil className="h-3.5 w-3.5" /> Edit this slide
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
