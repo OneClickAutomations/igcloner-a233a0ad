@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Sparkles, Loader2, Check, Film, LayoutGrid, ImageIcon,
-  Upload, X, FileText,
+  Upload, X, FileText, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
