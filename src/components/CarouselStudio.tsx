@@ -15,6 +15,9 @@ import {
   Wand2,
   Save,
   Maximize2,
+  Eye,
+  Pencil,
+  ZoomIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +37,14 @@ import { Send } from "lucide-react";
 import { EnhanceButton } from "@/components/EnhanceButton";
 import { generateCarouselSlideImage } from "@/lib/carousel-image.functions";
 import { ImageIcon } from "lucide-react";
+import { InstagramCarouselPreview } from "@/components/InstagramCarouselPreview";
+import { BrandingPanel } from "@/components/BrandingPanel";
+import {
+  DEFAULT_BRANDING,
+  loadBranding,
+  saveBranding,
+  type BrandingSettings,
+} from "@/lib/branding";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -112,6 +123,26 @@ export function CarouselStudio() {
   const [imgDirection, setImgDirection] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  const [branding, setBranding] = useState<BrandingSettings>(DEFAULT_BRANDING);
+
+  useEffect(() => {
+    if (projectId) setBranding(loadBranding(projectId));
+  }, [projectId]);
+
+  useEffect(() => {
+    if (projectId) saveBranding(projectId, branding);
+  }, [projectId, branding]);
+
+  const editSlide = (idx: number) => {
+    setActiveIdx(idx);
+    setViewMode("editor");
+    setTimeout(() => {
+      document
+        .getElementById("slide-editor-panel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
 
   useEffect(() => {
     if (project?.project_data) {
@@ -319,6 +350,45 @@ export function CarouselStudio() {
         />
       )}
 
+      {doc && (
+        <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/40 p-1">
+          <button
+            type="button"
+            onClick={() => setViewMode("editor")}
+            className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              viewMode === "editor"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Pencil className="h-3.5 w-3.5" /> Edit slides
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("preview")}
+            className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              viewMode === "preview"
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Eye className="h-3.5 w-3.5" /> Preview as Instagram post
+          </button>
+        </div>
+      )}
+
+      {doc && viewMode === "preview" && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <InstagramCarouselPreview doc={doc} branding={branding} />
+            <p className="text-center text-xs text-muted-foreground">
+              Swipe (or drag) the image to flip through slides — exactly like on Instagram.
+            </p>
+          </div>
+          <BrandingPanel settings={branding} onChange={setBranding} />
+        </div>
+      )}
+
       {!doc ? (
         // ============ Initial Generate panel ============
         <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-ig">
@@ -377,7 +447,7 @@ export function CarouselStudio() {
             </Button>
           </div>
         </div>
-      ) : (
+      ) : viewMode === "editor" ? (
         // ============ Two-column editor ============
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
           {/* Slide list */}
@@ -438,22 +508,44 @@ export function CarouselStudio() {
                     onClick={() => setActiveIdx(s.index)}
                     className="flex flex-1 items-start gap-3 text-left"
                   >
-                    {s.imageUrl ? (
-                      <img
-                        src={s.imageUrl}
-                        alt={`Slide ${s.index}`}
-                        className="h-10 w-10 shrink-0 rounded-md object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold">
-                        {s.index}
-                      </div>
-                    )}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewIdx(s.index);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setPreviewIdx(s.index);
+                        }
+                      }}
+                      aria-label={`Enlarge slide ${s.index}`}
+                      className="group/thumb relative h-10 w-10 shrink-0 overflow-hidden rounded-md"
+                    >
+                      {s.imageUrl ? (
+                        <img
+                          src={s.imageUrl}
+                          alt={`Slide ${s.index}`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center bg-muted text-xs font-semibold">
+                          {s.index}
+                        </span>
+                      )}
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover/thumb:opacity-100">
+                        <ZoomIn className="h-4 w-4 text-white" />
+                      </span>
+                    </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <Badge variant="secondary" className="text-[10px]">{s.role}</Badge>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-sm font-medium">{s.headline}</p>
+                      <p className="mt-1 line-clamp-2 text-sm font-medium hover:text-accent-primary hover:underline">
+                        {s.headline}
+                      </p>
                     </div>
                   </button>
                   <button
@@ -473,7 +565,7 @@ export function CarouselStudio() {
           </aside>
 
           {/* Editor */}
-          <section className="space-y-6">
+          <section id="slide-editor-panel" className="space-y-6">
             {active && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-ig">
                 <div className="mb-4 flex items-center justify-between">
@@ -686,13 +778,14 @@ export function CarouselStudio() {
             </div>
           </section>
         </div>
-      )}
+      ) : null}
 
       <SlidePreviewDialog
         doc={doc}
         openIndex={previewIdx}
         onOpenChange={(o) => !o && setPreviewIdx(null)}
         onIndexChange={setPreviewIdx}
+        onEdit={editSlide}
       />
     </div>
   );
