@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
+import { POST_GOALS, type PostGoal } from "@/lib/post-goals";
+import { PLATFORM_LIST, type SocialPlatform } from "@/lib/platform-voice";
 
 type CloneMethod = "A1" | "A2" | "A3";
 type OutputFormat = "image" | "reel" | "carousel";
@@ -19,11 +21,6 @@ const NICHES = [
   "Travel", "Motivation & Mindset", "Education", "Real Estate",
   "Entertainment", "Tech & Gaming", "Parenting", "Lifestyle",
   "Music & Arts", "Sports",
-];
-const GOALS = [
-  "Grow my followers", "Drive traffic to my link in bio", "Sell a product or service",
-  "Build authority in my niche", "Attract brand deals", "Increase engagement",
-  "Build my email list", "Grow a community",
 ];
 const TONES = [
   "Motivational & high energy", "Professional & authoritative", "Friendly & conversational",
@@ -67,7 +64,8 @@ export function IntentFlow({ analysisId }: Props) {
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
   const [niche, setNiche] = useState<string | null>(null);
   const [customNiche, setCustomNiche] = useState("");
-  const [goal, setGoal] = useState<string | null>(null);
+  const [goal, setGoal] = useState<PostGoal | null>(null);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(["instagram"]);
   const [tone, setTone] = useState<string | null>(null);
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
@@ -184,6 +182,7 @@ export function IntentFlow({ analysisId }: Props) {
           outputFormat,
           preferences: {
             contentGoal: goal,
+            goal: goal ?? undefined,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
@@ -220,6 +219,8 @@ export function IntentFlow({ analysisId }: Props) {
             outputFormat,
             niche: selectedNiche ?? undefined,
             contentGoal: goal ?? undefined,
+            goal: goal ?? undefined,
+            selectedPlatforms,
             toneOfVoice: tone ?? undefined,
             keywords,
             targetAudience: audience || undefined,
@@ -347,6 +348,36 @@ export function IntentFlow({ analysisId }: Props) {
             </button>
           )}
 
+          {/* Goal — always visible & required (drives copy direction) */}
+          <Section title="What is the goal of this post?" required>
+            <p className="mb-2 text-[11px] text-muted-foreground">
+              This shapes your captions, hooks, and CTAs to actually achieve it.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {POST_GOALS.map((g) => {
+                const active = goal === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => setGoal(g.id)}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      active
+                        ? "border-transparent bg-accent-primary/5 ring-2 ring-accent-primary"
+                        : "border-border bg-card hover:border-strong"
+                    }`}
+                  >
+                    <p className="text-sm font-semibold">
+                      <span className="mr-1.5">{g.emoji}</span>
+                      {g.label}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{g.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </Section>
+
           <div className={cloneMethod === "A1" && !advancedOpen ? "hidden" : "space-y-5"}>
           {/* Niche */}
           <Section title="Your niche" required>
@@ -363,11 +394,6 @@ export function IntentFlow({ analysisId }: Props) {
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
               />
             </div>
-          </Section>
-
-          {/* Goal */}
-          <Section title="Your content goal" required>
-            <ChipGrid options={GOALS} selected={goal} onSelect={setGoal} />
           </Section>
 
           {/* Tone */}
@@ -551,17 +577,82 @@ export function IntentFlow({ analysisId }: Props) {
           </div>
 
           {selectedIdx !== null && outputFormat && (
+            <>
+            {/* Platform picker — same image, copy adapts per platform */}
+            <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold">Where are you posting this?</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Same image everywhere — copy adapts to match each platform's voice.
+                  </p>
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlatforms(PLATFORM_LIST.map((p) => p.key))}
+                    className="rounded-md border border-border px-2 py-1 text-[11px] hover:border-strong"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlatforms([])}
+                    className="rounded-md border border-border px-2 py-1 text-[11px] hover:border-strong"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                {PLATFORM_LIST.map((p) => {
+                  const active = selectedPlatforms.includes(p.key);
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() =>
+                        setSelectedPlatforms((prev) =>
+                          prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key],
+                        )
+                      }
+                      className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-xs transition-all ${
+                        active
+                          ? "border-transparent bg-accent-primary/10 ring-2 ring-accent-primary"
+                          : "border-border bg-background hover:border-strong"
+                      }`}
+                    >
+                      <span className="text-base leading-none">{p.icon}</span>
+                      <span className="font-medium">{p.platform}</span>
+                      {active && <Check className="ml-auto h-3.5 w-3.5 text-accent-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                ℹ Simultaneous auto-posting coming soon. For now, IGCloner generates platform-perfect copy you can copy &amp; post.
+              </p>
+            </div>
+
             <div className="animate-in fade-in slide-in-from-bottom-2 rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-sm">
                   <p className="font-semibold">Ready to build "{angles[selectedIdx].angleName}"</p>
-                  <p className="text-xs text-muted-foreground">Opens the {outputFormat} studio with this angle and your preferences pre-loaded.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Opens the {outputFormat} studio with {selectedPlatforms.length || 0} platform
+                    {selectedPlatforms.length === 1 ? "" : "s"} pre-loaded.
+                  </p>
                 </div>
-                <Button onClick={openStudio} disabled={!!openingFormat} className="gap-2">
+                <Button
+                  onClick={openStudio}
+                  disabled={!!openingFormat || selectedPlatforms.length === 0}
+                  className="gap-2"
+                >
                   {openingFormat ? <><Loader2 className="h-4 w-4 animate-spin" /> Opening…</> : <>Open {outputFormat} Studio <Sparkles className="h-4 w-4" /></>}
                 </Button>
               </div>
             </div>
+            </>
           )}
         </div>
       )}

@@ -155,7 +155,9 @@ export function ImageStudio() {
         const sp: SocialPlatform[] =
           Array.isArray(saved.selectedPlatforms) && saved.selectedPlatforms.length > 0
             ? saved.selectedPlatforms
-            : ["instagram"];
+            : Array.isArray(prefs.selectedPlatforms) && prefs.selectedPlatforms.length > 0
+              ? prefs.selectedPlatforms
+              : ["instagram"];
         setSelectedPlatforms(sp);
         setActivePlatform(sp[0] ?? "instagram");
         if (saved.platformCopy && typeof saved.platformCopy === "object") {
