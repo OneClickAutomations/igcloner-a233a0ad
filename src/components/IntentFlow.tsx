@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   Sparkles, Loader2, Check, Film, LayoutGrid, ImageIcon,
-  Upload, X, FileText,
+  Upload, X, FileText, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
@@ -76,6 +76,7 @@ export function IntentFlow({ analysisId }: Props) {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [uploadedDocs, setUploadedDocs] = useState<UploadedDoc[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const [angles, setAngles] = useState<Angle[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -330,6 +331,23 @@ export function IntentFlow({ analysisId }: Props) {
 
           <div className="border-t border-border" />
 
+          {/* Advanced Features wrapper (collapsed by default for A1) */}
+          {cloneMethod === "A1" && (
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((v) => !v)}
+              className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-left hover:border-strong transition-colors"
+              aria-expanded={advancedOpen}
+            >
+              <div>
+                <p className="text-sm font-semibold">Advanced Features</p>
+                <p className="text-xs text-muted-foreground">Niche, goal, tone, keywords, audience, extra context</p>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+            </button>
+          )}
+
+          <div className={cloneMethod === "A1" && !advancedOpen ? "hidden" : "space-y-5"}>
           {/* Niche */}
           <Section title="Your niche" required>
             <ChipGrid
@@ -440,6 +458,7 @@ export function IntentFlow({ analysisId }: Props) {
               </div>
             )}
           </Section>
+          </div>
 
           {/* Generate */}
           <div className="mt-5 border-t border-border pt-4">
