@@ -54,6 +54,40 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
   const prefs = (project?.user_preferences as any) ?? {};
   const dna = (project?.dna_analysis as any) ?? {};
   const visual = dna.visualStyle ?? {};
+  const intent = String(prefs.intent ?? prefs.cloneMethod ?? "").toUpperCase();
+  const isA1 = intent === "A1";
+  const ocr = extractSourceText(dna);
+
+  // A1 = Clone Exactly. Strict rule: reproduce the source image 100% faithfully
+  // (same subject, composition, colors, lighting, framing, aesthetic) and ONLY
+  // change the text overlay — remove the original visible/OCR text and replace
+  // it with the user's new text (the selected angle's hook). Nothing else.
+  if (isA1 && hasRefImage) {
+    const lines: string[] = [];
+    lines.push(`Reproduce the ATTACHED REFERENCE IMAGE exactly as a ${ASPECT_DIMS[input.aspect]} Instagram post.`);
+    lines.push(
+      "STRICT CLONE RULES (A1 — Clone Exactly):",
+      "1. The output image must be VISUALLY IDENTICAL to the reference: same subject, same pose, same composition, same framing, same lighting, same color palette, same background, same props, same overall aesthetic. Do not reinterpret, restyle, or 'improve' it.",
+      "2. REMOVE every piece of original text, caption, watermark, handle, sticker text, and any visible writing that appears in the reference image. The cleaned image must have NO leftover original text or partial letters.",
+      `3. ${
+        ocr
+          ? `For reference, the original on-image text was: "${ocr}". This text MUST NOT appear in the output.`
+          : "Any incidental text in the reference must not be reproduced."
+      }`,
+      "4. Do not change faces, identities, logos that are part of the visual composition (e.g. a brand on a product), or environmental details — only the text changes.",
+    );
+    if (input.textOverlay) {
+      lines.push(
+        `5. Render this NEW text overlay in place of the original text, matching the original's typographic treatment (font weight, scale, placement, color contrast) as closely as possible, spelled perfectly: "${input.textOverlay}"`,
+      );
+    } else {
+      lines.push("5. Do not add any new text overlay — leave the cleaned image text-free.");
+    }
+    if (input.brandColor) lines.push(`Use ${input.brandColor} as a subtle accent only if it does not alter the cloned look.`);
+    lines.push("Output a finished post-ready image. No borders, no UI chrome, no Instagram frame.");
+    return lines.join("\n");
+  }
+
   const lines: string[] = [];
   lines.push(`Generate a single Instagram post image (${ASPECT_DIMS[input.aspect]}).`);
   if (hasRefImage) {
@@ -65,7 +99,6 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
   if (prefs.angle) lines.push(`Headline angle: "${prefs.angle}"`);
   if (prefs.angleConcept) lines.push(`Angle concept: ${prefs.angleConcept}`);
   if (scraped?.caption) lines.push(`Source post caption (for tone/topic context): "${String(scraped.caption).slice(0, 400)}"`);
-  const ocr = extractSourceText(dna);
   if (ocr) lines.push(`Source post on-image text: "${ocr}"`);
   lines.push(`Style: ${STYLE_DESCRIPTIONS[input.style] ?? input.style}`);
   if (visual.colorMood) lines.push(`Color mood inspiration: ${visual.colorMood}`);
