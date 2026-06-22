@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
 import { buildAnglesMediumConstraint, mediumLabel, type ContentMedium } from "@/lib/medium";
+import { GOAL_COPY_INSTRUCTIONS, GOAL_LABEL, type PostGoal } from "@/lib/post-goals";
 
 const AngleSchema = z.object({
   angleNumber: z.number(),
@@ -36,6 +37,7 @@ function parseJsonish(text: string): any {
 const PrefsSchema = z
   .object({
     contentGoal: z.string().max(200).optional(),
+    goal: z.string().max(60).optional(),
     toneOfVoice: z.string().max(200).optional(),
     keywords: z.array(z.string().max(80)).max(20).optional(),
     targetAudience: z.string().max(1000).optional(),
@@ -100,6 +102,12 @@ export const generateAngles = createServerFn({ method: "POST" })
     const prefs = data.preferences ?? {};
     const intent = data.intent ?? "A3";
     const lockedFormat = data.outputFormat ?? INTENT_LOCKED_FORMAT[intent];
+
+    const goalKey = (prefs.goal as PostGoal | undefined) ?? null;
+    const goalBlock =
+      goalKey && GOAL_COPY_INSTRUCTIONS[goalKey]
+        ? `\nPOST GOAL (PRIMARY OPTIMIZATION TARGET): ${GOAL_LABEL[goalKey]}\n${GOAL_COPY_INSTRUCTIONS[goalKey]}\nEvery angle MUST be measurably optimized for this goal. Include a "goalAlignment" sentence per angle.`
+        : "";
 
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
@@ -175,6 +183,7 @@ USER PREFERENCES:
 - Intent-specific preference: ${prefs.intentSpecificOption ?? "not specified"}
 ${lockedFormat ? `- LOCKED FORMAT for every angle: "${lockedFormat}"` : ""}
 ${mediumBlock}
+${goalBlock}
 
 USER'S FREE-FORM INSTRUCTIONS:
 ${prefs.userDescription || "(none provided)"}
