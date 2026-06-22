@@ -97,10 +97,10 @@ export const generateAngles = createServerFn({ method: "POST" })
     const niche = data.niche?.trim() || null;
     const nicheLine = niche
       ? `- Niche (USER-SPECIFIED — overrides source inference): ${niche}`
-      : `- Niche: NOT SPECIFIED. Infer the subject domain directly from the source post (image content, visible text/OCR, caption, hashtags, account context). Stay in the SOURCE'S OWN subject domain — do NOT drift into an unrelated industry.`;
+      : `- Niche: NOT SPECIFIED BY USER. Use the SOURCE POST'S OWN niche, as already established by the Content DNA analysis above (account context, image, visible text/OCR, caption, hashtags). Every one of the 5 angles MUST stay inside that single niche — do NOT span multiple industries, do NOT switch themes between angles, do NOT introduce an unrelated vertical.`;
     const ruleNiche = niche
       ? `Stay on-niche (${niche})`
-      : `Stay in the SOURCE POST'S inferred subject domain (do not invent a different industry)`;
+      : `Stay strictly inside the SOURCE POST'S single niche (same industry, same subject domain, same audience) for ALL 5 angles — never mix niches across angles, never invent a different industry`;
 
     const prefs = data.preferences ?? {};
     const intent = data.intent ?? "A3";
@@ -199,6 +199,8 @@ RULES:
 3. ${ruleNiche}, on-tone (${prefs.toneOfVoice ?? "—"}), aimed at goal (${prefs.contentGoal ?? "—"}).
 4. Hook line must be specific and ready-to-post — never a template.
 5. Where natural, weave in a user keyword${kw.length ? ` (${kw.join(", ")})` : ""}.
+6. 10X THE TEXT. Every new hook/caption must be measurably BETTER than the source's text overlay — more profound, deeper, sharper, more clever (if the original was clever), more quote-worthy and share-worthy. Treat the source text as the floor, not the ceiling. If the source is a one-liner, your version is a one-liner that hits harder. No watered-down rewordings, no generic motivational filler, no platitudes. Each hook should feel screenshot-worthy on its own.
+7. ALL 5 ANGLES STAY IN ONE NICHE — the source post's niche. Different ANGLE (contrarian, story, authority, etc.), same SUBJECT DOMAIN. Do not produce a fitness angle and a finance angle in the same set.
 
 Return ONLY this JSON object:
 {
