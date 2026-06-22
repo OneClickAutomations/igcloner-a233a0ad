@@ -221,7 +221,7 @@ export function AppPage() {
               </div>
               {postType && (
                 <div className="mt-2 flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-semibold animate-in fade-in slide-in-from-top-1 duration-300">
-                  <span className="inline-block text-xl animate-bounce" style={{ animationDuration: '1.5s' }}>👍</span>
+                  <span className="inline-block text-xl animate-bounce" style={{ animationDuration: '1.5s' }}>🙂👍</span>
                   <span>Detected: {postType}</span>
                 </div>
               )}
