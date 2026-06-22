@@ -1,64 +1,60 @@
-# IGCloner — Linear Flow Rebuild
+## A1 Mode v2 — Multi-Platform Rebuild
 
-This is a large rebuild. To ship it safely I'll execute in phases, each phase leaving the app in a working state. I'll build straight through phases 1–3 first (the core flow), then ask before starting phase 4 (image studio — requires a new API key) and phase 5 (voiceover — requires ElevenLabs key).
+Implementing the spec in `IGCloner_A1_Mode_v2_Multiplatform.md` as a focused, end-to-end upgrade to the Image Studio (A1 mode). A2/A3 behavior is untouched.
 
-## Scope decisions (please flag any you disagree with)
+### New User Flow
 
-- **AI provider**: keep Claude for DNA analysis (already working). Use **Lovable AI Gemini** for angles, scripts, carousel, post copy, and 30-day plan — no new key needed.
-- **Image studio**: spec calls for Nano Banana. Lovable AI already exposes `google/gemini-2.5-flash-image` ("Nano Banana") with no extra key. I'll use that instead of a separate `NANO_BANANA_API_KEY`.
-- **Voiceover**: requires `ELEVENLABS_API_KEY` (new secret). I'll request this only when we reach Phase 5.
-- **Instagram direct posting**: out of scope (requires Meta Graph API app review). I'll keep the "copy caption / open Instagram" flow from the spec and the schedule-for-later DB record, but not auto-publish.
-- **30-day plan**: I'll wire the generator + calendar grid, but Path B (full from-scratch wizard) is built as a single combined form rather than 7 separate screens to keep scope sane. Same outputs.
+```
+A1 → preferences (niche, tone) → [NEW] Goal selector
+   → generate 5 goal-optimized angles → pick angle
+   → [NEW] Platform picker (IG, LI, X, FB, YT, Threads, Pinterest, Reddit, Bluesky)
+   → [NEW] Branding panel (@handle + logo, 6 positions)
+   → Studio with per-platform tabs (image identical, copy adapts)
+   → Post/Schedule modal with one row per platform
+```
 
-## Phase 1 — Core flow rewrite (URL → Angles → Format picker)
+### What I'll Build
 
-- Rewrite `AppPage.tsx` into the new linear layout: URL input → Intelligence Card + collapsible DNA → 5 Angles → Format picker.
-- New server fn `generateAngles` in `src/lib/angles.functions.ts` (Lovable AI Gemini, returns 5 angle objects with hook, why-it-performs, recommended format, viral score).
-- New `AnglesGrid` + `FormatPicker` + `IntelligenceCard` components.
-- Niche quick-set chips inline above angles (skip if already saved on profile).
-- On format select: create `projects` row (status `in_progress`, stores `angle` + `format`) and navigate to the right studio with `?projectId`.
-- Delete the old `PostAnalysisFlow`, V1–V5 clone auto-gen, and pre-format preferences panel paths.
+1. **Types & constants**
+   - `src/lib/post-goals.ts` — 8 goals + goal-driven copy instructions
+   - `src/lib/platform-voice.ts` — 9 platform voice profiles
+   - Extend `src/lib/branding.ts` types (already exists)
 
-## Phase 2 — Reel Studio upgrade (already 80% there)
+2. **Goal selector UI** — required field added to the existing A1 preference panel inside `ImageStudio.tsx`. Generate button disabled until niche + goal selected.
 
-- Convert existing `ReelStudio` to the 4-tab layout: Script · VEO Prompts · Voiceover · Post Copy.
-- Tabs 1, 2, 4 wire to existing/extended `reel.functions.ts` (already produces script + veoPrompt; I'll add per-scene VEO prompts + post copy regen).
-- Tab 3 (Voiceover) shows a "Connect ElevenLabs" empty state until Phase 5.
-- Add Post Now / Schedule modal (universal — shared component).
+3. **Angles generation update** — extend `src/lib/angles.functions.ts` so A1 prompt injects the selected goal's instructions and returns a `goalAlignment` field per angle.
 
-## Phase 3 — Carousel Studio upgrade
+4. **Platform picker step** — new screen between angle-selection and studio: 9-platform checkbox grid with Select All / Clear All and the "simultaneous posting coming soon" notice.
 
-- Convert `CarouselStudio` to side-by-side layout: settings + slide nav (left) / slide editor + Canva instructions + post copy (right).
-- Extend `carousel.functions.ts` to also return per-slide Canva build instructions (font/size/hex/positions).
-- Wire Post Now / Schedule modal.
+5. **Branding panel** — upgrade existing `BrandingPanel.tsx`:
+   - @handle input + toggle
+   - Logo toggle, source (brand kit / upload), upload control
+   - 6-position picker (3×2 grid) with auto-suggest opposite-corner from text overlay
+   - Live preview composite (text overlay + branding)
 
-## Phase 4 — Image Studio (asks first)
+6. **Brand kit storage** — migration: `brand_kit_assets` table (id, user_id, type, name, url, created_at) with proper grants + RLS + has_role-style user policies. Server fns: `listBrandKit`, `addBrandKitAsset`, `deleteBrandKitAsset`. Logo uploads reuse existing reference-upload pipeline.
 
-- New `/studio/image` route + `ImageStudio.tsx` with the two-column layout from the spec.
-- New server route `src/routes/api/generate-image.ts` streaming `google/gemini-2.5-flash-image` via the AI gateway, with prompt builder from concept + style + text overlay + brand.
-- New Supabase storage bucket `project-assets` (private, RLS-scoped to `user_id`) for generated PNGs.
-- Post copy via shared `generatePostCopy` fn.
+7. **Per-platform copy generation** — new `src/lib/platform-copy.functions.ts` server fn `generatePlatformCopy({ angle, platforms, goal, niche, tone })` that calls the Lovable AI gateway once per platform in parallel and returns `{ platform, hook, caption, description, hashtags, cta, characterCount, platformFitNotes }[]`.
 
-## Phase 5 — Voiceover + 30-Day Plan (asks first)
+8. **Studio platform tabs** — tabs in `ImageStudio.tsx` for each selected platform. Left pane = identical branded image preview. Right pane = that platform's copy with hook, post text, hashtags, CTA, "Regenerate for {platform}", and Copy buttons. Top header shows the active goal.
 
-- ElevenLabs voiceover edge function (requires `ELEVENLABS_API_KEY` — I'll request it at this phase).
-- `generate30DayPlan` server fn + `/calendar/generate` route with calendar grid, CSV/PDF export.
-- Path A (from project) and Path B (combined questionnaire).
+9. **Post modal** — update `PostThisModal.tsx` to render one row per selected platform with Copy Caption / Copy Hashtags / Open ↗ (deep link to each platform's composer) plus a single Download Branded Image button and the "coming soon: auto-post" notice.
 
-## Technical notes
+10. **Persistence** — extend the existing image project record to store `goal`, `selectedPlatforms`, `platformCopy[]`, `branding` so reopening the project restores everything.
 
-- All new AI calls go through `createLovableAiGatewayProvider` (already in `src/lib/ai-gateway.server.ts`) — no new keys for text generation.
-- New tables: none for Phase 1–3. Phase 5 adds `calendar_plans` (id, user_id, source_project_id, items jsonb, created_at) with the standard GRANT + RLS block.
-- Existing `calendar_items` table reused for scheduling.
-- Universal `PostScheduleModal` component shared by all studios.
-- Mobile: every studio collapses to stacked single-column at <768px.
+### Technical Notes (for devs)
 
-## What gets deleted
+- Goal + platform instruction blocks are hardcoded TS modules (not regenerated per request) — keeps prompts cheap and consistent.
+- `generatePlatformCopy` uses `Promise.all` with the existing AI gateway helper; JSON extraction goes through `src/lib/json-extract.ts`.
+- Branded image export = canvas composite (source image + text overlay + branding badge) shared across all platform tabs — one PNG.
+- Auto-position rule: text in top-third → branding bottom-right; text in bottom-third → top-right; default bottom-right.
+- DB migration follows project rules: `CREATE TABLE` → `GRANT SELECT,INSERT,UPDATE,DELETE ... TO authenticated` + `GRANT ALL ... TO service_role` → `ENABLE RLS` → user-scoped policies via `auth.uid()`.
+- Upload-Post API integration is intentionally NOT built — only the "coming soon" notice ships, per spec rule 11.
+- A2/A3 modes and their components are not touched.
 
-- `src/components/PostAnalysisFlow.tsx` (replaced by inline angles + format picker in `AppPage`)
-- Auto-generated clone tabs / `clones` table reads on the app page (the table stays for now in case dashboard uses it)
-- The pre-format preferences panel — preferences now live inside each studio
+### Out of Scope (per spec)
 
-## Ready to start?
+- Actual cross-platform auto-posting (Upload-Post API) — surfaced as "coming soon" only.
+- Visual/design override panel changes — current collapsed A1 behavior preserved.
 
-Reply "go" and I'll execute Phases 1–3 straight through, then check in before Phase 4 (image studio) since it adds a storage bucket and a new AI surface.
+After you approve, I'll implement in this order: types/constants → DB migration → server fns → goal selector → platform picker → branding panel upgrade → studio tabs → post modal.
