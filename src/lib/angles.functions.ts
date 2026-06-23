@@ -57,12 +57,23 @@ const Input = z.object({
 });
 
 const INTENT_DESCRIPTIONS: Record<string, string> = {
-  A1: "Clone the image EXACTLY with different words. Visual style, composition, colors and aesthetic must be reproduced. Only text/message/caption changes.",
-  A2: "Clone the TEXT and caption structure, but use a completely different image. Hook, caption format and message structure stay identical; visual concept is new.",
-  A3: "Use the THEME, concept and emotional genre of the source post to generate fully original content in the user's niche. Execution is original; emotional mechanic is preserved.",
+  A1: "CLONE CONTENT — Clone the image EXACTLY with different words. Visual style, composition, colors and aesthetic must be reproduced. Only text/message/caption changes.",
+  A2: "REMIX THE MESSAGE — Clone the TEXT and caption structure, but use a completely different image. Hook, caption format and message structure stay identical; visual concept is new.",
+  A3: "REIMAGINE THE SCENE — Use the THEME, concept and emotional genre of the source post to generate fully original content in the user's niche. Execution is original; emotional mechanic is preserved.",
   B1: "Use this post as INSPIRATION to generate an original IMAGE post. Not a clone — something new sparked by it.",
   B2: "Use this post as INSPIRATION to generate an original REEL. Not a clone — something new sparked by it.",
   B3: "Use this post as INSPIRATION to generate an original CAROUSEL. Not a clone — something new sparked by it.",
+};
+// Per-intent sampling temperature (determinism control). Exact-clone work (A1)
+// runs cooler for consistency; theme/inspiration work runs hotter for range.
+const INTENT_TEMPERATURE: Record<string, number> = {
+  A1: 0.6, A2: 0.85, A3: 0.9, B1: 0.9, B2: 0.9, B3: 0.9,
+};
+// Isolated per-intent structural rule: must every angle's medium equal the
+// source medium? True only for A1 (Clone Content). Centralized here so the
+// rule lives in ONE place instead of scattered `intent === "A1"` conditionals.
+const INTENT_MEDIUM_LOCK: Record<string, boolean> = {
+  A1: true, A2: false, A3: false, B1: false, B2: false, B3: false,
 };
 const INTENT_LOCKED_FORMAT: Record<string, "image" | "reel" | "carousel" | null> = {
   A1: null, A2: null, A3: null, B1: "image", B2: "reel", B3: "carousel",
@@ -156,6 +167,7 @@ Return ONLY a JSON object — no prose, no code fences.`;
     const sourceMedium: ContentMedium | null = (dna as any).contentMedium ?? null;
     const mediumBlock = buildAnglesMediumConstraint(intent, sourceMedium);
     const sourceMediumPrimary = sourceMedium?.primary ?? "unknown";
+    const mediumMustMatch = INTENT_MEDIUM_LOCK[intent] ?? false;
 
     const prompt = `Analyze this Instagram post and generate 5 viral angles.
 
@@ -219,9 +231,9 @@ Return ONLY this JSON object:
       "hookType": "Personal Declaration|Curiosity Gap|Bold Claim|Contrarian|Question|Story Open|FOMO|Authority|Pattern Interrupt",
       "viralPotential": 0-100,
       "keywordUsed": "Which user keyword is incorporated, or 'none'",
-      "medium": "${sourceMediumPrimary}" ${intent === "A1" ? "(MUST equal the source medium for every angle in A1 mode)" : "(may be the source medium or a different one)"},
+      "medium": "${sourceMediumPrimary}" ${mediumMustMatch ? "(MUST equal the source medium for every angle)" : "(may be the source medium or a different one)"},
       "mediumLabel": "Short human label for the medium, e.g. '✍️ Handwriting on paper'",
-      "mediumIsSameAsSource": ${intent === "A1" ? "true" : "true|false"}
+      "mediumIsSameAsSource": ${mediumMustMatch ? "true" : "true|false"}
     }
   ]
 }`;
@@ -254,20 +266,74 @@ Return ONLY this JSON object:
             },
           ]
         : undefined;
-      const { text } = await generateText({
-        model,
-        system,
-        ...(messages ? { messages } : { prompt }),
-        abortSignal: controller.signal,
-      });
-      const parsed = AnglesSchema.parse(parseJsonish(text));
-      // Backfill medium label client-side so the UI always has a friendly tag.
-      const angles = parsed.angles.map((a) => ({
-        ...a,
-        mediumLabel: a.mediumLabel || mediumLabel(a.medium || sourceMediumPrimary),
-        medium: a.medium || String(sourceMediumPrimary),
-      }));
-      return { angles, niche, intent, sourceMedium };
+      const callModel = async (): Promise<string> => {
+        const { text } = await generateText({
+          model,
+          system,
+          temperature: INTENT_TEMPERATURE[intent] ?? 0.8,
+          ...(messages ? { messages } : { prompt }),
+          abortSignal: controller.signal,
+        });
+        return text;
+      };
+
+      // Bounded retry: regenerate on malformed JSON, wrong angle count, or (A1)
+      // medium drift, instead of throwing/showing bad output on the first miss.
+      // The single 45s AbortController caps total time across all attempts.
+      const maxRetries = 2;
+      let lastError: unknown = null;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const text = await callModel();
+          const result = AnglesSchema.safeParse(parseJsonish(text));
+          if (!result.success) {
+            lastError = result.error;
+            continue;
+          }
+
+          // Backfill medium label client-side so the UI always has a friendly tag.
+          let angles = result.data.angles.map((a) => ({
+            ...a,
+            mediumLabel: a.mediumLabel || mediumLabel(a.medium || sourceMediumPrimary),
+            medium: a.medium || String(sourceMediumPrimary),
+          }));
+
+          // A1 (Clone Content) structural rule: every angle's medium must equal
+          // the source medium. Retry on drift; on the final attempt, coerce to
+          // source rather than ship an inconsistent set.
+          if (mediumMustMatch && sourceMediumPrimary !== "unknown") {
+            const drifted = angles.some(
+              (a) => a.mediumIsSameAsSource === false ||
+                String(a.medium) !== String(sourceMediumPrimary),
+            );
+            if (drifted && attempt < maxRetries) {
+              lastError = new Error("A1 medium drift — every angle must match source medium");
+              continue;
+            }
+            if (drifted) {
+              angles = angles.map((a) => ({
+                ...a,
+                medium: String(sourceMediumPrimary),
+                mediumLabel: mediumLabel(String(sourceMediumPrimary)),
+                mediumIsSameAsSource: true,
+              }));
+            }
+          }
+
+          return { angles, niche, intent, sourceMedium };
+        } catch (err) {
+          lastError = err;
+          // Never retry a genuine timeout/abort — surface it immediately.
+          if (controller.signal.aborted) throw err;
+        }
+      }
+
+      throw new Error(
+        `Angle generation failed validation after ${maxRetries + 1} attempts: ${String(
+          lastError instanceof Error ? lastError.message : lastError,
+        )}`,
+      );
     } finally {
       clearTimeout(timer);
     }

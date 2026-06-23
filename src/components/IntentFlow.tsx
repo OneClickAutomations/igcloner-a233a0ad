@@ -30,10 +30,13 @@ const TONES = [
   "Vulnerable & personal", "Bold & provocative",
 ];
 
+// Display order: Clone Content (A1) → Reimagine the Scene (A3) → Remix the Message (A2).
+// Internal ids stay A1/A2/A3 — they are persisted in user_preferences and drive
+// medium/format logic across the generation pipeline. Only display names change.
 const CLONE_METHODS: { id: CloneMethod; title: string; blurb: string }[] = [
-  { id: "A1", title: "Clone the image exactly with different words", blurb: "Keep the same visual style, composition, colors, and aesthetic. Change the caption, hook, and message." },
-  { id: "A2", title: "Clone the text — use a different image", blurb: "Keep the same hook, caption structure, and message format. Use a completely new visual concept." },
-  { id: "A3", title: "Use the theme and generate original content", blurb: "Same concept, emotional genre, and niche. Completely original execution in your style." },
+  { id: "A1", title: "Clone Content", blurb: "Same image, stronger words. Keep the exact visual style, composition, and colors — restyle only the caption, hook, and message." },
+  { id: "A3", title: "Reimagine the Scene", blurb: "Use the source's theme, concept, and emotional genre to generate completely original content in your niche and style." },
+  { id: "A2", title: "Remix the Message", blurb: "Keep the hook, caption structure, and message format — pair it with a completely new visual concept." },
 ];
 
 const OUTPUT_FORMATS: { id: OutputFormat; title: string; icon: React.ReactNode; desc: string }[] = [
@@ -43,9 +46,16 @@ const OUTPUT_FORMATS: { id: OutputFormat; title: string; icon: React.ReactNode; 
 ];
 
 const CLONE_SUMMARY: Record<CloneMethod, string> = {
-  A1: "Clone the source post's visual style; deliver a new message.",
+  A1: "Clone the source post's exact visual; deliver a stronger message.",
   A2: "Clone the caption/hook structure; pair it with a new visual.",
-  A3: "Use the source as inspiration; create something fully original.",
+  A3: "Reimagine the source's theme into something fully original.",
+};
+
+// Friendly display label for the new names, keyed by stable internal id.
+const CLONE_LABEL: Record<CloneMethod, string> = {
+  A1: "Clone Content",
+  A2: "Remix the Message",
+  A3: "Reimagine the Scene",
 };
 
 const STORAGE_KEY = "igcloner.preferences.v1";
@@ -421,7 +431,38 @@ export function IntentFlow({ analysisId }: Props) {
             </div>
           </div>
 
-          <div className="border-t border-border" />
+          {/* Magic Generate direction box — Reimagine the Scene (A3) & Remix the Message (A2).
+              Bound to the same `description` state that feeds userDescription, so the
+              main Generate button below acts as the "✨ Magic Generate" trigger. */}
+          {(cloneMethod === "A3" || cloneMethod === "A2") && (
+            <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-accent-primary" />
+                <p className="text-sm font-semibold">{CLONE_LABEL[cloneMethod]}</p>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {cloneMethod === "A3"
+                  ? "The AI reinterprets the source's theme into original content in your niche. Steer the direction, or leave it blank and let the AI decide everything."
+                  : "Same message and caption structure, brand-new visual concept. Describe the visual direction you want, or leave it blank to let the AI surprise you."}
+              </p>
+              <label className="mt-3 block text-xs font-medium">
+                Have a specific direction in mind? <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
+                placeholder={cloneMethod === "A3"
+                  ? 'e.g. "lean into the underdog angle" or "make it feel premium" — or leave blank'
+                  : 'Describe the visual concept you want, or leave blank'}
+                rows={3}
+                className="mt-1.5 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+              />
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Sparkles className="h-3 w-3 text-accent-primary" />
+                Leave blank to let the AI decide — then hit Generate below.
+              </p>
+            </div>
+          )}
 
           {/* STEP 2 — output format */}
           <div>
@@ -460,7 +501,7 @@ export function IntentFlow({ analysisId }: Props) {
             <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-3 text-xs leading-relaxed">
               <p className="font-semibold uppercase tracking-widest text-[10px] text-accent-primary">Your creative brief</p>
               <p className="mt-1.5 text-foreground">
-                <span className="font-semibold">{cloneMethod} + {OUTPUT_FORMATS.find(f => f.id === outputFormat)?.title}</span> — {CLONE_SUMMARY[cloneMethod]} Output: {outputFormat}.
+                <span className="font-semibold">{CLONE_LABEL[cloneMethod]} + {OUTPUT_FORMATS.find(f => f.id === outputFormat)?.title}</span> — {CLONE_SUMMARY[cloneMethod]} Output: {outputFormat}.
               </p>
             </div>
           )}
@@ -632,7 +673,7 @@ export function IntentFlow({ analysisId }: Props) {
               Generate My 5 Viral {outputFormat ? OUTPUT_FORMATS.find(f => f.id === outputFormat)?.title : ""} Angles
             </Button>
             <p className="mt-2 text-center text-[11px] text-muted-foreground">
-              Clone: {cloneMethod} ✓{"  ·  "}
+              Clone: {CLONE_LABEL[cloneMethod]} ✓{"  ·  "}
               Format: {outputFormat ? <span>{outputFormat} ✓</span> : <span className="text-status-error">format required</span>}{"  ·  "}
               {goal ? `Goal: ${goal} ✓` : <span className="text-status-error">Goal required</span>}
             </p>
@@ -650,7 +691,7 @@ export function IntentFlow({ analysisId }: Props) {
               <h2 className="text-lg font-bold tracking-tight">
                 5 viral {outputFormat} angles for your <span className="gradient-text">{selectedNiche}</span> content
               </h2>
-              <p className="text-xs text-muted-foreground">Clone method {cloneMethod} · Format {outputFormat}. Pick one to open the studio.</p>
+              <p className="text-xs text-muted-foreground">Clone method {CLONE_LABEL[cloneMethod]} · Format {outputFormat}. Pick one to open the studio.</p>
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={restart}>← Change preferences</Button>
