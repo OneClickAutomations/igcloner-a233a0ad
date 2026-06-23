@@ -294,10 +294,20 @@ footer{background:var(--bg);padding:56px 0;border-top:1px solid var(--border)}
     <div class="nav-right">
       <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle dark mode">☀</button>
       <a href="/auth"><button class="btn-ghost" style="padding:10px 20px;font-size:14px">Log In</button></a>
-      <a href="/auth"><button class="nav-cta">Start Free →</button></a>
+      <a href="/auth"><button class="nav-cta">Start Free<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg></button></a>
+      <button class="nav-burger" aria-label="Open menu" onclick="toggleMobileMenu()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     </div>
   </div>
 </nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#pain" onclick="closeMobileMenu()">Why IG-Cloner</a>
+  <a href="#how" onclick="closeMobileMenu()">How It Works</a>
+  <a href="#features" onclick="closeMobileMenu()">Features</a>
+  <a href="#pricing" onclick="closeMobileMenu()">Pricing</a>
+  <div class="mm-divider"></div>
+  <a href="/auth" onclick="closeMobileMenu()">Log In</a>
+  <div class="mm-cta"><a href="/auth"><button class="nav-cta">Start Free<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg></button></a></div>
+</div>
 
 <section class="hero">
   <div class="hero-bg">
