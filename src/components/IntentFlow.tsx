@@ -432,39 +432,6 @@ export function IntentFlow({ analysisId }: Props) {
             </div>
           </div>
 
-          {/* Magic Generate direction box — Reimagine the Scene (A3) & Remix the Message (A2).
-              Bound to the same `description` state that feeds userDescription, so the
-              main Generate button below acts as the "✨ Magic Generate" trigger. */}
-          {(cloneMethod === "A3" || cloneMethod === "A2") && (
-            <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent-primary" />
-                <p className="text-sm font-semibold">{CLONE_LABEL[cloneMethod]}</p>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {cloneMethod === "A3"
-                  ? "The AI reinterprets the source's theme into original content in your niche. Steer the direction, or leave it blank and let the AI decide everything."
-                  : "Same message and caption structure, brand-new visual concept. Describe the visual direction you want, or leave it blank to let the AI surprise you."}
-              </p>
-              <label className="mt-3 block text-xs font-medium">
-                Have a specific direction in mind? <span className="text-muted-foreground">(optional)</span>
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
-                placeholder={cloneMethod === "A3"
-                  ? 'e.g. "lean into the underdog angle" or "make it feel premium" — or leave blank'
-                  : 'Describe the visual concept you want, or leave blank'}
-                rows={3}
-                className="mt-1.5 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
-              />
-              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Sparkles className="h-3 w-3 text-accent-primary" />
-                Leave blank to let the AI decide — then hit Generate below.
-              </p>
-            </div>
-          )}
-
           {/* STEP 2 — output format */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 2 of 2</p>
