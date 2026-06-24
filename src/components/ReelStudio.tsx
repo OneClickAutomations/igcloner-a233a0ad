@@ -46,6 +46,10 @@ import {
   type VisualDirection,
 } from "@/lib/reel.functions";
 import { submitVideoJob, pollVideoJob } from "@/lib/video.functions";
+import { ReelStylePresets } from "@/components/ReelStylePresets";
+import { AudioEngine } from "@/components/AudioEngine";
+import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
+import { REEL_STYLES, DEFAULT_MIX } from "@/lib/audio-types";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -123,6 +127,11 @@ export function ReelStudio() {
   const [direction, setDirection] = useState<VisualDirection | null>(null);
   const [editingDir, setEditingDir] = useState(false);
 
+  // Phase 1 — Style preset + Audio Engine
+  const [stylePreset, setStylePreset] = useState<ReelStylePreset | undefined>(undefined);
+  const [audioPlan, setAudioPlan] = useState<AudioPlan | undefined>(undefined);
+  const [mixProfile, setMixProfile] = useState<AudioMixProfile>(DEFAULT_MIX);
+
   // In-app video generation state
   const [videoModel, setVideoModel] = useState<"veo3-fast" | "veo3" | "kling-2.1">("veo3-fast");
   const [videoDuration, setVideoDuration] = useState<5 | 8 | 10>(8);
@@ -148,6 +157,9 @@ export function ReelStudio() {
           setDirection(pd.visualDirection);
           if (pd.visualDirection.approved) setTab(pd.hook ? "script" : "direction");
         }
+        if (pd.stylePreset) setStylePreset(pd.stylePreset);
+        if (pd.audioPlan) setAudioPlan(pd.audioPlan);
+        if (pd.mixProfile) setMixProfile(pd.mixProfile);
       }
       if (!angle) {
         const prefs = p?.user_preferences ?? {};
