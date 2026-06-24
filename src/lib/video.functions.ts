@@ -4,10 +4,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const FAL_BASE = "https://queue.fal.run";
 
+// We pick endpoint based on whether a source image is provided.
+// Image-to-video endpoints animate FROM the provided image (first frame +
+// visual anchor) instead of generating a brand-new scene.
 const MODELS = {
-  "veo3-fast": "fal-ai/veo3/fast",
-  "veo3": "fal-ai/veo3",
-  "kling-2.1": "fal-ai/kling-video/v2.1/standard/text-to-video",
+  "veo3-fast": {
+    t2v: "fal-ai/veo3/fast",
+    i2v: "fal-ai/veo3/fast/image-to-video",
+  },
+  veo3: {
+    t2v: "fal-ai/veo3",
+    i2v: "fal-ai/veo3/image-to-video",
+  },
+  "kling-2.1": {
+    t2v: "fal-ai/kling-video/v2.1/standard/text-to-video",
+    i2v: "fal-ai/kling-video/v2.1/standard/image-to-video",
+  },
 } as const;
 
 type ModelKey = keyof typeof MODELS;
@@ -51,7 +63,8 @@ export const submitVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data }) => {
-    const slug = MODELS[data.model as ModelKey];
+    const variants = MODELS[data.model as ModelKey];
+    const slug = data.image_url ? variants.i2v : variants.t2v;
     const res = await fetch(`${FAL_BASE}/${slug}`, {
       method: "POST",
       headers: authHeader(),
