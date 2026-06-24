@@ -384,8 +384,20 @@ export function ReelStudio() {
           onClick: () => setStep("script"),
         };
       case "script":
+        if (doc?.hook && !busy) {
+          return {
+            label: "Continue to audio",
+            icon: ArrowRight, disabled: false,
+            onClick: () => setStep("audio"),
+            secondary: {
+              label: "Regenerate",
+              icon: Sparkles,
+              onClick: handleGenerate,
+            },
+          };
+        }
         return {
-          label: busy ? "Writing…" : doc?.hook ? "Regenerate script" : "Generate script",
+          label: busy ? "Writing…" : "Generate script",
           icon: busy ? Loader2 : Sparkles, disabled: busy,
           onClick: handleGenerate, loading: busy,
         };
@@ -620,7 +632,7 @@ export function ReelStudio() {
           </div>
 
           {/* Sticky footer CTA */}
-          <div className="sticky bottom-0 z-10 mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-2xl border border-border bg-card/95 p-2 backdrop-blur pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="sticky bottom-0 z-10 mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/95 p-2 backdrop-blur pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <Button
               variant="ghost" size="sm"
               onClick={() => prevStep && setStep(prevStep)}
@@ -628,12 +640,23 @@ export function ReelStudio() {
             >
               <ChevronLeft className="h-4 w-4" /> Back
             </Button>
+            {primary && "secondary" in primary && primary.secondary && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={primary.secondary.onClick}
+                disabled={busy}
+              >
+                <primary.secondary.icon className="h-4 w-4" />
+                {primary.secondary.label}
+              </Button>
+            )}
             {primary && (
               <Button
                 onClick={primary.onClick}
                 disabled={primary.disabled}
                 size="lg"
-                className="w-full gradient-accent text-white border-0"
+                className="ml-auto flex-1 min-w-[10rem] gradient-accent text-white border-0"
               >
                 {primary.loading
                   ? <Loader2 className="h-4 w-4 animate-spin" />
