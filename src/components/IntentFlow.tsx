@@ -609,12 +609,12 @@ export function IntentFlow({ analysisId }: Props) {
               selected={niche && niche !== "__custom__" ? niche : null}
               onSelect={(v) => { setNiche(v); setCustomNiche(""); }}
             />
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <input
                 value={customNiche}
                 onChange={(e) => { setCustomNiche(e.target.value); setNiche("__custom__"); }}
                 placeholder="Or type your own niche…"
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+                className="min-w-[180px] flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
               />
               <EnhanceButton
                 value={customNiche}
