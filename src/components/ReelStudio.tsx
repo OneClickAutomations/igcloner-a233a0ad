@@ -133,6 +133,7 @@ export function ReelStudio() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [queuePos, setQueuePos] = useState<number | null>(null);
+  const [useSourceImage, setUseSourceImage] = useState(true);
 
   const project = useQuery({
     queryKey: ["project", projectId],
@@ -300,6 +301,12 @@ export function ReelStudio() {
     setQueuePos(null);
     try {
       const full = neg ? `${prompt}\n\nNegative prompt: ${neg}` : prompt;
+      const imageUrl = useSourceImage
+        ? (doc?.sourceImageUrl ||
+            (project.data as any)?.source_thumbnail ||
+            (project.data as any)?.user_preferences?.referenceImageUrl ||
+            undefined)
+        : undefined;
       const { requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
         data: {
           prompt: full,
@@ -307,9 +314,14 @@ export function ReelStudio() {
           aspect_ratio: format,
           duration: videoDuration,
           generate_audio: videoAudio,
+          ...(imageUrl ? { image_url: imageUrl } : {}),
         },
       });
-      toast.success("Video job queued. ~30-90s.");
+      toast.success(
+        imageUrl
+          ? "Animating your source image — ~30-90s."
+          : "Video job queued. ~30-90s.",
+      );
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
