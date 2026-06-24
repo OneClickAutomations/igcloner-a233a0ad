@@ -630,7 +630,37 @@ export function ReelStudio() {
           )}
         </TabsContent>
 
-        {/* TAB 2 — SCRIPT */}
+        {/* TAB 2 — REEL STYLE */}
+        <TabsContent value="style" className="mt-4">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <ReelStylePresets
+              value={stylePreset}
+              onChange={(id) => {
+                setStylePreset(id);
+                const cfg = REEL_STYLES.find((s) => s.id === id);
+                if (cfg) {
+                  setPace(cfg.pace);
+                  setAudioPlan((prev) => ({
+                    ...(prev ?? {}),
+                    mode: prev?.mode ?? cfg.defaultAudioMode,
+                    musicGenre: prev?.musicGenre ?? cfg.defaultMusicGenre,
+                    sfxIntensity: prev?.sfxIntensity ?? cfg.defaultSfx,
+                    voiceCategory: prev?.voiceCategory ?? cfg.defaultVoiceCategory,
+                    stylePreset: id,
+                  }));
+                  toast.success(`${cfg.label} style applied`);
+                }
+              }}
+            />
+            <div className="mt-5 flex justify-end">
+              <Button onClick={() => setTab("script")} className="gradient-accent text-white border-0">
+                Next: Script <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 3 — SCRIPT */}
         <TabsContent value="script" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
             <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
