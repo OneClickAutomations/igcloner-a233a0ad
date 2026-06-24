@@ -840,6 +840,63 @@ export function ReelStudio() {
                   <p className="text-xs text-muted-foreground">Generates inside the app. No other tools needed.</p>
                 </div>
 
+                {/* Source image anchor */}
+                {(doc.sourceImageUrl || (project.data as any)?.source_thumbnail) && (
+                  <div className="rounded-xl border-2 border-accent-primary/40 bg-card p-3">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={`/api/public/img?u=${encodeURIComponent(
+                          doc.sourceImageUrl ||
+                            (project.data as any)?.source_thumbnail,
+                        )}`}
+                        alt="Source frame"
+                        className="h-20 w-20 shrink-0 rounded-lg object-cover border border-border"
+                        onError={(e) =>
+                          ((e.currentTarget as HTMLImageElement).style.display = "none")
+                        }
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[10px] font-semibold uppercase tracking-widest text-accent-primary">
+                          Source frame
+                        </div>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-snug">
+                          This image will be the <strong>first frame</strong> and visual
+                          anchor. The model animates it instead of generating a new scene.
+                        </p>
+                        <label className="mt-2 flex items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={useSourceImage}
+                            onChange={(e) => setUseSourceImage(e.target.checked)}
+                          />
+                          Animate this image (recommended)
+                        </label>
+                        {doc.motionStrategy && useSourceImage && (
+                          <div className="mt-2 grid gap-1 text-[10px] text-muted-foreground">
+                            <div>
+                              <strong className="text-foreground">Camera:</strong>{" "}
+                              {doc.motionStrategy.cameraMotion}
+                            </div>
+                            <div>
+                              <strong className="text-foreground">Environment:</strong>{" "}
+                              {doc.motionStrategy.environmentalMotion}
+                            </div>
+                            <div>
+                              <strong className="text-foreground">Subject:</strong>{" "}
+                              {doc.motionStrategy.subjectMotion}
+                            </div>
+                            <div>
+                              <strong className="text-foreground">Confidence:</strong>{" "}
+                              {doc.motionStrategy.confidence} · preserves ≥
+                              {doc.motionStrategy.preservationTargetPct}% of the image
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Model cards */}
                 <div>
                   <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">1. Choose model</Label>
