@@ -124,6 +124,10 @@ export function CarouselStudio() {
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  // Default landing view for the studio is the Instagram preview; users can toggle to editor.
+  useEffect(() => {
+    setViewMode("preview");
+  }, []);
   const [branding, setBranding] = useState<BrandingSettings>(DEFAULT_BRANDING);
 
   useEffect(() => {
