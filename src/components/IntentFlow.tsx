@@ -7,6 +7,7 @@ import {
   Upload, X, FileText, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EnhanceButton } from "@/components/EnhanceButton";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
@@ -431,39 +432,6 @@ export function IntentFlow({ analysisId }: Props) {
             </div>
           </div>
 
-          {/* Magic Generate direction box — Reimagine the Scene (A3) & Remix the Message (A2).
-              Bound to the same `description` state that feeds userDescription, so the
-              main Generate button below acts as the "✨ Magic Generate" trigger. */}
-          {(cloneMethod === "A3" || cloneMethod === "A2") && (
-            <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent-primary" />
-                <p className="text-sm font-semibold">{CLONE_LABEL[cloneMethod]}</p>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {cloneMethod === "A3"
-                  ? "The AI reinterprets the source's theme into original content in your niche. Steer the direction, or leave it blank and let the AI decide everything."
-                  : "Same message and caption structure, brand-new visual concept. Describe the visual direction you want, or leave it blank to let the AI surprise you."}
-              </p>
-              <label className="mt-3 block text-xs font-medium">
-                Have a specific direction in mind? <span className="text-muted-foreground">(optional)</span>
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
-                placeholder={cloneMethod === "A3"
-                  ? 'e.g. "lean into the underdog angle" or "make it feel premium" — or leave blank'
-                  : 'Describe the visual concept you want, or leave blank'}
-                rows={3}
-                className="mt-1.5 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
-              />
-              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Sparkles className="h-3 w-3 text-accent-primary" />
-                Leave blank to let the AI decide — then hit Generate below.
-              </p>
-            </div>
-          )}
-
           {/* STEP 2 — output format */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 2 of 2</p>
@@ -506,6 +474,87 @@ export function IntentFlow({ analysisId }: Props) {
             </div>
           )}
 
+          {/* Context + uploads — surfaced directly under the creative brief for
+              Reimagine the Scene (A3) and Remix the Message (A2). If filled, the
+              AI uses this prompt to steer angle generation; if empty, the AI
+              decides everything. A1 keeps its context inside Advanced Features. */}
+          {(cloneMethod === "A3" || cloneMethod === "A2") && (
+            <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-accent-primary" />
+                  <p className="text-sm font-semibold">Give the AI more context (optional)</p>
+                </div>
+                <EnhanceButton
+                  value={description}
+                  onChange={setDescription}
+                  kind="generic"
+                  context={`Clone method: ${CLONE_LABEL[cloneMethod]}. Format: ${outputFormat ?? "tbd"}. Niche: ${selectedNiche ?? "unspecified"}.`}
+                />
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {cloneMethod === "A3"
+                  ? "Steer the direction, or leave blank and let the AI decide everything."
+                  : "Describe the visual concept you want, or leave blank to let the AI surprise you."}
+              </p>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
+                placeholder={cloneMethod === "A3"
+                  ? 'e.g. "lean into the underdog angle" or "make it feel premium" — or leave blank'
+                  : 'Describe the visual concept you want, or leave blank'}
+                rows={4}
+                className="mt-3 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,.txt,.md,text/plain,text/markdown"
+                  onChange={(e) => handleFiles(e.target.files)}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:border-strong disabled:opacity-60"
+                >
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  Upload image or .txt
+                </button>
+                <span className="text-[11px] text-muted-foreground">
+                  Images (max 10MB) used as visual reference · .txt/.md (max 200KB) as text context
+                </span>
+              </div>
+              {(uploadedImages.length > 0 || uploadedDocs.length > 0) && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {uploadedImages.map((img) => (
+                    <span key={img.url} className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px]">
+                      <ImageIcon className="h-3 w-3" />{img.name}
+                      <button onClick={() => setUploadedImages((p) => p.filter((x) => x.url !== img.url))} aria-label="remove">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {uploadedDocs.map((d) => (
+                    <span key={d.name} className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px]">
+                      <FileText className="h-3 w-3" />{d.name}
+                      <button onClick={() => setUploadedDocs((p) => p.filter((x) => x.name !== d.name))} aria-label="remove">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Sparkles className="h-3 w-3 text-accent-primary" />
+                Filled in? The AI uses your prompt to generate the 5 angles. Blank? It decides for you.
+              </p>
+            </div>
+          )}
+
           <div className="border-t border-border" />
 
           {/* Goal — always visible & required (drives copy direction) */}
@@ -538,9 +587,8 @@ export function IntentFlow({ analysisId }: Props) {
             </div>
           </Section>
 
-          {/* Advanced Features toggle — collapsed by default for A1 */}
-          {cloneMethod === "A1" && (
-            <button
+          {/* Advanced Features toggle — collapsed by default for all clone modes */}
+          <button
               type="button"
               onClick={() => setAdvancedOpen((v) => !v)}
               className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-left hover:border-strong transition-colors"
@@ -551,10 +599,9 @@ export function IntentFlow({ analysisId }: Props) {
                 <p className="text-xs text-muted-foreground">Niche, tone, keywords, audience, extra context</p>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
-            </button>
-          )}
+          </button>
 
-          <div className={cloneMethod === "A1" && !advancedOpen ? "hidden" : "space-y-5"}>
+          <div className={!advancedOpen ? "hidden" : "space-y-5"}>
           {/* Niche */}
           <Section title="Your niche (optional)">
             <ChipGrid
@@ -568,6 +615,12 @@ export function IntentFlow({ analysisId }: Props) {
                 onChange={(e) => { setCustomNiche(e.target.value); setNiche("__custom__"); }}
                 placeholder="Or type your own niche…"
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
+              />
+              <EnhanceButton
+                value={customNiche}
+                onChange={(v) => { setCustomNiche(v); setNiche("__custom__"); }}
+                kind="generic"
+                context="Sharpen this Instagram content niche into a tight, specific positioning phrase."
               />
             </div>
           </Section>
@@ -607,10 +660,28 @@ export function IntentFlow({ analysisId }: Props) {
               placeholder='e.g. "Women 30-45 trying to lose weight without giving up the foods they love."'
               className="min-h-[72px] w-full rounded-lg border border-border bg-background p-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/30"
             />
+            <div className="mt-2">
+              <EnhanceButton
+                value={audience}
+                onChange={setAudience}
+                kind="generic"
+                context="Rewrite this target audience description as a vivid, specific persona statement (demographics, pain, desire, where they hang out)."
+              />
+            </div>
           </Section>
 
-          {/* Free-form + uploads */}
+          {/* Free-form + uploads — only shown inside Advanced for A1.
+              A2/A3 surface this block above (right after the creative brief). */}
+          {cloneMethod === "A1" && (
           <Section title="Give the AI more context (optional)">
+            <div className="mb-2">
+              <EnhanceButton
+                value={description}
+                onChange={setDescription}
+                kind="generic"
+                context={`Clone method: ${CLONE_LABEL[cloneMethod]}. Format: ${outputFormat ?? "tbd"}. Niche: ${selectedNiche ?? "unspecified"}.`}
+              />
+            </div>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value.slice(0, 3000))}
@@ -660,6 +731,7 @@ export function IntentFlow({ analysisId }: Props) {
               </div>
             )}
           </Section>
+          )}
           </div>
 
           {/* Generate */}
