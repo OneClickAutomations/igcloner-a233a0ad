@@ -5,6 +5,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { Film, LayoutGrid, Mic, Type, Image as ImageIcon, Loader2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { listProjects, deleteProject, type ProjectFormat } from "@/lib/projects.functions";
 
 const FORMAT_META: Record<ProjectFormat, { Icon: typeof Film; label: string }> = {
@@ -29,6 +39,7 @@ export function ProjectsPage() {
   const delFn = useServerFn(deleteProject);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmDel, setConfirmDel] = useState<null | { id: string; title: string }>(null);
 
   const load = async () => {
     setLoading(true);
@@ -45,7 +56,6 @@ export function ProjectsPage() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this project? This cannot be undone.")) return;
     try {
       await delFn({ data: { id } });
       setProjects((p) => p.filter((x) => x.id !== id));
@@ -123,23 +133,49 @@ export function ProjectsPage() {
                     <p className="text-xs text-muted-foreground">From @{p.source_account}</p>
                   )}
                 </div>
-                <div className="mt-auto flex items-center justify-between gap-2 pt-2">
-                  <Button size="sm" onClick={() => open(p)}>
+                <div className="mt-auto grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 pt-2">
+                  <Button size="sm" onClick={() => open(p)} className="min-w-0">
                     {p.status === "complete" || p.status === "exported" ? "Open" : "Continue"}
                   </Button>
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="rounded-md p-1.5 text-muted-foreground transition hover:bg-muted hover:text-status-error"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfirmDel({ id: p.id, title: p.title })}
                     aria-label="Delete project"
+                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             );
           })}
         </div>
       )}
+      <AlertDialog open={!!confirmDel} onOpenChange={(o) => !o && setConfirmDel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-foreground">{confirmDel?.title}</span>?
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (confirmDel) await handleDelete(confirmDel.id);
+                setConfirmDel(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

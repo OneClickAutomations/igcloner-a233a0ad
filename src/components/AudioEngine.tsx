@@ -219,7 +219,7 @@ export function AudioEngine({
   return (
     <div className="space-y-6">
       {/* AI Director */}
-      <div className="rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-5">
+      <div className="rounded-2xl border border-border bg-card p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export function AudioEngine({
                   type="button"
                   onClick={() => update({ script: h })}
                   className={`rounded-lg border p-2 text-left text-xs ${
-                    plan.script === h ? "border-accent-primary bg-accent-primary/10" : "border-border bg-card hover:border-accent-primary/60"
+                    plan.script === h ? "border-accent-primary/60 bg-accent-primary/8" : "border-border bg-card hover:border-accent-primary/40"
                   }`}
                 >
                   {h}
@@ -283,7 +283,7 @@ export function AudioEngine({
               onClick={() => update({ mode: m.v })}
               className={`rounded-lg border p-2.5 text-left text-xs transition ${
                 plan.mode === m.v
-                  ? "border-accent-primary bg-accent-primary/10 ring-1 ring-accent-primary"
+                  ? "border-accent-primary/60 bg-accent-primary/8"
                   : "border-border bg-background hover:border-accent-primary/60"
               }`}
             >
@@ -426,7 +426,7 @@ export function AudioEngine({
                 onClick={() => update({ sfxIntensity: s.v })}
                 className={`rounded-full border px-3 py-1.5 text-xs transition ${
                   plan.sfxIntensity === s.v
-                    ? "border-accent-primary bg-accent-primary/10 text-foreground"
+                    ? "border-accent-primary/60 bg-accent-primary/8 text-foreground"
                     : "border-border bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >

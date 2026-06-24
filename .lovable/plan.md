@@ -1,76 +1,99 @@
-## Reel Studio → Premium Production Studio
+# Reel Studio — Premium UI/UX Upgrade
 
-This is a large multi-week build. I'll deliver it in phases so each ships working, and you can steer between phases. Phase 1 lays the foundation (workflow + audio engine wiring) and is the heaviest lift. Later phases layer on polish, presets, and premium features.
+A focused redesign pass. No new features, no backend changes. Visual system, layout, and interaction hierarchy only.
 
----
+## 1. Design tokens (src/styles.css)
 
-### Phase 1 — Core workflow + Audio Engine (this turn)
-
-Restructure `ReelStudio.tsx` into an explicit 5-step flow with a top progress rail:
+Introduce a calmer dark surface system used across Reel Studio (and available app-wide):
 
 ```text
-1. Visual Source → 2. Reel Style → 3. Audio Experience → 4. Creative Director Review → 5. Render
+--surface-base   #0B0B0C
+--surface-1      #111214
+--surface-2      #17181C
+--border-soft    rgba(255,255,255,0.06)
+--border-strong  rgba(255,255,255,0.10)
 ```
 
-**Step 1 — Visual Source**
-Replace today's image picker with a tabbed selector: Uploaded · Scraped · Generated · Collection · Carousel Slides. (Backed by existing `project_assets`.)
+- Map shadcn tokens (`--background`, `--card`, `--popover`, `--border`, `--muted`) in dark mode onto this scale.
+- Replace large neon/pink/purple gradient usage in Reel Studio with a single accent — keep `gradient-accent` reserved for the one Primary CTA per screen.
+- Soften shadow utility (`shadow-ig` → lighter) and add `.elev-1` / `.elev-2` subtle elevations.
 
-**Step 2 — Reel Style**
-New preset grid (Documentary, Educational, Luxury, Business, Motivational, Storytelling, News, Nature, Product Showcase, Lifestyle, Cinematic, Viral Reel). Each preset seeds visual direction + motion + audio defaults.
+## 2. Button hierarchy
 
-**Step 3 — Audio Experience (new, the big addition)**
-Top-level mode picker: Native · Voiceover · Music Only · Voice+Music · Voice+Music+SFX · Ambient Only · **Auto (recommended)**.
+One rule per screen: exactly one solid Primary; everything else outline / ghost / icon.
 
-Sub-panels appear based on mode:
-- **Voiceover Studio** — reuses existing `voiceover.functions.ts` + ElevenLabs key already in secrets. Adds Voice Type presets (Narrator, Storyteller, Doc Host, Business Expert, Motivational, News Anchor, Luxury, Casual Creator, Podcast Host) mapped to curated voice IDs. Script options: Generate / Paste / Hook only / CTA only / Auto from Content DNA.
-- **Music Engine** — genre picker (Trending, Cinematic, Motivational, Luxury, Corporate, Inspiring, Tech, Documentary, Emotional, Nature, Ambient, LoFi, Electronic, Epic, None). Generation via ElevenLabs Music API (new server fn `music.functions.ts`).
-- **Ambient Engine** — AI-suggested ambient tracks from image analysis (Ocean/Forest/City/Coffee Shop/Office/Nature). Generated via ElevenLabs Sound Effects API (new `ambient.functions.ts`).
-- **SFX Engine** — intensity picker (None/Subtle/Standard/Cinematic/Heavy). Scene-motion-driven SFX via same SFX endpoint.
-- **Audio Mixer** — sliders for Voice / Music / Ambient / SFX / Master, plus Auto-Duck toggle and "AI Mix" button. Stored as a mix profile on the reel doc.
+- Primary: existing `default` (solid gradient) — reserve for the step's main CTA (Generate Script, Generate Audio, Generate Reel, etc.).
+- Secondary: `outline` — supporting actions (Regenerate, Preview, Save Draft).
+- Danger: red icon-only `ghost` button (Trash2, `text-destructive`). Desktop adds "Delete" label; mobile shows icon only with `aria-label`. Always wrapped in an AlertDialog confirm ("Are you sure you want to delete this project?").
 
-**Step 4 — AI Creative Director**
-Pre-render summary card showing: Visual Strategy · Motion Strategy · Voice Strategy · Music Strategy · Sound Strategy · Hook Strategy. Plus 3 hook variations + 3 opening scripts + 3 audio strategies (user picks one).
+Apply to `ReelStudio.tsx` and `ProjectsPage.tsx` (this is where the clipped Delete lives on mobile).
 
-**Step 5 — Render**
-Length (5/10/15/30/45/60/90s) — model routing (5/10s native, longer via concatenated scenes). Platform (IG/TikTok/Shorts/FB/LinkedIn/X) sets aspect ratio + max length + caption style. Caption options (Burned-In, SRT, Dynamic word-highlight, TikTok/Instagram/Premium/Brand styles).
+## 3. Reel Studio — Step Focus Mode
 
-**New server functions (Phase 1):**
-- `src/lib/music.functions.ts` — ElevenLabs `/v1/music`
-- `src/lib/ambient.functions.ts` — ElevenLabs `/v1/sound-generation` (with "analyze image → suggest ambient" via Lovable AI Gateway)
-- `src/lib/audio-director.functions.ts` — Auto-mode planner (image + style + audience → full audio strategy JSON)
-- Extend `reel.functions.ts` `ReelDoc` with `audioPlan`, `mixProfile`, `captionStyle`, `platform`, `lengthSec`
+Replace the current always-expanded multi-tab layout with a single active step + breadcrumb stepper.
 
-**Storage:** all generated audio uploaded to existing `project-assets` bucket; signed URLs.
+Steps: `Visual Direction → Reel Style → Script → Audio → Generate`.
 
----
+- Top: a slim stepper bar (numbered pills + labels, current step highlighted, completed steps checked). Click a completed step to jump back.
+- Only the active step renders its full UI. Inactive steps render nothing in the center column.
+- Footer bar pinned at bottom of the center panel with `Back` (ghost, left) and the step's Primary CTA (right, solid). Replaces the inline "Continue" buttons currently scattered throughout.
 
-### Phase 2 — Caption Studio + Hook lab (next turn)
-- Burned-in caption rendering server-side (ffmpeg via fal.ai caption endpoint or `fal-ai/auto-caption`)
-- Word-level highlight from ElevenLabs STT timestamps
-- Style presets (TikTok bouncing, IG clean, Premium serif, Brand from saved profile)
-- Hook A/B lab with thumbnail preview per variation
+## 4. Three-panel desktop layout
 
-### Phase 3 — Presets & Templates
-- Brand Voice Profiles (saved voice + mix settings)
-- Voice Clones (ElevenLabs instant clone upload)
-- Saved Audio Presets, Reel Presets, Creator Templates, Industry Templates
-- New tables: `audio_presets`, `reel_presets`, `brand_voices` with RLS
+```text
+┌─────────────┬──────────────────────────┬─────────────┐
+│  CONTEXT    │        FOCUS             │   OUTPUT    │
+│  (left)     │      (center)            │   (right)   │
+│             │                          │             │
+│ Source img  │  Active step content     │ Script      │
+│ Settings    │  (one workspace only)    │ Scene break │
+│ Style chip  │                          │ Final preview│
+└─────────────┴──────────────────────────┴─────────────┘
+```
 
-### Phase 4 — Polish & QA
-- Final mixer with waveform preview (wavesurfer.js)
-- Auto-ducking implementation (sidechain via Web Audio API for preview, ffmpeg for final)
-- Multi-scene stitching for 30s+ reels
-- Per-platform export profiles (bitrate, fps, safe-area)
+- Grid: `lg:grid-cols-[280px_minmax(0,1fr)_340px]`. Tightened gaps, no nested boxed-over-boxed.
+- Left panel: source image thumbnail, video settings summary (length / platform / aspect), selected Reel Style chip with "Change" link.
+- Right panel: script preview (current draft), scene breakdown list (read-only), final reel preview (placeholder until rendered).
+- Both side panels are `Collapsible`; collapsed by default on `< lg`.
 
----
+## 5. Mobile layout
 
-### Scope check before I build Phase 1
+- Single column. Context + Output collapse into accordions above/below the focus step.
+- The footer Back/Primary bar becomes a sticky bottom bar (`sticky bottom-0`, safe-area padding) so the Primary CTA is always reachable and never clipped.
+- Horizontal scroll audit: every row that currently overflows gets `min-w-0` on text containers and `shrink-0` on icon/avatar widgets, per the responsive-layout pattern.
 
-A few choices that materially change the implementation:
+## 6. Visual cleanup pass
 
-1. **ElevenLabs key** — already in your secrets as `ELEVENLABS_API_KEY`. I'll use that for all users (workspace-shared) instead of asking each user to paste their own. OK?
-2. **Music generation** — ElevenLabs `/v1/music` is currently in limited access. If your key doesn't have it enabled, I'll fall back to a curated royalty-free track library (or Suno via API). Confirm: try ElevenLabs first, fall back to library?
-3. **Voice cloning** — ElevenLabs Instant Voice Clone requires a paid tier. Defer to Phase 3?
-4. **Render length > 10s** — fal Veo3/Kling cap at 8–10s. I'll stitch multi-scene clips with ffmpeg in a queued server route. OK to keep that as Phase 4?
+Across `ReelStudio.tsx`, `AudioEngine.tsx`, `ReelStylePresets.tsx`:
 
-Reply with answers (or "go ahead with your defaults") and I'll build Phase 1.
+- Remove `ring-1 ring-accent-primary`, neon outlines, and double borders. Selected state = filled tinted background + check icon, no ring.
+- Replace multi-color badges with neutral `secondary` badges; reserve the accent color for the active step and the Primary CTA only.
+- Cut ~20–30% of decorative chrome: redundant section icons, duplicate step labels, multiple "tip" cards. Use spacing + heading weight for structure.
+- Heading scale: `text-xl font-semibold` for step titles, `text-sm text-muted-foreground` for descriptions, `text-base font-medium` for subsection labels. Drop bold on body text.
+
+## 7. ProjectsPage delete fix
+
+- Trash button → `Button variant="ghost" size="icon"` with `text-destructive`, label hidden via `sr-only` on `< sm`, visible on `≥ sm`.
+- Wrap in `AlertDialog`: title "Delete project?", description naming the project, Cancel + Delete (destructive).
+- Ensure the card actions row uses `grid-cols-[minmax(0,1fr)_auto]` so the icon never clips.
+
+## Files touched
+
+- `src/styles.css` — surface tokens, softened shadows, dark-mode token remap.
+- `src/components/ReelStudio.tsx` — step focus mode, 3-panel layout, footer CTA bar, hierarchy cleanup.
+- `src/components/AudioEngine.tsx` — visual cleanup (borders, badges, spacing); no logic changes.
+- `src/components/ReelStylePresets.tsx` — selected-state without ring; tighter grid.
+- `src/components/ProjectsPage.tsx` — delete button + confirm dialog, mobile-safe action row.
+
+## Out of scope (explicit)
+
+- No new features, no new server functions, no schema changes.
+- No copy rewrites beyond button labels needed for hierarchy.
+- Light mode untouched beyond shadcn token consistency.
+
+## Verification
+
+- Build passes.
+- Playwright at 375px and 1280px on `/studio/reel`: stepper visible, only one step rendered, Primary CTA reachable, no horizontal scroll, Delete icon not clipped on `/projects`.
+
+Approve to proceed, or tell me what to cut/add.

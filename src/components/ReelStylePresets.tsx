@@ -29,8 +29,8 @@ export function ReelStylePresets({
               onClick={() => onChange(s.id)}
               className={`group relative rounded-xl border p-3 text-left transition ${
                 selected
-                  ? "border-accent-primary bg-accent-primary/10 ring-1 ring-accent-primary"
-                  : "border-border bg-card hover:border-accent-primary/60"
+                  ? "border-accent-primary/60 bg-accent-primary/8"
+                  : "border-border bg-card hover:border-accent-primary/40"
               }`}
             >
               <div className="flex items-center justify-between">
