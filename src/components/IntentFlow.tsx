@@ -480,10 +480,10 @@ export function IntentFlow({ analysisId }: Props) {
               decides everything. A1 keeps its context inside Advanced Features. */}
           {(cloneMethod === "A3" || cloneMethod === "A2") && (
             <div className="rounded-xl border border-accent-primary/30 bg-accent-primary/5 p-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <Sparkles className="h-4 w-4 text-accent-primary" />
-                  <p className="text-sm font-semibold">Give the AI more context (optional)</p>
+                  <p className="text-sm font-semibold leading-tight">Give the AI more context (optional)</p>
                 </div>
                 <EnhanceButton
                   value={description}
