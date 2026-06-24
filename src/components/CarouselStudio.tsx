@@ -123,7 +123,7 @@ export function CarouselStudio() {
   const [imgDirection, setImgDirection] = useState("");
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
-  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  const [viewMode, setViewMode] = useState<"editor" | "preview">("preview");
   const [branding, setBranding] = useState<BrandingSettings>(DEFAULT_BRANDING);
 
   useEffect(() => {
@@ -285,7 +285,7 @@ export function CarouselStudio() {
   };
 
   return (
-    <div className="mx-auto max-w-[1280px] px-4 py-6 lg:py-8">
+    <div className={`mx-auto max-w-[1280px] px-4 py-6 lg:py-8 ${doc ? "pb-28" : ""}`}>
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -314,30 +314,6 @@ export function CarouselStudio() {
             </p>
           )}
         </div>
-        {doc && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              Save
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => copy(designBriefText(doc), "Brief copied")}>
-              <Copy className="h-3.5 w-3.5" /> Brief
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => download(`${doc.title.replace(/\W+/g, "-")}.txt`, designBriefText(doc))}
-            >
-              <Download className="h-3.5 w-3.5" /> Export
-            </Button>
-            <Button
-              size="sm"
-              className="gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
-              onClick={() => setPostOpen(true)}
-            >
-              <Send className="h-3.5 w-3.5" /> Post Now
-            </Button>
-          </div>
-        )}
       </div>
 
       {doc && (
@@ -787,6 +763,34 @@ export function CarouselStudio() {
         onIndexChange={setPreviewIdx}
         onEdit={editSlide}
       />
+
+      {doc && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
+          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => copy(designBriefText(doc), "Brief copied")}>
+              <Copy className="h-3.5 w-3.5" /> Brief
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => download(`${doc.title.replace(/\W+/g, "-")}.txt`, designBriefText(doc))}
+            >
+              <Download className="h-3.5 w-3.5" /> Export
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5 gradient-accent text-white border-0 hover:opacity-95"
+              onClick={() => setPostOpen(true)}
+            >
+              <Send className="h-3.5 w-3.5" /> Post Now
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

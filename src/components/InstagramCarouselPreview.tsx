@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, Heart, MessageCircle, Send } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Heart, MessageCircle, Send } from "lucide-react";
 import type { CarouselDoc } from "@/lib/carousel.functions";
 import {
   POSITION_STYLES,
@@ -203,6 +203,32 @@ export function InstagramCarouselPreview({
           onClick={() => go(currentIndex + 1)}
           className="absolute inset-y-0 right-0 z-10 hidden w-1/3 md:block"
         />
+
+        {/* Visible chevron controls (work on all screen sizes) */}
+        {currentIndex > 0 && (
+          <button
+            type="button"
+            aria-label="Previous slide"
+            onClick={(e) => { e.stopPropagation(); go(currentIndex - 1); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="absolute left-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/45 p-1.5 text-white shadow backdrop-blur-sm transition hover:bg-black/65"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
+        {currentIndex < total - 1 && (
+          <button
+            type="button"
+            aria-label="Next slide"
+            onClick={(e) => { e.stopPropagation(); go(currentIndex + 1); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            className="absolute right-2 top-1/2 z-20 -translate-y-1/2 rounded-full bg-black/45 p-1.5 text-white shadow backdrop-blur-sm transition hover:bg-black/65"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
 
         {/* Counter */}
         <div className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
