@@ -46,6 +46,10 @@ import {
   type VisualDirection,
 } from "@/lib/reel.functions";
 import { submitVideoJob, pollVideoJob } from "@/lib/video.functions";
+import { ReelStylePresets } from "@/components/ReelStylePresets";
+import { AudioEngine } from "@/components/AudioEngine";
+import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
+import { REEL_STYLES, DEFAULT_MIX } from "@/lib/audio-types";
 
 function copy(text: string, label = "Copied") {
   navigator.clipboard.writeText(text);
@@ -123,6 +127,11 @@ export function ReelStudio() {
   const [direction, setDirection] = useState<VisualDirection | null>(null);
   const [editingDir, setEditingDir] = useState(false);
 
+  // Phase 1 — Style preset + Audio Engine
+  const [stylePreset, setStylePreset] = useState<ReelStylePreset | undefined>(undefined);
+  const [audioPlan, setAudioPlan] = useState<AudioPlan | undefined>(undefined);
+  const [mixProfile, setMixProfile] = useState<AudioMixProfile>(DEFAULT_MIX);
+
   // In-app video generation state
   const [videoModel, setVideoModel] = useState<"veo3-fast" | "veo3" | "kling-2.1">("veo3-fast");
   const [videoDuration, setVideoDuration] = useState<5 | 8 | 10>(8);
@@ -148,6 +157,9 @@ export function ReelStudio() {
           setDirection(pd.visualDirection);
           if (pd.visualDirection.approved) setTab(pd.hook ? "script" : "direction");
         }
+        if (pd.stylePreset) setStylePreset(pd.stylePreset);
+        if (pd.audioPlan) setAudioPlan(pd.audioPlan);
+        if (pd.mixProfile) setMixProfile(pd.mixProfile);
       }
       if (!angle) {
         const prefs = p?.user_preferences ?? {};
@@ -183,14 +195,15 @@ export function ReelStudio() {
     const t = setTimeout(() => {
       lastSavedRef.current = snapshot;
       const patch: any = {};
-      if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection };
-      else if (direction) patch.project_data = { visualDirection: direction };
+      const audioBits = { stylePreset, audioPlan, mixProfile };
+      if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection, ...audioBits };
+      else if (direction) patch.project_data = { visualDirection: direction, ...audioBits };
       if (!patch.project_data) return;
       patch.status = doc?.hook ? "in_progress" : "draft";
       updateProjectFn({ data: { id: projectId, patch } }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [doc, direction, projectId, updateProjectFn]);
+  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile]);
 
   useEffect(() => {
     const onBeforeUnload = () => {
@@ -261,7 +274,18 @@ export function ReelStudio() {
   const handleSave = async () => {
     if (!doc) return;
     try {
-      await saveFn({ data: { projectId, reel: { ...doc, visualDirection: direction ?? doc.visualDirection } } });
+      await saveFn({
+        data: {
+          projectId,
+          reel: {
+            ...doc,
+            visualDirection: direction ?? doc.visualDirection,
+            stylePreset,
+            audioPlan,
+            mixProfile,
+          } as any,
+        },
+      });
       toast.success("Project saved");
     } catch (e: any) {
       toast.error(e?.message || "Save failed");
@@ -440,17 +464,25 @@ export function ReelStudio() {
       )}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="direction" className="gap-1.5">
             <Eye className="h-3.5 w-3.5" /> 1. Visual Direction
             {direction?.approved && <Check className="h-3 w-3 text-status-success" />}
           </TabsTrigger>
+          <TabsTrigger value="style" className="gap-1.5">
+            <Crown className="h-3.5 w-3.5" /> 2. Reel Style
+            {stylePreset && <Check className="h-3 w-3 text-status-success" />}
+          </TabsTrigger>
           <TabsTrigger value="script" disabled={!direction?.approved} className="gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> 2. Script
+            <Sparkles className="h-3.5 w-3.5" /> 3. Script
             {doc?.hook && <Check className="h-3 w-3 text-status-success" />}
           </TabsTrigger>
+          <TabsTrigger value="audio" className="gap-1.5">
+            <Sparkle className="h-3.5 w-3.5" /> 4. Audio
+            {audioPlan?.mode && <Check className="h-3 w-3 text-status-success" />}
+          </TabsTrigger>
           <TabsTrigger value="video" disabled={!doc?.hook} className="gap-1.5">
-            <Film className="h-3.5 w-3.5" /> 3. Generate Video
+            <Film className="h-3.5 w-3.5" /> 5. Generate
           </TabsTrigger>
         </TabsList>
 
@@ -598,7 +630,37 @@ export function ReelStudio() {
           )}
         </TabsContent>
 
-        {/* TAB 2 — SCRIPT */}
+        {/* TAB 2 — REEL STYLE */}
+        <TabsContent value="style" className="mt-4">
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <ReelStylePresets
+              value={stylePreset}
+              onChange={(id) => {
+                setStylePreset(id);
+                const cfg = REEL_STYLES.find((s) => s.id === id);
+                if (cfg) {
+                  setPace(cfg.pace);
+                  setAudioPlan((prev) => ({
+                    ...(prev ?? {}),
+                    mode: prev?.mode ?? cfg.defaultAudioMode,
+                    musicGenre: prev?.musicGenre ?? cfg.defaultMusicGenre,
+                    sfxIntensity: prev?.sfxIntensity ?? cfg.defaultSfx,
+                    voiceCategory: prev?.voiceCategory ?? cfg.defaultVoiceCategory,
+                    stylePreset: id,
+                  }));
+                  toast.success(`${cfg.label} style applied`);
+                }
+              }}
+            />
+            <div className="mt-5 flex justify-end">
+              <Button onClick={() => setTab("script")} className="gradient-accent text-white border-0">
+                Next: Script <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 3 — SCRIPT */}
         <TabsContent value="script" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
             <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
@@ -760,7 +822,37 @@ export function ReelStudio() {
           </div>
         </TabsContent>
 
-        {/* TAB 3 — GENERATE VIDEO */}
+        {/* TAB 4 — AUDIO ENGINE */}
+        <TabsContent value="audio" className="mt-4">
+          <AudioEngine
+            projectId={projectId}
+            imageUrl={
+              doc?.sourceImageUrl ||
+              (project.data as any)?.source_thumbnail ||
+              (project.data as any)?.user_preferences?.referenceImageUrl ||
+              undefined
+            }
+            angle={angle}
+            stylePreset={stylePreset}
+            initialPlan={audioPlan}
+            initialMix={mixProfile}
+            onChange={(plan, mix) => {
+              setAudioPlan(plan);
+              setMixProfile(mix);
+            }}
+          />
+          <div className="mt-5 flex justify-end">
+            <Button
+              onClick={() => setTab("video")}
+              disabled={!doc?.hook}
+              className="gradient-accent text-white border-0"
+            >
+              Next: Generate Video <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* TAB 5 — GENERATE VIDEO */}
         <TabsContent value="video" className="mt-4">
           {!doc?.veoPrompt && (
             <div className="rounded-2xl border border-border bg-card p-8 text-sm text-muted-foreground">

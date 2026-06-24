@@ -4,6 +4,7 @@ import { generateText, type ModelMessage } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage, buildSourceContextBlock } from "@/lib/source-context";
+import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
 
 /* ---------- Schemas ---------- */
 
@@ -136,6 +137,10 @@ export type ReelDoc = z.infer<typeof ReelSchema> & {
     subjectMotion: string;
     notes: string;
   };
+  // Phase 1 — Audio Engine additions. All optional; existing reels keep working.
+  audioPlan?: AudioPlan;
+  mixProfile?: AudioMixProfile;
+  stylePreset?: ReelStylePreset;
 };
 
 const SettingsSchema = z.object({
@@ -713,7 +718,7 @@ export const regenerateVeoPrompt = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!project?.project_data) throw new Error("Generate a reel first");
 
-    const doc = project.project_data as ReelDoc;
+    const doc = project.project_data as unknown as ReelDoc;
     const direction = doc.visualDirection;
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
