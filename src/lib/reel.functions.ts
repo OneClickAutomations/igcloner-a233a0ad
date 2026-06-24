@@ -136,6 +136,10 @@ export type ReelDoc = z.infer<typeof ReelSchema> & {
     subjectMotion: string;
     notes: string;
   };
+  // Phase 1 — Audio Engine additions. All optional; existing reels keep working.
+  audioPlan?: import("./audio-types").AudioPlan;
+  mixProfile?: import("./audio-types").AudioMixProfile;
+  stylePreset?: import("./audio-types").ReelStylePreset;
 };
 
 const SettingsSchema = z.object({
