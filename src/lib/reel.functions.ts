@@ -583,14 +583,17 @@ Return ONLY this JSON:
     // strategy from the visual direction so prompts emphasize animating
     // the source image rather than reimagining it.
     const subj = visualDirection.subjectType;
-    const confidence: "high" | "medium" | "low" =
-      subj === "product" || subj === "cinematic-no-person" || subj === "abstract"
-        ? "high"
-        : subj === "person-lifestyle" ||
-            subj === "person-athlete" ||
-            subj === "person-business"
-          ? "medium"
-          : "high";
+    let confidence: "high" | "medium" | "low" = "high";
+    if (
+      subj === "person-lifestyle" ||
+      subj === "person-athlete" ||
+      subj === "person-business"
+    ) {
+      confidence = "medium";
+    }
+    if (visualDirection.contentFormat === "talking-head") {
+      confidence = "low";
+    }
     const motionStrategy = {
       contentType: subj,
       confidence,
