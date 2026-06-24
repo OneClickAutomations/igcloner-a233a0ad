@@ -7,6 +7,7 @@ import {
   Upload, X, FileText, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EnhanceButton } from "@/components/EnhanceButton";
 import { generateAngles, setDefaultNiche, type Angle } from "@/lib/angles.functions";
 import { uploadReferenceImage } from "@/lib/reference-upload.functions";
 import { createProject } from "@/lib/projects.functions";
