@@ -71,7 +71,7 @@ export function EnhanceButton({
             <Sparkles className="h-3.5 w-3.5" /> Enhanced version
           </div>
           <p className="text-sm leading-snug">{suggestion}</p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             <Button size="sm" onClick={accept}>
               <Check className="h-3.5 w-3.5" /> Use this
             </Button>
