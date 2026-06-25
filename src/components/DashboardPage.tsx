@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { proxiedImg } from "@/lib/img-proxy";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Sparkles, Trash2, ExternalLink, Share2, Key, CreditCard, Send } from "lucide-react";
+import { Sparkles, Trash2, ExternalLink } from "lucide-react";
 
 interface AnalysisItem {
   id: string;
@@ -147,34 +147,6 @@ export function DashboardPage() {
               <p className="text-xs text-muted-foreground uppercase tracking-wide">{stat.label}</p>
             </div>
           ))}
-        </div>
-
-        {/* Quick-access cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          <Link to="/settings" search={{ section: "social-accounts" } as any} className="group rounded-xl border border-border bg-card p-4 hover:border-accent-primary/30 hover:-translate-y-0.5 transition-all">
-            <Share2 className="h-4 w-4 text-muted-foreground mb-2" />
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Platforms</p>
-            <p className="text-sm font-medium mt-0.5">Social Accounts</p>
-            <p className="text-xs text-accent-primary mt-1 group-hover:underline">Manage →</p>
-          </Link>
-          <Link to="/settings" search={{ section: "api-keys" } as any} className="group rounded-xl border border-border bg-card p-4 hover:border-accent-primary/30 hover:-translate-y-0.5 transition-all">
-            <Key className="h-4 w-4 text-muted-foreground mb-2" />
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">API Status</p>
-            <p className="text-sm font-medium mt-0.5">Integrations</p>
-            <p className="text-xs text-accent-primary mt-1 group-hover:underline">Review →</p>
-          </Link>
-          <Link to="/settings" search={{ section: "subscription" } as any} className="group rounded-xl border border-border bg-card p-4 hover:border-accent-primary/30 hover:-translate-y-0.5 transition-all">
-            <CreditCard className="h-4 w-4 text-muted-foreground mb-2" />
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Plan</p>
-            <p className="text-sm font-medium mt-0.5">Subscription</p>
-            <p className="text-xs text-accent-primary mt-1 group-hover:underline">Upgrade →</p>
-          </Link>
-          <Link to="/publishing" className="group rounded-xl border border-border bg-card p-4 hover:border-accent-primary/30 hover:-translate-y-0.5 transition-all">
-            <Send className="h-4 w-4 text-muted-foreground mb-2" />
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Queue</p>
-            <p className="text-sm font-medium mt-0.5">Publishing</p>
-            <p className="text-xs text-accent-primary mt-1 group-hover:underline">View →</p>
-          </Link>
         </div>
 
         {loading ? (
