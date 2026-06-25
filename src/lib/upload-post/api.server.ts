@@ -24,14 +24,14 @@ export class UploadPostError extends Error {
   }
 }
 
-export function getUploadPostApiKey(): string {
-  const key = process.env.UPLOAD_POST_API_KEY;
+export function getUploadPostApiKey(override?: string | null): string {
+  const key = override || process.env.UPLOAD_POST_API_KEY;
   if (!key) throw new UploadPostError("Upload-Post not configured", 503, "PROVIDER_NOT_CONFIGURED");
   return key;
 }
 
-export function isUploadPostConfigured(): boolean {
-  return !!process.env.UPLOAD_POST_API_KEY;
+export function isUploadPostConfigured(userKey?: string | null): boolean {
+  return !!(userKey || process.env.UPLOAD_POST_API_KEY);
 }
 
 function normalizeStatusToCode(status: number): string {
@@ -52,10 +52,12 @@ interface RequestOpts {
   /** Override the Apikey auth scheme (validate-jwt uses Bearer). */
   authorization?: string;
   timeoutMs?: number;
+  /** Per-call API key override (the calling user's BYO key). */
+  apiKey?: string | null;
 }
 
 async function request(path: string, opts: RequestOpts = {}): Promise<any> {
-  const apiKey = getUploadPostApiKey();
+  const apiKey = getUploadPostApiKey(opts.apiKey);
   const url = new URL(`${BASE_URL}${path}`);
   if (opts.query) {
     for (const [k, v] of Object.entries(opts.query)) {
@@ -121,16 +123,30 @@ async function request(path: string, opts: RequestOpts = {}): Promise<any> {
 
 // ── Profile management ──────────────────────────────────────────────────
 
-export function createProfile(username: string) {
-  return request("/uploadposts/users", { method: "POST", json: { username } });
+export function createProfile(username: string, apiKey?: string | null) {
+  return request("/uploadposts/users", { method: "POST", json: { username }, apiKey });
 }
 
-export function deleteProfile(username: string) {
-  return request("/uploadposts/users", { method: "DELETE", json: { username } });
+export function deleteProfile(username: string, apiKey?: string | null) {
+  return request("/uploadposts/users", { method: "DELETE", json: { username }, apiKey });
 }
 
-export function getProfile(username: string) {
-  return request("/uploadposts/users", { query: { username } });
+export function getProfile(username: string, apiKey?: string | null) {
+  return request("/uploadposts/users", { query: { username }, apiKey });
+}
+
+/** Lists all profiles owned by the supplied (or env) API key. Defensive: returns [] on error. */
+export async function listProfiles(apiKey?: string | null): Promise<string[]> {
+  try {
+    const res = await request("/uploadposts/users", { apiKey });
+    const arr =
+      res?.profiles ?? res?.users ?? res?.data ?? res?.results ?? (Array.isArray(res) ? res : []);
+    return (Array.isArray(arr) ? arr : [])
+      .map((p: any) => p?.username ?? p?.user ?? p?.name ?? p?.profile_username)
+      .filter((s: any): s is string => typeof s === "string" && s.length > 0);
+  } catch {
+    return [];
+  }
 }
 
 export interface GenerateJwtOptions {
@@ -144,8 +160,8 @@ export interface GenerateJwtOptions {
   show_calendar?: boolean;
 }
 
-export function generateConnectJwt(opts: GenerateJwtOptions) {
-  return request("/uploadposts/users/generate-jwt", { method: "POST", json: { ...opts } });
+export function generateConnectJwt(opts: GenerateJwtOptions, apiKey?: string | null) {
+  return request("/uploadposts/users/generate-jwt", { method: "POST", json: { ...opts }, apiKey });
 }
 
 // ── Platform selectors ──────────────────────────────────────────────────
@@ -156,10 +172,10 @@ const SELECTOR_ENDPOINTS: Record<string, string> = {
   pinterest: "/uploadposts/pinterest/boards",
 };
 
-export function fetchSelectors(platform: string, username: string) {
+export function fetchSelectors(platform: string, username: string, apiKey?: string | null) {
   const endpoint = SELECTOR_ENDPOINTS[platform];
   if (!endpoint) throw new UploadPostError(`No selector endpoint for ${platform}`, 400, "UNKNOWN");
-  return request(endpoint, { query: { username } });
+  return request(endpoint, { query: { username }, apiKey });
 }
 
 // ── Upload / publish ────────────────────────────────────────────────────
@@ -187,7 +203,7 @@ export interface SubmitUploadArgs {
   linkedinOrgUrn?: string;
 }
 
-export function submitUpload(args: SubmitUploadArgs) {
+export function submitUpload(args: SubmitUploadArgs, apiKey?: string | null) {
   const endpoint = UPLOAD_ENDPOINTS[args.kind];
 
   // Upload-Post accepts repeated `platform[]` form fields plus a unified
@@ -212,26 +228,30 @@ export function submitUpload(args: SubmitUploadArgs) {
   if (args.pinterestBoardId) form.set("pinterest_board_id", args.pinterestBoardId);
   if (args.linkedinOrgUrn) form.set("linkedin_page_id", args.linkedinOrgUrn);
 
-  return request(endpoint, { method: "POST", form });
+  return request(endpoint, { method: "POST", form, apiKey });
 }
 
 // ── Status / analytics ──────────────────────────────────────────────────
 
-export function getUploadStatus(params: { requestId?: string; jobId?: string }) {
+export function getUploadStatus(
+  params: { requestId?: string; jobId?: string },
+  apiKey?: string | null,
+) {
   return request("/uploadposts/status", {
     query: { request_id: params.requestId, job_id: params.jobId },
+    apiKey,
   });
 }
 
-export function getAccountAnalytics(username: string) {
-  return request(`/analytics/${encodeURIComponent(username)}`);
+export function getAccountAnalytics(username: string, apiKey?: string | null) {
+  return request(`/analytics/${encodeURIComponent(username)}`, { apiKey });
 }
 
-export function getPostAnalytics(requestId: string) {
-  return request(`/uploadposts/post-analytics/${encodeURIComponent(requestId)}`);
+export function getPostAnalytics(requestId: string, apiKey?: string | null) {
+  return request(`/uploadposts/post-analytics/${encodeURIComponent(requestId)}`, { apiKey });
 }
 
 /** Validate the API key / fetch plan info. */
-export function getMe() {
-  return request("/uploadposts/me");
+export function getMe(apiKey?: string | null) {
+  return request("/uploadposts/me", { apiKey });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import * as uploadPost from "@/lib/upload-post/api.server";
 import { UploadPostError } from "@/lib/upload-post/api.server";
+import { getUserUploadPostApiKey } from "@/lib/upload-post/user-key.server";
 
 // ════════════════════════════════════════════════════════════════════════
 // Upload-Post profile, account-connection, and selector management.
@@ -18,26 +19,54 @@ function rethrow(e: unknown): never {
   throw e instanceof Error ? e : new Error(String(e));
 }
 
-/** Ensures the local profile row exists, creating it on Upload-Post if needed. */
+/**
+ * Resolves which Upload-Post API key to use for this user and which profile
+ * username to operate on.
+ *
+ * When the user has saved their OWN Upload-Post API key in Settings → API
+ * Keys, we use that key and try to REUSE an existing profile in their
+ * account (so the platforms they already connected on app.upload-post.com
+ * stay connected). Only when their account has no profiles do we create
+ * one. When no user key is saved, we fall back to the platform-wide
+ * `UPLOAD_POST_API_KEY` and mint a profile keyed by the Supabase user id.
+ */
 async function ensureProfile(
   supabase: any,
   userId: string,
-): Promise<{ upload_post_username: string; alreadyExists: boolean }> {
+): Promise<{ upload_post_username: string; alreadyExists: boolean; apiKey: string | null }> {
+  const userKey = await getUserUploadPostApiKey(userId);
+  if (!userKey && !process.env.UPLOAD_POST_API_KEY) throw new Error("PROVIDER_NOT_CONFIGURED");
+
   const { data: existing } = await supabase
     .from("upload_post_profiles")
     .select("upload_post_username")
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (existing) return { upload_post_username: existing.upload_post_username, alreadyExists: true };
+  if (existing) {
+    return {
+      upload_post_username: existing.upload_post_username,
+      alreadyExists: true,
+      apiKey: userKey,
+    };
+  }
 
-  const username = userId; // stable mapping — the Supabase UUID itself
-  try {
-    await uploadPost.createProfile(username);
-  } catch (e) {
-    // If the profile already exists provider-side (e.g. a prior partial run),
-    // a duplicate create may 4xx — tolerate it and continue to persist locally.
-    if (!(e instanceof UploadPostError) || (e.status !== 409 && e.status !== 400)) rethrow(e);
+  // Prefer an existing profile under the user's own Upload-Post account so
+  // their already-connected Instagram/etc. carry over.
+  let username: string | null = null;
+  if (userKey) {
+    const existingProfiles = await uploadPost.listProfiles(userKey);
+    if (existingProfiles.length > 0) username = existingProfiles[0];
+  }
+
+  if (!username) {
+    username = userId; // stable mapping — the Supabase UUID itself
+    try {
+      await uploadPost.createProfile(username, userKey);
+    } catch (e) {
+      // Duplicate-create can 4xx; tolerate and persist locally anyway.
+      if (!(e instanceof UploadPostError) || (e.status !== 409 && e.status !== 400)) rethrow(e);
+    }
   }
 
   const { data: saved, error } = await supabase
@@ -50,14 +79,13 @@ async function ensureProfile(
     .select("upload_post_username")
     .single();
   if (error) throw new Error(error.message);
-  return { upload_post_username: saved.upload_post_username, alreadyExists: false };
+  return { upload_post_username: saved.upload_post_username, alreadyExists: false, apiKey: userKey };
 }
 
 export const createUploadPostProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
     const { alreadyExists } = await ensureProfile(supabase, userId);
     return { ok: true, alreadyExists };
   });
@@ -73,24 +101,26 @@ export const generateConnectUrl = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => GenerateConnectInput.parse(d) ?? {})
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
 
-    const { upload_post_username } = await ensureProfile(supabase, userId);
+    const { upload_post_username, apiKey } = await ensureProfile(supabase, userId);
     const siteUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || "";
 
     let jwtData: any;
     try {
-      jwtData = await uploadPost.generateConnectJwt({
-        username: upload_post_username,
-        redirect_url: siteUrl ? `${siteUrl}/publishing?tab=accounts&connected=true` : undefined,
-        logo_image: siteUrl ? `${siteUrl}/favicon.ico` : undefined,
-        redirect_button_text: "Return to IGCloner",
-        connect_title: "Connect Your Social Accounts",
-        connect_description:
-          "Link your accounts to publish AI-generated content directly from IGCloner.",
-        platforms: data.platforms,
-        show_calendar: false,
-      });
+      jwtData = await uploadPost.generateConnectJwt(
+        {
+          username: upload_post_username,
+          redirect_url: siteUrl ? `${siteUrl}/publishing?tab=accounts&connected=true` : undefined,
+          logo_image: siteUrl ? `${siteUrl}/favicon.ico` : undefined,
+          redirect_button_text: "Return to IGCloner",
+          connect_title: "Connect Your Social Accounts",
+          connect_description:
+            "Link your accounts to publish AI-generated content directly from IGCloner.",
+          platforms: data.platforms,
+          show_calendar: false,
+        },
+        apiKey,
+      );
     } catch (e) {
       rethrow(e);
     }
@@ -144,13 +174,12 @@ export const syncAccounts = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
 
-    const { upload_post_username } = await ensureProfile(supabase, userId);
+    const { upload_post_username, apiKey } = await ensureProfile(supabase, userId);
 
     let payload: any;
     try {
-      payload = await uploadPost.getProfile(upload_post_username);
+      payload = await uploadPost.getProfile(upload_post_username, apiKey);
     } catch (e) {
       rethrow(e);
     }
@@ -226,7 +255,8 @@ export const fetchPlatformSelectors = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => FetchSelectorsInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
+    const apiKey = await getUserUploadPostApiKey(userId);
+    if (!uploadPost.isUploadPostConfigured(apiKey)) throw new Error("PROVIDER_NOT_CONFIGURED");
 
     const { data: profile } = await supabase
       .from("upload_post_profiles")
@@ -237,7 +267,7 @@ export const fetchPlatformSelectors = createServerFn({ method: "POST" })
 
     let raw: any;
     try {
-      raw = await uploadPost.fetchSelectors(data.platform, profile.upload_post_username);
+      raw = await uploadPost.fetchSelectors(data.platform, profile.upload_post_username, apiKey);
     } catch (e) {
       rethrow(e);
     }
@@ -271,7 +301,8 @@ export const setPlatformSelector = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SetSelectorInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
+    const apiKey = await getUserUploadPostApiKey(userId);
+    if (!uploadPost.isUploadPostConfigured(apiKey)) throw new Error("PROVIDER_NOT_CONFIGURED");
 
     const { data: profile } = await supabase
       .from("upload_post_profiles")
@@ -283,7 +314,7 @@ export const setPlatformSelector = createServerFn({ method: "POST" })
     // Cross-check: the chosen id must belong to this user's provider account.
     let raw: any;
     try {
-      raw = await uploadPost.fetchSelectors(data.platform, profile.upload_post_username);
+      raw = await uploadPost.fetchSelectors(data.platform, profile.upload_post_username, apiKey);
     } catch (e) {
       rethrow(e);
     }

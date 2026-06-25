@@ -46,7 +46,9 @@ export const fetchAnalytics = createServerFn({ method: "POST" })
       }
     }
 
-    if (!uploadPost.isUploadPostConfigured()) throw new Error("PROVIDER_NOT_CONFIGURED");
+    const { getUserUploadPostApiKey } = await import("@/lib/upload-post/user-key.server");
+    const apiKey = await getUserUploadPostApiKey(userId);
+    if (!uploadPost.isUploadPostConfigured(apiKey)) throw new Error("PROVIDER_NOT_CONFIGURED");
 
     const { data: profile } = await supabase
       .from("upload_post_profiles")
@@ -57,7 +59,7 @@ export const fetchAnalytics = createServerFn({ method: "POST" })
 
     let raw: any;
     try {
-      raw = await uploadPost.getAccountAnalytics(profile.upload_post_username);
+      raw = await uploadPost.getAccountAnalytics(profile.upload_post_username, apiKey);
     } catch (e) {
       rethrow(e);
     }
