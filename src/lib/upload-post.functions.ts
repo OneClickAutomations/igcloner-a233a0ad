@@ -44,6 +44,37 @@ async function ensureProfile(
     .maybeSingle();
 
   if (existing) {
+    // If the user has their own API key, make sure the stored profile
+    // actually exists under THEIR Upload-Post account. If we previously
+    // created a profile keyed to the Supabase user id under the platform
+    // key, it won't be visible with the user's key — and none of their
+    // already-connected platforms (Instagram, etc.) will show up. In that
+    // case, repoint to an existing profile in their account.
+    if (userKey) {
+      const myProfiles = await uploadPost.listProfiles(userKey);
+      if (myProfiles.length > 0 && !myProfiles.includes(existing.upload_post_username)) {
+        // Pick the profile that has the most connected accounts.
+        let best = myProfiles[0];
+        let bestCount = -1;
+        for (const name of myProfiles) {
+          try {
+            const p = await uploadPost.getProfile(name, userKey);
+            const count = extractConnectedPlatforms(p).length;
+            if (count > bestCount) {
+              bestCount = count;
+              best = name;
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        await supabase
+          .from("upload_post_profiles")
+          .update({ upload_post_username: best })
+          .eq("user_id", userId);
+        return { upload_post_username: best, alreadyExists: true, apiKey: userKey };
+      }
+    }
     return {
       upload_post_username: existing.upload_post_username,
       alreadyExists: true,
@@ -56,7 +87,25 @@ async function ensureProfile(
   let username: string | null = null;
   if (userKey) {
     const existingProfiles = await uploadPost.listProfiles(userKey);
-    if (existingProfiles.length > 0) username = existingProfiles[0];
+    if (existingProfiles.length > 0) {
+      // Pick the one with the most connections so the user's existing
+      // Instagram / TikTok / etc. show up immediately.
+      let best = existingProfiles[0];
+      let bestCount = -1;
+      for (const name of existingProfiles) {
+        try {
+          const p = await uploadPost.getProfile(name, userKey);
+          const count = extractConnectedPlatforms(p).length;
+          if (count > bestCount) {
+            bestCount = count;
+            best = name;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      username = best;
+    }
   }
 
   if (!username) {
