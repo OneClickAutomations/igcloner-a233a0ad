@@ -1,14 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { X, ChevronLeft, ChevronRight, ExternalLink, Clock } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { openAffiliateLink } from "@/lib/affiliateLinks";
 import type { HelpDrawerContent } from "./helpContent";
 
@@ -21,6 +15,11 @@ interface HelpDrawerProps {
 export function HelpDrawer({ content, open, onClose }: HelpDrawerProps) {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
+
+  // Reset to step 1 whenever a new walkthrough is opened.
+  useEffect(() => {
+    if (open) setStep(0);
+  }, [open, content?.provider]);
 
   if (!content) return null;
 
@@ -111,53 +110,19 @@ export function HelpDrawer({ content, open, onClose }: HelpDrawerProps) {
             )}
           </div>
 
-          {/* FAQ & Troubleshooting always visible */}
-          <div className="mt-8 space-y-4">
-            {content.faq.length > 0 && (
-              <Accordion type="single" collapsible>
-                <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
-                  Frequently Asked Questions
-                </div>
-                {content.faq.map((item, i) => (
-                  <AccordionItem key={i} value={String(i)} className="border-b border-border/50">
-                    <AccordionTrigger className="text-sm py-2.5 font-medium">
-                      {item.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-muted-foreground pb-3">
-                      {item.answer}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-
-            {content.troubleshooting.length > 0 && (
-              <Accordion type="single" collapsible>
-                <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">
-                  Troubleshooting
-                </div>
-                {content.troubleshooting.map((item, i) => (
-                  <AccordionItem key={i} value={String(i)} className="border-b border-border/50">
-                    <AccordionTrigger className="text-sm py-2.5 font-medium">
-                      {item.issue}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm text-muted-foreground pb-3">
-                      {item.solution}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-
-            <a
-              href={content.docsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-accent-primary hover:underline"
-            >
-              View Full Documentation <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </div>
+          {step === totalSteps - 1 && (
+            <div className="mt-8 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              Still stuck? Open the official guide:{" "}
+              <a
+                href={content.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-accent-primary hover:underline"
+              >
+                Full docs <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          )}
         </div>
 
         {/* Footer nav */}
