@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import * as uploadPost from "@/lib/upload-post/api.server";
 import { UploadPostError } from "@/lib/upload-post/api.server";
+import { getUserUploadPostApiKey } from "@/lib/upload-post/user-key.server";
 import {
   PLATFORM_CAPABILITY_MATRIX,
   PUBLISHING_PLATFORMS,
@@ -163,19 +164,23 @@ export const publishContent = createServerFn({ method: "POST" })
     );
 
     try {
-      const result = await uploadPost.submitUpload({
-        kind: mediaKind,
-        user: profile.upload_post_username,
-        platforms: data.platforms,
-        title: data.title || captions[data.platforms[0]] || "",
-        captionPerPlatform: captions,
-        mediaUrls: mediaKind === "text" ? undefined : data.mediaUrls,
-        scheduledAt: data.scheduledAt ?? null,
-        asyncUpload: true,
-        facebookPageId: fbAccount?.facebook_page_id ?? undefined,
-        pinterestBoardId: pinAccount?.pinterest_default_board_id ?? undefined,
-        linkedinOrgUrn: liAccount?.linkedin_org_urn ?? undefined,
-      });
+      const apiKey = await getUserUploadPostApiKey(userId);
+      const result = await uploadPost.submitUpload(
+        {
+          kind: mediaKind,
+          user: profile.upload_post_username,
+          platforms: data.platforms,
+          title: data.title || captions[data.platforms[0]] || "",
+          captionPerPlatform: captions,
+          mediaUrls: mediaKind === "text" ? undefined : data.mediaUrls,
+          scheduledAt: data.scheduledAt ?? null,
+          asyncUpload: true,
+          facebookPageId: fbAccount?.facebook_page_id ?? undefined,
+          pinterestBoardId: pinAccount?.pinterest_default_board_id ?? undefined,
+          linkedinOrgUrn: liAccount?.linkedin_org_urn ?? undefined,
+        },
+        apiKey,
+      );
 
       const requestId = result.request_id ?? result.requestId ?? null;
       const jobIdProvider = result.job_id ?? result.jobId ?? null;
@@ -247,10 +252,14 @@ export const pollPublishingStatus = createServerFn({ method: "POST" })
 
     let statusData: any;
     try {
-      statusData = await uploadPost.getUploadStatus({
-        requestId: job.upload_post_request_id ?? undefined,
-        jobId: job.upload_post_job_id ?? undefined,
-      });
+      const apiKey = await getUserUploadPostApiKey(userId);
+      statusData = await uploadPost.getUploadStatus(
+        {
+          requestId: job.upload_post_request_id ?? undefined,
+          jobId: job.upload_post_job_id ?? undefined,
+        },
+        apiKey,
+      );
     } catch (e) {
       // A transient status-check failure shouldn't flip the job to failed.
       return { status: job.status, results: [], transientError: true };
