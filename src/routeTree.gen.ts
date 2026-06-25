@@ -21,8 +21,8 @@ import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedStudioIndexRouteImport } from './routes/_authenticated/studio.index'
-import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
 import { Route as ApiPublicUploadPostWebhookRouteImport } from './routes/api/public/upload-post-webhook'
+import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
@@ -52,14 +52,14 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedPublishingRoute = AuthenticatedPublishingRouteImport.update({
   id: '/publishing',
   path: '/publishing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -88,17 +88,17 @@ const AuthenticatedStudioIndexRoute =
     path: '/studio/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
-  id: '/api/public/img',
-  path: '/api/public/img',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicUploadPostWebhookRoute =
   ApiPublicUploadPostWebhookRouteImport.update({
     id: '/api/public/upload-post-webhook',
     path: '/api/public/upload-post-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
+  id: '/api/public/img',
+  path: '/api/public/img',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedStudioVoiceoverRoute =
   AuthenticatedStudioVoiceoverRouteImport.update({
     id: '/studio/voiceover',
@@ -289,18 +289,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/projects': {
-      id: '/_authenticated/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/publishing': {
       id: '/_authenticated/publishing'
       path: '/publishing'
       fullPath: '/publishing'
       preLoaderRoute: typeof AuthenticatedPublishingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/dashboard': {
@@ -338,18 +338,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/public/img': {
-      id: '/api/public/img'
-      path: '/api/public/img'
-      fullPath: '/api/public/img'
-      preLoaderRoute: typeof ApiPublicImgRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/upload-post-webhook': {
       id: '/api/public/upload-post-webhook'
       path: '/api/public/upload-post-webhook'
       fullPath: '/api/public/upload-post-webhook'
       preLoaderRoute: typeof ApiPublicUploadPostWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/img': {
+      id: '/api/public/img'
+      path: '/api/public/img'
+      fullPath: '/api/public/img'
+      preLoaderRoute: typeof ApiPublicImgRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/studio/voiceover': {
@@ -428,3 +428,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
