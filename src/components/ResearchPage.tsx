@@ -78,6 +78,7 @@ import {
   generateContentIdeas,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
+import { exportResearchPdf } from "@/lib/research-pdf";
 
 const routeApi = getRouteApi("/_authenticated/research");
 
@@ -190,6 +191,7 @@ export function ResearchPage() {
         detail={detail}
         loading={loadingDetail}
         onBack={() => navigate({ to: "/research", search: {} })}
+        onNewResearch={() => navigate({ to: "/research", search: {} })}
         onSave={async () => {
           if (!detail?.report?.id) return;
           await saveFn({ data: { id: detail.report.id } });
@@ -318,11 +320,12 @@ export function ResearchPage() {
 // ═══════════════════════════════════════════════════════════════════
 
 function ReportDetail({
-  detail, loading, onBack, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
   onBack: () => void;
+  onNewResearch: () => void;
   onSave: () => void;
   onDelete: () => void;
   onGenerateIdeas: () => void;
@@ -340,6 +343,15 @@ function ReportDetail({
   const dna = (report?.dna_report ?? {}) as any;
   const score = Number(report?.opportunity_score ?? 0);
 
+  const handleExportPdf = () => {
+    try {
+      exportResearchPdf(report, ideas);
+      toast.success("PDF downloaded");
+    } catch (e) {
+      toast.error((e as Error).message || "Failed to export PDF");
+    }
+  };
+
   const pillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
   const pillarData = pillars.map((p) => ({
     name: String(p?.name ?? "").slice(0, 20),
@@ -354,20 +366,23 @@ function ReportDetail({
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 pb-32 pt-8 lg:pt-10">
-      {/* ── Top nav row ────────────────────────────────────────── */}
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+      {/* ── Top nav row (mobile-optimized) ─────────────────────── */}
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="ghost" size="sm" onClick={onBack} className="w-fit gap-1 -ml-2">
           <ArrowLeft className="h-4 w-4" /> Back to Research
         </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => toast.info("PDF export ships next")} className="gap-1">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0">
+          <Button size="sm" onClick={onNewResearch} className="shrink-0 gap-1">
+            <Sparkles className="h-4 w-4" /> New Research
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPdf} className="shrink-0 gap-1">
             <Download className="h-4 w-4" /> Export PDF
           </Button>
-          <Button variant="outline" size="sm" onClick={onSave} className="gap-1">
+          <Button variant="outline" size="sm" onClick={onSave} className="shrink-0 gap-1">
             <Star className={cn("h-4 w-4", report?.is_saved && "fill-current text-amber-500")} />
             {report?.is_saved ? "Saved" : "Save"}
           </Button>
-          <Button variant="outline" size="sm" onClick={onDelete} className="gap-1 text-status-error">
+          <Button variant="outline" size="sm" onClick={onDelete} className="shrink-0 gap-1 text-status-error">
             <Trash2 className="h-4 w-4" /> Delete
           </Button>
         </div>
@@ -674,7 +689,7 @@ function ReportDetail({
           <ActionCard tone="purple" icon={Rocket}       title="Generate 30-Day Campaign" desc="AI-plan a full month grounded in this research." onClick={onGenerateCampaign} />
           <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="50 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
           <ActionCard tone="blue"   icon={Send}         title="Publishing Schedule"      desc="Push to connected accounts."                    onClick={() => toast.info("Open Publishing Center from the sidebar")} />
-          <ActionCard tone="amber"  icon={Download}     title="Export PDF Report"        desc="Agency-ready deliverable."                      onClick={() => toast.info("PDF export ships next")} />
+          <ActionCard tone="amber"  icon={Download}     title="Export PDF Report"        desc="Agency-ready deliverable."                      onClick={handleExportPdf} />
         </div>
       </div>
 
@@ -687,7 +702,7 @@ function ReportDetail({
           <Button size="sm" variant="ghost" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-1.5 rounded-full">
             <Sparkles className="h-4 w-4" /> Ideas
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => toast.info("PDF export ships next")} className="gap-1.5 rounded-full">
+          <Button size="sm" variant="ghost" onClick={handleExportPdf} className="gap-1.5 rounded-full">
             <Download className="h-4 w-4" /> PDF
           </Button>
           <Button size="sm" variant="ghost" onClick={onSave} className="gap-1.5 rounded-full">
