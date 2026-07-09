@@ -1,99 +1,73 @@
-# Reel Studio — Premium UI/UX Upgrade
+# Content Intelligence Engine Upgrade
 
-A focused redesign pass. No new features, no backend changes. Visual system, layout, and interaction hierarchy only.
+This is a large, multi-phase build. I'll extend the existing app without removing anything. To keep it shippable, I'm proposing 4 phases you can approve in order — each phase is usable on its own.
 
-## 1. Design tokens (src/styles.css)
+## Architecture (shared foundation)
 
-Introduce a calmer dark surface system used across Reel Studio (and available app-wide):
+A new **Content Intelligence Engine** — a single structured data model that Research, Campaign Planner, Analyze, Studio, and Publishing all read from. No module reruns AI when existing intelligence already answers the question.
 
-```text
---surface-base   #0B0B0C
---surface-1      #111214
---surface-2      #17181C
---border-soft    rgba(255,255,255,0.06)
---border-strong  rgba(255,255,255,0.10)
-```
+New tables (backend):
+- `research_reports` — Content DNA reports (niche / competitor / topic), scraped raw data + AI-structured analysis
+- `content_ideas` — 50-ideas engine output, linked to a research report, scored (virality, difficulty, competition, business value, audience interest, production time, confidence)
+- `campaigns` — a 30-day plan with goal, business type, audience, platforms, content mix, linked `research_report_id`
+- `campaign_items` — each day's content object; supersedes/extends `calendar_items` (kept for back-compat, migrated)
+- `competitor_watchlist` — saved competitors for Dashboard widget
 
-- Map shadcn tokens (`--background`, `--card`, `--popover`, `--border`, `--muted`) in dark mode onto this scale.
-- Replace large neon/pink/purple gradient usage in Reel Studio with a single accent — keep `gradient-accent` reserved for the one Primary CTA per screen.
-- Soften shadow utility (`shadow-ig` → lighter) and add `.elev-1` / `.elev-2` subtle elevations.
+Reuses existing: `analyses`, `projects`, `publishing_jobs`, `social_accounts`, Apify token, Lovable AI Gateway.
 
-## 2. Button hierarchy
+## Phase 1 — Research Module + Sidebar/Dashboard (foundation)
 
-One rule per screen: exactly one solid Primary; everything else outline / ghost / icon.
+**Sidebar reorder:** Dashboard → **Research** → Projects → **Campaign Planner** (renamed from Calendar) → Analyze → Settings.
 
-- Primary: existing `default` (solid gradient) — reserve for the step's main CTA (Generate Script, Generate Audio, Generate Reel, etc.).
-- Secondary: `outline` — supporting actions (Regenerate, Preview, Save Draft).
-- Danger: red icon-only `ghost` button (Trash2, `text-destructive`). Desktop adds "Delete" label; mobile shows icon only with `aria-label`. Always wrapped in an AlertDialog confirm ("Are you sure you want to delete this project?").
+**Dashboard additions:**
+- New "Research" card (Discover what content your audience actually wants → Start Research)
+- "Recent Research" list
+- "Trending Opportunities" (top-scored ideas from user's reports)
+- "Competitor Watchlist"
+- "Saved Research"
 
-Apply to `ReelStudio.tsx` and `ProjectsPage.tsx` (this is where the clipped Delete lives on mobile).
+**New route `/research`** with 3 modes:
+1. By Niche (preset list: Fitness, Real Estate, Automotive, etc.)
+2. By Competitor (IG username/brand)
+3. By Topic (freeform)
 
-## 3. Reel Studio — Step Focus Mode
+**Apify integration** (server function using existing `APIFY_TOKEN`):
+- Runs Instagram scraper actor → posts, reels, carousels, captions, hashtags, cadence, engagement, comments
+- Stores raw payload in `research_reports.raw_data`
+- Second pass via Lovable AI (`openai/gpt-5.5`) produces structured **Content DNA Report**: Executive Summary, Audience Profile, Content Pillars, Top Topics, Hooks, Caption Structure, Thumbnail Patterns, Visual Style, Posting Frequency/Times, Engagement Trends, Most Shared/Saved, CTAs, Brand Voice, Storytelling, Growth Opps, Weaknesses, Missed Opps, Competitive Advantages, Opportunity Score
 
-Replace the current always-expanded multi-tab layout with a single active step + breadcrumb stepper.
+**Content Opportunity Engine:** button on report → generates 50 ranked ideas → stored in `content_ideas` → each has "Save to Campaign Planner" action.
 
-Steps: `Visual Direction → Reel Style → Script → Audio → Generate`.
+## Phase 2 — Campaign Planner (rename + wizard + generation)
 
-- Top: a slim stepper bar (numbered pills + labels, current step highlighted, completed steps checked). Click a completed step to jump back.
-- Only the active step renders its full UI. Inactive steps render nothing in the center column.
-- Footer bar pinned at bottom of the center panel with `Back` (ghost, left) and the step's Primary CTA (right, solid). Replaces the inline "Continue" buttons currently scattered throughout.
+- Rename Calendar → **Campaign Planner** (route stays `/calendar`, add `/campaigns` alias)
+- **Campaign Wizard** (6 steps): Goal → Business Type → Audience → Platforms → Content Mix (% sliders) → Use Research (pick existing report to auto-populate)
+- **Generate 30-day campaign** via AI using the research report as grounding — creates 30 `campaign_items`
+- Each day = editable project with: Title, Idea, Objective, Audience, Hook, CTA, Platform recs, Content Type, Status, Priority, Publishing rec, AI Notes, Confidence
 
-## 4. Three-panel desktop layout
+## Phase 3 — Daily Content Object + Campaign Views
 
-```text
-┌─────────────┬──────────────────────────┬─────────────┐
-│  CONTEXT    │        FOCUS             │   OUTPUT    │
-│  (left)     │      (center)            │   (right)   │
-│             │                          │             │
-│ Source img  │  Active step content     │ Script      │
-│ Settings    │  (one workspace only)    │ Scene break │
-│ Style chip  │                          │ Final preview│
-└─────────────┴──────────────────────────┴─────────────┘
-```
+- Per-day action bar: Generate Script / Carousel / Reel / Image / Thumbnail / Voice / Captions / Hashtags / Publishing Copy / Schedule / Publish / Duplicate / Archive / Delete (wires into existing Studio + Publishing server functions)
+- **Views:** Calendar, Kanban, List, Agenda, Pipeline, Week, Month (tab switcher on Campaign Planner)
+- **AI Content Director** panel per item: Rewrite / More Viral / More Professional / More Emotional / More Educational / Luxury / Short / Long / Alternatives (single `directContent` server fn with variant enum)
 
-- Grid: `lg:grid-cols-[280px_minmax(0,1fr)_340px]`. Tightened gaps, no nested boxed-over-boxed.
-- Left panel: source image thumbnail, video settings summary (length / platform / aspect), selected Reel Style chip with "Change" link.
-- Right panel: script preview (current draft), scene breakdown list (read-only), final reel preview (placeholder until rendered).
-- Both side panels are `Collapsible`; collapsed by default on `< lg`.
+## Phase 4 — Scheduling Center + Progress Tracking
 
-## 5. Mobile layout
+- Enhanced scheduling per item: Immediate / Schedule / Recurring / Platform selection / Timezone / Optimal time / Approval workflow
+- Status pipeline: Draft → Queued → Scheduled → Publishing → Published → Failed → Retry (reuses `publishing_jobs`)
+- **Campaign Dashboard widget**: Planned / Scripts / Reels / Scheduled / Published counters + completion % + upcoming queue
+- Platform-specific caption variations (reuses existing platform-copy server fn)
 
-- Single column. Context + Output collapse into accordions above/below the focus step.
-- The footer Back/Primary bar becomes a sticky bottom bar (`sticky bottom-0`, safe-area padding) so the Primary CTA is always reachable and never clipped.
-- Horizontal scroll audit: every row that currently overflows gets `min-w-0` on text containers and `shrink-0` on icon/avatar widgets, per the responsive-layout pattern.
+## Technical Details
 
-## 6. Visual cleanup pass
+- All AI calls go through `src/lib/ai-gateway.server.ts` with `openai/gpt-5.5`
+- All Apify + AI work in `createServerFn` under `_authenticated` — user-scoped, RLS-enforced
+- Every new `public` table gets: `GRANT` to authenticated + service_role, RLS enabled, owner-scoped policies (`auth.uid() = user_id`)
+- Research report reuse: Campaign wizard/Studio/Analyze accept a `research_report_id` and skip re-analysis
+- Zero removals: existing Calendar, Analyze, Projects, Studio, Publishing all keep working; new layer sits alongside and links in
 
-Across `ReelStudio.tsx`, `AudioEngine.tsx`, `ReelStylePresets.tsx`:
+## Recommendation
 
-- Remove `ring-1 ring-accent-primary`, neon outlines, and double borders. Selected state = filled tinted background + check icon, no ring.
-- Replace multi-color badges with neutral `secondary` badges; reserve the accent color for the active step and the Primary CTA only.
-- Cut ~20–30% of decorative chrome: redundant section icons, duplicate step labels, multiple "tip" cards. Use spacing + heading weight for structure.
-- Heading scale: `text-xl font-semibold` for step titles, `text-sm text-muted-foreground` for descriptions, `text-base font-medium` for subsection labels. Drop bold on body text.
+Approve **Phase 1** first. It's the foundation everything else reuses. I'll implement it end-to-end (schema + Apify scraper + Content DNA + Opportunity Engine + Research route + Dashboard widgets + sidebar) in one turn, then we iterate through phases 2–4.
 
-## 7. ProjectsPage delete fix
-
-- Trash button → `Button variant="ghost" size="icon"` with `text-destructive`, label hidden via `sr-only` on `< sm`, visible on `≥ sm`.
-- Wrap in `AlertDialog`: title "Delete project?", description naming the project, Cancel + Delete (destructive).
-- Ensure the card actions row uses `grid-cols-[minmax(0,1fr)_auto]` so the icon never clips.
-
-## Files touched
-
-- `src/styles.css` — surface tokens, softened shadows, dark-mode token remap.
-- `src/components/ReelStudio.tsx` — step focus mode, 3-panel layout, footer CTA bar, hierarchy cleanup.
-- `src/components/AudioEngine.tsx` — visual cleanup (borders, badges, spacing); no logic changes.
-- `src/components/ReelStylePresets.tsx` — selected-state without ring; tighter grid.
-- `src/components/ProjectsPage.tsx` — delete button + confirm dialog, mobile-safe action row.
-
-## Out of scope (explicit)
-
-- No new features, no new server functions, no schema changes.
-- No copy rewrites beyond button labels needed for hierarchy.
-- Light mode untouched beyond shadcn token consistency.
-
-## Verification
-
-- Build passes.
-- Playwright at 375px and 1280px on `/studio/reel`: stepper visible, only one step rendered, Primary CTA reachable, no horizontal scroll, Delete icon not clipped on `/projects`.
-
-Approve to proceed, or tell me what to cut/add.
+**Reply "go" to start Phase 1, or tell me to adjust scope / re-order phases.**
