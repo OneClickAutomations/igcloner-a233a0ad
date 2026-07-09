@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -7,6 +7,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Cell,
+  PieChart,
+  Pie,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+} from "recharts";
 import {
   Search,
   Users,
@@ -19,6 +41,33 @@ import {
   RefreshCw,
   Lightbulb,
   CalendarPlus,
+  LayoutDashboard,
+  TriangleAlert,
+  TrendingUp,
+  Radar,
+  Layers3,
+  CalendarClock,
+  Rocket,
+  BarChart3,
+  BrainCircuit,
+  Send,
+  Download,
+  Share2,
+  Target,
+  CheckCircle2,
+  ArrowRight,
+  CircleDot,
+  Gauge,
+  Palette,
+  MessageSquare,
+  Type,
+  MousePointerClick,
+  Eye,
+  Bookmark,
+  ShieldAlert,
+  ShieldCheck,
+  Compass,
+  ChevronRight,
 } from "lucide-react";
 import {
   createResearchReport,
@@ -28,22 +77,13 @@ import {
   deleteResearchReport,
   generateContentIdeas,
 } from "@/lib/research.functions";
+import { cn } from "@/lib/utils";
 
 const routeApi = getRouteApi("/_authenticated/research");
 
 const NICHES = [
-  "Fitness",
-  "Real Estate",
-  "Automotive",
-  "Marketing",
-  "Law",
-  "Finance",
-  "Beauty",
-  "Travel",
-  "Cooking",
-  "Coaching",
-  "SaaS",
-  "E-commerce",
+  "Fitness","Real Estate","Automotive","Marketing","Law","Finance",
+  "Beauty","Travel","Cooking","Coaching","SaaS","E-commerce",
 ] as const;
 
 type Report = {
@@ -57,6 +97,29 @@ type Report = {
   created_at: string | null;
 };
 
+// ─── Icon tile ─────────────────────────────────────────────────────
+type Tone = "blue" | "green" | "amber" | "purple" | "rose" | "gray";
+const TONE: Record<Tone, string> = {
+  blue:   "bg-blue-500/10   text-blue-600   dark:text-blue-400   border-blue-500/20",
+  green:  "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+  amber:  "bg-amber-500/10  text-amber-600  dark:text-amber-400  border-amber-500/20",
+  purple: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+  rose:   "bg-rose-500/10   text-rose-600   dark:text-rose-400   border-rose-500/20",
+  gray:   "bg-muted         text-muted-foreground border-border",
+};
+function IconTile({
+  icon: Icon, tone = "blue", size = 20,
+}: { icon: React.ComponentType<{ className?: string }>; tone?: Tone; size?: 16 | 20 | 24 }) {
+  const box = size === 24 ? "h-10 w-10" : size === 20 ? "h-9 w-9" : "h-7 w-7";
+  const ico = size === 24 ? "h-5 w-5" : size === 20 ? "h-[18px] w-[18px]" : "h-[14px] w-[14px]";
+  return (
+    <div className={cn("flex shrink-0 items-center justify-center rounded-lg border", box, TONE[tone])}>
+      <Icon className={ico} />
+    </div>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────
 export function ResearchPage() {
   const search = routeApi.useSearch();
   const navigate = useNavigate();
@@ -75,16 +138,12 @@ export function ResearchPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
 
-  // Form state
   const [tab, setTab] = useState<"niche" | "competitor" | "topic">("niche");
   const [niche, setNiche] = useState<string>("");
   const [competitor, setCompetitor] = useState("");
   const [topic, setTopic] = useState("");
 
-  useEffect(() => {
-    refresh();
-  }, []);
-
+  useEffect(() => { refresh(); }, []);
   useEffect(() => {
     if (search.reportId) openReport(search.reportId);
     else setDetail(null);
@@ -92,45 +151,28 @@ export function ResearchPage() {
 
   async function refresh() {
     setLoadingList(true);
-    try {
-      const { reports } = await listFn();
-      setReports(reports as any);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    try { const { reports } = await listFn(); setReports(reports as any); }
+    catch (e) { toast.error((e as Error).message); }
     setLoadingList(false);
   }
-
   async function openReport(id: string) {
     setLoadingDetail(true);
-    try {
-      const res = await getFn({ data: { id } });
-      setDetail(res as any);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    try { const res = await getFn({ data: { id } }); setDetail(res as any); }
+    catch (e) { toast.error((e as Error).message); }
     setLoadingDetail(false);
   }
-
   async function submit() {
-    const subject =
-      tab === "niche" ? niche.trim() : tab === "competitor" ? competitor.trim() : topic.trim();
-    if (!subject) {
-      toast.error("Please enter a subject");
-      return;
-    }
+    const subject = tab === "niche" ? niche.trim() : tab === "competitor" ? competitor.trim() : topic.trim();
+    if (!subject) { toast.error("Please enter a subject"); return; }
     setCreating(true);
     try {
       const { id } = await createFn({ data: { mode: tab, subject } });
       toast.success("Research report generated");
       await refresh();
       navigate({ to: "/research", search: { reportId: id } });
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    } catch (e) { toast.error((e as Error).message); }
     setCreating(false);
   }
-
   async function runIdeas() {
     if (!detail?.report?.id) return;
     setIdeasBusy(true);
@@ -138,9 +180,7 @@ export function ResearchPage() {
       const { ideas } = await ideasFn({ data: { id: detail.report.id } });
       setDetail({ ...detail, ideas });
       toast.success(`Generated ${ideas.length} content ideas`);
-    } catch (e) {
-      toast.error((e as Error).message);
-    }
+    } catch (e) { toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
 
@@ -153,7 +193,6 @@ export function ResearchPage() {
         onSave={async () => {
           if (!detail?.report?.id) return;
           await saveFn({ data: { id: detail.report.id } });
-          toast.success("Toggled saved");
           await refresh();
           await openReport(detail.report.id);
         }}
@@ -167,25 +206,24 @@ export function ResearchPage() {
         }}
         ideasBusy={ideasBusy}
         onGenerateIdeas={runIdeas}
+        onGenerateCampaign={() => navigate({ to: "/calendar" })}
       />
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent shadow-ig">
-          <Search className="h-5 w-5 text-white" />
-        </div>
+    <div className="mx-auto max-w-[1200px] px-4 py-8 lg:py-12">
+      <div className="mb-8 flex items-center gap-3">
+        <IconTile icon={BrainCircuit} tone="purple" size={24} />
         <div>
           <h1 className="text-2xl font-bold tracking-tight lg:text-3xl">Research</h1>
           <p className="text-sm text-muted-foreground">
-            Discover what content your audience actually wants.
+            Uncover the audience, angles, and formats that actually convert.
           </p>
         </div>
       </div>
 
-      <Card className="p-4 lg:p-6 mb-8">
+      <Card className="mb-10 p-5 lg:p-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
           <TabsList className="mb-4">
             <TabsTrigger value="niche" className="gap-2"><Hash className="h-4 w-4" />By Niche</TabsTrigger>
@@ -198,42 +236,29 @@ export function ResearchPage() {
             <div className="mb-3 flex flex-wrap gap-2">
               {NICHES.map((n) => (
                 <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNiche(n)}
-                  className={`rounded-full border px-3 py-1 text-sm transition ${
+                  key={n} type="button" onClick={() => setNiche(n)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-sm transition",
                     niche === n
                       ? "border-accent-primary bg-accent-primary/10 text-accent-primary"
-                      : "border-border hover:border-border-default"
-                  }`}
-                >
-                  {n}
-                </button>
+                      : "border-border hover:border-border-default",
+                  )}
+                >{n}</button>
               ))}
             </div>
             <Input value={niche} onChange={(e) => setNiche(e.target.value)} placeholder="e.g. Fitness Coaching" />
           </TabsContent>
-
           <TabsContent value="competitor">
             <Label className="mb-2 block">Instagram handle / creator / brand</Label>
-            <Input
-              value={competitor}
-              onChange={(e) => setCompetitor(e.target.value)}
-              placeholder="@alexhormozi or garyvee"
-            />
+            <Input value={competitor} onChange={(e) => setCompetitor(e.target.value)} placeholder="@alexhormozi or garyvee" />
           </TabsContent>
-
           <TabsContent value="topic">
             <Label className="mb-2 block">Topic</Label>
-            <Input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="Lead generation, personal branding, weight loss…"
-            />
+            <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Lead generation, personal branding, weight loss…" />
           </TabsContent>
         </Tabs>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-5 flex justify-end">
           <Button onClick={submit} disabled={creating} className="gap-2">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {creating ? "Analyzing… this can take up to a minute" : "Run Research"}
@@ -249,12 +274,11 @@ export function ResearchPage() {
       </div>
 
       {loadingList ? (
-        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          Loading…
-        </div>
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">Loading…</div>
       ) : reports.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          No research yet. Run your first one above.
+        <div className="rounded-xl border border-border bg-card p-10 text-center">
+          <IconTile icon={Compass} tone="purple" size={24} />
+          <p className="mt-3 text-sm text-muted-foreground">No research yet. Run your first one above.</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -262,21 +286,24 @@ export function ResearchPage() {
             <button
               key={r.id}
               onClick={() => navigate({ to: "/research", search: { reportId: r.id } })}
-              className="rounded-xl border border-border bg-card p-4 text-left transition hover:border-border-default hover:-translate-y-0.5"
+              className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md"
             >
-              <div className="mb-2 flex items-center justify-between">
-                <span className="rounded-md bg-accent-secondary/10 px-1.5 py-0.5 text-xs font-medium uppercase text-accent-secondary">
-                  {r.mode}
-                </span>
+              <div className="mb-3 flex items-center justify-between">
+                <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">{r.mode}</Badge>
                 {r.opportunity_score != null && (
-                  <span className="font-mono text-sm font-bold text-accent-primary">
-                    {r.opportunity_score}
-                  </span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono text-lg font-bold text-accent-primary">{r.opportunity_score}</span>
+                    <span className="text-[10px] text-muted-foreground">/100</span>
+                  </div>
                 )}
               </div>
-              <p className="mb-1 truncate text-sm font-semibold">{r.subject}</p>
-              <p className="text-xs text-muted-foreground">
-                {r.status === "ready" ? "Ready" : r.status === "failed" ? `Failed: ${r.error_message ?? "error"}` : r.status}
+              <p className="mb-1 truncate text-base font-semibold">{r.subject}</p>
+              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                {r.status === "ready"
+                  ? <><CheckCircle2 className="h-3 w-3 text-emerald-500" /> Ready to explore</>
+                  : r.status === "failed"
+                  ? <><TriangleAlert className="h-3 w-3 text-rose-500" /> {r.error_message ?? "Failed"}</>
+                  : <><Loader2 className="h-3 w-3 animate-spin" /> {r.status}</>}
               </p>
             </button>
           ))}
@@ -286,16 +313,12 @@ export function ResearchPage() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// REPORT DETAIL — the redesigned dashboard
+// ═══════════════════════════════════════════════════════════════════
 
 function ReportDetail({
-  detail,
-  loading,
-  onBack,
-  onSave,
-  onDelete,
-  onGenerateIdeas,
-  ideasBusy,
+  detail, loading, onBack, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -304,26 +327,44 @@ function ReportDetail({
   onDelete: () => void;
   onGenerateIdeas: () => void;
   ideasBusy: boolean;
+  onGenerateCampaign: () => void;
 }) {
   if (loading || !detail) {
     return (
-      <div className="mx-auto max-w-[1100px] px-4 py-12 text-center text-sm text-muted-foreground">
+      <div className="mx-auto max-w-[1200px] px-4 py-24 text-center text-sm text-muted-foreground">
         <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Loading report…
       </div>
     );
   }
   const { report, ideas } = detail;
-  const dna = report?.dna_report ?? {};
+  const dna = (report?.dna_report ?? {}) as any;
+  const score = Number(report?.opportunity_score ?? 0);
+
+  const pillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
+  const pillarData = pillars.map((p) => ({
+    name: String(p?.name ?? "").slice(0, 20),
+    value: Number(p?.share) || 0,
+  }));
+
+  const CHART_COLORS = ["#8134AF", "#DD2A7B", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981"];
+
+  const growthOpp = arr(dna.growthOpportunities)[0];
+  const topRisk = arr(dna.weaknesses)[0] ?? arr(dna.missedOpportunities)[0];
+  const topPillar = pillars[0]?.name;
 
   return (
-    <div className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
+    <div className="mx-auto max-w-[1200px] px-4 pb-32 pt-8 lg:pt-10">
+      {/* ── Top nav row ────────────────────────────────────────── */}
       <div className="mb-4 flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
-          <ArrowLeft className="h-4 w-4" /> Back
+          <ArrowLeft className="h-4 w-4" /> Back to Research
         </Button>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => toast.info("PDF export ships next")} className="gap-1">
+            <Download className="h-4 w-4" /> Export PDF
+          </Button>
           <Button variant="outline" size="sm" onClick={onSave} className="gap-1">
-            <Star className={`h-4 w-4 ${report?.is_saved ? "fill-current text-yellow-500" : ""}`} />
+            <Star className={cn("h-4 w-4", report?.is_saved && "fill-current text-amber-500")} />
             {report?.is_saved ? "Saved" : "Save"}
           </Button>
           <Button variant="outline" size="sm" onClick={onDelete} className="gap-1 text-status-error">
@@ -332,173 +373,522 @@ function ReportDetail({
         </div>
       </div>
 
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">{report.mode}</p>
-          <h1 className="text-2xl font-bold lg:text-3xl">{report.subject}</h1>
-          {dna.executiveSummary && (
-            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{dna.executiveSummary}</p>
+      {/* ── HERO SUMMARY ────────────────────────────────────────── */}
+      <Card className="mb-6 overflow-hidden border-border/60">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:p-8">
+          <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="uppercase tracking-wide">{report.mode}</Badge>
+              <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3 w-3" /> Ready
+              </Badge>
+              {topPillar && <Badge variant="outline" className="gap-1"><Target className="h-3 w-3" /> {topPillar}</Badge>}
+            </div>
+            <h1 className="mb-3 text-3xl font-bold tracking-tight lg:text-4xl">{report.subject}</h1>
+            {dna.executiveSummary && (
+              <p className="max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
+                {dna.executiveSummary}
+              </p>
+            )}
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Button onClick={onGenerateCampaign} className="gap-2">
+                <Rocket className="h-4 w-4" /> Generate 30-Day Campaign
+              </Button>
+              <Button variant="outline" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
+                {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {ideas.length > 0 ? "Regenerate Ideas" : "Generate Content Ideas"}
+              </Button>
+            </div>
+          </div>
+
+          <OpportunityGauge score={score} />
+        </div>
+      </Card>
+
+      {/* ── KPI CARDS ──────────────────────────────────────────── */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard tone="green"  icon={Gauge}         label="Opportunity"       value={`${score || "—"}`}     hint={score >= 70 ? "High" : score >= 40 ? "Moderate" : "Low"} sub="/ 100" />
+        <KpiCard tone="rose"   icon={Radar}         label="Competition"       value={inferCompetition(score)} hint="vs. current supply" />
+        <KpiCard tone="blue"   icon={Users}         label="Audience"          value={firstWord(dna?.audienceProfile?.who) || "Defined"} hint={dna?.audienceProfile?.who ? shortText(dna.audienceProfile.who, 40) : "—"} />
+        <KpiCard tone="amber"  icon={CalendarClock} label="Posting cadence"   value={firstWord(dna.postingFrequency) || "Daily"} hint={shortText(dna.postingFrequency, 34)} />
+      </div>
+
+      {/* ── AI INSIGHTS callouts ───────────────────────────────── */}
+      {(growthOpp || topRisk) && (
+        <div className="mb-8 grid gap-3 lg:grid-cols-2">
+          {growthOpp && (
+            <InsightCallout tone="green" icon={TrendingUp} title="Biggest opportunity">
+              {String(growthOpp)}
+            </InsightCallout>
+          )}
+          {topRisk && (
+            <InsightCallout tone="amber" icon={ShieldAlert} title="Biggest risk">
+              {String(topRisk)}
+            </InsightCallout>
           )}
         </div>
-        {report.opportunity_score != null && (
-          <div className="rounded-xl border border-border bg-card p-4 text-center">
-            <p className="font-mono text-3xl font-bold text-accent-primary">
-              {report.opportunity_score}
-            </p>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Opportunity</p>
-          </div>
-        )}
-      </div>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DnaSection title="Audience Profile">
-          <p className="mb-2 text-sm"><b>Who:</b> {dna?.audienceProfile?.who}</p>
-          <ListLine label="Desires" items={dna?.audienceProfile?.desires} />
-          <ListLine label="Pain points" items={dna?.audienceProfile?.painPoints} />
-          <p className="text-sm"><b>Psychographics:</b> {dna?.audienceProfile?.psychographics}</p>
-        </DnaSection>
-
-        <DnaSection title="Content Pillars">
-          <ul className="space-y-2 text-sm">
-            {(dna.contentPillars ?? []).map((p: any, i: number) => (
-              <li key={i}>
-                <b>{p.name}</b> {p.share != null && <span className="text-muted-foreground">— {p.share}%</span>}
-                <div className="text-muted-foreground">{p.description}</div>
-              </li>
-            ))}
-          </ul>
-        </DnaSection>
-
-        <DnaSection title="Common Hooks">
-          <ul className="space-y-2 text-sm">
-            {(dna.commonHooks ?? []).map((h: any, i: number) => (
-              <li key={i}>
-                <b>{h.pattern}</b>
-                <div className="text-muted-foreground italic">"{h.example}"</div>
-              </li>
-            ))}
-          </ul>
-        </DnaSection>
-
-        <DnaSection title="Top Topics">
-          <ul className="space-y-1 text-sm">
-            {(dna.topTopics ?? []).map((t: any, i: number) => (
-              <li key={i}>
-                <b>{t.topic}</b> — <span className="text-muted-foreground">{t.why}</span>
-              </li>
-            ))}
-          </ul>
-        </DnaSection>
-
-        <DnaSection title="Caption Structure">
-          <p className="text-sm"><b>Length:</b> {dna?.captionStructure?.typicalLength}</p>
-          <p className="text-sm"><b>Tone:</b> {dna?.captionStructure?.tone}</p>
-          <p className="text-sm"><b>Opening:</b> {dna?.captionStructure?.openingStyle}</p>
-          <p className="text-sm"><b>CTA:</b> {dna?.captionStructure?.ctaStyle}</p>
-        </DnaSection>
-
-        <DnaSection title="Visual Style">
-          <p className="text-sm"><b>Palette:</b> {dna?.visualStyle?.palette}</p>
-          <p className="text-sm"><b>Composition:</b> {dna?.visualStyle?.composition}</p>
-          <p className="text-sm"><b>Overlay:</b> {dna?.visualStyle?.textOverlay}</p>
-          <p className="text-sm"><b>Edit style:</b> {dna?.visualStyle?.editStyle}</p>
-        </DnaSection>
-
-        <DnaSection title="Cadence & Engagement">
-          <p className="text-sm"><b>Frequency:</b> {dna.postingFrequency}</p>
-          <p className="text-sm"><b>Times:</b> {dna.postingTimes}</p>
-          <p className="text-sm"><b>Trends:</b> {dna.engagementTrends}</p>
-          <p className="text-sm"><b>Most shared:</b> {dna.mostShared}</p>
-          <p className="text-sm"><b>Most saved:</b> {dna.mostSaved}</p>
-        </DnaSection>
-
-        <DnaSection title="Brand Voice & Storytelling">
-          <p className="text-sm"><b>Voice:</b> {dna.brandVoice}</p>
-          <p className="text-sm"><b>Style:</b> {dna.storytellingStyle}</p>
-          <p className="text-sm"><b>Thumbnails:</b> {dna.thumbnailPatterns}</p>
-          <ListLine label="CTA patterns" items={dna.ctaPatterns} />
-        </DnaSection>
-
-        <DnaSection title="Growth Opportunities">
-          <ListLine items={dna.growthOpportunities} />
-        </DnaSection>
-        <DnaSection title="Weaknesses & Missed">
-          <ListLine label="Weaknesses" items={dna.weaknesses} />
-          <ListLine label="Missed opportunities" items={dna.missedOpportunities} />
-        </DnaSection>
-        <DnaSection title="Competitive Advantages">
-          <ListLine items={dna.competitiveAdvantages} />
-        </DnaSection>
-      </div>
-
-      {/* ── Content Opportunity Engine ─────────────────────────────── */}
-      <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-bold">Content Opportunity Engine</h2>
-          <Button onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
-            {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {ideas.length > 0 ? "Regenerate 50 Ideas" : "Generate 50 Ideas"}
-          </Button>
+      {/* ── CHARTS ─────────────────────────────────────────────── */}
+      {pillarData.length > 0 && (
+        <div className="mb-8 grid gap-4 lg:grid-cols-3">
+          <Card className="p-5 lg:col-span-2">
+            <SectionHead icon={Layers3} tone="purple" title="Content pillar mix" sub="Share of voice by pillar" />
+            <div className="mt-4 h-[260px] w-full">
+              <ResponsiveContainer>
+                <BarChart data={pillarData} layout="vertical" margin={{ left: 12, right: 24, top: 4, bottom: 4 }}>
+                  <XAxis type="number" hide />
+                  <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 12 }} stroke="currentColor" className="text-muted-foreground" />
+                  <Tooltip
+                    cursor={{ fill: "rgba(129,52,175,0.06)" }}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 6, 6]}>
+                    {pillarData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+          <Card className="p-5">
+            <SectionHead icon={BarChart3} tone="blue" title="Distribution" sub="Content mix by topic weight" />
+            <div className="mt-4 h-[260px] w-full">
+              <ResponsiveContainer>
+                <PieChart>
+                  <Tooltip
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                  />
+                  <Pie data={pillarData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                    {pillarData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
         </div>
-        {ideas.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            Generate 50 ranked ideas grounded in this DNA report.
-          </div>
-        ) : (
+      )}
+
+      {/* ── COLLAPSIBLE RESEARCH SECTIONS ──────────────────────── */}
+      <Accordion type="multiple" defaultValue={["exec"]} className="space-y-3">
+        <SectionCard value="exec" icon={LayoutDashboard} tone="blue" title="Executive Summary"
+          summary="Market snapshot, biggest opportunity, and recommended play.">
           <div className="grid gap-3 md:grid-cols-2">
-            {ideas.map((idea: any) => (
-              <div key={idea.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="rounded bg-accent-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-accent-primary">
-                    {idea.format}
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    conf {idea.confidence_score}
-                  </span>
+            <BriefingBlock icon={Compass} tone="blue" title="Market snapshot">
+              {dna.executiveSummary || "—"}
+            </BriefingBlock>
+            <BriefingBlock icon={TrendingUp} tone="green" title="Biggest opportunity">
+              {growthOpp ?? "—"}
+            </BriefingBlock>
+            <BriefingBlock icon={ShieldAlert} tone="amber" title="Biggest risk">
+              {topRisk ?? "—"}
+            </BriefingBlock>
+            <BriefingBlock icon={Rocket} tone="purple" title="Recommended play">
+              {dna.storytellingStyle || dna.brandVoice || "—"}
+            </BriefingBlock>
+          </div>
+        </SectionCard>
+
+        <SectionCard value="audience" icon={Users} tone="blue" title="Audience Profile"
+          summary={shortText(dna?.audienceProfile?.who, 100) || "Who they are and what they want."}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <MiniCard icon={Users} tone="blue" title="Who they are">{dna?.audienceProfile?.who || "—"}</MiniCard>
+            <MiniCard icon={BrainCircuit} tone="purple" title="Psychographics">{dna?.audienceProfile?.psychographics || "—"}</MiniCard>
+            <MiniCard icon={Target} tone="green" title="Desires">
+              <IconList items={arr(dna?.audienceProfile?.desires)} icon={CheckCircle2} tone="green" />
+            </MiniCard>
+            <MiniCard icon={TriangleAlert} tone="rose" title="Pain points">
+              <IconList items={arr(dna?.audienceProfile?.painPoints)} icon={CircleDot} tone="rose" />
+            </MiniCard>
+          </div>
+        </SectionCard>
+
+        <SectionCard value="pillars" icon={Layers3} tone="purple" title="Content Pillars"
+          summary={`${pillars.length} strategic pillars driving this niche.`}>
+          <div className="grid gap-3 md:grid-cols-2">
+            {pillars.map((p, i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <IconTile icon={Layers3} tone="purple" size={16} />
+                    <h4 className="truncate text-sm font-semibold">{p.name}</h4>
+                  </div>
+                  {p.share != null && (
+                    <Badge variant="outline" className="font-mono">{Math.round(Number(p.share))}%</Badge>
+                  )}
                 </div>
-                <h3 className="mb-1 text-sm font-semibold">{idea.title}</h3>
-                <p className="mb-2 text-xs italic text-muted-foreground">"{idea.hook}"</p>
-                <p className="mb-3 text-xs text-muted-foreground">{idea.description}</p>
-                <div className="mb-3 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
-                  <span>Virality {idea.virality_score}</span>
-                  <span>Diff {idea.difficulty_score}</span>
-                  <span>Comp {idea.competition_score}</span>
-                  <span>Biz {idea.business_value_score}</span>
-                  <span>Aud {idea.audience_interest_score}</span>
-                  <span>Prod {idea.production_time_score}</span>
+                <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{p.description}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={onGenerateIdeas}>
+                    <Sparkles className="h-3 w-3" /> Ideas
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={onGenerateCampaign}>
+                    <KanbanIcon /> Campaign
+                  </Button>
                 </div>
-                <Button size="sm" variant="outline" className="w-full gap-1" onClick={() => toast.info("Campaign Planner integration ships in Phase 2")}>
-                  <CalendarPlus className="h-3 w-3" /> Save to Planner
-                </Button>
               </div>
             ))}
           </div>
+        </SectionCard>
+
+        <SectionCard value="topics" icon={Sparkles} tone="green" title="Top Topics & Hooks"
+          summary="What people are searching for and the hooks that stop the scroll.">
+          <div className="grid gap-3 md:grid-cols-2">
+            <MiniCard icon={Sparkles} tone="green" title="Top topics">
+              <IconList
+                items={arr(dna.topTopics).map((t: any) => `${t.topic} — ${t.why}`)}
+                icon={ArrowRight} tone="green"
+              />
+            </MiniCard>
+            <MiniCard icon={MousePointerClick} tone="purple" title="Common hooks">
+              <ul className="space-y-2">
+                {arr(dna.commonHooks).map((h: any, i: number) => (
+                  <li key={i} className="rounded-md bg-muted/50 p-2 text-xs">
+                    <div className="font-semibold">{h.pattern}</div>
+                    <div className="italic text-muted-foreground">"{h.example}"</div>
+                  </li>
+                ))}
+              </ul>
+            </MiniCard>
+          </div>
+        </SectionCard>
+
+        <SectionCard value="caption" icon={Type} tone="blue" title="Caption & Voice"
+          summary="How to write and speak in this niche.">
+          <div className="grid gap-3 md:grid-cols-2">
+            <MiniCard icon={Type} tone="blue" title="Caption structure">
+              <KV k="Length"  v={dna?.captionStructure?.typicalLength} />
+              <KV k="Tone"    v={dna?.captionStructure?.tone} />
+              <KV k="Opening" v={dna?.captionStructure?.openingStyle} />
+              <KV k="CTA"     v={dna?.captionStructure?.ctaStyle} />
+            </MiniCard>
+            <MiniCard icon={MessageSquare} tone="purple" title="Brand voice">
+              <p className="mb-2 text-sm text-muted-foreground">{dna.brandVoice || "—"}</p>
+              <Separator className="my-2" />
+              <p className="text-xs text-muted-foreground"><b className="text-foreground">Storytelling:</b> {dna.storytellingStyle || "—"}</p>
+            </MiniCard>
+            <MiniCard icon={MousePointerClick} tone="green" title="CTA patterns">
+              <IconList items={arr(dna.ctaPatterns)} icon={ArrowRight} tone="green" />
+            </MiniCard>
+            <MiniCard icon={Palette} tone="purple" title="Visual style">
+              <KV k="Palette"     v={dna?.visualStyle?.palette} />
+              <KV k="Composition" v={dna?.visualStyle?.composition} />
+              <KV k="Overlay"     v={dna?.visualStyle?.textOverlay} />
+              <KV k="Edit"        v={dna?.visualStyle?.editStyle} />
+            </MiniCard>
+          </div>
+        </SectionCard>
+
+        <SectionCard value="cadence" icon={CalendarClock} tone="amber" title="Posting Strategy"
+          summary={shortText(`${dna.postingFrequency ?? ""} ${dna.postingTimes ? "• " + dna.postingTimes : ""}`, 100) || "Cadence, timing, and engagement patterns."}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <MiniCard icon={CalendarClock} tone="amber" title="Frequency">{dna.postingFrequency || "—"}</MiniCard>
+            <MiniCard icon={CalendarClock} tone="amber" title="Best times">{dna.postingTimes || "—"}</MiniCard>
+            <MiniCard icon={TrendingUp} tone="green" title="Engagement trends">{dna.engagementTrends || "—"}</MiniCard>
+            <MiniCard icon={Eye} tone="blue" title="Thumbnail patterns">{dna.thumbnailPatterns || "—"}</MiniCard>
+            <MiniCard icon={Share2} tone="purple" title="Most shared">{dna.mostShared || "—"}</MiniCard>
+            <MiniCard icon={Bookmark} tone="purple" title="Most saved">{dna.mostSaved || "—"}</MiniCard>
+          </div>
+        </SectionCard>
+
+        <SectionCard value="growth" icon={TrendingUp} tone="green" title="Growth Opportunities"
+          summary={`${arr(dna.growthOpportunities).length} openings + ${arr(dna.competitiveAdvantages).length} advantages.`}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <MiniCard icon={TrendingUp} tone="green" title="Growth opportunities">
+              <IconList items={arr(dna.growthOpportunities)} icon={ArrowRight} tone="green" />
+            </MiniCard>
+            <MiniCard icon={ShieldCheck} tone="blue" title="Competitive advantages">
+              <IconList items={arr(dna.competitiveAdvantages)} icon={CheckCircle2} tone="blue" />
+            </MiniCard>
+            <MiniCard icon={TriangleAlert} tone="amber" title="Weaknesses to avoid">
+              <IconList items={arr(dna.weaknesses)} icon={CircleDot} tone="amber" />
+            </MiniCard>
+            <MiniCard icon={Lightbulb} tone="purple" title="Missed opportunities">
+              <IconList items={arr(dna.missedOpportunities)} icon={Sparkles} tone="purple" />
+            </MiniCard>
+          </div>
+        </SectionCard>
+      </Accordion>
+
+      {/* ── CONTENT OPPORTUNITY ENGINE ─────────────────────────── */}
+      <div className="mt-10">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <IconTile icon={Sparkles} tone="green" size={20} />
+            <div>
+              <h2 className="text-xl font-bold">Content Opportunity Engine</h2>
+              <p className="text-sm text-muted-foreground">50 ranked ideas grounded in this DNA report.</p>
+            </div>
+          </div>
+          <Button onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
+            {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {ideas.length > 0 ? "Regenerate" : "Generate"}
+          </Button>
+        </div>
+
+        {ideas.length === 0 ? (
+          <Card className="p-10 text-center">
+            <IconTile icon={Lightbulb} tone="amber" size={24} />
+            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+              Run the opportunity engine to get 50 ranked, scored content ideas you can drop straight into a campaign.
+            </p>
+          </Card>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {ideas.map((idea: any) => (
+              <Card key={idea.id} className="p-4 transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <Badge variant="outline" className="uppercase text-[10px] tracking-wide">{idea.format}</Badge>
+                  <div className="flex items-center gap-1 text-xs">
+                    <Gauge className="h-3 w-3 text-emerald-500" />
+                    <span className="font-mono font-semibold">{idea.confidence_score}</span>
+                  </div>
+                </div>
+                <h3 className="mb-1 text-sm font-semibold">{idea.title}</h3>
+                <p className="mb-2 line-clamp-2 text-xs italic text-muted-foreground">"{idea.hook}"</p>
+                <p className="mb-3 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
+                <div className="mb-3 grid grid-cols-3 gap-1.5">
+                  <ScorePill label="Viral" value={idea.virality_score} tone="green" />
+                  <ScorePill label="Diff"  value={idea.difficulty_score} tone="amber" />
+                  <ScorePill label="Aud"   value={idea.audience_interest_score} tone="blue" />
+                </div>
+                <Button size="sm" variant="outline" className="w-full gap-1"
+                  onClick={() => toast.info("Save to Campaign Planner — coming next")}>
+                  <CalendarPlus className="h-3.5 w-3.5" /> Save to Planner
+                </Button>
+              </Card>
+            ))}
+          </div>
         )}
+      </div>
+
+      {/* ── ACTION CENTER ──────────────────────────────────────── */}
+      <div className="mt-12">
+        <div className="mb-4 flex items-center gap-3">
+          <IconTile icon={Rocket} tone="purple" size={20} />
+          <div>
+            <h2 className="text-xl font-bold">Action Center</h2>
+            <p className="text-sm text-muted-foreground">Turn insight into shipped content.</p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ActionCard tone="purple" icon={Rocket}       title="Generate 30-Day Campaign" desc="AI-plan a full month grounded in this research." onClick={onGenerateCampaign} />
+          <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="50 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
+          <ActionCard tone="blue"   icon={Send}         title="Publishing Schedule"      desc="Push to connected accounts."                    onClick={() => toast.info("Open Publishing Center from the sidebar")} />
+          <ActionCard tone="amber"  icon={Download}     title="Export PDF Report"        desc="Agency-ready deliverable."                      onClick={() => toast.info("PDF export ships next")} />
+        </div>
+      </div>
+
+      {/* ── FLOATING ACTION BAR ────────────────────────────────── */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+        <div className="pointer-events-auto flex items-center gap-1 rounded-full border border-border bg-card/95 p-1.5 shadow-lg backdrop-blur">
+          <Button size="sm" onClick={onGenerateCampaign} className="gap-1.5 rounded-full">
+            <Rocket className="h-4 w-4" /> Campaign
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-1.5 rounded-full">
+            <Sparkles className="h-4 w-4" /> Ideas
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => toast.info("PDF export ships next")} className="gap-1.5 rounded-full">
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onSave} className="gap-1.5 rounded-full">
+            <Star className={cn("h-4 w-4", report?.is_saved && "fill-current text-amber-500")} />
+            Save
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
-function DnaSection({ title, children }: { title: string; children: React.ReactNode }) {
+// ─── Sub-components ────────────────────────────────────────────────
+
+function OpportunityGauge({ score }: { score: number }) {
+  const data = [{ name: "score", value: Math.max(0, Math.min(100, score)) }];
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">{title}</h3>
-      <div className="space-y-1">{children}</div>
+    <div className="relative flex h-40 w-40 shrink-0 items-center justify-center self-center">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadialBarChart innerRadius="72%" outerRadius="100%" data={data} startAngle={210} endAngle={-30}>
+          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+          <RadialBar dataKey="value" cornerRadius={12} fill="#8134AF" background={{ fill: "hsl(var(--muted))" }} />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-4xl font-bold text-accent-primary">{score || 0}</span>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Opportunity</span>
+      </div>
     </div>
   );
 }
 
-function ListLine({ label, items }: { label?: string; items?: unknown }) {
-  const arr = Array.isArray(items) ? items : [];
-  if (arr.length === 0) return null;
+function KpiCard({
+  icon, label, value, hint, sub, tone = "blue",
+}: { icon: any; label: string; value: string; hint?: string; sub?: string; tone?: Tone }) {
   return (
-    <div className="text-sm">
-      {label && <b>{label}: </b>}
-      <ul className="ml-4 list-disc text-muted-foreground">
-        {arr.map((x, i) => (
-          <li key={i}>{String(x)}</li>
-        ))}
-      </ul>
+    <Card className="group p-4 transition hover:-translate-y-0.5 hover:shadow-md">
+      <div className="mb-3 flex items-center justify-between">
+        <IconTile icon={icon} tone={tone} size={16} />
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="text-2xl font-bold tracking-tight">{value}</span>
+        {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
+      </div>
+      {hint && <p className="mt-1 truncate text-xs text-muted-foreground">{hint}</p>}
+    </Card>
+  );
+}
+
+function InsightCallout({
+  icon: Icon, title, children, tone,
+}: { icon: any; title: string; children: React.ReactNode; tone: Tone }) {
+  return (
+    <Card className={cn("relative overflow-hidden p-5 pl-6", `before:absolute before:inset-y-0 before:left-0 before:w-1`, {
+      "before:bg-emerald-500": tone === "green",
+      "before:bg-amber-500":   tone === "amber",
+      "before:bg-blue-500":    tone === "blue",
+      "before:bg-violet-500":  tone === "purple",
+      "before:bg-rose-500":    tone === "rose",
+    })}>
+      <div className="mb-2 flex items-center gap-2">
+        <IconTile icon={Icon} tone={tone} size={16} />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">AI Insight · {title}</span>
+      </div>
+      <p className="text-sm leading-relaxed">{children}</p>
+    </Card>
+  );
+}
+
+function SectionCard({
+  value, icon, title, summary, tone, children,
+}: { value: string; icon: any; title: string; summary?: string; tone: Tone; children: React.ReactNode }) {
+  return (
+    <AccordionItem value={value} className="overflow-hidden rounded-xl border border-border bg-card">
+      <AccordionTrigger className="px-5 py-4 hover:no-underline">
+        <div className="flex min-w-0 items-center gap-3 text-left">
+          <IconTile icon={icon} tone={tone} size={20} />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">{title}</div>
+            {summary && <div className="truncate text-xs text-muted-foreground">{summary}</div>}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="border-t border-border/60 px-5 pb-5 pt-4">
+        {children}
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+function SectionHead({ icon, tone, title, sub }: { icon: any; tone: Tone; title: string; sub?: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <IconTile icon={icon} tone={tone} size={16} />
+      <div>
+        <div className="text-sm font-semibold">{title}</div>
+        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+      </div>
     </div>
   );
+}
+
+function BriefingBlock({
+  icon, title, tone, children,
+}: { icon: any; title: string; tone: Tone; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-4">
+      <div className="mb-2 flex items-center gap-2">
+        <IconTile icon={icon} tone={tone} size={16} />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+      </div>
+      <p className="text-sm leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function MiniCard({
+  icon, title, tone, children,
+}: { icon: any; title: string; tone: Tone; children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <IconTile icon={icon} tone={tone} size={16} />
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+      </div>
+      <div className="text-sm leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function IconList({ items, icon: Icon, tone }: { items: unknown[]; icon: any; tone: Tone }) {
+  const arr2 = Array.isArray(items) ? items : [];
+  if (arr2.length === 0) return <p className="text-sm text-muted-foreground">—</p>;
+  return (
+    <ul className="space-y-1.5">
+      {arr2.map((x, i) => (
+        <li key={i} className="flex items-start gap-2 text-sm">
+          <span className={cn("mt-0.5 shrink-0 rounded-md p-0.5", TONE[tone])}>
+            <Icon className="h-3 w-3" />
+          </span>
+          <span className="leading-relaxed">{String(x)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function KV({ k, v }: { k: string; v?: string }) {
+  if (!v) return null;
+  return (
+    <div className="mb-1.5 flex items-baseline gap-2 text-sm">
+      <span className="w-20 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">{k}</span>
+      <span className="min-w-0">{v}</span>
+    </div>
+  );
+}
+
+function ScorePill({ label, value, tone }: { label: string; value: number; tone: Tone }) {
+  return (
+    <div className={cn("flex items-center justify-between rounded-md border px-2 py-1 text-[10px]", TONE[tone])}>
+      <span className="uppercase tracking-wide opacity-80">{label}</span>
+      <span className="font-mono font-bold">{Number(value) || 0}</span>
+    </div>
+  );
+}
+
+function ActionCard({
+  icon: Icon, title, desc, onClick, tone,
+}: { icon: any; title: string; desc: string; onClick: () => void; tone: Tone }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-start gap-3 rounded-xl border border-border bg-card p-5 text-left transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md"
+    >
+      <IconTile icon={Icon} tone={tone} size={24} />
+      <div>
+        <div className="mb-1 flex items-center gap-1 text-sm font-semibold">
+          {title}
+          <ChevronRight className="h-4 w-4 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100" />
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
+      </div>
+    </button>
+  );
+}
+
+function KanbanIcon() {
+  return <Layers3 className="h-3 w-3" />;
+}
+
+// ─── utils ────────────────────────────────────────────────────────
+function arr(v: unknown): any[] { return Array.isArray(v) ? v : []; }
+function firstWord(s?: string) { return (s ?? "").trim().split(/[\s,.]/)[0] || ""; }
+function shortText(s?: string, n = 60) {
+  if (!s) return "";
+  return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
+}
+function inferCompetition(score: number) {
+  if (!score) return "—";
+  if (score >= 75) return "Low";
+  if (score >= 50) return "Medium";
+  return "High";
 }
