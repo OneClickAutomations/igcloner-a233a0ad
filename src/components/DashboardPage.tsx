@@ -68,6 +68,51 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export function DashboardPage() {
+  return <DashboardPageInner />;
+}
+
+function ResearchWidget({
+  icon,
+  title,
+  empty,
+  items,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  empty: string;
+  items: Array<{ key: string; label: string; sub?: string; onClick: () => void }>;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        {icon} {title}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.slice(0, 5).map((it) => (
+            <li key={it.key}>
+              <button
+                onClick={it.onClick}
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-muted/50"
+              >
+                <span className="truncate">{it.label}</span>
+                {it.sub && (
+                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {it.sub}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DashboardPageInner() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [loading, setLoading] = useState(true);
