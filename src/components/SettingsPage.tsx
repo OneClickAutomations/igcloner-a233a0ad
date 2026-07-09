@@ -22,6 +22,7 @@ import { PreferencesSection } from "./settings/PreferencesSection";
 import { UsageSection } from "./settings/UsageSection";
 import { SecuritySection } from "./settings/SecuritySection";
 import { HelpSection } from "./settings/HelpSection";
+import { LaunchChecklist } from "./settings/LaunchChecklist";
 
 const NAV_ITEMS = [
   { key: "profile", label: "Profile", icon: User },
@@ -71,6 +72,8 @@ export function SettingsPage() {
             Manage your account, API keys, and connected platforms.
           </p>
         </div>
+
+        <LaunchChecklist />
 
         <div className="flex gap-8 items-start">
           {/* Left nav */}
