@@ -143,45 +143,155 @@ export type Database = {
       }
       calendar_items: {
         Row: {
+          ai_notes: string | null
+          audience: string | null
+          campaign_id: string | null
           caption: string | null
+          confidence: number | null
           created_at: string
+          cta: string | null
+          hashtags: string[] | null
           hook: string | null
           id: string
           niche: string | null
+          objective: string | null
+          platforms: string[] | null
           post_type: string | null
+          priority: string | null
+          research_report_id: string | null
           scheduled_for: string
           status: string
+          title: string | null
           updated_at: string
           user_id: string
           visual_idea: string | null
         }
         Insert: {
+          ai_notes?: string | null
+          audience?: string | null
+          campaign_id?: string | null
           caption?: string | null
+          confidence?: number | null
           created_at?: string
+          cta?: string | null
+          hashtags?: string[] | null
           hook?: string | null
           id?: string
           niche?: string | null
+          objective?: string | null
+          platforms?: string[] | null
           post_type?: string | null
+          priority?: string | null
+          research_report_id?: string | null
           scheduled_for: string
           status?: string
+          title?: string | null
           updated_at?: string
           user_id: string
           visual_idea?: string | null
         }
         Update: {
+          ai_notes?: string | null
+          audience?: string | null
+          campaign_id?: string | null
           caption?: string | null
+          confidence?: number | null
           created_at?: string
+          cta?: string | null
+          hashtags?: string[] | null
           hook?: string | null
           id?: string
           niche?: string | null
+          objective?: string | null
+          platforms?: string[] | null
           post_type?: string | null
+          priority?: string | null
+          research_report_id?: string | null
           scheduled_for?: string
           status?: string
+          title?: string | null
           updated_at?: string
           user_id?: string
           visual_idea?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calendar_items_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_items_research_report_id_fkey"
+            columns: ["research_report_id"]
+            isOneToOne: false
+            referencedRelation: "research_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          ai_summary: string | null
+          audience: string | null
+          business_type: string | null
+          content_mix: Json
+          created_at: string
+          duration_days: number
+          goal: string | null
+          id: string
+          name: string
+          platforms: string[]
+          research_report_id: string | null
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          audience?: string | null
+          business_type?: string | null
+          content_mix?: Json
+          created_at?: string
+          duration_days?: number
+          goal?: string | null
+          id?: string
+          name: string
+          platforms?: string[]
+          research_report_id?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_summary?: string | null
+          audience?: string | null
+          business_type?: string | null
+          content_mix?: Json
+          created_at?: string
+          duration_days?: number
+          goal?: string | null
+          id?: string
+          name?: string
+          platforms?: string[]
+          research_report_id?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_research_report_id_fkey"
+            columns: ["research_report_id"]
+            isOneToOne: false
+            referencedRelation: "research_reports"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clones: {
         Row: {
