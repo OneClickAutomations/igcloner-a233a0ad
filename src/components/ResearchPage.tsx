@@ -78,6 +78,7 @@ import {
   generateContentIdeas,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
+import { exportResearchPdf } from "@/lib/research-pdf";
 
 const routeApi = getRouteApi("/_authenticated/research");
 
@@ -190,6 +191,7 @@ export function ResearchPage() {
         detail={detail}
         loading={loadingDetail}
         onBack={() => navigate({ to: "/research", search: {} })}
+        onNewResearch={() => navigate({ to: "/research", search: {} })}
         onSave={async () => {
           if (!detail?.report?.id) return;
           await saveFn({ data: { id: detail.report.id } });
