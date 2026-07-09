@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Search, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderKanban, Send } from "lucide-react";
+import { Search, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderKanban, Send, Microscope } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,11 +17,12 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 const items = [
-  { title: "Analyze", url: "/app", icon: Search },
-  { title: "Projects", url: "/projects", icon: FolderKanban },
-  { title: "Publishing", url: "/publishing", icon: Send },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Calendar", url: "/calendar", icon: CalendarIcon },
+  { title: "Research", url: "/research", icon: Microscope },
+  { title: "Projects", url: "/projects", icon: FolderKanban },
+  { title: "Campaign Planner", url: "/calendar", icon: CalendarIcon },
+  { title: "Analyze", url: "/app", icon: Search },
+  { title: "Publishing", url: "/publishing", icon: Send },
   { title: "Settings & Integrations", url: "/settings", icon: SettingsIcon },
 ] as const;
 

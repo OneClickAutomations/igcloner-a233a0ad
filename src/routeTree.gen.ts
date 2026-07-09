@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
 import { Route as AuthenticatedPublishingRouteImport } from './routes/_authenticated/publishing'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -50,6 +51,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPublishingRoute = AuthenticatedPublishingRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/publishing': typeof AuthenticatedPublishingRoute
+  '/research': typeof AuthenticatedResearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/studio/image': typeof AuthenticatedStudioImageRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/publishing': typeof AuthenticatedPublishingRoute
+  '/research': typeof AuthenticatedResearchRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/studio/image': typeof AuthenticatedStudioImageRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/publishing': typeof AuthenticatedPublishingRoute
+  '/_authenticated/research': typeof AuthenticatedResearchRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/_authenticated/studio/image': typeof AuthenticatedStudioImageRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/publishing'
+    | '/research'
     | '/settings'
     | '/studio/carousel'
     | '/studio/image'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/projects'
     | '/publishing'
+    | '/research'
     | '/settings'
     | '/studio/carousel'
     | '/studio/image'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/projects'
     | '/_authenticated/publishing'
+    | '/_authenticated/research'
     | '/_authenticated/settings'
     | '/_authenticated/studio/carousel'
     | '/_authenticated/studio/image'
@@ -287,6 +299,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/research': {
+      id: '/_authenticated/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof AuthenticatedResearchRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/publishing': {
@@ -390,6 +409,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedPublishingRoute: typeof AuthenticatedPublishingRoute
+  AuthenticatedResearchRoute: typeof AuthenticatedResearchRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStudioCarouselRoute: typeof AuthenticatedStudioCarouselRoute
   AuthenticatedStudioImageRoute: typeof AuthenticatedStudioImageRoute
@@ -405,6 +425,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedPublishingRoute: AuthenticatedPublishingRoute,
+  AuthenticatedResearchRoute: AuthenticatedResearchRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStudioCarouselRoute: AuthenticatedStudioCarouselRoute,
   AuthenticatedStudioImageRoute: AuthenticatedStudioImageRoute,
@@ -428,13 +449,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

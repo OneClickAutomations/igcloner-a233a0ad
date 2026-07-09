@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { proxiedImg } from "@/lib/img-proxy";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Sparkles, Trash2, ExternalLink } from "lucide-react";
+import { Sparkles, Trash2, ExternalLink, Microscope, Users, Star, TrendingUp } from "lucide-react";
+import { getResearchDashboard } from "@/lib/research.functions";
 
 interface AnalysisItem {
   id: string;
@@ -66,13 +68,66 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export function DashboardPage() {
+  return <DashboardPageInner />;
+}
+
+function ResearchWidget({
+  icon,
+  title,
+  empty,
+  items,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  empty: string;
+  items: Array<{ key: string; label: string; sub?: string; onClick: () => void }>;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        {icon} {title}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.slice(0, 5).map((it) => (
+            <li key={it.key}>
+              <button
+                onClick={it.onClick}
+                className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-muted/50"
+              >
+                <span className="truncate">{it.label}</span>
+                {it.sub && (
+                  <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {it.sub}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DashboardPageInner() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
+  const dashFn = useServerFn(getResearchDashboard);
+  const [research, setResearch] = useState<{
+    recent: any[];
+    saved: any[];
+    watchlist: any[];
+    trending: any[];
+  }>({ recent: [], saved: [], watchlist: [], trending: [] });
 
   useEffect(() => {
     loadAnalyses();
+    dashFn().then(setResearch).catch(() => {});
   }, []);
 
   async function loadAnalyses() {
@@ -134,6 +189,77 @@ export function DashboardPage() {
       <div className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
         <h1 className="text-2xl font-bold mb-2">Dashboard</h1>
         <p className="text-sm text-muted-foreground mb-8">Your analysis history and usage</p>
+
+        {/* Research Intelligence hero card */}
+        <div className="mb-6 rounded-2xl border border-border bg-gradient-to-br from-accent-primary/10 via-card to-accent-secondary/10 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl gradient-accent shadow-ig">
+                <Microscope className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Research</h2>
+                <p className="text-sm text-muted-foreground">
+                  Discover what content your audience actually wants.
+                </p>
+              </div>
+            </div>
+            <Button onClick={() => navigate({ to: "/research" })} className="gap-2">
+              <Sparkles className="h-4 w-4" /> Start Research
+            </Button>
+          </div>
+        </div>
+
+        {/* Trending / Watchlist / Saved / Recent */}
+        <div className="mb-8 grid gap-4 md:grid-cols-2">
+          <ResearchWidget
+            icon={<TrendingUp className="h-4 w-4" />}
+            title="Trending Opportunities"
+            empty="Run research to surface high-signal ideas."
+            items={research.trending.map((i) => ({
+              key: i.id,
+              label: i.title,
+              sub: `${i.format} · conf ${i.confidence_score}`,
+              onClick: () => navigate({ to: "/research", search: { reportId: i.research_report_id } }),
+            }))}
+          />
+          <ResearchWidget
+            icon={<Users className="h-4 w-4" />}
+            title="Competitor Watchlist"
+            empty="Research a competitor to add them here."
+            items={research.watchlist.map((c) => ({
+              key: c.id,
+              label: `@${c.handle}`,
+              sub: c.display_name ?? "",
+              onClick: () =>
+                c.last_report_id
+                  ? navigate({ to: "/research", search: { reportId: c.last_report_id } })
+                  : navigate({ to: "/research" }),
+            }))}
+          />
+          <ResearchWidget
+            icon={<Microscope className="h-4 w-4" />}
+            title="Recent Research"
+            empty="No reports yet."
+            items={research.recent.map((r) => ({
+              key: r.id,
+              label: r.subject,
+              sub: `${r.mode} · ${r.status}`,
+              onClick: () => navigate({ to: "/research", search: { reportId: r.id } }),
+            }))}
+          />
+          <ResearchWidget
+            icon={<Star className="h-4 w-4" />}
+            title="Saved Research"
+            empty="Star a report to pin it here."
+            items={research.saved.map((r) => ({
+              key: r.id,
+              label: r.subject,
+              sub: `${r.mode} · score ${r.opportunity_score ?? "—"}`,
+              onClick: () => navigate({ to: "/research", search: { reportId: r.id } }),
+            }))}
+          />
+        </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
