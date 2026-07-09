@@ -243,6 +243,124 @@ export type Database = {
           },
         ]
       }
+      competitor_watchlist: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          handle: string
+          id: string
+          last_report_id: string | null
+          platform: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          handle: string
+          id?: string
+          last_report_id?: string | null
+          platform?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          handle?: string
+          id?: string
+          last_report_id?: string | null
+          platform?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competitor_watchlist_last_report_id_fkey"
+            columns: ["last_report_id"]
+            isOneToOne: false
+            referencedRelation: "research_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_ideas: {
+        Row: {
+          audience_interest_score: number | null
+          business_value_score: number | null
+          competition_score: number | null
+          confidence_score: number | null
+          created_at: string
+          cta: string | null
+          description: string | null
+          difficulty_score: number | null
+          format: string | null
+          hashtags: Json | null
+          hook: string | null
+          id: string
+          platform: string | null
+          production_time_score: number | null
+          research_report_id: string | null
+          saved_to_planner: boolean
+          title: string
+          updated_at: string
+          user_id: string
+          virality_score: number | null
+        }
+        Insert: {
+          audience_interest_score?: number | null
+          business_value_score?: number | null
+          competition_score?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          cta?: string | null
+          description?: string | null
+          difficulty_score?: number | null
+          format?: string | null
+          hashtags?: Json | null
+          hook?: string | null
+          id?: string
+          platform?: string | null
+          production_time_score?: number | null
+          research_report_id?: string | null
+          saved_to_planner?: boolean
+          title: string
+          updated_at?: string
+          user_id: string
+          virality_score?: number | null
+        }
+        Update: {
+          audience_interest_score?: number | null
+          business_value_score?: number | null
+          competition_score?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          cta?: string | null
+          description?: string | null
+          difficulty_score?: number | null
+          format?: string | null
+          hashtags?: Json | null
+          hook?: string | null
+          id?: string
+          platform?: string | null
+          production_time_score?: number | null
+          research_report_id?: string | null
+          saved_to_planner?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+          virality_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_ideas_research_report_id_fkey"
+            columns: ["research_report_id"]
+            isOneToOne: false
+            referencedRelation: "research_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       multiplied_content: {
         Row: {
           analysis_id: string
@@ -730,6 +848,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      research_reports: {
+        Row: {
+          created_at: string
+          dna_report: Json | null
+          error_message: string | null
+          id: string
+          is_saved: boolean
+          mode: string
+          opportunity_score: number | null
+          raw_data: Json | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dna_report?: Json | null
+          error_message?: string | null
+          id?: string
+          is_saved?: boolean
+          mode: string
+          opportunity_score?: number | null
+          raw_data?: Json | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dna_report?: Json | null
+          error_message?: string | null
+          id?: string
+          is_saved?: boolean
+          mode?: string
+          opportunity_score?: number | null
+          raw_data?: Json | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       saved_projects: {
         Row: {
