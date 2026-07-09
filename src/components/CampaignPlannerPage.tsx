@@ -5,8 +5,8 @@ import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
   Plus, Sparkles, Rocket, Microscope, Trash2, Calendar as CalIcon,
-  LayoutGrid, List as ListIcon, Layers3, ChevronRight, Loader2,
-  Target, Users, Share2, TrendingUp,
+  LayoutGrid, List as ListIcon, Layers3, ChevronRight,
+  Target, Users, Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -459,7 +459,3 @@ function CalendarView({ items, onOpen }: { items: CampaignItem[]; onOpen: (i: Ca
     </div>
   );
 }
-
-// re-export helpers to satisfy TrendingUp import (used in header lint)
-export const __TrendingUp = TrendingUp;
-export const __Loader2 = Loader2;
