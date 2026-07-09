@@ -4,10 +4,10 @@ import { CalendarPage } from "@/components/CalendarPage";
 export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({
     meta: [
-      { title: "Content Calendar — IG-Cloner" },
-      { name: "description", content: "A 30-day Instagram posting plan tailored to your niche, with hooks, captions, and visual ideas for every day." },
-      { property: "og:title", content: "Content Calendar — IG-Cloner" },
-      { property: "og:description", content: "A 30-day Instagram posting plan tailored to your niche, with hooks, captions, and visual ideas for every day." },
+      { title: "Campaign Planner — IG-Cloner" },
+      { name: "description", content: "Plan, generate, and schedule 30 days of multi-platform content in one place." },
+      { property: "og:title", content: "Campaign Planner — IG-Cloner" },
+      { property: "og:description", content: "Plan, generate, and schedule 30 days of multi-platform content in one place." },
       { name: "robots", content: "noindex" },
     ],
   }),
