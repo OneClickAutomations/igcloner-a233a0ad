@@ -68,6 +68,12 @@ import {
   ShieldCheck,
   Compass,
   ChevronRight,
+  Film,
+  Images,
+  Image as ImageIcon,
+  StickyNote,
+  Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   createResearchReport,
@@ -76,6 +82,7 @@ import {
   toggleSaveResearch,
   deleteResearchReport,
   generateContentIdeas,
+  saveIdeaToPlanner,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
 import { exportResearchPdf } from "@/lib/research-pdf";
@@ -342,6 +349,29 @@ function ReportDetail({
   const { report, ideas } = detail;
   const dna = (report?.dna_report ?? {}) as any;
   const score = Number(report?.opportunity_score ?? 0);
+
+  // ── Content Opportunity Engine local state ──────────────────────────
+  const saveIdeaFn = useServerFn(saveIdeaToPlanner);
+  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set());
+  const [savingIdea, setSavingIdea] = useState<string | null>(null);
+  const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
+  const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("confidence");
+
+  async function handleSaveIdea(idea: any) {
+    if (savedIdeas.has(idea.id)) return;
+    setSavingIdea(idea.id);
+    try {
+      const res = await saveIdeaFn({ data: { idea_id: idea.id } });
+      setSavedIdeas((s) => new Set(s).add(idea.id));
+      const when = (res as any)?.item?.scheduled_for ?? "planner";
+      toast.success(`Saved to Planner · ${when}`, {
+        action: { label: "Open Planner", onClick: () => window.location.assign("/calendar") },
+      });
+    } catch (e) {
+      toast.error((e as Error).message || "Could not save to planner");
+    }
+    setSavingIdea(null);
+  }
 
   const handleExportPdf = () => {
     try {
@@ -625,56 +655,18 @@ function ReportDetail({
       </Accordion>
 
       {/* ── CONTENT OPPORTUNITY ENGINE ─────────────────────────── */}
-      <div className="mt-10">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <IconTile icon={Sparkles} tone="green" size={20} />
-            <div>
-              <h2 className="text-xl font-bold">Content Opportunity Engine</h2>
-              <p className="text-sm text-muted-foreground">50 ranked ideas grounded in this DNA report.</p>
-            </div>
-          </div>
-          <Button onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
-            {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {ideas.length > 0 ? "Regenerate" : "Generate"}
-          </Button>
-        </div>
-
-        {ideas.length === 0 ? (
-          <Card className="p-10 text-center">
-            <IconTile icon={Lightbulb} tone="amber" size={24} />
-            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-              Run the opportunity engine to get 50 ranked, scored content ideas you can drop straight into a campaign.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {ideas.map((idea: any) => (
-              <Card key={idea.id} className="p-4 transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <Badge variant="outline" className="uppercase text-[10px] tracking-wide">{idea.format}</Badge>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Gauge className="h-3 w-3 text-emerald-500" />
-                    <span className="font-mono font-semibold">{idea.confidence_score}</span>
-                  </div>
-                </div>
-                <h3 className="mb-1 text-sm font-semibold">{idea.title}</h3>
-                <p className="mb-2 line-clamp-2 text-xs italic text-muted-foreground">"{idea.hook}"</p>
-                <p className="mb-3 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
-                <div className="mb-3 grid grid-cols-3 gap-1.5">
-                  <ScorePill label="Viral" value={idea.virality_score} tone="green" />
-                  <ScorePill label="Diff"  value={idea.difficulty_score} tone="amber" />
-                  <ScorePill label="Aud"   value={idea.audience_interest_score} tone="blue" />
-                </div>
-                <Button size="sm" variant="outline" className="w-full gap-1"
-                  onClick={() => toast.info("Save to Campaign Planner — coming next")}>
-                  <CalendarPlus className="h-3.5 w-3.5" /> Save to Planner
-                </Button>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+      <OpportunityEngine
+        ideas={ideas}
+        ideasBusy={ideasBusy}
+        onGenerate={onGenerateIdeas}
+        onSaveIdea={handleSaveIdea}
+        savedIdeas={savedIdeas}
+        savingIdea={savingIdea}
+        formatFilter={ideaFormatFilter}
+        setFormatFilter={setIdeaFormatFilter}
+        sort={ideaSort}
+        setSort={setIdeaSort}
+      />
 
       {/* ── ACTION CENTER ──────────────────────────────────────── */}
       <div className="mt-12">
@@ -861,12 +853,273 @@ function KV({ k, v }: { k: string; v?: string }) {
   );
 }
 
-function ScorePill({ label, value, tone }: { label: string; value: number; tone: Tone }) {
+// ─── Content Opportunity Engine ───────────────────────────────────
+
+const FORMAT_META: Record<string, { icon: any; tone: Tone; label: string }> = {
+  Reel:     { icon: Film,       tone: "purple", label: "Reel" },
+  Carousel: { icon: Images,     tone: "blue",   label: "Carousel" },
+  Post:     { icon: ImageIcon,  tone: "green",  label: "Post" },
+  Story:    { icon: StickyNote, tone: "amber",  label: "Story" },
+};
+function formatMeta(f?: string) {
+  const key = (f ?? "Post").trim();
+  return FORMAT_META[key] ?? FORMAT_META.Post;
+}
+
+function ScoreBar({ label, value, tone }: { label: string; value: number; tone: Tone }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const barTone =
+    tone === "green"  ? "bg-emerald-500" :
+    tone === "amber"  ? "bg-amber-500"   :
+    tone === "blue"   ? "bg-blue-500"    :
+    tone === "purple" ? "bg-violet-500"  :
+    tone === "rose"   ? "bg-rose-500"    : "bg-muted-foreground";
   return (
-    <div className={cn("flex items-center justify-between rounded-md border px-2 py-1 text-[10px]", TONE[tone])}>
-      <span className="uppercase tracking-wide opacity-80">{label}</span>
-      <span className="font-mono font-bold">{Number(value) || 0}</span>
+    <div className="min-w-0">
+      <div className="mb-1 flex items-center justify-between text-[10px]">
+        <span className="uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="font-mono font-semibold tabular-nums">{pct}</span>
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+        <div className={cn("h-full rounded-full transition-all", barTone)} style={{ width: `${pct}%` }} />
+      </div>
     </div>
+  );
+}
+
+function ConfidenceRing({ value }: { value: number }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const data = [{ v: pct }];
+  const color = pct >= 75 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
+  return (
+    <div className="relative h-11 w-11 shrink-0">
+      <ResponsiveContainer width="100%" height="100%">
+        <RadialBarChart innerRadius="72%" outerRadius="100%" data={data} startAngle={90} endAngle={-270}>
+          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+          <RadialBar dataKey="v" cornerRadius={8} fill={color} background={{ fill: "hsl(var(--muted))" }} />
+        </RadialBarChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <span className="font-mono text-[11px] font-bold tabular-nums">{pct}</span>
+      </div>
+    </div>
+  );
+}
+
+function IdeaCard({
+  idea, saved, saving, onSave,
+}: { idea: any; saved: boolean; saving: boolean; onSave: () => void }) {
+  const meta = formatMeta(idea.format);
+  const FIcon = meta.icon;
+  return (
+    <Card className="group flex flex-col overflow-hidden border-border/60 p-0 transition hover:-translate-y-0.5 hover:border-accent-primary/50 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-3 px-5 pt-4">
+        <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
+          <FIcon className="h-3 w-3" />
+          {meta.label}
+        </div>
+        <ConfidenceRing value={idea.confidence_score} />
+      </div>
+
+      <div className="flex-1 px-5 pt-3">
+        <h3 className="mb-2 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+          {idea.title}
+        </h3>
+        {idea.hook && (
+          <blockquote className="mb-3 border-l-2 border-accent-primary/40 pl-3 text-[13px] italic leading-relaxed text-foreground/80 line-clamp-2">
+            {idea.hook}
+          </blockquote>
+        )}
+        {idea.description && (
+          <p className="mb-4 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
+            {idea.description}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2.5 border-t border-border/60 bg-muted/20 px-5 py-4">
+        <ScoreBar label="Virality"   value={idea.virality_score}          tone="green" />
+        <ScoreBar label="Audience"   value={idea.audience_interest_score} tone="blue" />
+        <ScoreBar label="Difficulty" value={idea.difficulty_score}        tone="amber" />
+      </div>
+
+      <div className="px-5 pb-4">
+        <Button
+          size="sm"
+          variant={saved ? "secondary" : "default"}
+          className="w-full gap-1.5"
+          onClick={onSave}
+          disabled={saving || saved}
+        >
+          {saving ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : saved ? (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          ) : (
+            <CalendarPlus className="h-3.5 w-3.5" />
+          )}
+          {saved ? "Saved to Planner" : saving ? "Saving…" : "Save to Planner"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function OpportunityEngine({
+  ideas, ideasBusy, onGenerate, onSaveIdea, savedIdeas, savingIdea,
+  formatFilter, setFormatFilter, sort, setSort,
+}: {
+  ideas: any[];
+  ideasBusy: boolean;
+  onGenerate: () => void;
+  onSaveIdea: (idea: any) => void;
+  savedIdeas: Set<string>;
+  savingIdea: string | null;
+  formatFilter: string;
+  setFormatFilter: (v: string) => void;
+  sort: "confidence" | "virality" | "easy";
+  setSort: (v: "confidence" | "virality" | "easy") => void;
+}) {
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: ideas.length };
+    for (const i of ideas) c[i.format] = (c[i.format] ?? 0) + 1;
+    return c;
+  }, [ideas]);
+
+  const filtered = useMemo(() => {
+    let out = formatFilter === "all" ? ideas : ideas.filter((i) => i.format === formatFilter);
+    out = [...out].sort((a, b) => {
+      if (sort === "virality") return (b.virality_score || 0) - (a.virality_score || 0);
+      if (sort === "easy") return (a.difficulty_score || 0) - (b.difficulty_score || 0);
+      return (b.confidence_score || 0) - (a.confidence_score || 0);
+    });
+    return out;
+  }, [ideas, formatFilter, sort]);
+
+  const avgViral = ideas.length ? Math.round(ideas.reduce((s, i) => s + (i.virality_score || 0), 0) / ideas.length) : 0;
+  const avgConf  = ideas.length ? Math.round(ideas.reduce((s, i) => s + (i.confidence_score || 0), 0) / ideas.length) : 0;
+  const highCount = ideas.filter((i) => (i.confidence_score || 0) >= 80).length;
+
+  const filterChips: { key: string; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "Reel", label: "Reels" },
+    { key: "Carousel", label: "Carousels" },
+    { key: "Post", label: "Posts" },
+    { key: "Story", label: "Stories" },
+  ];
+
+  return (
+    <div className="mt-10">
+      {/* Header */}
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <IconTile icon={Sparkles} tone="green" size={24} />
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">Content Opportunity Engine</h2>
+            <p className="text-sm text-muted-foreground">
+              AI-ranked ideas grounded in this DNA report — save straight to your Planner.
+            </p>
+          </div>
+        </div>
+        <Button onClick={onGenerate} disabled={ideasBusy} className="shrink-0 gap-2">
+          {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {ideas.length > 0 ? "Regenerate" : "Generate 50 Ideas"}
+        </Button>
+      </div>
+
+      {ideas.length === 0 ? (
+        <Card className="border-dashed p-10 text-center">
+          <IconTile icon={Lightbulb} tone="amber" size={24} />
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+            Run the opportunity engine to get 50 ranked, scored content ideas you can drop straight into a campaign.
+          </p>
+        </Card>
+      ) : (
+        <>
+          {/* KPI strip */}
+          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <MiniStat icon={Lightbulb}    tone="green"  label="Ideas"          value={String(ideas.length)} />
+            <MiniStat icon={TrendingUp}   tone="purple" label="Avg virality"   value={`${avgViral}`} suffix="/100" />
+            <MiniStat icon={Gauge}        tone="blue"   label="Avg confidence" value={`${avgConf}`} suffix="/100" />
+            <MiniStat icon={CheckCircle2} tone="amber"  label="High-conf"      value={String(highCount)} suffix=" · 80+" />
+          </div>
+
+          {/* Controls */}
+          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2 overflow-x-auto">
+              <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex items-center gap-1.5">
+                {filterChips.map((c) => {
+                  const active = formatFilter === c.key;
+                  const n = counts[c.key] ?? 0;
+                  if (c.key !== "all" && n === 0) return null;
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setFormatFilter(c.key)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition",
+                        active
+                          ? "border-accent-primary/50 bg-accent-primary/10 text-accent-primary"
+                          : "border-border bg-transparent text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {c.label} <span className="ml-1 font-mono opacity-70">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <ArrowUpDown className="h-3.5 w-3.5" />
+              <span>Sort:</span>
+              {(["confidence", "virality", "easy"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSort(s)}
+                  className={cn(
+                    "rounded-md px-2 py-1 font-medium transition",
+                    sort === s ? "bg-muted text-foreground" : "hover:text-foreground",
+                  )}
+                >
+                  {s === "confidence" ? "Confidence" : s === "virality" ? "Virality" : "Easiest"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Grid */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((idea: any) => (
+              <IdeaCard
+                key={idea.id}
+                idea={idea}
+                saved={savedIdeas.has(idea.id)}
+                saving={savingIdea === idea.id}
+                onSave={() => onSaveIdea(idea)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({
+  icon: Icon, label, value, suffix, tone,
+}: { icon: any; label: string; value: string; suffix?: string; tone: Tone }) {
+  return (
+    <Card className="flex items-center gap-3 p-3">
+      <IconTile icon={Icon} tone={tone} size={16} />
+      <div className="min-w-0">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="flex items-baseline gap-0.5">
+          <span className="text-lg font-bold tabular-nums">{value}</span>
+          {suffix && <span className="text-[10px] text-muted-foreground">{suffix}</span>}
+        </div>
+      </div>
+    </Card>
   );
 }
 
