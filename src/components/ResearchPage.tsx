@@ -350,6 +350,29 @@ function ReportDetail({
   const dna = (report?.dna_report ?? {}) as any;
   const score = Number(report?.opportunity_score ?? 0);
 
+  // ── Content Opportunity Engine local state ──────────────────────────
+  const saveIdeaFn = useServerFn(saveIdeaToPlanner);
+  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set());
+  const [savingIdea, setSavingIdea] = useState<string | null>(null);
+  const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
+  const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("confidence");
+
+  async function handleSaveIdea(idea: any) {
+    if (savedIdeas.has(idea.id)) return;
+    setSavingIdea(idea.id);
+    try {
+      const res = await saveIdeaFn({ data: { idea_id: idea.id } });
+      setSavedIdeas((s) => new Set(s).add(idea.id));
+      const when = (res as any)?.item?.scheduled_for ?? "planner";
+      toast.success(`Saved to Planner · ${when}`, {
+        action: { label: "Open Planner", onClick: () => window.location.assign("/calendar") },
+      });
+    } catch (e) {
+      toast.error((e as Error).message || "Could not save to planner");
+    }
+    setSavingIdea(null);
+  }
+
   const handleExportPdf = () => {
     try {
       exportResearchPdf(report, ideas);
