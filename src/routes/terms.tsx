@@ -20,7 +20,7 @@ export const Route = createFileRoute("/terms")({
 
 function TermsPage() {
   return (
-    <LegalLayout title="Terms of Service" updated={UPDATED}>
+    <LegalLayout title="Terms of Service" updated={UPDATED} kind="terms">
       <p>
         These Terms of Service ("Terms") form a binding agreement between you and IG-Cloner
         ("IG-Cloner," "we," "us," or "our"), operator of the website{" "}
