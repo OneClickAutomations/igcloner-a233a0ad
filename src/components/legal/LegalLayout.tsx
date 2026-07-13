@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, ArrowUp, FileText, Mail, ShieldCheck, Cookie, Sparkles } from "lucide-react";
+import { ArrowLeft, Home, FileText, Mail, ShieldCheck, Cookie, Sparkles } from "lucide-react";
 
 type LegalKind = "terms" | "privacy" | "cookies";
 
@@ -157,13 +157,9 @@ export function LegalLayout({
                   </li>
                 ))}
               </ul>
-              <button
-                type="button"
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                className="legal-toc-top"
-              >
-                <ArrowUp className="h-3 w-3" /> Back to top
-              </button>
+              <Link to="/" className="legal-toc-top">
+                <Home className="h-3 w-3" /> Back Home
+              </Link>
             </div>
           </aside>
 
@@ -201,16 +197,42 @@ export function LegalLayout({
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-[1] border-t border-[color:var(--legal-border)]/70 bg-white/40 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-6 sm:flex-row">
-          <p className="text-[13px] text-[color:var(--legal-text2)]">
-            © {new Date().getFullYear()} IG-Cloner. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 text-[13px] text-[color:var(--legal-text2)]">
-            <Link to="/terms" className="hover:text-[color:var(--legal-ig2)]">Terms</Link>
-            <Link to="/privacy" className="hover:text-[color:var(--legal-ig2)]">Privacy</Link>
-            <Link to="/cookies" className="hover:text-[color:var(--legal-ig2)]">Cookies</Link>
+      {/* Footer — mirrors the landing page */}
+      <footer className="legal-footer relative z-[1]">
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <div className="legal-footer-grid">
+            <div className="legal-footer-brand">
+              <Link to="/" className="legal-logo">
+                IG<span className="legal-logo-grad">Cloner</span>
+              </Link>
+              <p>
+                The AI content intelligence platform for Instagram creators who want to grow smarter,
+                not harder.
+              </p>
+            </div>
+            <div className="legal-footer-col">
+              <h4>Product</h4>
+              <a href="/#features">Content DNA</a>
+              <a href="/#features">Clone Engine</a>
+              <a href="/#features">30-Day Calendar</a>
+              <a href="/#pricing">Pricing</a>
+            </div>
+            <div className="legal-footer-col">
+              <h4>Company</h4>
+              <a href="/#about">About</a>
+              <a href="/#blog">Blog</a>
+              <a href="mailto:hello@igcloner.com">Contact</a>
+            </div>
+            <div className="legal-footer-col">
+              <h4>Legal</h4>
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+              <Link to="/cookies">Cookie Policy</Link>
+            </div>
+          </div>
+          <div className="legal-footer-bottom">
+            <p>© {new Date().getFullYear()} IG-Cloner. All rights reserved.</p>
+            <p className="legal-footer-tag">Steal the strategy. Not the content. ✦</p>
           </div>
         </div>
       </footer>
