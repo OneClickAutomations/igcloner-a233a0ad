@@ -1,73 +1,80 @@
-# Content Intelligence Engine Upgrade
 
-This is a large, multi-phase build. I'll extend the existing app without removing anything. To keep it shippable, I'm proposing 4 phases you can approve in order — each phase is usable on its own.
+# IGCloner — Full MVP Launch Plan
 
-## Architecture (shared foundation)
+Goal: get the app to a state where you can hand invite links to beta testers without embarrassing gaps. You picked **Full MVP** (reel stitch + billing included).
 
-A new **Content Intelligence Engine** — a single structured data model that Research, Campaign Planner, Analyze, Studio, and Publishing all read from. No module reruns AI when existing intelligence already answers the question.
+## Current state (verified)
 
-New tables (backend):
-- `research_reports` — Content DNA reports (niche / competitor / topic), scraped raw data + AI-structured analysis
-- `content_ideas` — 50-ideas engine output, linked to a research report, scored (virality, difficulty, competition, business value, audience interest, production time, confidence)
-- `campaigns` — a 30-day plan with goal, business type, audience, platforms, content mix, linked `research_report_id`
-- `campaign_items` — each day's content object; supersedes/extends `calendar_items` (kept for back-compat, migrated)
-- `competitor_watchlist` — saved competitors for Dashboard widget
+- Admin route works but **no user has `role = 'admin'`**. 2 users, 68 analyses, 40 projects, 1 research report, 8 connected social accounts, **0 campaigns, 0 publishing jobs**.
+- All 8 recent AI Gateway calls returned 200 (Gemini 2.5 Flash / 2.5 Flash Image / 3 Flash Preview). Secrets for ElevenLabs, Fal, Apify, Upload-Post, Anthropic, Lovable AI, encryption all present.
+- No `StudioComingSoon` in use — Reel, Carousel, Image, Voiceover studios all wired to real routes.
+- **No ffmpeg / final-render code exists** — Reel Studio still produces audio + visuals as separate assets.
+- No Stripe/Paddle checkout wired. `analyses_limit` exists on `profiles` but nothing enforces it or upgrades users.
 
-Reuses existing: `analyses`, `projects`, `publishing_jobs`, `social_accounts`, Apify token, Lovable AI Gateway.
+## Phase 1 — Instant unblocks (same session)
 
-## Phase 1 — Research Module + Sidebar/Dashboard (foundation)
+1. **Promote admin.** Update `profiles.role = 'admin'` for `streetlitmagazine@gmail.com`.
+2. **End-to-end smoke test.** Log in as admin, run: Research → generate a campaign → open a day → generate a reel → publish to a connected IG account via Upload-Post. Fix anything that throws.
+3. **Migrate to `has_role` pattern.** Move admin check off `profiles.role` into a `user_roles` table + `has_role()` security-definer function (current pattern is the flagged privilege-escalation shape). Update `_authenticated/admin.tsx` gate accordingly.
 
-**Sidebar reorder:** Dashboard → **Research** → Projects → **Campaign Planner** (renamed from Calendar) → Analyze → Settings.
+## Phase 2 — Reel final render (ffmpeg on the worker is a no-go)
 
-**Dashboard additions:**
-- New "Research" card (Discover what content your audience actually wants → Start Research)
-- "Recent Research" list
-- "Trending Opportunities" (top-scored ideas from user's reports)
-- "Competitor Watchlist"
-- "Saved Research"
+Cloudflare Workers can't run ffmpeg. Two viable paths:
 
-**New route `/research`** with 3 modes:
-1. By Niche (preset list: Fitness, Real Estate, Automotive, etc.)
-2. By Competitor (IG username/brand)
-3. By Topic (freeform)
+- **A. Fal.ai video/audio composition endpoints** (already have `FAL_KEY`). Cleanest — no infra.
+- **B. Delegate stitch to a lightweight Modal/Replicate/Render worker** we call from a server function; store the mp4 in the `project-assets` bucket.
 
-**Apify integration** (server function using existing `APIFY_TOKEN`):
-- Runs Instagram scraper actor → posts, reels, carousels, captions, hashtags, cadence, engagement, comments
-- Stores raw payload in `research_reports.raw_data`
-- Second pass via Lovable AI (`openai/gpt-5.5`) produces structured **Content DNA Report**: Executive Summary, Audience Profile, Content Pillars, Top Topics, Hooks, Caption Structure, Thumbnail Patterns, Visual Style, Posting Frequency/Times, Engagement Trends, Most Shared/Saved, CTAs, Brand Voice, Storytelling, Growth Opps, Weaknesses, Missed Opps, Competitive Advantages, Opportunity Score
+Recommend **A**. Deliverables:
+- `src/lib/reel-compose.functions.ts` — takes clip URLs + voiceover + music + captions timing → returns final mp4 URL.
+- "Render final video" button in Reel Studio after audio step; shows progress, saves to `project_assets`.
+- Download + "Send to Publishing" actions on the finished mp4.
 
-**Content Opportunity Engine:** button on report → generates 50 ranked ideas → stored in `content_ideas` → each has "Save to Campaign Planner" action.
+## Phase 3 — Billing (Stripe seamless)
 
-## Phase 2 — Campaign Planner (rename + wizard + generation)
+1. Run `recommend_payment_provider` → likely Stripe seamless (SaaS + digital).
+2. `enable_stripe_payments` with tax calc only default.
+3. Products: Free (10 analyses), Creator ($19 / 100), Pro ($49 / unlimited-ish, e.g. 1000).
+4. Webhook → update `profiles.plan` + `analyses_limit`.
+5. **Enforce limits server-side** in `analyze.functions.ts`, `research.functions.ts`, `reel.functions.ts`, `carousel.functions.ts`, `image.functions.ts`, `voiceover.functions.ts`. Currently unenforced — beta users can burn unlimited AI credits.
+6. Billing UI already exists in `settings/BillingSection.tsx`; wire the "Upgrade" buttons to Stripe checkout.
 
-- Rename Calendar → **Campaign Planner** (route stays `/calendar`, add `/campaigns` alias)
-- **Campaign Wizard** (6 steps): Goal → Business Type → Audience → Platforms → Content Mix (% sliders) → Use Research (pick existing report to auto-populate)
-- **Generate 30-day campaign** via AI using the research report as grounding — creates 30 `campaign_items`
-- Each day = editable project with: Title, Idea, Objective, Audience, Hook, CTA, Platform recs, Content Type, Status, Priority, Publishing rec, AI Notes, Confidence
+## Phase 4 — Beta gating
 
-## Phase 3 — Daily Content Object + Campaign Views
+Options (pick one):
+- **Invite-code table** — user signs up with a code, blocks otherwise.
+- **Allowlist email** on `profiles.role IN ('beta','admin')`.
+- **Public with waitlist form** on landing, manual approve in admin.
 
-- Per-day action bar: Generate Script / Carousel / Reel / Image / Thumbnail / Voice / Captions / Hashtags / Publishing Copy / Schedule / Publish / Duplicate / Archive / Delete (wires into existing Studio + Publishing server functions)
-- **Views:** Calendar, Kanban, List, Agenda, Pipeline, Week, Month (tab switcher on Campaign Planner)
-- **AI Content Director** panel per item: Rewrite / More Viral / More Professional / More Emotional / More Educational / Luxury / Short / Long / Alternatives (single `directContent` server fn with variant enum)
+Also: `analyses_limit` default should drop to a beta-friendly number (e.g. 20).
 
-## Phase 4 — Scheduling Center + Progress Tracking
+## Phase 5 — Legal + trust
 
-- Enhanced scheduling per item: Immediate / Schedule / Recurring / Platform selection / Timezone / Optimal time / Approval workflow
-- Status pipeline: Draft → Queued → Scheduled → Publishing → Published → Failed → Retry (reuses `publishing_jobs`)
-- **Campaign Dashboard widget**: Planned / Scripts / Reels / Scheduled / Published counters + completion % + upcoming queue
-- Platform-specific caption variations (reuses existing platform-copy server fn)
+- `/terms` and `/privacy` routes with real copy (Instagram TOS + data collection language required by Upload-Post + Apify).
+- Auth page footer links to both.
+- Cookie/consent banner (light — no analytics yet means minimal).
 
-## Technical Details
+## Phase 6 — Ops + monitoring
 
-- All AI calls go through `src/lib/ai-gateway.server.ts` with `openai/gpt-5.5`
-- All Apify + AI work in `createServerFn` under `_authenticated` — user-scoped, RLS-enforced
-- Every new `public` table gets: `GRANT` to authenticated + service_role, RLS enabled, owner-scoped policies (`auth.uid() = user_id`)
-- Research report reuse: Campaign wizard/Studio/Analyze accept a `research_report_id` and skip re-analysis
-- Zero removals: existing Calendar, Analyze, Projects, Studio, Publishing all keep working; new layer sits alongside and links in
+- **Error capture**: `src/lib/error-capture.ts` exists — verify it's actually reporting somewhere (Sentry / Lovable). Add server-side capture in every `.functions.ts` catch block.
+- **Admin panel additions**: recent errors, recent publishing job failures, per-user credit usage chart.
+- **Health page** `/api/public/health` — 200 if DB + Lovable AI + Upload-Post reachable.
+- **Uptime ping** via cron.
 
-## Recommendation
+## Phase 7 — Onboarding polish
 
-Approve **Phase 1** first. It's the foundation everything else reuses. I'll implement it end-to-end (schema + Apify scraper + Content DNA + Opportunity Engine + Research route + Dashboard widgets + sidebar) in one turn, then we iterate through phases 2–4.
+Not blockers, but big for beta perception:
+- First-run wizard: connect Upload-Post → connect first social → generate first research report (auto-open Research after signup).
+- The Launch Checklist widget already handles this — verify all 7 items detect correctly after phases 2–3 land.
 
-**Reply "go" to start Phase 1, or tell me to adjust scope / re-order phases.**
+## Technical notes
+
+- Reel stitch: `sharp` / `ffmpeg` / `puppeteer` are all blocked on Workers per server-runtime constraints — must use external service.
+- Move `admin` check to `user_roles` + `has_role()` before shipping (linter will flag current pattern).
+- Every new public table needs GRANTs + RLS in the same migration.
+- Publishing throttling: `UPLOAD_POST_API_KEY` is per-user now (good), but add rate-limit backoff in `publishing.functions.ts`.
+
+## Suggested execution order
+
+Phase 1 → Phase 3 (billing before beta invites, so users can't nuke credits) → Phase 5 (legal) → Phase 4 (gating flip) → **soft launch first cohort of 5–10 testers** → Phase 2 (reel render, users can produce assets in meantime) → Phase 6 → Phase 7.
+
+Approve and I'll start with Phase 1 (admin promotion + smoke test).
