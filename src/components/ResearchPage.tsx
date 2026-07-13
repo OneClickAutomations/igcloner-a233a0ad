@@ -76,6 +76,7 @@ import {
   toggleSaveResearch,
   deleteResearchReport,
   generateContentIdeas,
+  saveIdeaToPlanner,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
 import { exportResearchPdf } from "@/lib/research-pdf";
