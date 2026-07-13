@@ -68,6 +68,12 @@ import {
   ShieldCheck,
   Compass,
   ChevronRight,
+  Film,
+  Images,
+  Image as ImageIcon,
+  StickyNote,
+  Filter,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   createResearchReport,
