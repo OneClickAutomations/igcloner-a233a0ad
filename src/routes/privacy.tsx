@@ -20,7 +20,7 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <LegalLayout title="Privacy Policy" updated={UPDATED}>
+    <LegalLayout title="Privacy Policy" updated={UPDATED} kind="privacy">
       <p>
         This Privacy Policy explains how IG-Cloner ("we," "us," or "our") collects, uses, shares,
         and protects information when you use <a href={SITE}>www.igcloner.com</a> and related services

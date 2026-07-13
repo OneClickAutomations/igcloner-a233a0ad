@@ -20,7 +20,7 @@ export const Route = createFileRoute("/cookies")({
 
 function CookiesPage() {
   return (
-    <LegalLayout title="Cookie Policy" updated={UPDATED}>
+    <LegalLayout title="Cookie Policy" updated={UPDATED} kind="cookies">
       <p>
         This Cookie Policy explains how IG-Cloner uses cookies and similar technologies on{" "}
         <a href={SITE}>www.igcloner.com</a> and the Service.
