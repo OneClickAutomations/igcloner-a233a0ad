@@ -76,6 +76,8 @@ export function LegalLayout({
     <div className="legal-root min-h-screen">
       {/* Ambient gradient blobs, matching landing page */}
       <div className="legal-bg" aria-hidden="true">
+        <span className="legal-blueprint" />
+        <span className="legal-blueprint legal-blueprint-accent" />
         <span className="legal-blob legal-blob-1" />
         <span className="legal-blob legal-blob-2" />
         <span className="legal-blob legal-blob-3" />
@@ -257,13 +259,48 @@ const legalStyles = `
     --legal-bg:#FFFFFF; --legal-bg2:#F9F7FF;
     --legal-card:#FFFFFF; --legal-border: rgba(129,52,175,0.14);
     --legal-text:#0F0A1E; --legal-text2:#4A4060; --legal-text3:#8A7FA0;
+    --legal-bp-line: rgba(81,91,212,0.10);
+    --legal-bp-line-strong: rgba(129,52,175,0.14);
+    --legal-bp-fade: radial-gradient(ellipse at 50% 30%, #000 40%, transparent 85%);
     font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     background: linear-gradient(180deg,#FFFFFF 0%,#F9F7FF 40%,#F3F0FF 100%);
     color: var(--legal-text);
     position: relative;
     overflow-x: hidden;
   }
+  @media (prefers-color-scheme: dark) {
+    .legal-root {
+      --legal-bg:#0B0B12; --legal-bg2:#0F0A1E;
+      --legal-card:#141020; --legal-border: rgba(255,255,255,0.08);
+      --legal-text:#F5F3FF; --legal-text2:#B8B0CC; --legal-text3:#7A7290;
+      --legal-bp-line: rgba(129,140,248,0.10);
+      --legal-bp-line-strong: rgba(221,42,123,0.14);
+      background: linear-gradient(180deg,#0B0B12 0%,#0F0A1E 40%,#120A24 100%);
+    }
+    .legal-nav { background: rgba(15,10,30,0.72); }
+    .legal-nav-cta, .legal-chip { background: rgba(255,255,255,0.04); }
+    .legal-card { background: rgba(20,16,32,0.72); }
+    .legal-related { background: rgba(20,16,32,0.6); }
+    .legal-footer { background: rgba(15,10,30,0.55); }
+  }
   .legal-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .legal-blueprint {
+    position: absolute; inset: -2px;
+    background-image:
+      linear-gradient(to right, var(--legal-bp-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--legal-bp-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: var(--legal-bp-fade);
+            mask-image: var(--legal-bp-fade);
+    opacity: .9;
+  }
+  .legal-blueprint-accent {
+    background-image:
+      linear-gradient(to right, var(--legal-bp-line-strong) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--legal-bp-line-strong) 1px, transparent 1px);
+    background-size: 200px 200px;
+    opacity: .7;
+  }
   .legal-blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .16; }
   .legal-blob-1 { width: 520px; height: 520px; background: var(--legal-ig1); top: -180px; right: -120px; }
   .legal-blob-2 { width: 460px; height: 460px; background: var(--legal-ig2); top: 20%; left: -160px; }
