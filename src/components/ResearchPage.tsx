@@ -655,56 +655,18 @@ function ReportDetail({
       </Accordion>
 
       {/* ── CONTENT OPPORTUNITY ENGINE ─────────────────────────── */}
-      <div className="mt-10">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <IconTile icon={Sparkles} tone="green" size={20} />
-            <div>
-              <h2 className="text-xl font-bold">Content Opportunity Engine</h2>
-              <p className="text-sm text-muted-foreground">50 ranked ideas grounded in this DNA report.</p>
-            </div>
-          </div>
-          <Button onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
-            {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {ideas.length > 0 ? "Regenerate" : "Generate"}
-          </Button>
-        </div>
-
-        {ideas.length === 0 ? (
-          <Card className="p-10 text-center">
-            <IconTile icon={Lightbulb} tone="amber" size={24} />
-            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-              Run the opportunity engine to get 50 ranked, scored content ideas you can drop straight into a campaign.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {ideas.map((idea: any) => (
-              <Card key={idea.id} className="p-4 transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <Badge variant="outline" className="uppercase text-[10px] tracking-wide">{idea.format}</Badge>
-                  <div className="flex items-center gap-1 text-xs">
-                    <Gauge className="h-3 w-3 text-emerald-500" />
-                    <span className="font-mono font-semibold">{idea.confidence_score}</span>
-                  </div>
-                </div>
-                <h3 className="mb-1 text-sm font-semibold">{idea.title}</h3>
-                <p className="mb-2 line-clamp-2 text-xs italic text-muted-foreground">"{idea.hook}"</p>
-                <p className="mb-3 line-clamp-2 text-xs text-muted-foreground">{idea.description}</p>
-                <div className="mb-3 grid grid-cols-3 gap-1.5">
-                  <ScorePill label="Viral" value={idea.virality_score} tone="green" />
-                  <ScorePill label="Diff"  value={idea.difficulty_score} tone="amber" />
-                  <ScorePill label="Aud"   value={idea.audience_interest_score} tone="blue" />
-                </div>
-                <Button size="sm" variant="outline" className="w-full gap-1"
-                  onClick={() => toast.info("Save to Campaign Planner — coming next")}>
-                  <CalendarPlus className="h-3.5 w-3.5" /> Save to Planner
-                </Button>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+      <OpportunityEngine
+        ideas={ideas}
+        ideasBusy={ideasBusy}
+        onGenerate={onGenerateIdeas}
+        onSaveIdea={handleSaveIdea}
+        savedIdeas={savedIdeas}
+        savingIdea={savingIdea}
+        formatFilter={ideaFormatFilter}
+        setFormatFilter={setIdeaFormatFilter}
+        sort={ideaSort}
+        setSort={setIdeaSort}
+      />
 
       {/* ── ACTION CENTER ──────────────────────────────────────── */}
       <div className="mt-12">
