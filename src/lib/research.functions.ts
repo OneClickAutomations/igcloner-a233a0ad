@@ -383,3 +383,55 @@ export const removeCompetitor = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ── Save a Content Idea into the Campaign Planner (calendar_items) ────
+
+const SaveIdeaInput = z.object({
+  idea_id: z.string().uuid(),
+  scheduled_for: z.string().optional(), // ISO date (YYYY-MM-DD)
+});
+
+export const saveIdeaToPlanner = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => SaveIdeaInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: idea, error } = await supabase
+      .from("content_ideas")
+      .select("*")
+      .eq("id", data.idea_id)
+      .single();
+    if (error || !idea) throw new Error("Idea not found");
+
+    // Default: schedule for tomorrow if no date supplied.
+    let scheduled = data.scheduled_for;
+    if (!scheduled) {
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      scheduled = t.toISOString().slice(0, 10);
+    }
+
+    const { data: inserted, error: insErr } = await supabase
+      .from("calendar_items")
+      .insert({
+        user_id: userId,
+        research_report_id: (idea as any).research_report_id ?? null,
+        niche: null,
+        scheduled_for: scheduled,
+        post_type: (idea as any).format ?? "Post",
+        title: (idea as any).title ?? null,
+        hook: (idea as any).hook ?? null,
+        caption: (idea as any).description ?? null,
+        cta: (idea as any).cta ?? null,
+        platforms: (idea as any).platform ? [(idea as any).platform] : ["Instagram"],
+        hashtags: Array.isArray((idea as any).hashtags) ? (idea as any).hashtags : [],
+        priority: "normal",
+        confidence: Number((idea as any).confidence_score) || 0,
+        status: "planned",
+      })
+      .select("id, scheduled_for")
+      .single();
+    if (insErr) throw new Error(insErr.message);
+    return { item: inserted };
+  });
