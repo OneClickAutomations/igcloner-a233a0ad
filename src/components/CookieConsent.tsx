@@ -11,12 +11,11 @@ export function CookieConsent() {
   useEffect(() => {
     try {
       if (!localStorage.getItem(STORAGE_KEY)) {
-        // Delay slightly so it doesn't fight the first paint
         const t = setTimeout(() => setVisible(true), 600);
         return () => clearTimeout(t);
       }
     } catch {
-      /* ignore storage errors */
+      /* ignore */
     }
   }, []);
 
@@ -39,30 +38,28 @@ export function CookieConsent() {
       role="dialog"
       aria-live="polite"
       aria-label="Cookie consent"
-      className="cookie-consent"
+      className="cc-root"
     >
-      <div className="cookie-consent__inner">
-        <div className="cookie-consent__text">
-          <span aria-hidden="true" className="cookie-consent__dot" />
+      <div className="cc-pill">
+        <div className="cc-copy">
+          <span aria-hidden="true" className="cc-dot" />
           <p>
-            We use cookies for sign-in, security, and — with your consent — analytics.{" "}
-            <Link to="/cookies" className="cookie-consent__link">
-              Learn more
-            </Link>
-            .
+            We use cookies to improve your experience.{" "}
+            <Link to="/cookies" className="cc-link">Learn more</Link>
           </p>
         </div>
-        <div className="cookie-consent__actions">
+
+        <div className="cc-actions">
           <button
             type="button"
-            className="cookie-consent__btn cookie-consent__btn--ghost"
+            className="cc-btn cc-btn-ghost"
             onClick={() => dismiss("essential")}
           >
             Essential only
           </button>
           <button
             type="button"
-            className="cookie-consent__btn cookie-consent__btn--primary"
+            className="cc-btn cc-btn-primary"
             onClick={() => dismiss("accepted")}
           >
             Accept
@@ -71,82 +68,112 @@ export function CookieConsent() {
       </div>
 
       <style>{`
-        .cookie-consent {
+        .cc-root {
           position: fixed;
           left: 50%;
-          bottom: 16px;
+          bottom: 20px;
           transform: translateX(-50%);
           z-index: 60;
-          width: min(560px, calc(100vw - 24px));
-          animation: cc-in .35s ease-out both;
+          max-width: calc(100vw - 24px);
+          animation: cc-in .4s cubic-bezier(.22,.8,.36,1) both;
+          font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
         }
         @keyframes cc-in {
-          from { opacity: 0; transform: translate(-50%, 12px); }
-          to { opacity: 1; transform: translate(-50%, 0); }
+          from { opacity: 0; transform: translate(-50%, 14px); }
+          to   { opacity: 1; transform: translate(-50%, 0); }
         }
-        .cookie-consent__inner {
-          display: flex;
+        .cc-pill {
+          display: inline-flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px 14px;
-          background: rgba(17, 18, 20, 0.92);
-          color: #f5f5f7;
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 14px;
-          backdrop-filter: saturate(160%) blur(14px);
-          -webkit-backdrop-filter: saturate(160%) blur(14px);
-          box-shadow: 0 10px 30px -12px rgba(0,0,0,.5);
-          font-size: 13px;
-          line-height: 1.4;
+          gap: 20px;
+          padding: 10px 10px 10px 16px;
+          background: rgba(255, 255, 255, 0.82);
+          border: 1px solid rgba(255, 255, 255, 0.9);
+          border-radius: 9999px;
+          backdrop-filter: saturate(180%) blur(20px);
+          -webkit-backdrop-filter: saturate(180%) blur(20px);
+          box-shadow:
+            0 1px 0 rgba(255,255,255,0.6) inset,
+            0 8px 30px rgba(15, 23, 42, 0.06),
+            0 2px 6px rgba(15, 23, 42, 0.04);
         }
-        .cookie-consent__text {
+        .cc-copy {
           display: flex;
           align-items: center;
           gap: 10px;
-          flex: 1;
           min-width: 0;
         }
-        .cookie-consent__text p { margin: 0; }
-        .cookie-consent__dot {
-          width: 8px; height: 8px; border-radius: 999px;
-          background: linear-gradient(135deg, #a855f7, #ec4899);
+        .cc-copy p {
+          margin: 0;
+          font-size: 13px;
+          font-weight: 500;
+          color: #475569;
+          line-height: 1.4;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .cc-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 9999px;
+          background: #3b82f6;
           flex-shrink: 0;
-          box-shadow: 0 0 0 3px rgba(168,85,247,.15);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
         }
-        .cookie-consent__link {
-          color: #f5f5f7;
+        .cc-link {
+          color: #0f172a;
           text-decoration: underline;
-          text-underline-offset: 2px;
+          text-decoration-color: rgba(15,23,42,0.2);
+          text-underline-offset: 3px;
+          font-weight: 600;
+          transition: text-decoration-color .15s ease;
         }
-        .cookie-consent__actions {
+        .cc-link:hover { text-decoration-color: rgba(15,23,42,0.6); }
+        .cc-actions {
           display: flex;
+          align-items: center;
           gap: 6px;
           flex-shrink: 0;
         }
-        .cookie-consent__btn {
+        .cc-btn {
           appearance: none;
           border: 0;
-          padding: 8px 12px;
+          font-family: inherit;
           font-size: 13px;
           font-weight: 600;
-          border-radius: 9px;
           cursor: pointer;
-          transition: background .15s ease, transform .15s ease;
+          border-radius: 9999px;
+          transition: background .15s ease, color .15s ease, transform .15s ease;
+          white-space: nowrap;
         }
-        .cookie-consent__btn--ghost {
+        .cc-btn-ghost {
+          padding: 6px 12px;
+          color: #64748b;
           background: transparent;
-          color: #cfcfd4;
         }
-        .cookie-consent__btn--ghost:hover { background: rgba(255,255,255,.06); color:#fff; }
-        .cookie-consent__btn--primary {
-          background: #f5f5f7;
-          color: #111214;
+        .cc-btn-ghost:hover { color: #0f172a; background: rgba(15,23,42,0.04); }
+        .cc-btn-primary {
+          padding: 8px 16px;
+          color: #ffffff;
+          background: #0f172a;
+          box-shadow: 0 1px 2px rgba(15,23,42,0.15);
         }
-        .cookie-consent__btn--primary:hover { background: #fff; transform: translateY(-1px); }
-        @media (max-width: 480px) {
-          .cookie-consent { width: calc(100vw - 16px); bottom: 10px; }
-          .cookie-consent__inner { flex-direction: column; align-items: stretch; padding: 12px; }
-          .cookie-consent__actions { justify-content: flex-end; }
+        .cc-btn-primary:hover { background: #1e293b; }
+        .cc-btn-primary:active { transform: translateY(1px); }
+
+        @media (max-width: 560px) {
+          .cc-root { width: calc(100vw - 16px); bottom: 12px; }
+          .cc-pill {
+            display: flex;
+            gap: 10px;
+            padding: 10px 10px 10px 14px;
+            border-radius: 18px;
+          }
+          .cc-copy p { white-space: normal; font-size: 12.5px; }
+          .cc-actions { margin-left: auto; }
+          .cc-btn-ghost { padding: 6px 10px; }
+          .cc-btn-primary { padding: 8px 14px; }
         }
       `}</style>
     </div>
