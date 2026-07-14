@@ -34,7 +34,7 @@ export function AuthPage() {
       return;
     }
     toast.success("Welcome back!");
-    navigate({ to: "/app" });
+    navigate({ to: "/dashboard" });
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -52,7 +52,7 @@ export function AuthPage() {
       return;
     }
     toast.success("Account created! Check your email to confirm.");
-    navigate({ to: "/app" });
+    navigate({ to: "/dashboard" });
   };
 
   const handleGoogle = async () => {
@@ -64,7 +64,7 @@ export function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/app" });
+    navigate({ to: "/dashboard" });
   };
 
   const isSignin = mode === "signin";

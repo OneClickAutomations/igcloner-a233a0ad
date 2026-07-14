@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import landingHtml from "@/assets/landing.html?raw";
+import { supabase } from "@/integrations/supabase/client";
 
 // Inject a click delegator so links inside the srcdoc iframe work:
 // - In-page anchors (#id) smooth-scroll within the iframe
@@ -32,6 +33,12 @@ export function LandingPage() {
   const ref = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/dashboard", replace: true });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) navigate({ to: "/dashboard", replace: true });
+    });
     const onMsg = (ev: MessageEvent) => {
       const data = ev.data as { __igcloner_nav?: string } | null;
       if (!data || typeof data.__igcloner_nav !== "string") return;
@@ -43,7 +50,10 @@ export function LandingPage() {
       }
     };
     window.addEventListener("message", onMsg);
-    return () => window.removeEventListener("message", onMsg);
+    return () => {
+      window.removeEventListener("message", onMsg);
+      sub.subscription.unsubscribe();
+    };
   }, [navigate]);
 
   return (
