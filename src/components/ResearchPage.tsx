@@ -1015,12 +1015,48 @@ function IdeaCard({
 }: { idea: any; saved: boolean; saving: boolean; onSave: () => void }) {
   const meta = formatMeta(idea.format);
   const FIcon = meta.icon;
+  const navigate = useNavigate();
+  const useThisIdea = () => {
+    try {
+      sessionStorage.setItem(
+        "ig:seed-idea",
+        JSON.stringify({
+          title: idea.title,
+          hook: idea.hook,
+          caption_opener: idea.caption_opener,
+          cta: idea.cta,
+          format: idea.format,
+          hashtags: idea.hashtags,
+          description: idea.description,
+          why_it_works: idea.why_it_works,
+        }),
+      );
+    } catch {}
+    const f = String(idea.format ?? "").toLowerCase();
+    const dest =
+      f === "reel" ? "/studio/reel" :
+      f === "carousel" ? "/studio/carousel" :
+      f === "image" ? "/studio/image" :
+      "/studio";
+    toast.success("Idea sent to Studio — hook & caption are on your clipboard-ready draft");
+    navigate({ to: dest });
+  };
   return (
     <Card className="group flex flex-col overflow-hidden border-border/60 p-0 transition hover:-translate-y-0.5 hover:border-accent-primary/50 hover:shadow-lg">
       <div className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
-          <FIcon className="h-3 w-3" />
-          {meta.label}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
+            <FIcon className="h-3 w-3" />
+            {meta.label}
+          </div>
+          {idea.category && (
+            <Badge variant="outline" className="text-[10px]">
+              {idea.category}
+            </Badge>
+          )}
+          {idea.production_difficulty && (
+            <span className="text-[10px] text-muted-foreground">· {idea.production_difficulty}</span>
+          )}
         </div>
         <ConfidenceRing value={idea.confidence_score} />
       </div>
@@ -1034,10 +1070,24 @@ function IdeaCard({
             {idea.hook}
           </blockquote>
         )}
-        {idea.description && (
+        {idea.why_it_works ? (
+          <p className="mb-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Why it works: </span>{idea.why_it_works}
+          </p>
+        ) : idea.description && (
           <p className="mb-4 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
             {idea.description}
           </p>
+        )}
+        {idea.caption_opener && (
+          <p className="mb-3 line-clamp-2 rounded-md bg-muted/40 p-2 text-[12px] leading-relaxed text-foreground/75">
+            {idea.caption_opener}
+          </p>
+        )}
+        {idea.viral_mechanism && (
+          <span className="mb-2 inline-block text-[10px] font-medium uppercase tracking-wider text-accent-primary">
+            {idea.viral_mechanism}
+          </span>
         )}
       </div>
 
@@ -1047,11 +1097,11 @@ function IdeaCard({
         <ScoreBar label="Difficulty" value={idea.difficulty_score}        tone="amber" />
       </div>
 
-      <div className="px-5 pb-4">
+      <div className="grid grid-cols-2 gap-2 px-5 pb-4">
         <Button
           size="sm"
-          variant={saved ? "secondary" : "default"}
-          className="w-full gap-1.5"
+          variant={saved ? "secondary" : "outline"}
+          className="gap-1.5"
           onClick={onSave}
           disabled={saving || saved}
         >
@@ -1062,7 +1112,10 @@ function IdeaCard({
           ) : (
             <CalendarPlus className="h-3.5 w-3.5" />
           )}
-          {saved ? "Saved to Planner" : saving ? "Saving…" : "Save to Planner"}
+          {saved ? "Saved" : saving ? "Saving…" : "Save"}
+        </Button>
+        <Button size="sm" className="gap-1.5" onClick={useThisIdea}>
+          <Sparkles className="h-3.5 w-3.5" /> Use This Idea
         </Button>
       </div>
     </Card>
