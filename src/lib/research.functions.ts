@@ -227,9 +227,19 @@ export const createResearchReport = createServerFn({ method: "POST" })
 
     try {
       const signals = await collectSignals(data.mode, data.subject);
+      const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
+      const limited = postsCount === 0;
       await supabase
         .from("research_reports")
-        .update({ status: "analyzing", raw_data: signals })
+        .update({
+          status: "analyzing",
+          raw_data: signals,
+          posts_analyzed: postsCount,
+          limited_data: limited,
+          limited_data_reason: limited
+            ? "This account's posts could not be scraped. Profile intelligence is based on bio and public profile data only."
+            : null,
+        })
         .eq("id", row.id);
 
       const { dna, score } = await generateDnaReport(data.mode, data.subject, signals);
