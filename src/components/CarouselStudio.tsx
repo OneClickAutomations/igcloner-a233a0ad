@@ -157,7 +157,7 @@ export function CarouselStudio() {
     return (
       <div className="mx-auto max-w-md p-10 text-center">
         <p className="mb-4 text-muted-foreground">Missing project. Start from an analysis.</p>
-        <Button onClick={() => navigate({ to: "/app" })}>Go to Analyze</Button>
+        <Button onClick={() => navigate({ to: "/app" })}>Go to Clone Studio</Button>
       </div>
     );
   }

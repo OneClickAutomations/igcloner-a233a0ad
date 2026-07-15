@@ -82,7 +82,7 @@ export function ProjectsPage() {
           <p className="text-muted-foreground">Every content production session you've started.</p>
         </div>
         <Button onClick={() => navigate({ to: "/app" })} className="gap-1.5">
-          <Plus className="h-4 w-4" /> New from analysis
+          <Plus className="h-4 w-4" /> New Clone
         </Button>
       </div>
 
@@ -97,7 +97,7 @@ export function ProjectsPage() {
             Analyze a post and click <span className="font-medium text-foreground">Create Content</span> to start your first project.
           </p>
           <Button onClick={() => navigate({ to: "/app" })} className="mt-4 gap-1.5">
-            <Plus className="h-4 w-4" /> Go to Analyze
+            <Plus className="h-4 w-4" /> Go to Clone Studio
           </Button>
         </div>
       ) : (

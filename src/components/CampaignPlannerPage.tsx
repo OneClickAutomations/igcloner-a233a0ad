@@ -106,7 +106,7 @@ export function CampaignPlannerPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-accent shadow-ig">
             <Rocket className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-2xl font-bold">Campaign Planner</h1>
+          <h1 className="text-2xl font-bold">Content Calendar</h1>
           <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
             Generate a full multi-platform content campaign — goal, audience, hooks, visuals, captions, CTAs — grounded in your Research DNA. Then edit, produce, and publish each day from one place.
           </p>
@@ -148,7 +148,7 @@ export function CampaignPlannerPage() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Campaign Planner</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Content Calendar</h1>
           <p className="text-sm text-muted-foreground">Your content operating system — plan, produce, publish.</p>
         </div>
         <Button onClick={() => setWizardOpen(true)} className="gap-1.5">

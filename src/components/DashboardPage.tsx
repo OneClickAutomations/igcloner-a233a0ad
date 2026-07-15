@@ -359,27 +359,27 @@ function DashboardPageInner() {
           {/* ── Quick actions ───────────────────────────────── */}
           <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <ActionCard
-              icon={<Search className="h-5 w-5" />}
-              title="Analyze a Post"
-              desc="Break down any IG post"
+              icon={<Copy className="h-5 w-5" />}
+              title="Clone Studio"
+              desc="Break down & clone any post"
               accent
               onClick={() => navigate({ to: "/app" })}
             />
             <ActionCard
               icon={<Microscope className="h-5 w-5" />}
-              title="Start Research"
+              title="Research"
               desc="Find what audiences want"
               onClick={() => navigate({ to: "/research" })}
             />
             <ActionCard
               icon={<Calendar className="h-5 w-5" />}
-              title="Plan Campaign"
+              title="Content Calendar"
               desc="Schedule 30 days of content"
               onClick={() => navigate({ to: "/calendar" })}
             />
             <ActionCard
               icon={<Send className="h-5 w-5" />}
-              title="Publish"
+              title="Publishing"
               desc="Push to every platform"
               onClick={() => navigate({ to: "/publishing" })}
             />
