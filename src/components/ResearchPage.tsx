@@ -349,6 +349,10 @@ function ReportDetail({
   const { report, ideas } = detail;
   const dna = (report?.dna_report ?? {}) as any;
   const score = Number(report?.opportunity_score ?? 0);
+  const perf = (dna?.performanceMetrics ?? {}) as any;
+  const fmt  = (dna?.contentFormatDistribution ?? {}) as any;
+  const limited = !!report?.limited_data;
+  const postsAnalyzed = Number(report?.posts_analyzed ?? perf?.postsAnalyzed ?? 0);
 
   // ── Content Opportunity Engine local state ──────────────────────────
   const saveIdeaFn = useServerFn(saveIdeaToPlanner);
@@ -384,8 +388,8 @@ function ReportDetail({
 
   const pillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
   const pillarData = pillars.map((p) => ({
-    name: String(p?.name ?? "").slice(0, 20),
-    value: Number(p?.share) || 0,
+    name: String(p?.name ?? p?.pillarName ?? "").slice(0, 20),
+    value: Number(p?.share ?? p?.percentage) || 0,
   }));
 
   const CHART_COLORS = ["#8134AF", "#DD2A7B", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981"];
@@ -450,13 +454,79 @@ function ReportDetail({
         </div>
       </Card>
 
-      {/* ── KPI CARDS ──────────────────────────────────────────── */}
+      {/* ── LIMITED DATA BANNER ─────────────────────────────────── */}
+      {limited && (
+        <Card className="mb-6 flex items-start gap-3 border-amber-500/40 bg-amber-500/5 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Limited data mode</p>
+            <p className="text-xs text-muted-foreground">
+              {report?.limited_data_reason ??
+                "Some post metrics are unavailable for this account. Content ideas and hook analysis are based on niche research and profile intelligence rather than post-level data."}
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* ── PERFORMANCE METRIC CARDS ──────────────────────────── */}
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard tone="green"  icon={Gauge}         label="Opportunity"       value={`${score || "—"}`}     hint={score >= 70 ? "High" : score >= 40 ? "Moderate" : "Low"} sub="/ 100" />
-        <KpiCard tone="rose"   icon={Radar}         label="Competition"       value={inferCompetition(score)} hint="vs. current supply" />
-        <KpiCard tone="blue"   icon={Users}         label="Audience"          value={firstWord(dna?.audienceProfile?.who) || "Defined"} hint={dna?.audienceProfile?.who ? shortText(dna.audienceProfile.who, 40) : "—"} />
-        <KpiCard tone="amber"  icon={CalendarClock} label="Posting cadence"   value={firstWord(dna.postingFrequency) || "Daily"} hint={shortText(dna.postingFrequency, 34)} />
+        <KpiCard
+          tone={engagementTone(perf?.engagementBenchmark)}
+          icon={Gauge}
+          label="Engagement rate"
+          value={String(perf?.engagementRate ?? (limited ? "—" : "—"))}
+          hint={perf?.engagementBenchmark ? capitalize(String(perf.engagementBenchmark)) : "Not available"}
+        />
+        <KpiCard
+          tone="blue"
+          icon={TrendingUp}
+          label="Avg likes"
+          value={numOrDash(perf?.avgLikesPerPost)}
+          hint={postsAnalyzed ? `${postsAnalyzed} posts analyzed` : "No posts scraped"}
+        />
+        <KpiCard
+          tone="purple"
+          icon={MessageSquare}
+          label="Avg comments"
+          value={numOrDash(perf?.avgCommentsPerPost)}
+          hint={perf?.avgViewsPerReel ? `${numOrDash(perf.avgViewsPerReel)} avg reel views` : undefined}
+        />
+        <KpiCard
+          tone={Number(perf?.viralPostCount) > 0 ? "green" : "gray"}
+          icon={Rocket}
+          label="Viral posts"
+          value={numOrDash(perf?.viralPostCount)}
+          hint={perf?.viralThreshold ? "3× avg engagement threshold" : undefined}
+          sub={postsAnalyzed ? `/ ${postsAnalyzed}` : undefined}
+        />
       </div>
+
+      {/* ── OPPORTUNITY + CADENCE strip ───────────────────────── */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard tone="green" icon={Target} label="Opportunity" value={`${score || "—"}`} sub="/ 100"
+                 hint={score >= 70 ? "High" : score >= 40 ? "Moderate" : "Low"} />
+        <KpiCard tone="rose"  icon={Radar}  label="Competition"
+                 value={capitalize(String(dna?.competitivePosition?.competitionLevel ?? inferCompetition(score)))}
+                 hint="Supply vs demand" />
+        <KpiCard tone="blue"  icon={Users}  label="Audience"
+                 value={firstWord(dna?.audienceProfile?.who) || "Defined"}
+                 hint={shortText(dna?.audienceProfile?.who, 40) || "—"} />
+        <KpiCard tone="amber" icon={CalendarClock} label="Cadence"
+                 value={firstWord(dna?.postingFrequency) || "—"}
+                 hint={shortText(dna?.postingFrequency, 34)} />
+      </div>
+
+      {/* ── CONTENT FORMAT DISTRIBUTION ───────────────────────── */}
+      {(fmt?.imagePercent != null || fmt?.reelPercent != null || fmt?.carouselPercent != null) && !limited && (
+        <Card className="mb-8 p-5">
+          <SectionHead icon={Layers3} tone="purple" title="Content format mix" sub={fmt?.formatInsight || "Format distribution across scraped posts"} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <FormatBar label="Image"    value={Number(fmt?.imagePercent) || 0}    color="from-blue-500 to-blue-600" />
+            <FormatBar label="Reel"     value={Number(fmt?.reelPercent) || 0}     color="from-violet-500 to-pink-500" />
+            <FormatBar label="Carousel" value={Number(fmt?.carouselPercent) || 0} color="from-amber-500 to-orange-500" />
+          </div>
+        </Card>
+      )}
 
       {/* ── AI INSIGHTS callouts ───────────────────────────────── */}
       {(growthOpp || topRisk) && (
@@ -475,7 +545,7 @@ function ReportDetail({
       )}
 
       {/* ── CHARTS ─────────────────────────────────────────────── */}
-      {pillarData.length > 0 && (
+      {pillarData.length > 0 && !limited && (
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
           <Card className="p-5 lg:col-span-2">
             <SectionHead icon={Layers3} tone="purple" title="Content pillar mix" sub="Share of voice by pillar" />
