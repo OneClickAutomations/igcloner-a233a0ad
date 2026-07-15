@@ -190,7 +190,7 @@ export function AppPage() {
 
       {usage && usage.remaining > 0 && usage.remaining <= 5 && !dismissedWarning && (
         <div className="flex items-center justify-between gap-3 border-b border-status-warning/30 bg-status-warning/10 px-4 py-2 text-sm text-status-warning lg:px-8">
-          <span>⚡ {usage.remaining} analyses left · <button onClick={() => navigate({ to: "/settings" })} className="underline">Upgrade →</button></span>
+          <span>⚡ {usage.remaining} analyses left · <button onClick={() => navigate({ to: "/settings", search: { section: "subscription" } })} className="underline">Upgrade →</button></span>
           <button onClick={() => setDismissedWarning(true)} aria-label="Dismiss" className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
         </div>
       )}
@@ -398,7 +398,7 @@ export function AppPage() {
       </div>
 
       {showUpgrade && (
-        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings" }); }} />
+        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings", search: { section: "subscription" } }); }} />
       )}
     </div>
   );

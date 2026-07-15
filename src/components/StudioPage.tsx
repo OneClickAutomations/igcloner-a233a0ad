@@ -49,7 +49,7 @@ const CARDS: FormatCard[] = [
 
 export function StudioPage() {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio" });
+  const search = useSearch({ from: "/_authenticated/studio/" });
   const analysisId = (search as any)?.analysisId as string | undefined;
   const initialMode = ((search as any)?.mode as "exact" | "inspired" | undefined) ?? "exact";
   const createFn = useServerFn(createProject);
