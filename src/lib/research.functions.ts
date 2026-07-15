@@ -113,11 +113,66 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-2.5-flash");
 
-  const system = `You are IGCloner's Content Intelligence analyst. From the provided scraped Instagram data, produce a rigorous Content DNA report. Ground every claim in the evidence. Return ONLY a single JSON object, no prose, no markdown fences.`;
-  const schemaHint = `{
+  const posts: any[] = Array.isArray(signals?.posts) ? signals.posts : [];
+  const profile = signals?.profile ?? null;
+  const postsAnalyzed = posts.length;
+
+  const system = `You are IGCloner's senior content intelligence analyst.
+You receive raw Instagram scrape data and produce a complete, precise intelligence report.
+You NEVER fabricate data. If a field is genuinely unavailable, say "Not available" — but NEVER
+return 0% for calculated fields when post data exists to calculate from.
+
+CRITICAL DATA RULES:
+1. Content pillar percentages MUST be calculated from the actual posts array below
+2. Engagement rate MUST be calculated: ((totalLikes + totalComments) / postsAnalyzed) / followerCount * 100
+3. Best posting times MUST be derived from timestamps of highest-performing posts (UTC)
+4. Every hook pattern MUST be extracted from ACTUAL caption opening lines, quoted verbatim — never invented
+5. Content format distribution MUST be counted from actual post types in the data
+6. Return ONLY valid JSON. No markdown fences, no explanation.`;
+
+  const user = `SUBJECT: ${subject} (mode: ${mode})
+PROFILE: ${JSON.stringify(profile).slice(0, 4000)}
+POSTS ANALYZED: ${postsAnalyzed}
+POSTS DATA:
+${JSON.stringify(posts).slice(0, 45000)}
+
+Return a single JSON object with BOTH the detailed schema AND the compact legacy keys used by the UI.
+Schema:
+{
+  "profileSummary": { "username": string, "displayName": string, "bio": string, "followerCount": number, "followingCount": number, "totalPosts": number, "postsAnalyzed": number, "isVerified": boolean, "isBusinessAccount": boolean, "businessCategory": string, "externalUrl": string },
+  "performanceMetrics": {
+    "engagementRate": "X.XX%",
+    "engagementRateFormula": "((totalLikes + totalComments) / postsAnalyzed) / followerCount * 100",
+    "avgLikesPerPost": number,
+    "avgCommentsPerPost": number,
+    "avgViewsPerReel": number,
+    "totalLikesAnalyzed": number,
+    "totalCommentsAnalyzed": number,
+    "highestLikedPost": { "likes": number, "captionExcerpt": string, "postType": string, "url": string },
+    "highestCommentedPost": { "comments": number, "captionExcerpt": string, "postType": string, "url": string },
+    "engagementBenchmark": "above average" | "average" | "below average",
+    "viralPostCount": number,
+    "viralThreshold": "posts with 3x or more avg engagement"
+  },
+  "contentFormatDistribution": { "imagePercent": number, "reelPercent": number, "carouselPercent": number, "dominantFormat": string, "formatInsight": string },
+  "postingStrategy": { "frequency": string, "consistencyScore": number, "bestPerformingDays": [string], "bestPerformingTimes": [string], "postingPatternInsight": string },
+  "hookAnalysis": {
+    "dominantHookTypes": [string],
+    "provenHooks": [{ "hookType": string, "actualOpeningLine": string, "engagementOnThisPost": number, "whyItWorked": string }],
+    "captionLengthPattern": string,
+    "captionStructure": string,
+    "ctaPatterns": [string],
+    "emojiUsagePattern": string,
+    "hashtagStrategy": string
+  },
+  "audienceIntelligence": { "primaryAudience": string, "audienceLanguage": string, "communitySignals": [string], "painPointsAddressed": [string], "desiresAddressed": [string], "psychographics": string },
+  "competitivePosition": { "nicheStrengths": [string], "contentGaps": [string], "opportunityScore": number, "opportunityReasoning": string, "competitionLevel": "low"|"medium"|"high"|"very high", "differentiationPotential": string },
+  "visualStyleAnalysis": { "colorPaletteObserved": string, "editingStyle": string, "textOverlayUsage": string, "thumbnailPattern": string, "brandingConsistency": string },
+
   "executiveSummary": string,
+  "opportunityScore": number,
   "audienceProfile": { "who": string, "desires": [string], "painPoints": [string], "psychographics": string },
-  "contentPillars": [{ "name": string, "share": number, "description": string }],
+  "contentPillars": [{ "name": string, "share": number, "description": string, "avgEngagement": string, "topPerformingExample": string }],
   "topTopics": [{ "topic": string, "why": string }],
   "commonHooks": [{ "pattern": string, "example": string }],
   "captionStructure": { "typicalLength": string, "tone": string, "openingStyle": string, "ctaStyle": string },
@@ -134,15 +189,19 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   "growthOpportunities": [string],
   "weaknesses": [string],
   "missedOpportunities": [string],
-  "competitiveAdvantages": [string],
-  "opportunityScore": number
-}`;
-  const user = `Mode: ${mode}\nSubject: ${subject}\n\nScraped signals (JSON):\n${JSON.stringify(signals).slice(0, 30000)}\n\nReturn a JSON object matching:\n${schemaHint}`;
+  "competitiveAdvantages": [string]
+}
+
+IMPORTANT:
+- "contentPillars" MUST sum to ~100 and MUST be derived from the actual captions. Do NOT return 0% for real pillars.
+- If posts array is empty, still return the JSON but set pillars to [] and mark performanceMetrics numeric fields to 0.
+- Legacy compact keys (executiveSummary, audienceProfile, contentPillars, commonHooks, captionStructure, etc.) MUST be filled and stay consistent with the detailed ones.`;
 
   const { text } = await generateText({ model, system, prompt: user });
   const dna = parseJsonish<any>(text);
-  const score = Number(dna?.opportunityScore ?? 0) || 0;
-  return { dna, score };
+  const score =
+    Number(dna?.opportunityScore ?? dna?.competitivePosition?.opportunityScore ?? 0) || 0;
+  return { dna, score, postsAnalyzed };
 }
 
 // ══════════════════════════════════════════════════════════════════════
