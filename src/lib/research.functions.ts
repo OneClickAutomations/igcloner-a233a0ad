@@ -51,13 +51,18 @@ function slimPost(p: any) {
     likesCount: p?.likesCount,
     commentsCount: p?.commentsCount,
     videoViewCount: p?.videoViewCount ?? p?.videoPlayCount,
+    videoPlayCount: p?.videoPlayCount ?? null,
     hashtags: (p?.hashtags ?? []).slice(0, 20),
+    mentions: (p?.mentions ?? []).slice(0, 10),
     timestamp: p?.timestamp,
     productType: p?.productType,
     ownerUsername: p?.ownerUsername ?? p?.owner?.username,
     url: p?.url,
+    shortCode: p?.shortCode ?? null,
+    isSponsored: p?.isSponsored ?? false,
+    locationName: p?.locationName ?? null,
+    carouselSlides: p?.type === "Sidecar" ? (p?.images?.length ?? null) : null,
     firstComment: (p?.firstComment ?? "").slice(0, 300),
-    mentions: (p?.mentions ?? []).slice(0, 10),
     musicInfo: p?.musicInfo?.song_name ?? p?.musicInfo?.artist_name ?? null,
   };
 }
@@ -80,8 +85,10 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
             followsCount: profile.followsCount,
             postsCount: profile.postsCount,
             verified: profile.verified,
+            isBusinessAccount: profile.isBusinessAccount ?? false,
             businessCategoryName: profile.businessCategoryName,
             externalUrl: profile.externalUrl,
+            language: profile.language ?? null,
           }
         : null,
       posts,
@@ -106,11 +113,66 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   const gateway = createLovableAiGatewayProvider(apiKey);
   const model = gateway("google/gemini-2.5-flash");
 
-  const system = `You are IGCloner's Content Intelligence analyst. From the provided scraped Instagram data, produce a rigorous Content DNA report. Ground every claim in the evidence. Return ONLY a single JSON object, no prose, no markdown fences.`;
-  const schemaHint = `{
+  const posts: any[] = Array.isArray(signals?.posts) ? signals.posts : [];
+  const profile = signals?.profile ?? null;
+  const postsAnalyzed = posts.length;
+
+  const system = `You are IGCloner's senior content intelligence analyst.
+You receive raw Instagram scrape data and produce a complete, precise intelligence report.
+You NEVER fabricate data. If a field is genuinely unavailable, say "Not available" — but NEVER
+return 0% for calculated fields when post data exists to calculate from.
+
+CRITICAL DATA RULES:
+1. Content pillar percentages MUST be calculated from the actual posts array below
+2. Engagement rate MUST be calculated: ((totalLikes + totalComments) / postsAnalyzed) / followerCount * 100
+3. Best posting times MUST be derived from timestamps of highest-performing posts (UTC)
+4. Every hook pattern MUST be extracted from ACTUAL caption opening lines, quoted verbatim — never invented
+5. Content format distribution MUST be counted from actual post types in the data
+6. Return ONLY valid JSON. No markdown fences, no explanation.`;
+
+  const user = `SUBJECT: ${subject} (mode: ${mode})
+PROFILE: ${JSON.stringify(profile).slice(0, 4000)}
+POSTS ANALYZED: ${postsAnalyzed}
+POSTS DATA:
+${JSON.stringify(posts).slice(0, 45000)}
+
+Return a single JSON object with BOTH the detailed schema AND the compact legacy keys used by the UI.
+Schema:
+{
+  "profileSummary": { "username": string, "displayName": string, "bio": string, "followerCount": number, "followingCount": number, "totalPosts": number, "postsAnalyzed": number, "isVerified": boolean, "isBusinessAccount": boolean, "businessCategory": string, "externalUrl": string },
+  "performanceMetrics": {
+    "engagementRate": "X.XX%",
+    "engagementRateFormula": "((totalLikes + totalComments) / postsAnalyzed) / followerCount * 100",
+    "avgLikesPerPost": number,
+    "avgCommentsPerPost": number,
+    "avgViewsPerReel": number,
+    "totalLikesAnalyzed": number,
+    "totalCommentsAnalyzed": number,
+    "highestLikedPost": { "likes": number, "captionExcerpt": string, "postType": string, "url": string },
+    "highestCommentedPost": { "comments": number, "captionExcerpt": string, "postType": string, "url": string },
+    "engagementBenchmark": "above average" | "average" | "below average",
+    "viralPostCount": number,
+    "viralThreshold": "posts with 3x or more avg engagement"
+  },
+  "contentFormatDistribution": { "imagePercent": number, "reelPercent": number, "carouselPercent": number, "dominantFormat": string, "formatInsight": string },
+  "postingStrategy": { "frequency": string, "consistencyScore": number, "bestPerformingDays": [string], "bestPerformingTimes": [string], "postingPatternInsight": string },
+  "hookAnalysis": {
+    "dominantHookTypes": [string],
+    "provenHooks": [{ "hookType": string, "actualOpeningLine": string, "engagementOnThisPost": number, "whyItWorked": string }],
+    "captionLengthPattern": string,
+    "captionStructure": string,
+    "ctaPatterns": [string],
+    "emojiUsagePattern": string,
+    "hashtagStrategy": string
+  },
+  "audienceIntelligence": { "primaryAudience": string, "audienceLanguage": string, "communitySignals": [string], "painPointsAddressed": [string], "desiresAddressed": [string], "psychographics": string },
+  "competitivePosition": { "nicheStrengths": [string], "contentGaps": [string], "opportunityScore": number, "opportunityReasoning": string, "competitionLevel": "low"|"medium"|"high"|"very high", "differentiationPotential": string },
+  "visualStyleAnalysis": { "colorPaletteObserved": string, "editingStyle": string, "textOverlayUsage": string, "thumbnailPattern": string, "brandingConsistency": string },
+
   "executiveSummary": string,
+  "opportunityScore": number,
   "audienceProfile": { "who": string, "desires": [string], "painPoints": [string], "psychographics": string },
-  "contentPillars": [{ "name": string, "share": number, "description": string }],
+  "contentPillars": [{ "name": string, "share": number, "description": string, "avgEngagement": string, "topPerformingExample": string }],
   "topTopics": [{ "topic": string, "why": string }],
   "commonHooks": [{ "pattern": string, "example": string }],
   "captionStructure": { "typicalLength": string, "tone": string, "openingStyle": string, "ctaStyle": string },
@@ -127,15 +189,19 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   "growthOpportunities": [string],
   "weaknesses": [string],
   "missedOpportunities": [string],
-  "competitiveAdvantages": [string],
-  "opportunityScore": number
-}`;
-  const user = `Mode: ${mode}\nSubject: ${subject}\n\nScraped signals (JSON):\n${JSON.stringify(signals).slice(0, 30000)}\n\nReturn a JSON object matching:\n${schemaHint}`;
+  "competitiveAdvantages": [string]
+}
+
+IMPORTANT:
+- "contentPillars" MUST sum to ~100 and MUST be derived from the actual captions. Do NOT return 0% for real pillars.
+- If posts array is empty, still return the JSON but set pillars to [] and mark performanceMetrics numeric fields to 0.
+- Legacy compact keys (executiveSummary, audienceProfile, contentPillars, commonHooks, captionStructure, etc.) MUST be filled and stay consistent with the detailed ones.`;
 
   const { text } = await generateText({ model, system, prompt: user });
   const dna = parseJsonish<any>(text);
-  const score = Number(dna?.opportunityScore ?? 0) || 0;
-  return { dna, score };
+  const score =
+    Number(dna?.opportunityScore ?? dna?.competitivePosition?.opportunityScore ?? 0) || 0;
+  return { dna, score, postsAnalyzed };
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -161,9 +227,19 @@ export const createResearchReport = createServerFn({ method: "POST" })
 
     try {
       const signals = await collectSignals(data.mode, data.subject);
+      const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
+      const limited = postsCount === 0;
       await supabase
         .from("research_reports")
-        .update({ status: "analyzing", raw_data: signals })
+        .update({
+          status: "analyzing",
+          raw_data: signals,
+          posts_analyzed: postsCount,
+          limited_data: limited,
+          limited_data_reason: limited
+            ? "This account's posts could not be scraped. Profile intelligence is based on bio and public profile data only."
+            : null,
+        })
         .eq("id", row.id);
 
       const { dna, score } = await generateDnaReport(data.mode, data.subject, signals);
@@ -268,14 +344,37 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const system = `You generate high-signal Instagram content ideas grounded in a Content DNA report. Return ONLY a JSON array of 50 items. No prose.`;
-    const shape = `[{
+    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
+Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
+
+REJECT an idea if it:
+- Could apply to any account in any niche ("Post more consistently")
+- Does not include a specific, ready-to-use hook line
+- Does not specify the exact format (Reel / Carousel / Image / Story)
+- Does not explain WHY it will perform based on this account's data
+- Sounds like something a generic AI calendar would generate
+
+APPROVE an idea if it:
+- Uses the SPECIFIC language patterns found in this account's captions
+- References the SPECIFIC audience this account attracts
+- Has a hook line the user can literally copy and post tomorrow
+- Is informed by what ALREADY performed on this account or this niche
+
+Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no wrapper object.`;
+
+    const shape = `{
+  "idea_number": 1..50,
+  "category": "Steal the Frame" | "Exploit the Gaps" | "Amplify What Works" | "Original Authority" | "Viral Formats",
   "title": string,
-  "hook": string,
-  "description": string,
-  "format": "Reel"|"Carousel"|"Post"|"Story",
+  "format": "Reel" | "Carousel" | "Image" | "Story",
   "platform": string,
-  "cta": string,
+  "hook": string,                       // exact first line — ready to post
+  "description": string,                // one sentence concept
+  "why_it_works": string,               // reference specific data from this account
+  "caption_opener": string,             // first 2-3 lines of caption
+  "cta": string,                        // match this account's proven CTA patterns
+  "viral_mechanism": "save-worthy" | "share-worthy" | "comment-triggering" | "scroll-stopping",
+  "production_difficulty": "easy (30 min)" | "medium (2 hours)" | "hard (half day)",
   "hashtags": [string],
   "virality_score": 0-100,
   "difficulty_score": 0-100,
@@ -284,8 +383,24 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
   "audience_interest_score": 0-100,
   "production_time_score": 0-100,
   "confidence_score": 0-100
-}]`;
-    const prompt = `Subject: ${report.subject} (${report.mode})\nContent DNA:\n${JSON.stringify(report.dna_report).slice(0, 20000)}\n\nGenerate exactly 50 distinct ideas following:\n${shape}`;
+}`;
+
+    const prompt = `Subject: ${report.subject} (mode: ${report.mode})
+Content DNA report (grounded in real scrape):
+${JSON.stringify(report.dna_report).slice(0, 22000)}
+
+Generate EXACTLY 50 content ideas distributed across 5 strategy categories, 10 ideas each:
+
+CATEGORY 1 — "Steal the Frame" (ideas 1-10): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
+CATEGORY 2 — "Exploit the Gaps" (ideas 11-20): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
+CATEGORY 3 — "Amplify What Works" (ideas 21-30): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
+CATEGORY 4 — "Original Authority" (ideas 31-40): Original angles NOT present on this account that position the user as a trusted authority.
+CATEGORY 5 — "Viral Formats" (ideas 41-50): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
+
+Each object MUST match this shape:
+${shape}
+
+Return a flat JSON array of 50 objects. Nothing else.`;
 
     const { text } = await generateText({ model, system, prompt });
     const ideas = parseJsonish<any[]>(text);
@@ -294,7 +409,7 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     // Wipe prior ideas so re-runs don't duplicate.
     await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
 
-    const rows = ideas.slice(0, 50).map((i: any) => ({
+    const rows = ideas.slice(0, 50).map((i: any, idx: number) => ({
       user_id: userId,
       research_report_id: data.id,
       title: String(i.title ?? "Untitled").slice(0, 200),
@@ -304,6 +419,12 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
       platform: String(i.platform ?? "Instagram"),
       cta: String(i.cta ?? ""),
       hashtags: Array.isArray(i.hashtags) ? i.hashtags.slice(0, 20) : [],
+      category: String(i.category ?? "").slice(0, 60) || null,
+      idea_number: Number(i.idea_number) || idx + 1,
+      caption_opener: String(i.caption_opener ?? "").slice(0, 800) || null,
+      why_it_works: String(i.why_it_works ?? "").slice(0, 500) || null,
+      viral_mechanism: String(i.viral_mechanism ?? "").slice(0, 60) || null,
+      production_difficulty: String(i.production_difficulty ?? "").slice(0, 60) || null,
       virality_score: Number(i.virality_score) || 0,
       difficulty_score: Number(i.difficulty_score) || 0,
       competition_score: Number(i.competition_score) || 0,

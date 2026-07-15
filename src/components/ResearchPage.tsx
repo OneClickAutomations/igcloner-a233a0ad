@@ -349,6 +349,10 @@ function ReportDetail({
   const { report, ideas } = detail;
   const dna = (report?.dna_report ?? {}) as any;
   const score = Number(report?.opportunity_score ?? 0);
+  const perf = (dna?.performanceMetrics ?? {}) as any;
+  const fmt  = (dna?.contentFormatDistribution ?? {}) as any;
+  const limited = !!report?.limited_data;
+  const postsAnalyzed = Number(report?.posts_analyzed ?? perf?.postsAnalyzed ?? 0);
 
   // ── Content Opportunity Engine local state ──────────────────────────
   const saveIdeaFn = useServerFn(saveIdeaToPlanner);
@@ -384,8 +388,8 @@ function ReportDetail({
 
   const pillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
   const pillarData = pillars.map((p) => ({
-    name: String(p?.name ?? "").slice(0, 20),
-    value: Number(p?.share) || 0,
+    name: String(p?.name ?? p?.pillarName ?? "").slice(0, 20),
+    value: Number(p?.share ?? p?.percentage) || 0,
   }));
 
   const CHART_COLORS = ["#8134AF", "#DD2A7B", "#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981"];
@@ -450,13 +454,79 @@ function ReportDetail({
         </div>
       </Card>
 
-      {/* ── KPI CARDS ──────────────────────────────────────────── */}
+      {/* ── LIMITED DATA BANNER ─────────────────────────────────── */}
+      {limited && (
+        <Card className="mb-6 flex items-start gap-3 border-amber-500/40 bg-amber-500/5 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Limited data mode</p>
+            <p className="text-xs text-muted-foreground">
+              {report?.limited_data_reason ??
+                "Some post metrics are unavailable for this account. Content ideas and hook analysis are based on niche research and profile intelligence rather than post-level data."}
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* ── PERFORMANCE METRIC CARDS ──────────────────────────── */}
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard tone="green"  icon={Gauge}         label="Opportunity"       value={`${score || "—"}`}     hint={score >= 70 ? "High" : score >= 40 ? "Moderate" : "Low"} sub="/ 100" />
-        <KpiCard tone="rose"   icon={Radar}         label="Competition"       value={inferCompetition(score)} hint="vs. current supply" />
-        <KpiCard tone="blue"   icon={Users}         label="Audience"          value={firstWord(dna?.audienceProfile?.who) || "Defined"} hint={dna?.audienceProfile?.who ? shortText(dna.audienceProfile.who, 40) : "—"} />
-        <KpiCard tone="amber"  icon={CalendarClock} label="Posting cadence"   value={firstWord(dna.postingFrequency) || "Daily"} hint={shortText(dna.postingFrequency, 34)} />
+        <KpiCard
+          tone={engagementTone(perf?.engagementBenchmark)}
+          icon={Gauge}
+          label="Engagement rate"
+          value={String(perf?.engagementRate ?? (limited ? "—" : "—"))}
+          hint={perf?.engagementBenchmark ? capitalize(String(perf.engagementBenchmark)) : "Not available"}
+        />
+        <KpiCard
+          tone="blue"
+          icon={TrendingUp}
+          label="Avg likes"
+          value={numOrDash(perf?.avgLikesPerPost)}
+          hint={postsAnalyzed ? `${postsAnalyzed} posts analyzed` : "No posts scraped"}
+        />
+        <KpiCard
+          tone="purple"
+          icon={MessageSquare}
+          label="Avg comments"
+          value={numOrDash(perf?.avgCommentsPerPost)}
+          hint={perf?.avgViewsPerReel ? `${numOrDash(perf.avgViewsPerReel)} avg reel views` : undefined}
+        />
+        <KpiCard
+          tone={Number(perf?.viralPostCount) > 0 ? "green" : "gray"}
+          icon={Rocket}
+          label="Viral posts"
+          value={numOrDash(perf?.viralPostCount)}
+          hint={perf?.viralThreshold ? "3× avg engagement threshold" : undefined}
+          sub={postsAnalyzed ? `/ ${postsAnalyzed}` : undefined}
+        />
       </div>
+
+      {/* ── OPPORTUNITY + CADENCE strip ───────────────────────── */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard tone="green" icon={Target} label="Opportunity" value={`${score || "—"}`} sub="/ 100"
+                 hint={score >= 70 ? "High" : score >= 40 ? "Moderate" : "Low"} />
+        <KpiCard tone="rose"  icon={Radar}  label="Competition"
+                 value={capitalize(String(dna?.competitivePosition?.competitionLevel ?? inferCompetition(score)))}
+                 hint="Supply vs demand" />
+        <KpiCard tone="blue"  icon={Users}  label="Audience"
+                 value={firstWord(dna?.audienceProfile?.who) || "Defined"}
+                 hint={shortText(dna?.audienceProfile?.who, 40) || "—"} />
+        <KpiCard tone="amber" icon={CalendarClock} label="Cadence"
+                 value={firstWord(dna?.postingFrequency) || "—"}
+                 hint={shortText(dna?.postingFrequency, 34)} />
+      </div>
+
+      {/* ── CONTENT FORMAT DISTRIBUTION ───────────────────────── */}
+      {(fmt?.imagePercent != null || fmt?.reelPercent != null || fmt?.carouselPercent != null) && !limited && (
+        <Card className="mb-8 p-5">
+          <SectionHead icon={Layers3} tone="purple" title="Content format mix" sub={fmt?.formatInsight || "Format distribution across scraped posts"} />
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <FormatBar label="Image"    value={Number(fmt?.imagePercent) || 0}    color="from-blue-500 to-blue-600" />
+            <FormatBar label="Reel"     value={Number(fmt?.reelPercent) || 0}     color="from-violet-500 to-pink-500" />
+            <FormatBar label="Carousel" value={Number(fmt?.carouselPercent) || 0} color="from-amber-500 to-orange-500" />
+          </div>
+        </Card>
+      )}
 
       {/* ── AI INSIGHTS callouts ───────────────────────────────── */}
       {(growthOpp || topRisk) && (
@@ -475,7 +545,7 @@ function ReportDetail({
       )}
 
       {/* ── CHARTS ─────────────────────────────────────────────── */}
-      {pillarData.length > 0 && (
+      {pillarData.length > 0 && !limited && (
         <div className="mb-8 grid gap-4 lg:grid-cols-3">
           <Card className="p-5 lg:col-span-2">
             <SectionHead icon={Layers3} tone="purple" title="Content pillar mix" sub="Share of voice by pillar" />
@@ -709,6 +779,40 @@ function ReportDetail({
 
 // ─── Sub-components ────────────────────────────────────────────────
 
+function numOrDash(n: unknown): string {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v === 0) return "—";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return String(Math.round(v));
+}
+function capitalize(s: string): string {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function engagementTone(bench?: string): Tone {
+  const b = String(bench ?? "").toLowerCase();
+  if (b.includes("above")) return "green";
+  if (b.includes("below")) return "rose";
+  if (b.includes("average")) return "amber";
+  return "gray";
+}
+
+function FormatBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="font-mono text-lg font-bold">{pct}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-background">
+        <div className={cn("h-full rounded-full bg-gradient-to-r transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function OpportunityGauge({ score }: { score: number }) {
   const data = [{ name: "score", value: Math.max(0, Math.min(100, score)) }];
   return (
@@ -911,12 +1015,48 @@ function IdeaCard({
 }: { idea: any; saved: boolean; saving: boolean; onSave: () => void }) {
   const meta = formatMeta(idea.format);
   const FIcon = meta.icon;
+  const navigate = useNavigate();
+  const useThisIdea = () => {
+    try {
+      sessionStorage.setItem(
+        "ig:seed-idea",
+        JSON.stringify({
+          title: idea.title,
+          hook: idea.hook,
+          caption_opener: idea.caption_opener,
+          cta: idea.cta,
+          format: idea.format,
+          hashtags: idea.hashtags,
+          description: idea.description,
+          why_it_works: idea.why_it_works,
+        }),
+      );
+    } catch {}
+    const f = String(idea.format ?? "").toLowerCase();
+    const dest =
+      f === "reel" ? "/studio/reel" :
+      f === "carousel" ? "/studio/carousel" :
+      f === "image" ? "/studio/image" :
+      "/studio";
+    toast.success("Idea sent to Studio — hook & caption are on your clipboard-ready draft");
+    navigate({ to: dest });
+  };
   return (
     <Card className="group flex flex-col overflow-hidden border-border/60 p-0 transition hover:-translate-y-0.5 hover:border-accent-primary/50 hover:shadow-lg">
       <div className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
-          <FIcon className="h-3 w-3" />
-          {meta.label}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
+            <FIcon className="h-3 w-3" />
+            {meta.label}
+          </div>
+          {idea.category && (
+            <Badge variant="outline" className="text-[10px]">
+              {idea.category}
+            </Badge>
+          )}
+          {idea.production_difficulty && (
+            <span className="text-[10px] text-muted-foreground">· {idea.production_difficulty}</span>
+          )}
         </div>
         <ConfidenceRing value={idea.confidence_score} />
       </div>
@@ -930,10 +1070,24 @@ function IdeaCard({
             {idea.hook}
           </blockquote>
         )}
-        {idea.description && (
+        {idea.why_it_works ? (
+          <p className="mb-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground/80">Why it works: </span>{idea.why_it_works}
+          </p>
+        ) : idea.description && (
           <p className="mb-4 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
             {idea.description}
           </p>
+        )}
+        {idea.caption_opener && (
+          <p className="mb-3 line-clamp-2 rounded-md bg-muted/40 p-2 text-[12px] leading-relaxed text-foreground/75">
+            {idea.caption_opener}
+          </p>
+        )}
+        {idea.viral_mechanism && (
+          <span className="mb-2 inline-block text-[10px] font-medium uppercase tracking-wider text-accent-primary">
+            {idea.viral_mechanism}
+          </span>
         )}
       </div>
 
@@ -943,11 +1097,11 @@ function IdeaCard({
         <ScoreBar label="Difficulty" value={idea.difficulty_score}        tone="amber" />
       </div>
 
-      <div className="px-5 pb-4">
+      <div className="grid grid-cols-2 gap-2 px-5 pb-4">
         <Button
           size="sm"
-          variant={saved ? "secondary" : "default"}
-          className="w-full gap-1.5"
+          variant={saved ? "secondary" : "outline"}
+          className="gap-1.5"
           onClick={onSave}
           disabled={saving || saved}
         >
@@ -958,7 +1112,10 @@ function IdeaCard({
           ) : (
             <CalendarPlus className="h-3.5 w-3.5" />
           )}
-          {saved ? "Saved to Planner" : saving ? "Saving…" : "Save to Planner"}
+          {saved ? "Saved" : saving ? "Saving…" : "Save"}
+        </Button>
+        <Button size="sm" className="gap-1.5" onClick={useThisIdea}>
+          <Sparkles className="h-3.5 w-3.5" /> Use This Idea
         </Button>
       </div>
     </Card>
@@ -1088,18 +1245,60 @@ function OpportunityEngine({
             </div>
           </div>
 
-          {/* Grid */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((idea: any) => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                saved={savedIdeas.has(idea.id)}
-                saving={savingIdea === idea.id}
-                onSave={() => onSaveIdea(idea)}
-              />
-            ))}
-          </div>
+          {/* Grouped by category */}
+          {(() => {
+            const CATEGORIES = [
+              "Steal the Frame",
+              "Exploit the Gaps",
+              "Amplify What Works",
+              "Original Authority",
+              "Viral Formats",
+            ];
+            const grouped = new Map<string, any[]>();
+            for (const i of filtered) {
+              const key = i.category || "Other";
+              if (!grouped.has(key)) grouped.set(key, []);
+              grouped.get(key)!.push(i);
+            }
+            const ordered = [
+              ...CATEGORIES.filter((c) => grouped.has(c)).map((c) => [c, grouped.get(c)!] as const),
+              ...Array.from(grouped.entries()).filter(([k]) => !CATEGORIES.includes(k)),
+            ];
+            // If AI didn't tag categories, render a single grid
+            if (ordered.length <= 1 && !ordered[0]?.[0]) {
+              return (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filtered.map((idea: any) => (
+                    <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <Accordion type="multiple" defaultValue={CATEGORIES} className="space-y-3">
+                {ordered.map(([cat, list]) => (
+                  <AccordionItem key={cat} value={cat} className="overflow-hidden rounded-xl border border-border bg-card">
+                    <AccordionTrigger className="px-5 py-4 hover:no-underline">
+                      <div className="flex min-w-0 items-center gap-3 text-left">
+                        <IconTile icon={Sparkles} tone="green" size={20} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold">{cat}</div>
+                          <div className="text-xs text-muted-foreground">{list.length} idea{list.length === 1 ? "" : "s"}</div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="border-t border-border/60 p-4">
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {list.map((idea: any) => (
+                          <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            );
+          })()}
         </>
       )}
     </div>

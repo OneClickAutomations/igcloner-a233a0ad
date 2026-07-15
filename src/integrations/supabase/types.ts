@@ -398,6 +398,8 @@ export type Database = {
         Row: {
           audience_interest_score: number | null
           business_value_score: number | null
+          caption_opener: string | null
+          category: string | null
           competition_score: number | null
           confidence_score: number | null
           created_at: string
@@ -408,18 +410,24 @@ export type Database = {
           hashtags: Json | null
           hook: string | null
           id: string
+          idea_number: number | null
           platform: string | null
+          production_difficulty: string | null
           production_time_score: number | null
           research_report_id: string | null
           saved_to_planner: boolean
           title: string
           updated_at: string
           user_id: string
+          viral_mechanism: string | null
           virality_score: number | null
+          why_it_works: string | null
         }
         Insert: {
           audience_interest_score?: number | null
           business_value_score?: number | null
+          caption_opener?: string | null
+          category?: string | null
           competition_score?: number | null
           confidence_score?: number | null
           created_at?: string
@@ -430,18 +438,24 @@ export type Database = {
           hashtags?: Json | null
           hook?: string | null
           id?: string
+          idea_number?: number | null
           platform?: string | null
+          production_difficulty?: string | null
           production_time_score?: number | null
           research_report_id?: string | null
           saved_to_planner?: boolean
           title: string
           updated_at?: string
           user_id: string
+          viral_mechanism?: string | null
           virality_score?: number | null
+          why_it_works?: string | null
         }
         Update: {
           audience_interest_score?: number | null
           business_value_score?: number | null
+          caption_opener?: string | null
+          category?: string | null
           competition_score?: number | null
           confidence_score?: number | null
           created_at?: string
@@ -452,14 +466,18 @@ export type Database = {
           hashtags?: Json | null
           hook?: string | null
           id?: string
+          idea_number?: number | null
           platform?: string | null
+          production_difficulty?: string | null
           production_time_score?: number | null
           research_report_id?: string | null
           saved_to_planner?: boolean
           title?: string
           updated_at?: string
           user_id?: string
+          viral_mechanism?: string | null
           virality_score?: number | null
+          why_it_works?: string | null
         }
         Relationships: [
           {
@@ -966,8 +984,11 @@ export type Database = {
           error_message: string | null
           id: string
           is_saved: boolean
+          limited_data: boolean
+          limited_data_reason: string | null
           mode: string
           opportunity_score: number | null
+          posts_analyzed: number | null
           raw_data: Json | null
           status: string
           subject: string
@@ -980,8 +1001,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           is_saved?: boolean
+          limited_data?: boolean
+          limited_data_reason?: string | null
           mode: string
           opportunity_score?: number | null
+          posts_analyzed?: number | null
           raw_data?: Json | null
           status?: string
           subject: string
@@ -994,8 +1018,11 @@ export type Database = {
           error_message?: string | null
           id?: string
           is_saved?: boolean
+          limited_data?: boolean
+          limited_data_reason?: string | null
           mode?: string
           opportunity_score?: number | null
+          posts_analyzed?: number | null
           raw_data?: Json | null
           status?: string
           subject?: string
