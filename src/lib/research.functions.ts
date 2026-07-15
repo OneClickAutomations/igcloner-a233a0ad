@@ -344,14 +344,37 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
 
-    const system = `You generate high-signal Instagram content ideas grounded in a Content DNA report. Return ONLY a JSON array of 50 items. No prose.`;
-    const shape = `[{
+    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
+Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
+
+REJECT an idea if it:
+- Could apply to any account in any niche ("Post more consistently")
+- Does not include a specific, ready-to-use hook line
+- Does not specify the exact format (Reel / Carousel / Image / Story)
+- Does not explain WHY it will perform based on this account's data
+- Sounds like something a generic AI calendar would generate
+
+APPROVE an idea if it:
+- Uses the SPECIFIC language patterns found in this account's captions
+- References the SPECIFIC audience this account attracts
+- Has a hook line the user can literally copy and post tomorrow
+- Is informed by what ALREADY performed on this account or this niche
+
+Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no wrapper object.`;
+
+    const shape = `{
+  "idea_number": 1..50,
+  "category": "Steal the Frame" | "Exploit the Gaps" | "Amplify What Works" | "Original Authority" | "Viral Formats",
   "title": string,
-  "hook": string,
-  "description": string,
-  "format": "Reel"|"Carousel"|"Post"|"Story",
+  "format": "Reel" | "Carousel" | "Image" | "Story",
   "platform": string,
-  "cta": string,
+  "hook": string,                       // exact first line — ready to post
+  "description": string,                // one sentence concept
+  "why_it_works": string,               // reference specific data from this account
+  "caption_opener": string,             // first 2-3 lines of caption
+  "cta": string,                        // match this account's proven CTA patterns
+  "viral_mechanism": "save-worthy" | "share-worthy" | "comment-triggering" | "scroll-stopping",
+  "production_difficulty": "easy (30 min)" | "medium (2 hours)" | "hard (half day)",
   "hashtags": [string],
   "virality_score": 0-100,
   "difficulty_score": 0-100,
@@ -360,8 +383,24 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
   "audience_interest_score": 0-100,
   "production_time_score": 0-100,
   "confidence_score": 0-100
-}]`;
-    const prompt = `Subject: ${report.subject} (${report.mode})\nContent DNA:\n${JSON.stringify(report.dna_report).slice(0, 20000)}\n\nGenerate exactly 50 distinct ideas following:\n${shape}`;
+}`;
+
+    const prompt = `Subject: ${report.subject} (mode: ${report.mode})
+Content DNA report (grounded in real scrape):
+${JSON.stringify(report.dna_report).slice(0, 22000)}
+
+Generate EXACTLY 50 content ideas distributed across 5 strategy categories, 10 ideas each:
+
+CATEGORY 1 — "Steal the Frame" (ideas 1-10): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
+CATEGORY 2 — "Exploit the Gaps" (ideas 11-20): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
+CATEGORY 3 — "Amplify What Works" (ideas 21-30): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
+CATEGORY 4 — "Original Authority" (ideas 31-40): Original angles NOT present on this account that position the user as a trusted authority.
+CATEGORY 5 — "Viral Formats" (ideas 41-50): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
+
+Each object MUST match this shape:
+${shape}
+
+Return a flat JSON array of 50 objects. Nothing else.`;
 
     const { text } = await generateText({ model, system, prompt });
     const ideas = parseJsonish<any[]>(text);
@@ -370,7 +409,7 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     // Wipe prior ideas so re-runs don't duplicate.
     await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
 
-    const rows = ideas.slice(0, 50).map((i: any) => ({
+    const rows = ideas.slice(0, 50).map((i: any, idx: number) => ({
       user_id: userId,
       research_report_id: data.id,
       title: String(i.title ?? "Untitled").slice(0, 200),
@@ -380,6 +419,12 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
       platform: String(i.platform ?? "Instagram"),
       cta: String(i.cta ?? ""),
       hashtags: Array.isArray(i.hashtags) ? i.hashtags.slice(0, 20) : [],
+      category: String(i.category ?? "").slice(0, 60) || null,
+      idea_number: Number(i.idea_number) || idx + 1,
+      caption_opener: String(i.caption_opener ?? "").slice(0, 800) || null,
+      why_it_works: String(i.why_it_works ?? "").slice(0, 500) || null,
+      viral_mechanism: String(i.viral_mechanism ?? "").slice(0, 60) || null,
+      production_difficulty: String(i.production_difficulty ?? "").slice(0, 60) || null,
       virality_score: Number(i.virality_score) || 0,
       difficulty_score: Number(i.difficulty_score) || 0,
       competition_score: Number(i.competition_score) || 0,
