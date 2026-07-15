@@ -1245,18 +1245,60 @@ function OpportunityEngine({
             </div>
           </div>
 
-          {/* Grid */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((idea: any) => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                saved={savedIdeas.has(idea.id)}
-                saving={savingIdea === idea.id}
-                onSave={() => onSaveIdea(idea)}
-              />
-            ))}
-          </div>
+          {/* Grouped by category */}
+          {(() => {
+            const CATEGORIES = [
+              "Steal the Frame",
+              "Exploit the Gaps",
+              "Amplify What Works",
+              "Original Authority",
+              "Viral Formats",
+            ];
+            const grouped = new Map<string, any[]>();
+            for (const i of filtered) {
+              const key = i.category || "Other";
+              if (!grouped.has(key)) grouped.set(key, []);
+              grouped.get(key)!.push(i);
+            }
+            const ordered = [
+              ...CATEGORIES.filter((c) => grouped.has(c)).map((c) => [c, grouped.get(c)!] as const),
+              ...Array.from(grouped.entries()).filter(([k]) => !CATEGORIES.includes(k)),
+            ];
+            // If AI didn't tag categories, render a single grid
+            if (ordered.length <= 1 && !ordered[0]?.[0]) {
+              return (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filtered.map((idea: any) => (
+                    <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
+                  ))}
+                </div>
+              );
+            }
+            return (
+              <Accordion type="multiple" defaultValue={CATEGORIES} className="space-y-3">
+                {ordered.map(([cat, list]) => (
+                  <AccordionItem key={cat} value={cat} className="overflow-hidden rounded-xl border border-border bg-card">
+                    <AccordionTrigger className="px-5 py-4 hover:no-underline">
+                      <div className="flex min-w-0 items-center gap-3 text-left">
+                        <IconTile icon={Sparkles} tone="green" size={20} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold">{cat}</div>
+                          <div className="text-xs text-muted-foreground">{list.length} idea{list.length === 1 ? "" : "s"}</div>
+                        </div>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="border-t border-border/60 p-4">
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {list.map((idea: any) => (
+                          <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            );
+          })()}
         </>
       )}
     </div>
