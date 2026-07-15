@@ -779,6 +779,40 @@ function ReportDetail({
 
 // ─── Sub-components ────────────────────────────────────────────────
 
+function numOrDash(n: unknown): string {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v === 0) return "—";
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return String(Math.round(v));
+}
+function capitalize(s: string): string {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function engagementTone(bench?: string): Tone {
+  const b = String(bench ?? "").toLowerCase();
+  if (b.includes("above")) return "green";
+  if (b.includes("below")) return "rose";
+  if (b.includes("average")) return "amber";
+  return "gray";
+}
+
+function FormatBar({ label, value, color }: { label: string; value: number; color: string }) {
+  const pct = Math.max(0, Math.min(100, Math.round(value)));
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span className="font-mono text-lg font-bold">{pct}%</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-background">
+        <div className={cn("h-full rounded-full bg-gradient-to-r transition-all", color)} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function OpportunityGauge({ score }: { score: number }) {
   const data = [{ name: "score", value: Math.max(0, Math.min(100, score)) }];
   return (
