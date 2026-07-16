@@ -23,6 +23,35 @@ import {
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
 
+function AnalysisThumb({
+  src,
+  postType,
+  account,
+}: {
+  src: string | null;
+  postType: string | null;
+  account: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center gradient-card text-4xl">
+        {postType === "Reel" ? "🎬" : postType === "Carousel" ? "🎴" : "📸"}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={`@${account ?? ""} post`}
+      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface AnalysisItem {
   id: string;
   instagram_url: string;
