@@ -23,6 +23,35 @@ import {
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
 
+function AnalysisThumb({
+  src,
+  postType,
+  account,
+}: {
+  src: string | null;
+  postType: string | null;
+  account: string | null;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center gradient-card text-4xl">
+        {postType === "Reel" ? "🎬" : postType === "Carousel" ? "🎴" : "📸"}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={`@${account ?? ""} post`}
+      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface AnalysisItem {
   id: string;
   instagram_url: string;
@@ -442,26 +471,7 @@ function DashboardPageInner() {
                         className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-ig transition-all duration-200 hover:-translate-y-0.5 hover:shadow-ig-hover"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-                          {t ? (
-                            <img
-                              src={t}
-                              alt={`@${a.source_account ?? ""} post`}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center gradient-card text-4xl">
-                              {a.post_type === "Reel"
-                                ? "🎬"
-                                : a.post_type === "Carousel"
-                                  ? "🎴"
-                                  : "📸"}
-                            </div>
-                          )}
+                          <AnalysisThumb src={t} postType={a.post_type} account={a.source_account} />
                           <span className="absolute left-2 top-2 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur">
                             {a.post_type || "Post"}
                           </span>
