@@ -1,18 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// 1x1 transparent PNG returned when upstream fails so <img> tags don't break the UI.
-const FALLBACK_PNG = Uint8Array.from(
-  atob(
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-  ),
-  (c) => c.charCodeAt(0),
-);
-
-function fallbackResponse(reason: string) {
-  return new Response(FALLBACK_PNG, {
-    status: 200,
+// Return a real error status so <img onError> fires and the UI swaps to its
+// own fallback (emoji thumbnail, initials, etc.) instead of rendering a blank
+// 1x1 pixel stretched to fill the container.
+function errorResponse(reason: string, status = 502) {
+  return new Response(reason, {
+    status,
     headers: {
-      "Content-Type": "image/png",
+      "Content-Type": "text/plain",
       "Cache-Control": "public, max-age=300",
       "X-Proxy-Fallback": reason,
     },
@@ -46,7 +41,7 @@ export const Route = createFileRoute("/api/public/img")({
           });
           if (!upstream.ok || !upstream.body) {
             console.warn(`[img-proxy] upstream ${upstream.status} for ${target.hostname}`);
-            return fallbackResponse(`upstream-${upstream.status}`);
+            return errorResponse(`upstream-${upstream.status}`, 502);
           }
           return new Response(upstream.body, {
             status: 200,
@@ -57,7 +52,7 @@ export const Route = createFileRoute("/api/public/img")({
           });
         } catch (err) {
           console.error("[img-proxy] fetch failed", err);
-          return fallbackResponse("fetch-failed");
+          return errorResponse("fetch-failed", 502);
         }
       },
     },
