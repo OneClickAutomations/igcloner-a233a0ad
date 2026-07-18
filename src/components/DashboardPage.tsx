@@ -264,6 +264,8 @@ function DashboardPageInner() {
   const [firstName, setFirstName] = useState<string>("");
   const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
   const dashFn = useServerFn(getResearchDashboard);
+  const cacheThumbsFn = useServerFn(ensureAnalysisThumbnails);
+  const [cachedThumbs, setCachedThumbs] = useState<Record<string, string | null>>({});
   const [research, setResearch] = useState<{
     recent: any[];
     saved: any[];
@@ -303,6 +305,15 @@ function DashboardPageInner() {
     }
 
     setAnalyses(data || []);
+
+    // Cache IG thumbnails to our own bucket so they don't disappear when
+    // Instagram's signed URLs expire. Fire-and-forget; UI still renders.
+    const ids = (data ?? []).slice(0, 12).map((a: any) => a.id);
+    if (ids.length > 0) {
+      cacheThumbsFn({ data: { ids } })
+        .then((res: any) => setCachedThumbs((prev) => ({ ...prev, ...(res?.thumbnails ?? {}) })))
+        .catch(() => {});
+    }
 
     const [clonesRes, savedRes] = await Promise.all([
       supabase.from("clones").select("*", { count: "exact", head: true }).eq("user_id", uid),
