@@ -22,6 +22,24 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
+import { ensureAnalysisThumbnails } from "@/lib/analysis-thumbs.functions";
+
+// Deterministic premium gradient per account handle so the fallback tile
+// feels branded and consistent, not random.
+const GRADIENTS = [
+  "from-[#F58529] via-[#DD2A7B] to-[#8134AF]",
+  "from-[#8134AF] via-[#515BD4] to-[#0F172A]",
+  "from-[#0EA5E9] via-[#6366F1] to-[#8B5CF6]",
+  "from-[#F472B6] via-[#EC4899] to-[#8B5CF6]",
+  "from-[#F59E0B] via-[#EF4444] to-[#DB2777]",
+  "from-[#10B981] via-[#0EA5E9] to-[#6366F1]",
+];
+function gradientFor(seed: string | null | undefined): string {
+  const s = String(seed ?? "").toLowerCase();
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return GRADIENTS[Math.abs(h) % GRADIENTS.length];
+}
 
 function AnalysisThumb({
   src,
@@ -33,10 +51,15 @@ function AnalysisThumb({
   account: string | null;
 }) {
   const [failed, setFailed] = useState(false);
+  const initial = (account?.trim()?.[0] ?? "•").toUpperCase();
+  const grad = gradientFor(account);
   if (!src || failed) {
     return (
-      <div className="flex h-full w-full items-center justify-center gradient-card text-4xl">
-        {postType === "Reel" ? "🎬" : postType === "Carousel" ? "🎴" : "📸"}
+      <div className={`relative flex h-full w-full items-center justify-center bg-gradient-to-br ${grad}`}>
+        <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "radial-gradient(circle at 30% 20%, white 0, transparent 45%)" }} />
+        <span className="relative z-10 font-serif text-5xl font-semibold text-white drop-shadow-sm">
+          {initial}
+        </span>
       </div>
     );
   }
@@ -241,6 +264,8 @@ function DashboardPageInner() {
   const [firstName, setFirstName] = useState<string>("");
   const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
   const dashFn = useServerFn(getResearchDashboard);
+  const cacheThumbsFn = useServerFn(ensureAnalysisThumbnails);
+  const [cachedThumbs, setCachedThumbs] = useState<Record<string, string | null>>({});
   const [research, setResearch] = useState<{
     recent: any[];
     saved: any[];
@@ -280,6 +305,15 @@ function DashboardPageInner() {
     }
 
     setAnalyses(data || []);
+
+    // Cache IG thumbnails to our own bucket so they don't disappear when
+    // Instagram's signed URLs expire. Fire-and-forget; UI still renders.
+    const ids = (data ?? []).slice(0, 12).map((a: any) => a.id);
+    if (ids.length > 0) {
+      cacheThumbsFn({ data: { ids } })
+        .then((res: any) => setCachedThumbs((prev) => ({ ...prev, ...(res?.thumbnails ?? {}) })))
+        .catch(() => {});
+    }
 
     const [clonesRes, savedRes] = await Promise.all([
       supabase.from("clones").select("*", { count: "exact", head: true }).eq("user_id", uid),
@@ -464,7 +498,7 @@ function DashboardPageInner() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {analyses.slice(0, 6).map((a) => {
                     const raw = a.scraped_data?.displayUrl || a.scraped_data?.thumbnailUrl;
-                    const t = proxiedImg(raw);
+                    const t = cachedThumbs[a.id] ?? proxiedImg(raw);
                     return (
                       <div
                         key={a.id}
