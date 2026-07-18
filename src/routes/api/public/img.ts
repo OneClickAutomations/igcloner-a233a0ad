@@ -3,7 +3,10 @@ import { createFileRoute } from "@tanstack/react-router";
 // Return a real error status so <img onError> fires and the UI swaps to its
 // own fallback (emoji thumbnail, initials, etc.) instead of rendering a blank
 // 1x1 pixel stretched to fill the container.
-function errorResponse(reason: string, status = 502) {
+// Return 404 (not 5xx) so <img onError> still fires and swaps to the UI
+// fallback, but Lovable's runtime-error reporter doesn't flag expired
+// Instagram URLs as server errors / blank screens.
+function errorResponse(reason: string, status = 404) {
   return new Response(reason, {
     status,
     headers: {
@@ -41,7 +44,7 @@ export const Route = createFileRoute("/api/public/img")({
           });
           if (!upstream.ok || !upstream.body) {
             console.warn(`[img-proxy] upstream ${upstream.status} for ${target.hostname}`);
-            return errorResponse(`upstream-${upstream.status}`, 502);
+            return errorResponse(`upstream-${upstream.status}`, 404);
           }
           return new Response(upstream.body, {
             status: 200,
@@ -52,7 +55,7 @@ export const Route = createFileRoute("/api/public/img")({
           });
         } catch (err) {
           console.error("[img-proxy] fetch failed", err);
-          return errorResponse("fetch-failed", 502);
+          return errorResponse("fetch-failed", 404);
         }
       },
     },
