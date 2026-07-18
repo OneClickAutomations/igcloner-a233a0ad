@@ -498,7 +498,7 @@ function DashboardPageInner() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   {analyses.slice(0, 6).map((a) => {
                     const raw = a.scraped_data?.displayUrl || a.scraped_data?.thumbnailUrl;
-                    const t = proxiedImg(raw);
+                    const t = cachedThumbs[a.id] ?? proxiedImg(raw);
                     return (
                       <div
                         key={a.id}
