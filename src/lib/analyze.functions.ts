@@ -714,7 +714,7 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       let fallback = false;
       try {
         console.log("[analyze] scraping…");
-        scraped = await scrapeInstagram(data.url);
+        scraped = await scrapePost(data.url);
         console.log("[analyze] scrape ok", { owner: scraped?.ownerUsername });
       } catch (e) {
         console.warn("[analyze] scrape fallback:", (e as Error).message);
