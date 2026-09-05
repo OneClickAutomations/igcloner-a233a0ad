@@ -15,12 +15,18 @@ import type { ViralScoreResult } from "@/lib/scoring";
 const PLACEHOLDERS = [
   "instagram.com/reel/...",
   "instagram.com/p/...",
-  "instagram.com/carousel/...",
+  "facebook.com/.../posts/...",
+  "facebook.com/reel/...",
 ];
 
+function isSupportedUrl(url: string): boolean {
+  return /(instagram\.com|facebook\.com|fb\.watch|fb\.com)/i.test(url);
+}
+
 function detectPostType(url: string): string | null {
-  if (!url.includes("instagram.com")) return null;
-  if (url.includes("/reel/")) return "Reel";
+  if (!isSupportedUrl(url)) return null;
+  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
+  if (url.includes("/videos/") || url.includes("fb.watch")) return "Video";
   if (url.includes("/p/")) return "Post";
   if (url.includes("/carousel/")) return "Carousel";
   return "Post";
@@ -107,8 +113,8 @@ export function AppPage() {
   }, [search, analysisId, loadFn]);
 
   const handleAnalyze = async () => {
-    if (!url.includes("instagram.com")) {
-      toast.error("Please enter a valid Instagram URL");
+    if (!isSupportedUrl(url)) {
+      toast.error("Please enter a valid Instagram or Facebook URL");
       return;
     }
     if (usage && usage.remaining <= 0) {
@@ -199,7 +205,7 @@ export function AppPage() {
         {phase === "input" && (
           <div className="flex flex-col items-center justify-center py-20">
             <h1 className="mb-2 text-center text-3xl font-bold tracking-tight sm:text-4xl">
-              Paste any Instagram URL
+              Paste any Instagram or Facebook URL
             </h1>
             <p className="mb-8 text-center text-muted-foreground">
               We'll deconstruct why it works and give you 5 viral angles for your niche.
@@ -225,11 +231,11 @@ export function AppPage() {
                   <span>Detected: {postType}</span>
                 </div>
               )}
-              {!postType && url && !url.includes("instagram.com") && (
-                <div className="mt-2 text-sm text-status-error">Please enter a valid Instagram URL</div>
+              {!postType && url && !isSupportedUrl(url) && (
+                <div className="mt-2 text-sm text-status-error">Please enter a valid Instagram or Facebook URL</div>
               )}
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">Reel · Carousel · Post — any public Instagram content</p>
+            <p className="mt-6 text-xs text-muted-foreground">Reel · Carousel · Post · Video — any public Instagram or Facebook content</p>
           </div>
         )}
 
