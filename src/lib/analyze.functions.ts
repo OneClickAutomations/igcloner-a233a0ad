@@ -263,7 +263,10 @@ async function fetchVisionImage(
       const res = await fetch(sourceUrl, {
         headers: {
           Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          Referer: "https://www.instagram.com/",
+          Referer: /fbcdn|facebook/i.test(sourceUrl)
+            ? "https://www.facebook.com/"
+            : "https://www.instagram.com/",
+
           "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
         },
