@@ -132,7 +132,6 @@ async function scrapeFacebook(url: string): Promise<ScrapedPost> {
     body: JSON.stringify({
       startUrls: [{ url }],
       resultsLimit: 1,
-about: false,
     }),
   });
 
