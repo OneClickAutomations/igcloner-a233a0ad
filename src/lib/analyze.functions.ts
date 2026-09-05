@@ -5,14 +5,34 @@ import { generateText, type ModelMessage } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { computeViralScore } from "@/lib/scoring";
 
+const SUPPORTED_HOST = /(^|\.)(instagram\.com|facebook\.com|fb\.watch|fb\.com|m\.facebook\.com)$/i;
+
+function isSupportedSocialUrl(u: string): boolean {
+  try {
+    return SUPPORTED_HOST.test(new URL(u).hostname);
+  } catch {
+    return false;
+  }
+}
+
+export function isFacebookUrl(u: string): boolean {
+  try {
+    const h = new URL(u).hostname;
+    return /facebook\.com$|fb\.watch$|fb\.com$/i.test(h);
+  } catch {
+    return false;
+  }
+}
+
 const InputSchema = z.object({
   url: z
     .string()
     .url()
-    .refine((u) => u.includes("instagram.com"), {
-      message: "Must be an Instagram URL",
+    .refine(isSupportedSocialUrl, {
+      message: "Must be an Instagram or Facebook URL",
     }),
 });
+
 
 type ScrapedPost = {
   caption: string;
