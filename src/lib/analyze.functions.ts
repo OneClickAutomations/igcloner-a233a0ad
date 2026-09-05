@@ -70,10 +70,89 @@ type ScrapedPost = {
 };
 
 function detectPostType(url: string): string {
-  if (url.includes("/reel/")) return "Reel";
+  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
   if (url.includes("/carousel/")) return "Carousel";
+  if (isFacebookUrl(url) && (url.includes("/videos/") || url.includes("fb.watch"))) return "Video";
   return "Post";
 }
+
+/** Normalizes an Apify Facebook post item into our ScrapedPost shape. */
+function normalizeFacebookPost(raw: any, url: string): ScrapedPost {
+  const text: string = raw?.text ?? raw?.message ?? raw?.postText ?? "";
+  const hashtags = Array.from(
+    new Set((text.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((h: string) => h.slice(1))),
+  );
+  const media = Array.isArray(raw?.media) ? raw.media : [];
+  const firstMedia = media[0] ?? {};
+  const image =
+    raw?.thumbnailUrl ??
+    raw?.previewImage?.uri ??
+    firstMedia?.thumbnail ??
+    firstMedia?.photo_image?.uri ??
+    firstMedia?.image?.uri ??
+    firstMedia?.url ??
+    undefined;
+  const author = raw?.user ?? raw?.author ?? raw?.pageInfo ?? {};
+
+  return {
+    caption: text,
+    ownerUsername:
+      author?.name ?? author?.username ?? raw?.pageName ?? raw?.facebookUrl ?? "facebook",
+    likesCount: Number(raw?.likes ?? raw?.likesCount ?? raw?.reactionsCount ?? 0) || 0,
+    commentsCount: Number(raw?.comments ?? raw?.commentsCount ?? 0) || 0,
+    videoViewCount: Number(raw?.viewsCount ?? raw?.videoViewCount ?? 0) || undefined,
+    videoPlayCount: Number(raw?.videoPlayCount ?? 0) || undefined,
+    hashtags,
+    type: detectPostType(url),
+    url: raw?.url ?? raw?.topLevelUrl ?? url,
+    displayUrl: image,
+    thumbnailUrl: image,
+    videoUrl: raw?.videoUrl ?? firstMedia?.video_url ?? undefined,
+    timestamp: raw?.time ?? raw?.timestamp ?? undefined,
+    isSponsored: Boolean(raw?.isSponsored),
+    owner: {
+      username: author?.name ?? author?.username ?? undefined,
+      fullName: author?.name ?? undefined,
+      followersCount: Number(raw?.pageFollowers ?? author?.followers ?? 0) || undefined,
+      profilePicUrl: author?.profilePic ?? author?.profilePicture ?? undefined,
+      biography: raw?.pageAbout ?? undefined,
+      externalUrl: author?.profileUrl ?? raw?.facebookUrl ?? undefined,
+    },
+  };
+}
+
+async function scrapeFacebook(url: string): Promise<ScrapedPost> {
+  const token = process.env.APIFY_TOKEN;
+  if (!token) throw new Error("APIFY_TOKEN not configured");
+
+  const endpoint = `https://api.apify.com/v2/acts/apify~facebook-posts-scraper/run-sync-get-dataset-items?token=${token}`;
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      startUrls: [{ url }],
+      resultsLimit: 1,
+about: false,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("[Apify][fb] error:", res.status, text);
+    throw new Error(`Failed to scrape Facebook post (${res.status})`);
+  }
+
+  const items = (await res.json()) as any[];
+  if (!items || items.length === 0) {
+    throw new Error("No data returned for this Facebook URL. It may be private or invalid.");
+  }
+  return normalizeFacebookPost(items[0], url);
+}
+
+async function scrapePost(url: string): Promise<ScrapedPost> {
+  return isFacebookUrl(url) ? scrapeFacebook(url) : scrapeInstagram(url);
+}
+
 
 async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   const token = process.env.APIFY_TOKEN;
