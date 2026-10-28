@@ -376,6 +376,8 @@ Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no
 }`;
 
     const prompt = `Subject: ${report.subject} (mode: ${report.mode})
+Current date (UTC): ${new Date().toISOString().slice(0,10)}
+Do not invent first-person earnings, results, testimonials, credentials, or experiments. If a concept needs the creator's own evidence, explicitly say so in the concept and use a non-fabricated hook. Do not present predictions or an unscripted experiment as a proven financial result. Keep dates current unless quoting historic source material.
 Content DNA report (grounded in real scrape):
 ${JSON.stringify(report.dna_report)}
 INDEXED SOURCE POSTS (complete evidence):

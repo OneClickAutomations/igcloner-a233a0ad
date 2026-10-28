@@ -519,7 +519,8 @@ function ReportDetail({
         <SectionHead icon={TrendingUp} tone="green" title="Top posts by engagement" sub="Ranked by observed likes + comments" />
         <div className="mt-4 grid gap-3 md:grid-cols-3">{arr(dna.topPosts).map((post: any, index: number) => <Card key={post.url ?? index} className="min-w-0 p-4">
           <div className="mb-3 flex justify-between gap-2"><Badge variant="secondary">#{index+1} · {post.type}</Badge><span className="text-xs font-mono">{numOrDash(post.engagement)} interactions</span></div>
-          <p className="whitespace-pre-line break-words text-sm">{post.caption || "Caption not available"}</p>
+          <p className="whitespace-pre-line break-words text-sm">{String(post.caption || "Caption not available").slice(0,240)}{String(post.caption ?? "").length > 240 ? "…" : ""}</p>
+          {String(post.caption ?? "").length > 240 && <details className="mt-3 text-sm"><summary className="cursor-pointer text-accent-primary">Full caption</summary><p className="mt-2 whitespace-pre-line break-words">{post.caption}</p></details>}
           <p className="mt-3 text-xs text-muted-foreground">{post.timestamp ? new Date(post.timestamp).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC" : "Timestamp not available"}</p>
           {post.url && <Button asChild variant="outline" className="mt-3 min-h-11 w-full"><a href={post.url} target="_blank" rel="noreferrer">View source post <ArrowRight className="h-4 w-4" /></a></Button>}
         </Card>)}</div>
@@ -535,7 +536,7 @@ function ReportDetail({
                  value={firstWord(dna?.audienceProfile?.who) || "Defined"}
                  hint={shortText(dna?.audienceProfile?.who, 40) || "—"} />
         <KpiCard tone="amber" icon={CalendarClock} label="Cadence"
-                 value={firstWord(dna?.postingFrequency) || "—"}
+                 value={limited ? "Unavailable" : firstWord(dna?.postingFrequency) || "—"}
                  hint={shortText(dna?.postingFrequency, 34)} />
       </div>
 
