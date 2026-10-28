@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { normalizeIntelPost, groundIntelReport, validateIntelIdeas } from "@/lib/intel-analytics";
+import { generateIntelJson } from "@/lib/intel-ai.server";
 
 // ─────────────────────────────────────────────────────────────────────
 // Content Intelligence Engine — Research module (Phase 1)
@@ -25,8 +25,7 @@ function parseJsonish<T = any>(text: string): T {
   }
 }
 
-async function apifyRun(actor: string, input: unknown): Promise<any[]> {
-  const token = process.env.APIFY_TOKEN;
+async function apifyRun(actor: string, input: unknown, token: string): Promise<any[]> {
   if (!token) throw new Error("APIFY_TOKEN not configured");
   const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${token}`;
   const res = await fetch(url, {
@@ -43,37 +42,13 @@ async function apifyRun(actor: string, input: unknown): Promise<any[]> {
   return Array.isArray(data) ? data : [];
 }
 
-/** Trim a scraped post payload down to what the AI actually needs. */
-function slimPost(p: any) {
-  return {
-    type: p?.type,
-    caption: (p?.caption ?? "").slice(0, 1200),
-    likesCount: p?.likesCount,
-    commentsCount: p?.commentsCount,
-    videoViewCount: p?.videoViewCount ?? p?.videoPlayCount,
-    videoPlayCount: p?.videoPlayCount ?? null,
-    hashtags: (p?.hashtags ?? []).slice(0, 20),
-    mentions: (p?.mentions ?? []).slice(0, 10),
-    timestamp: p?.timestamp,
-    productType: p?.productType,
-    ownerUsername: p?.ownerUsername ?? p?.owner?.username,
-    url: p?.url,
-    shortCode: p?.shortCode ?? null,
-    isSponsored: p?.isSponsored ?? false,
-    locationName: p?.locationName ?? null,
-    carouselSlides: p?.type === "Sidecar" ? (p?.images?.length ?? null) : null,
-    firstComment: (p?.firstComment ?? "").slice(0, 300),
-    musicInfo: p?.musicInfo?.song_name ?? p?.musicInfo?.artist_name ?? null,
-  };
-}
-
-async function collectSignals(mode: "niche" | "competitor" | "topic", subject: string) {
+async function collectSignals(mode: "niche" | "competitor" | "topic", subject: string, token: string) {
   if (mode === "competitor") {
     // Handle the handle: strip @ / URL fragments.
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
-    const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] });
+    const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    const posts = (profile?.latestPosts ?? []).slice(0, 30).map(slimPost);
+    const posts = (profile?.latestPosts ?? []).map(normalizeIntelPost);
     return {
       subject: handle,
       profile: profile
@@ -82,7 +57,7 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
             fullName: profile.fullName,
             biography: profile.biography,
             followersCount: profile.followersCount,
-            followsCount: profile.followsCount,
+            followingCount: profile.followingCount ?? profile.followsCount,
             postsCount: profile.postsCount,
             verified: profile.verified,
             isBusinessAccount: profile.isBusinessAccount ?? false,
@@ -103,15 +78,11 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
   const items = await apifyRun("apify~instagram-hashtag-scraper", {
     hashtags: [term],
     resultsLimit: 40,
-  }).catch(() => [] as any[]);
-  return { subject, profile: null, posts: items.slice(0, 30).map(slimPost) };
+  }, token);
+  return { subject, profile: null, posts: items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]).filter(p => p.caption != null || p.type != null).map(normalizeIntelPost) };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-  const gateway = createLovableAiGatewayProvider(apiKey);
-  const model = gateway("google/gemini-2.5-flash");
 
   const posts: any[] = Array.isArray(signals?.posts) ? signals.posts : [];
   const profile = signals?.profile ?? null;
@@ -131,10 +102,10 @@ CRITICAL DATA RULES:
 6. Return ONLY valid JSON. No markdown fences, no explanation.`;
 
   const user = `SUBJECT: ${subject} (mode: ${mode})
-PROFILE: ${JSON.stringify(profile).slice(0, 4000)}
+PROFILE: ${JSON.stringify(profile)}
 POSTS ANALYZED: ${postsAnalyzed}
 POSTS DATA:
-${JSON.stringify(posts).slice(0, 45000)}
+${JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p })))}
 
 Return a single JSON object with BOTH the detailed schema AND the compact legacy keys used by the UI.
 Schema:
@@ -158,7 +129,7 @@ Schema:
   "postingStrategy": { "frequency": string, "consistencyScore": number, "bestPerformingDays": [string], "bestPerformingTimes": [string], "postingPatternInsight": string },
   "hookAnalysis": {
     "dominantHookTypes": [string],
-    "provenHooks": [{ "hookType": string, "actualOpeningLine": string, "engagementOnThisPost": number, "whyItWorked": string }],
+    "provenHooks": [{ "postIndex": number, "hookType": string, "actualOpeningLine": string, "engagementOnThisPost": number, "whyItWorked": string }],
     "captionLengthPattern": string,
     "captionStructure": string,
     "ctaPatterns": [string],
@@ -172,7 +143,7 @@ Schema:
   "executiveSummary": string,
   "opportunityScore": number,
   "audienceProfile": { "who": string, "desires": [string], "painPoints": [string], "psychographics": string },
-  "contentPillars": [{ "name": string, "share": number, "description": string, "avgEngagement": string, "topPerformingExample": string }],
+  "contentPillars": [{ "name": string, "postIndices": [number], "share": number, "description": string, "avgEngagement": string, "topPerformingExample": string }],
   "topTopics": [{ "topic": string, "why": string }],
   "commonHooks": [{ "pattern": string, "example": string }],
   "captionStructure": { "typicalLength": string, "tone": string, "openingStyle": string, "ctaStyle": string },
@@ -192,13 +163,22 @@ Schema:
   "competitiveAdvantages": [string]
 }
 
+ADDITIONAL REQUIRED STRATEGY KEYS:
+"opportunityActions": [{"title": string, "problem": string, "action": string}] (4 specific gaps; label inferred gaps as hypotheses, never claim competitor comparison without competitor data)
+"thirtyDayPlan": [{"week": number, "title": string, "actions": [string]}] (4 weeks, 4 specific action items each grounded in source captions, hooks and gaps)
+"hashtagTiers": {"broad": [string], "niche": [string], "community": [string], "recommendation": string} (only actual hashtag tokens from scraped posts, or explicitly label suggested tags in limited mode; volumes are Not available)
+
 IMPORTANT:
+- Assign EVERY postIndex to exactly one natural content pillar using postIndices. Never repeat or skip indices. Do not calculate percentages without assignments.
+- Hook evidence MUST include a real postIndex. Quote its exact first nonempty caption line.
+- Missing likes/comments/followers are null, not zero. Unknown visual features are Not available: this request supplies text, not images.
+- Account age, saves, shares and external niche benchmarks are Not available unless supplied.
+- No posts: all post metrics are null/Not available, no provenHooks or contentPillars. Interpret bio only, label audience and gap claims as inferences.
 - "contentPillars" MUST sum to ~100 and MUST be derived from the actual captions. Do NOT return 0% for real pillars.
 - If posts array is empty, still return the JSON but set pillars to [] and mark performanceMetrics numeric fields to 0.
 - Legacy compact keys (executiveSummary, audienceProfile, contentPillars, commonHooks, captionStructure, etc.) MUST be filled and stay consistent with the detailed ones.`;
 
-  const { text } = await generateText({ model, system, prompt: user });
-  const dna = parseJsonish<any>(text);
+  const dna = groundIntelReport(await generateIntelJson(system, user), signals);
   const score =
     Number(dna?.opportunityScore ?? dna?.competitivePosition?.opportunityScore ?? 0) || 0;
   return { dna, score, postsAnalyzed };
@@ -226,7 +206,14 @@ export const createResearchReport = createServerFn({ method: "POST" })
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
 
     try {
-      const signals = await collectSignals(data.mode, data.subject);
+      const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
+      let apifyToken = process.env.APIFY_TOKEN;
+      if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
+        const { decryptApiKey } = await import("@/lib/encryption.server");
+        apifyToken = decryptApiKey(keyRow.encrypted_key);
+      }
+      if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
+      const signals = await collectSignals(data.mode, data.subject, apifyToken);
       const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
       const limited = postsCount === 0;
       await supabase
@@ -297,7 +284,9 @@ export const getResearchReport = createServerFn({ method: "POST" })
       .select("*")
       .eq("research_report_id", data.id)
       .order("confidence_score", { ascending: false });
-    return { report, ideas: ideas ?? [] };
+    const raw = report.raw_data as any;
+    const grounded = raw?.posts ? groundIntelReport(report.dna_report ?? {}, raw) : report.dna_report;
+    return { report: { ...report, dna_report: grounded, limited_data: raw?.posts ? raw.posts.length === 0 : report.limited_data }, ideas: ideas ?? [] };
   });
 
 export const toggleSaveResearch = createServerFn({ method: "POST" })
@@ -327,13 +316,13 @@ export const deleteResearchReport = createServerFn({ method: "POST" })
 
 export const generateContentIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => IdInput.parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), preferences: z.object({ goal: z.string().max(200).optional(), niche: z.string().max(200).optional(), toneOfVoice: z.string().max(200).optional(), keywords: z.array(z.string().max(100)).max(20).optional() }).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
     const { data: report, error } = await supabase
       .from("research_reports")
-      .select("id, mode, subject, dna_report, status")
+      .select("id, mode, subject, dna_report, raw_data, status")
       .eq("id", data.id)
       .single();
     if (error || !report) throw new Error("Report not found");
@@ -350,7 +339,7 @@ Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL 
 REJECT an idea if it:
 - Could apply to any account in any niche ("Post more consistently")
 - Does not include a specific, ready-to-use hook line
-- Does not specify the exact format (Reel / Carousel / Image / Story)
+- Does not specify the exact format (Reel / Carousel / Image)
 - Does not explain WHY it will perform based on this account's data
 - Sounds like something a generic AI calendar would generate
 
@@ -363,10 +352,11 @@ APPROVE an idea if it:
 Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no wrapper object.`;
 
     const shape = `{
+  "source_post_index": number | null, // exact source post index for Steal the Frame and Amplify What Works
   "idea_number": 1..50,
   "category": "Steal the Frame" | "Exploit the Gaps" | "Amplify What Works" | "Original Authority" | "Viral Formats",
   "title": string,
-  "format": "Reel" | "Carousel" | "Image" | "Story",
+  "format": "Reel" | "Carousel" | "Image",
   "platform": string,
   "hook": string,                       // exact first line — ready to post
   "description": string,                // one sentence concept
@@ -387,7 +377,13 @@ Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no
 
     const prompt = `Subject: ${report.subject} (mode: ${report.mode})
 Content DNA report (grounded in real scrape):
-${JSON.stringify(report.dna_report).slice(0, 22000)}
+${JSON.stringify(report.dna_report)}
+INDEXED SOURCE POSTS (complete evidence):
+${JSON.stringify(((report.raw_data as any)?.posts ?? []).map((p: any, postIndex: number) => ({ postIndex, ...p })))}
+USER PREFERENCES (prioritize selected values over inferred niche or tone):
+${JSON.stringify(data.preferences ?? {})}
+If no user niche is selected, use the account's audience. No posts means PROFILE-ONLY suggestions: never claim a scraped best performer. Explain the specific bio/audience inference instead and use null source_post_index.
+For Steal the Frame and Amplify What Works with posts, source_post_index MUST reference an actual post and why_it_works MUST quote or describe that specific post and its observed engagement. Scores are predictions, not measured probabilities.
 
 Generate EXACTLY 50 content ideas distributed across 5 strategy categories, 10 ideas each:
 
@@ -402,14 +398,13 @@ ${shape}
 
 Return a flat JSON array of 50 objects. Nothing else.`;
 
-    const { text } = await generateText({ model, system, prompt });
-    const ideas = parseJsonish<any[]>(text);
-    if (!Array.isArray(ideas) || ideas.length === 0) throw new Error("AI returned no ideas");
+    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt), (report.raw_data as any)?.posts ?? []);
 
     // Wipe prior ideas so re-runs don't duplicate.
-    await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
+    const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
+    if (deleteError) throw new Error(deleteError.message);
 
-    const rows = ideas.slice(0, 50).map((i: any, idx: number) => ({
+    const rows = ideas.map((i: any, idx: number) => ({
       user_id: userId,
       research_report_id: data.id,
       title: String(i.title ?? "Untitled").slice(0, 200),
