@@ -48,7 +48,12 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
     const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    const posts = (profile?.latestPosts ?? []).map(normalizeIntelPost);
+    let scrapedPosts = profile?.latestPosts ?? [];
+    // Profile actor frequently omits latestPosts despite a public post count.
+    if (!scrapedPosts.length && profile && !profile.private) {
+      scrapedPosts = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 12 }, token);
+    }
+    const posts = scrapedPosts.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
     return {
       subject: handle,
       profile: profile
