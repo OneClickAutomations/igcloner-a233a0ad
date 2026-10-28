@@ -1,795 +1,88 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
-// ─── Palette (matches redesigned dark report) ─────────────────────────────
-const C = {
-  bg: [13, 13, 26] as [number, number, number],           // #0D0D1A page background
-  panel: [22, 22, 40] as [number, number, number],        // #161628 cards / stripes
-  panelAlt: [28, 28, 48] as [number, number, number],     // #1C1C30
-  border: [40, 40, 60] as [number, number, number],       // subtle divider
-  ink: [255, 255, 255] as [number, number, number],
-  sub: [160, 160, 190] as [number, number, number],       // muted body
-  faint: [110, 110, 140] as [number, number, number],     // labels / captions
-  // gradient stops (orange → pink → purple → blue)
-  g1: [255, 155, 65] as [number, number, number],
-  g2: [221, 42, 123] as [number, number, number],
-  g3: [129, 52, 175] as [number, number, number],
-  g4: [64, 93, 230] as [number, number, number],
-  orange: [255, 155, 65] as [number, number, number],
-  pink: [221, 42, 123] as [number, number, number],
-  purple: [129, 52, 175] as [number, number, number],
-  blue: [64, 93, 230] as [number, number, number],
-  green: [16, 185, 129] as [number, number, number],
-  amber: [245, 158, 11] as [number, number, number],
-  rose: [244, 63, 94] as [number, number, number],
+// Export-specific brand tokens; deliberately independent of the app's selected theme.
+export const INTEL_PDF_DESIGN = {
+  pageBg: "#0D0D1A", cardBg: "#13131F", cardBorder: "#1E1E32", darkCardBg: "#0A0A14",
+  primary: "#FFFFFF", secondary: "#9B9BB8", muted: "#5C5C7A",
+  gradient: ["#F58529", "#DD2A7B", "#8134AF", "#515BD4"], success: "#22C55E", warning: "#F59E0B", danger: "#EF4444", info: "#06B6D4",
 };
+const D = INTEL_PDF_DESIGN; const W = 595, H = 842, M = 42, CW = W-M*2;
+const arr = (v: unknown): any[] => Array.isArray(v) ? v : [];
+const val = (v: unknown) => v == null || v === "" ? "Not available" : String(v);
+const ascii = (v: unknown) => val(v).replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,"-").replace(/[^\x20-\x7E\n]/g, "");
 
-const A4 = { w: 210, h: 297 };
-const M = { x: 16, top: 22, bottom: 20 };
-
-function arr(v: unknown): any[] { return Array.isArray(v) ? v : []; }
-function shortText(s?: string, n = 60) { if (!s) return ""; return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s; }
-
-// ─── Public API ───────────────────────────────────────────────────────────
+export function buildResearchPdf(report: any, ideas: any[] = []) {
+  const doc = new jsPDF({ unit: "pt", format: [W,H] });
+  const dna = report.dna_report ?? {}, perf = dna.performanceMetrics ?? {}, comp = dna.competitivePosition ?? {}, audience = dna.audienceIntelligence ?? {};
+  const limited = report.limited_data || dna.reportFlags?.limitedData;
+  const subject = report.mode === "competitor" ? `@${String(report.subject).replace(/^@/,"")}` : report.subject;
+  const text = (v: unknown, x: number, y: number, size = 9, color = D.secondary, bold = false) => { doc.setFont("helvetica",bold ? "bold":"normal"); doc.setFontSize(size); doc.setTextColor(color); doc.text(ascii(v),x,y); };
+  const lines = (v: unknown, x: number, y: number, width: number, size = 9, color = D.secondary, maxHeight = 120, bold = false) => {
+    doc.setFont("helvetica",bold ? "bold":"normal"); doc.setFontSize(size);
+    let wrapped = doc.splitTextToSize(ascii(v),width) as string[];
+    while (wrapped.length*size*1.4 > maxHeight && size > 6.5) { size-=0.25; doc.setFontSize(size); wrapped=doc.splitTextToSize(ascii(v),width); }
+    const count = Math.max(1,Math.floor(maxHeight/(size*1.4)));
+    if (wrapped.length>count) { wrapped=wrapped.slice(0,count); wrapped[count-1]=(wrapped[count-1]??"")+"..."; }
+    doc.setTextColor(color); doc.text(wrapped,x,y,{ lineHeightFactor:1.4 }); return wrapped.length*size*1.4;
+  };
+  const gradient = (x:number,y:number,w:number,h:number) => {
+    const stops = D.gradient.map(c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]);
+    for(let i=0;i<100;i++){ const t=i/99*3,k=Math.min(2,Math.floor(t)),f=t-k,a=stops[k]??[],b=stops[k+1]??[]; doc.setFillColor(Math.round((a[0]??0)*(1-f)+(b[0]??0)*f),Math.round((a[1]??0)*(1-f)+(b[1]??0)*f),Math.round((a[2]??0)*(1-f)+(b[2]??0)*f));doc.rect(x+i*w/100,y,w/100+0.1,h,"F"); }
+  };
+  const card = (x:number,y:number,w:number,h:number,accent?:string) => { doc.setFillColor(D.cardBg);doc.setDrawColor(D.cardBorder);doc.setLineWidth(0.7);doc.roundedRect(x,y,w,h,4,4,"FD");if(accent){doc.setFillColor(accent);doc.rect(x,y,3,h,"F");} };
+  const page = (number:number,label:string,title:string) => {
+    if(number>1)doc.addPage();doc.setFillColor(D.pageBg);doc.rect(0,0,W,H,"F");gradient(0,0,W,4);
+    text("IGCloner",M,29,11,D.primary,true);text("CONTENT INTELLIGENCE REPORT",M+80,29,7,D.muted);
+    if(number>1){text(`${String(number-1).padStart(2,"0")} / ${label}`,M,67,7,D.muted,true);text(title,M,94,16,D.primary,true);gradient(M,107,CW,1);}
+    text(`IGCloner - igcloner.lovable.app - Confidential - ${number} / 9`,M,817,7,D.muted);
+  };
+  const sectionCard = (title:string,body:unknown,y:number,h:number,color:string=D.gradient[1]??D.info) => { card(M,y,CW,h,color);text(title,M+14,y+19,10,D.primary,true);lines(body,M+14,y+37,CW-28,9,D.secondary,h-45); };
+  // 1: cover
+  page(1,"","Cover");text("Deep-Dive",M,157,44,D.primary,true);text(report.mode === "competitor" ? "Competitor":"Content",M,208,44,D.gradient[1],true);text("Intelligence",M,259,44,D.primary,true);
+  doc.setDrawColor(D.cardBorder);doc.line(M,285,W-M,285);
+  const date = new Date(report.created_at ?? Date.now()).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"});
+  [["ACCOUNT",subject],["REPORT DATE",date],["ANALYSIS TYPE",report.mode],["NICHE",audience.primaryAudience ?? dna.audienceProfile?.who]].forEach(([k,v],i)=>{text(k,M+i*CW/4,312,7,D.muted,true);lines(v,M+i*CW/4,331,CW/4-10,9,D.primary,42,true);});
+  card(M,387,CW,126);const score=Math.max(0,Math.min(100,Number(report.opportunity_score??dna.opportunityScore??0)));const cx=M+61,cy=450,r=38;
+  doc.setDrawColor(D.cardBorder);doc.setLineWidth(6);doc.circle(cx,cy,r,"S");for(let i=0;i<score;i++){const a=(i/100*2*Math.PI)-Math.PI/2,b=((i+1)/100*2*Math.PI)-Math.PI/2;doc.setDrawColor(D.gradient[Math.min(3,Math.floor(i/25))]??D.info);doc.line(cx+Math.cos(a)*r,cy+Math.sin(a)*r,cx+Math.cos(b)*r,cy+Math.sin(b)*r);}text(score,cx-14,453,25,D.primary,true);text("/100",cx-10,469,7,D.muted);
+  text("OPPORTUNITY SCORE",M+125,413,7,D.muted,true);text(`${score} / 100`,M+125,442,24,D.gradient[0],true);lines(comp.opportunityReasoning??dna.executiveSummary,M+125,463,CW-143,9,D.secondary,38);
+  [["COMPETITION",comp.competitionLevel,D.danger],["POSTING CADENCE",dna.postingStrategy?.frequency,D.warning],["AVG ENGAGEMENT",perf.engagementRate,D.info],["CONTENT GAPS",`${arr(comp.contentGaps).length} FOUND`,D.success]].forEach(([k,v,c],i)=>{card(M+i*(CW/4+2),537,CW/4-6,85);text(k,M+i*(CW/4+2)+8,556,7,D.muted,true);lines(v,M+i*(CW/4+2)+8,578,CW/4-22,12,c,32,true);});
+  if(limited)sectionCard("LIMITED DATA MODE","Posts could not be scraped. Metrics and proven hook evidence are unavailable; ideas use profile intelligence and labelled niche inferences.",653,85,D.warning);
+  // 2: summary
+  page(2,"OVERVIEW","Executive Summary");lines(dna.executiveSummary,M,139,CW,9,D.secondary,135);
+  const findings=[["Evidence quality",dna.rawDataSummary?.dataQualityNote,D.info],["Biggest opportunity",arr(dna.growthOpportunities)[0]??comp.differentiationPotential,D.warning],["Content gap",arr(comp.contentGaps)[0],D.gradient[1]],["Competitive advantage",arr(comp.nicheStrengths)[0]??arr(dna.competitiveAdvantages)[0],D.success]];
+  findings.forEach(([title,body,color],i)=>sectionCard(String(title),body,296+i*111,96,String(color)));
+  // 3: performance
+  page(3,"METRICS","Performance Intelligence");if(limited)text("LIMITED DATA - Post-level metrics are not available",M,134,9,D.warning,true);
+  const metrics=[["Engagement rate",perf.engagementRate],["Avg likes",perf.avgLikesPerPost],["Avg comments",perf.avgCommentsPerPost],["Avg reel views",perf.avgViewsPerReel],["Viral posts",perf.viralPostCount],["Best post interactions",dna.topPosts?.[0]?.engagement]];
+  metrics.forEach(([k,v],i)=>{const x=M+(i%2)*(CW/2+6),y=155+Math.floor(i/2)*87;card(x,y,CW/2-6,75);gradient(x,y,CW/2-6,2);text(k,x+12,y+22,8,D.secondary);lines(limited?"Not available":v,x+12,y+49,CW/2-30,21,D.primary,30,true);});
+  text("CONTENT FORMAT DISTRIBUTION",M,451,8,D.muted,true);
+  if(!limited){[["Image",dna.contentFormatDistribution?.imagePercent],["Reel",dna.contentFormatDistribution?.reelPercent],["Carousel",dna.contentFormatDistribution?.carouselPercent]].forEach(([label,v],i)=>{const y=479+i*34;text(`${label}: ${val(v)}%`,M,y,9,D.primary);gradient(M+110,y-8,(CW-110)*Number(v??0)/100,7);});
+    text("CONTENT PILLARS",M,597,8,D.muted,true);arr(dna.contentPillars).slice(0,5).forEach((p,i)=>{text(`${p.name}: ${p.share}% (${p.postCount} posts)`,M,619+i*20,9,D.secondary);});
+  }else lines("No distribution or pillar charts are shown because no posts were available.",M,479,CW);
+  lines(`${perf.engagementRateFormula??"Not available"}\nInputs: ${JSON.stringify(perf.engagementRateInputs??{})}\nBenchmark: ${val(perf.engagementBenchmark)}`,M,733,CW,7,D.muted,51);
+  // 4: audience
+  page(4,"AUDIENCE","Audience Intelligence");card(M,134,CW/2-6,209);card(M+CW/2+6,134,CW/2-6,209);text("WHO THEY ARE",M+12,158,8,D.gradient[0],true);lines(audience.primaryAudience??dna.audienceProfile?.who,M+12,178,CW/2-30,9,D.secondary,149);text("CORE DESIRES",M+CW/2+18,158,8,D.gradient[1],true);lines(arr(audience.desiresAddressed).map(v=>`- ${v}`).join("\n"),M+CW/2+18,178,CW/2-30,9,D.secondary,149);
+  text("PAIN POINTS",M,381,8,D.muted,true);arr(audience.painPointsAddressed).slice(0,4).forEach((p,i)=>{const x=M+(i%2)*(CW/2+6),y=402+Math.floor(i/2)*131;card(x,y,CW/2-6,118,D.gradient[0]);lines(p,x+12,y+25,CW/2-30,10,D.secondary,83);});lines(audience.psychographics,M,708,CW,9,D.secondary,76);
+  // 5: DNA
+  page(5,"CONTENT DNA","Hook & Caption Analysis");const hooks=arr(dna.hookAnalysis?.provenHooks).slice(0,4);if(!hooks.length)sectionCard("No scraped hook evidence",limited?"Limited data: suggested hooks are niche-informed, not proven by this account's posts.":"Captions did not provide usable hook evidence.",136,83,D.warning);
+  hooks.forEach((h,i)=>{card(M,134+i*114,CW,103,D.gradient[1]);text(h.hookType,M+13,154+i*114,8,D.gradient[1],true);lines(`"${h.actualOpeningLine}"`,M+13,176+i*114,CW-26,10,D.primary,43);lines(`${h.engagementOnThisPost??"Unknown"} interactions - ${val(h.whyItWorked)}`,M+13,214+i*114,CW-26,7,D.secondary,16);});
+  const anatomy=[["Opening style",dna.hookAnalysis?.dominantHookTypes?.join(", ")],["Body structure",dna.hookAnalysis?.captionStructure],["Brand voice",dna.brandVoice],["CTA pattern",arr(dna.hookAnalysis?.ctaPatterns).join(" | ")],["Length",dna.hookAnalysis?.captionLengthPattern]];
+  anatomy.forEach(([k,v],i)=>{card(M,612+i*33,CW,31);text(k,M+10,631+i*33,8,D.primary,true);lines(v,M+120,626+i*33,CW-133,7,D.secondary,22);});
+  // 6: gaps
+  page(6,"OPPORTUNITY","Content Gap Analysis");const gaps=arr(dna.opportunityActions);for(let i=0;i<4;i++){const g=gaps[i];card(M,134+i*160,CW,146,D.gradient[i]);text(`${String(i+1).padStart(2,"0")}  ${val(g?.title)}`,M+13,156+i*160,11,D.primary,true);text("THE PROBLEM",M+13,178+i*160,7,D.muted,true);lines(g?.problem,M+13,195+i*160,CW-26,9,D.secondary,32);text("YOUR ACTION STEP",M+13,235+i*160,7,D.gradient[i],true);lines(g?.action,M+13,251+i*160,CW-26,9,D.secondary,23);}
+  // 7: plan
+  page(7,"STRATEGY","30-Day Outperform Plan");const weeks=arr(dna.thirtyDayPlan);for(let i=0;i<4;i++){const w=weeks[i];card(M,134+i*160,CW,146);gradient(M,134+i*160,CW,2);text(`WEEK ${i+1}`,M+13,157+i*160,8,D.gradient[i],true);text(w?.title??"Plan not available",M+13,177+i*160,11,D.primary,true);lines(arr(w?.actions).map(a=>`- ${a}`).join("\n"),M+13,199+i*160,CW-26,9,D.secondary,70);}
+  // 8: hashtags
+  page(8,"DISTRIBUTION","Hashtag Strategy");const tiers=dna.hashtagTiers??{};[["Broad",tiers.broad],["Niche",tiers.niche],["Community",tiers.community]].forEach(([name,tags],i)=>{card(M,136+i*164,CW,145,D.gradient[i]);text(`TIER ${i+1} - ${name}`,M+13,160+i*164,10,D.gradient[i],true);text("Post volumes: Not available (not scraped)",M+13,180+i*164,7,D.muted);lines(arr(tags).filter(t=>/^#?[\w]+$/.test(String(t))).map(t=>`#${String(t).replace(/^#/,"")}`).join("  "),M+13,204+i*164,CW-26,11,D.primary,58);});sectionCard("RECOMMENDED MIX",tiers.recommendation??"Test a relevant combination of observed niche and community tags. Compare reach on your own posts; hashtag performance is not guaranteed.",654,116,D.info);
+  // 9: top ideas; ten complete excerpts on the promised page.
+  page(9,"IDEAS","Top 10 Content Ideas");text(`${ideas.length} full ideas available as Studio drafts from this report`,M,124,8,D.muted);
+  const top=[...ideas].sort((a,b)=>Number(b.virality_score)-Number(a.virality_score)).slice(0,10);
+  if(!top.length)sectionCard("Ideas not generated yet","Generate 50 content ideas in the report, then export again to include the top ten.",145,86,D.warning);
+  top.forEach((idea,i)=>{const y=139+i*64;card(M,y,CW,59);text(`${i+1} / ${idea.format} / Predicted score ${idea.virality_score}`,M+9,y+12,7,D.gradient[i%4],true);lines(idea.hook,M+9,y+25,CW-18,8,D.primary,17,true);lines(idea.description,M+9,y+44,CW-18,7,D.secondary,12);});
+  doc.setProperties({title:`IGCloner Intel - ${subject}`,subject:"Content Intelligence Report",author:"IGCloner"});
+  return doc;
+}
 export function exportResearchPdf(report: any, ideas: any[] = []) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-
-  const dna = (report?.dna_report ?? {}) as any;
-  const subject = String(report?.subject ?? "Research Report");
-  const mode = String(report?.mode ?? "");
-  const score = Number(report?.opportunity_score ?? dna?.opportunityScore ?? 0) || 0;
-  const perf = dna?.performanceMetrics ?? {};
-  const comp = dna?.competitivePosition ?? {};
-  const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-
-  // Derive header meta
-  const displayAccount = mode === "competitor" && !subject.startsWith("@") ? `@${subject}` : subject;
-  const analysisLabel =
-    mode === "competitor" ? "Competitor Intel" :
-    mode === "niche"      ? "Niche Report"     :
-    mode === "topic"      ? "Topic Report"     : "Content Intelligence";
-  const nicheLabel = String(dna?.profileSummary?.businessCategory || dna?.audienceProfile?.who || "Content").split(/[,.]/)[0].trim().slice(0, 24) || "Content";
-
-  // Derive KPIs
-  const competitionLevel = String(comp?.competitionLevel || inferCompetition(score)).toUpperCase();
-  const cadence = String(dna?.postingFrequency || dna?.postingStrategy?.frequency || "IRREGULAR").split(/[.,–—]/)[0].trim().toUpperCase().slice(0, 14) || "IRREGULAR";
-  const engagement = String(perf?.engagementRate ?? "—");
-  const gaps = arr(dna?.missedOpportunities).length || arr(comp?.contentGaps).length || arr(dna?.growthOpportunities).length || 0;
-
-  // ── Cover ─────────────────────────────────────────────────────────────
-  drawCover(doc, {
-    account: displayAccount, date: dateStr, analysis: analysisLabel, niche: nicheLabel,
-    score, summary: dna?.executiveSummary ?? comp?.opportunityReasoning ?? "",
-    competition: competitionLevel, cadence, engagement, gaps,
-  });
-
-  // ── Executive Summary ────────────────────────────────────────────────
-  startPage(doc, "01", "OVERVIEW", "Executive Summary");
-  let y = M.top + 34;
-  y = paragraph(doc, dna?.executiveSummary || "A structured analysis of audience, hooks, cadence, and growth opportunities for this account.", y, C.sub);
-  y += 4;
-  const summaryPoints = buildSummaryPoints(dna);
-  for (const pt of summaryPoints) {
-    y = summaryBullet(doc, pt.title, pt.body, y);
-  }
-
-  // ── Audience Intelligence ────────────────────────────────────────────
-  const audience = dna?.audienceProfile ?? {};
-  const aud = dna?.audienceIntelligence ?? {};
-  startPage(doc, "02", "AUDIENCE", "Audience Intelligence");
-  y = M.top + 34;
-  y = paragraph(doc, "Understanding who this account speaks to — and what they actually want — is the foundation of any content strategy that outperforms it.", y, C.sub);
-  y += 4;
-  y = subhead(doc, "Who they are", y, C.g1);
-  y = twoColBullets(doc, splitPairs(audience?.who || aud?.primaryAudience || ""), y);
-  y = subhead(doc, "Core desires", y + 2, C.g2);
-  y = bulletCol(doc, arr(audience?.desires).length ? arr(audience.desires) : arr(aud?.desiresAddressed), y, C.g2);
-  y = subhead(doc, "Pain points to target in your content", y + 2, C.g3);
-  y = painPointGrid(doc, arr(audience?.painPoints).length ? arr(audience.painPoints) : arr(aud?.painPointsAddressed), y);
-
-  // ── Content DNA ──────────────────────────────────────────────────────
-  startPage(doc, "03", "CONTENT", "Content DNA Analysis");
-  y = M.top + 34;
-  y = paragraph(doc, "How the account communicates — the hooks, structure, and voice that define its content fingerprint.", y, C.sub);
-  y += 4;
-  y = subhead(doc, "Proven hook patterns", y, C.g2);
-  const hooks = (arr(dna?.hookAnalysis?.provenHooks).length ? arr(dna?.hookAnalysis?.provenHooks).map((h: any) => ({
-    type: h?.hookType, label: h?.whyItWorked, quote: h?.actualOpeningLine,
-  })) : arr(dna?.commonHooks).map((h: any) => ({ type: h?.pattern, label: "", quote: h?.example })));
-  for (const h of hooks.slice(0, 4)) y = hookCard(doc, h, y);
-
-  y = subhead(doc, "Caption anatomy", y + 2, C.g3);
-  const cs = dna?.captionStructure ?? {};
-  autoTable(doc, {
-    startY: y,
-    margin: { left: M.x, right: M.x },
-    theme: "plain",
-    body: [
-      ["Opening Style", cs.openingStyle || dna?.hookAnalysis?.dominantHookTypes?.join(", ") || "—"],
-      ["Body Structure", cs.typicalLength || dna?.hookAnalysis?.captionStructure || "—"],
-      ["Brand Voice", dna?.brandVoice || cs?.tone || "—"],
-      ["CTA Pattern", cs.ctaStyle || (arr(dna?.ctaPatterns).join(", ")) || "—"],
-      ["Length", cs.typicalLength || dna?.hookAnalysis?.captionLengthPattern || "—"],
-    ],
-    styles: { fontSize: 9, cellPadding: { top: 3, right: 3, bottom: 3, left: 4 }, textColor: C.sub, fillColor: C.panel, lineColor: C.border, lineWidth: 0.1, valign: "top" },
-    columnStyles: { 0: { cellWidth: 44, fontStyle: "bold", textColor: C.ink, fillColor: C.panelAlt } },
-    didDrawPage: () => pageChrome(doc, "Content DNA Analysis"),
-  });
-
-  // ── Strategy: Opportunity Cards ──────────────────────────────────────
-  startPage(doc, "04", "STRATEGY", "Content Gap & Opportunity Analysis");
-  y = M.top + 34;
-  y = paragraph(doc, "These are the specific opportunities this account is leaving unclaimed. Each one is actionable today.", y, C.sub);
-  y += 4;
-  const opportunities = buildOpportunities(dna);
-  const oppColors = [C.orange, C.pink, C.purple, C.blue, C.green, C.amber];
-  opportunities.forEach((op, i) => {
-    y = opportunityCard(doc, i + 1, op.title, op.problem, op.action, oppColors[i % oppColors.length], y);
-  });
-
-  // ── Action Plan ──────────────────────────────────────────────────────
-  startPage(doc, "05", "ACTION PLAN", "30-Day Outperform Strategy");
-  y = M.top + 34;
-  y = paragraph(doc, "A specific, sequenced plan to outperform this account within 30 days using IGCloner's clone-and-improve workflow.", y, C.sub);
-  y += 4;
-  const weeks = buildWeeks(dna, subject);
-  const weekColors = [C.orange, C.pink, C.purple, C.blue];
-  weeks.forEach((w, i) => {
-    y = weekBlock(doc, `WEEK ${i + 1}`, w.title, w.bullets, weekColors[i], y);
-  });
-
-  // ── Distribution (Hashtags) ──────────────────────────────────────────
-  startPage(doc, "06", "DISTRIBUTION", "Hashtag Strategy");
-  y = M.top + 34;
-  y = paragraph(doc, "A tiered hashtag strategy built for this specific niche. Use a mix of all three tiers on every post for maximum discovery.", y, C.sub);
-  y += 4;
-  y = hashtagTiers(doc, dna, y);
-
-  // ── Content Opportunity Engine (ideas) ───────────────────────────────
-  if (ideas.length) {
-    startPage(doc, "07", "IDEAS", "Content Opportunity Engine");
-    y = M.top + 34;
-    y = paragraph(doc, `${ideas.length} ranked ideas grounded in this research, ready to route into Clone Studio.`, y, C.sub);
-    y += 2;
-    autoTable(doc, {
-      startY: y,
-      margin: { left: M.x, right: M.x, top: M.top + 14, bottom: M.bottom },
-      theme: "plain",
-      head: [["#", "Title", "Format", "Hook", "Viral", "Conf."]],
-      body: ideas.map((i: any, idx: number) => [
-        String(idx + 1),
-        String(i?.title ?? ""),
-        String(i?.format ?? ""),
-        shortText(String(i?.hook ?? ""), 90),
-        String(i?.virality_score ?? "—"),
-        String(i?.confidence_score ?? "—"),
-      ]),
-      styles: { fontSize: 8, cellPadding: 2.2, textColor: C.sub, fillColor: C.bg, lineColor: C.border, lineWidth: 0.1, valign: "top" },
-      headStyles: { fillColor: C.panelAlt, textColor: C.ink, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: C.panel },
-      columnStyles: {
-        0: { cellWidth: 8, halign: "center", textColor: C.faint },
-        1: { cellWidth: 48, fontStyle: "bold", textColor: C.ink },
-        2: { cellWidth: 18, halign: "center" },
-        3: { cellWidth: 70 },
-        4: { cellWidth: 14, halign: "center", textColor: C.ink },
-        5: { cellWidth: 14, halign: "center", textColor: C.ink },
-      },
-      didDrawPage: () => pageChrome(doc, "Content Opportunity Engine"),
-    });
-  }
-
-  paginate(doc);
-  const slug = subject.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
-  doc.save(`igcloner-intel-${slug || "report"}.pdf`);
-}
-
-// ─── Cover ────────────────────────────────────────────────────────────────
-function drawCover(
-  doc: jsPDF,
-  o: { account: string; date: string; analysis: string; niche: string; score: number; summary: string;
-       competition: string; cadence: string; engagement: string; gaps: number },
-) {
-  pageBg(doc);
-  cornerOrb(doc);
-  // Top gradient accent bar
-  gradientBar(doc, M.x, M.top - 4, 62, 1.6);
-
-  // Brand mark
-  setFont(doc, 12, "bold", C.ink);
-  doc.text("IGCloner", M.x, M.top + 6);
-  setFont(doc, 8, "bold", C.faint);
-  doc.text("CONTENT INTELLIGENCE REPORT", M.x, M.top + 11);
-
-  // Huge title — 3 lines. Middle line pink (or gradient stops).
-  const title = titleFromMode(o.analysis);
-  setFont(doc, 44, "bold", C.ink);
-  doc.text(title.top, M.x, M.top + 60);
-  setFont(doc, 44, "bold", C.pink);
-  doc.text(title.mid, M.x, M.top + 78);
-  setFont(doc, 44, "bold", C.ink);
-  doc.text(title.bot, M.x, M.top + 96);
-
-  // Divider
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.2);
-  doc.line(M.x, M.top + 108, A4.w - M.x, M.top + 108);
-
-  // Meta row (4 columns)
-  const metaY = M.top + 116;
-  const cols = [
-    { label: "ACCOUNT", value: o.account },
-    { label: "REPORT DATE", value: o.date },
-    { label: "ANALYSIS TYPE", value: o.analysis },
-    { label: "NICHE", value: o.niche },
-  ];
-  const colW = (A4.w - M.x * 2) / cols.length;
-  cols.forEach((c, i) => {
-    const x = M.x + i * colW;
-    setFont(doc, 8, "bold", C.faint);
-    doc.text(c.label, x, metaY);
-    setFont(doc, 11, "bold", C.ink);
-    doc.text(shortText(c.value, 22), x, metaY + 6);
-  });
-
-  // Opportunity Score card
-  const cardY = metaY + 16;
-  const cardH = 46;
-  doc.setFillColor(...C.panel);
-  doc.roundedRect(M.x, cardY, A4.w - M.x * 2, cardH, 2.5, 2.5, "F");
-
-  // Score ring (left)
-  const cx = M.x + 22;
-  const cy = cardY + cardH / 2;
-  scoreRing(doc, cx, cy, 15, o.score);
-
-  // Score copy (right of ring)
-  const tx = cx + 22;
-  setFont(doc, 8, "bold", C.faint);
-  doc.text("OPPORTUNITY SCORE", tx, cardY + 12);
-  setFont(doc, 20, "bold", C.orange);
-  doc.text(`${o.score} / 100`, tx, cardY + 22);
-  setFont(doc, 9, "normal", C.sub);
-  const lines = doc.splitTextToSize(o.summary || "Analysis complete — see interior pages for full breakdown.", A4.w - tx - M.x - 4);
-  doc.text(lines.slice(0, 3), tx, cardY + 30);
-
-  // KPI band
-  const kpiY = cardY + cardH + 10;
-  const kpiH = 22;
-  const kpiW = (A4.w - M.x * 2) / 4;
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.2);
-  doc.roundedRect(M.x, kpiY, A4.w - M.x * 2, kpiH, 2, 2, "S");
-  const kpis = [
-    { label: "COMPETITION LEVEL", value: o.competition, color: C.rose },
-    { label: "POSTING CADENCE", value: o.cadence, color: C.amber },
-    { label: "AVG ENGAGEMENT", value: o.engagement, color: C.rose },
-    { label: "CONTENT GAPS", value: `${o.gaps} FOUND`, color: C.green },
-  ];
-  kpis.forEach((k, i) => {
-    const x = M.x + i * kpiW;
-    if (i > 0) {
-      doc.setDrawColor(...C.border);
-      doc.line(x, kpiY + 3, x, kpiY + kpiH - 3);
-    }
-    setFont(doc, 7, "bold", C.faint);
-    doc.text(k.label, x + kpiW / 2, kpiY + 7, { align: "center" });
-    setFont(doc, 13, "bold", k.color);
-    doc.text(shortText(k.value, 14), x + kpiW / 2, kpiY + 16, { align: "center" });
-  });
-
-  // Footer note
-  setFont(doc, 8, "normal", C.faint);
-  doc.text("This report was generated by IGCloner. Data sourced from public Instagram profile signals. For internal use only.", M.x, A4.h - 14);
-}
-
-function titleFromMode(analysis: string) {
-  const a = analysis.toLowerCase();
-  if (a.includes("competitor")) return { top: "Deep-Dive", mid: "Competitor", bot: "Intelligence" };
-  if (a.includes("niche"))      return { top: "Niche",     mid: "Content",    bot: "Intelligence" };
-  if (a.includes("topic"))      return { top: "Topic",     mid: "Signal",     bot: "Intelligence" };
-  return { top: "Content", mid: "Intelligence", bot: "Report" };
-}
-
-// ─── Page chrome / headers ────────────────────────────────────────────────
-function pageBg(doc: jsPDF) {
-  doc.setFillColor(...C.bg);
-  doc.rect(0, 0, A4.w, A4.h, "F");
-}
-
-function cornerOrb(doc: jsPDF) {
-  // decorative purple orb (top right)
-  doc.setFillColor(28, 22, 56);
-  doc.circle(A4.w + 8, -4, 26, "F");
-  doc.setFillColor(45, 32, 78);
-  doc.circle(A4.w - 4, -12, 14, "F");
-}
-
-function pageChrome(doc: jsPDF, _title: string) {
-  pageBg(doc);
-  cornerOrb(doc);
-}
-
-function startPage(doc: jsPDF, num: string, section: string, title: string) {
-  doc.addPage();
-  pageChrome(doc, title);
-  // section label
-  setFont(doc, 8, "bold", C.faint);
-  doc.text(`${num} / ${section}`, M.x, M.top + 4);
-  // title
-  setFont(doc, 22, "bold", C.ink);
-  doc.text(title, M.x, M.top + 14);
-  // underline
-  doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.25);
-  doc.line(M.x, M.top + 18, A4.w - M.x, M.top + 18);
-}
-
-function paginate(doc: jsPDF) {
-  const total = doc.getNumberOfPages();
-  for (let i = 1; i <= total; i++) {
-    doc.setPage(i);
-    if (i === 1) continue;
-    setFont(doc, 8, "normal", C.faint);
-    doc.text(`IGCloner  ·  Content Intelligence Report  ·  Page ${i}`, A4.w / 2, A4.h - 8, { align: "center" });
-  }
-}
-
-// ─── Building blocks ──────────────────────────────────────────────────────
-function setFont(doc: jsPDF, size: number, style: "normal" | "bold" | "italic" = "normal", color: [number, number, number] = C.ink) {
-  doc.setFont("helvetica", style);
-  doc.setFontSize(size);
-  doc.setTextColor(color[0], color[1], color[2]);
-}
-
-function ensure(doc: jsPDF, y: number, need: number, title: string): number {
-  if (y + need > A4.h - M.bottom) {
-    doc.addPage();
-    pageChrome(doc, title);
-    return M.top + 6;
-  }
-  return y;
-}
-
-function paragraph(doc: jsPDF, text: string, y: number, color = C.sub): number {
-  if (!text) return y;
-  setFont(doc, 10, "normal", color);
-  const lines = doc.splitTextToSize(text, A4.w - M.x * 2);
-  for (const line of lines) {
-    y = ensure(doc, y, 5.5, "");
-    doc.text(line, M.x, y);
-    y += 5;
-  }
-  return y + 2;
-}
-
-function subhead(doc: jsPDF, title: string, y: number, accent = C.pink): number {
-  y = ensure(doc, y, 10, title);
-  // small accent dot
-  doc.setFillColor(accent[0], accent[1], accent[2]);
-  doc.rect(M.x, y - 2.6, 2, 2.6, "F");
-  setFont(doc, 9, "bold", C.faint);
-  doc.text(title.toUpperCase(), M.x + 4, y);
-  return y + 5;
-}
-
-function summaryBullet(doc: jsPDF, title: string, body: string, y: number): number {
-  const w = A4.w - M.x * 2;
-  setFont(doc, 11, "bold", C.ink);
-  const titleLines = doc.splitTextToSize(title, w - 10);
-  setFont(doc, 10, "normal", C.sub);
-  const bodyLines = doc.splitTextToSize(body, w - 10);
-  const need = titleLines.length * 5.5 + bodyLines.length * 5 + 6;
-  y = ensure(doc, y, need, "");
-  // square marker
-  doc.setFillColor(...C.pink);
-  doc.rect(M.x, y - 1.6, 2.4, 2.4, "F");
-  setFont(doc, 11, "bold", C.ink);
-  doc.text(titleLines, M.x + 8, y);
-  let ny = y + titleLines.length * 5.5;
-  setFont(doc, 10, "normal", C.sub);
-  doc.text(bodyLines, M.x + 8, ny + 0.5);
-  return ny + bodyLines.length * 5 + 4;
-}
-
-function bulletCol(doc: jsPDF, items: unknown[], y: number, accent = C.pink): number {
-  setFont(doc, 10, "normal", C.sub);
-  for (const raw of items) {
-    const text = String(raw ?? "").trim();
-    if (!text) continue;
-    const lines = doc.splitTextToSize(text, A4.w - M.x * 2 - 8);
-    y = ensure(doc, y, lines.length * 5 + 2, "");
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(M.x, y - 1.8, 2.2, 2.2, "F");
-    setFont(doc, 10, "normal", C.sub);
-    doc.text(lines, M.x + 6, y);
-    y += lines.length * 5 + 1.2;
-  }
-  return y + 2;
-}
-
-function twoColBullets(doc: jsPDF, items: [string, string][], y: number): number {
-  if (!items.length) return y;
-  const colW = (A4.w - M.x * 2 - 6) / 2;
-  const lineH = 5.5;
-  for (let i = 0; i < items.length; i += 2) {
-    const rowItems = [items[i], items[i + 1]].filter(Boolean);
-    // compute row height
-    let rowH = 0;
-    rowItems.forEach(([label, val]) => {
-      const l1 = doc.splitTextToSize(label, colW - 4);
-      const l2 = doc.splitTextToSize(val, colW - 4);
-      rowH = Math.max(rowH, l1.length * lineH + l2.length * 4.5 + 4);
-    });
-    y = ensure(doc, y, rowH, "");
-    rowItems.forEach(([label, val], idx) => {
-      const x = M.x + idx * (colW + 6);
-      setFont(doc, 10, "bold", C.ink);
-      const labelLines = doc.splitTextToSize(label, colW - 4);
-      doc.text(labelLines, x, y);
-      setFont(doc, 9, "normal", C.sub);
-      const valLines = doc.splitTextToSize(val, colW - 4);
-      doc.text(valLines, x, y + labelLines.length * lineH);
-    });
-    y += rowH + 1;
-  }
-  return y + 2;
-}
-
-function painPointGrid(doc: jsPDF, items: unknown[], y: number): number {
-  const list = items.map((i) => String(i ?? "").trim()).filter(Boolean).slice(0, 6);
-  if (!list.length) return y;
-  const cols = 2;
-  const gap = 4;
-  const cardW = (A4.w - M.x * 2 - gap * (cols - 1)) / cols;
-  const cardH = 26;
-  for (let i = 0; i < list.length; i += cols) {
-    y = ensure(doc, y, cardH + gap, "");
-    for (let j = 0; j < cols && i + j < list.length; j++) {
-      const x = M.x + j * (cardW + gap);
-      const text = list[i + j];
-      doc.setFillColor(...C.panel);
-      doc.roundedRect(x, y, cardW, cardH, 2, 2, "F");
-      // left accent
-      doc.setFillColor(...C.pink);
-      doc.rect(x, y, 1.5, cardH, "F");
-      const [title, ...rest] = text.split(/[:\-—]\s?/);
-      setFont(doc, 10, "bold", C.ink);
-      doc.text(shortText(title, 34), x + 5, y + 8);
-      setFont(doc, 9, "normal", C.sub);
-      const body = rest.length ? rest.join(" — ") : "";
-      const lines = doc.splitTextToSize(body || " ", cardW - 8);
-      doc.text(lines.slice(0, 2), x + 5, y + 14);
-    }
-    y += cardH + gap;
-  }
-  return y + 2;
-}
-
-function hookCard(doc: jsPDF, h: { type?: string; label?: string; quote?: string }, y: number): number {
-  if (!h?.quote && !h?.type) return y;
-  const w = A4.w - M.x * 2;
-  const quote = String(h.quote ?? "");
-  const quoteLines = doc.splitTextToSize(`"${quote}"`, w - 12);
-  const cardH = 14 + quoteLines.length * 4.4 + 6;
-  y = ensure(doc, y, cardH + 3, "");
-  doc.setFillColor(...C.panel);
-  doc.roundedRect(M.x, y, w, cardH, 2, 2, "F");
-  // gradient accent stripe (top)
-  gradientBar(doc, M.x + 2, y + 2, 30, 1);
-  setFont(doc, 10, "bold", C.ink);
-  doc.text(String(h.type ?? "Hook").toUpperCase(), M.x + 5, y + 8);
-  setFont(doc, 8, "bold", C.faint);
-  doc.text(String(h.label ?? "").slice(0, 60), M.x + 5, y + 12.5);
-  setFont(doc, 9, "italic", C.sub);
-  doc.text(quoteLines, M.x + 6, y + 18);
-  return y + cardH + 3;
-}
-
-function opportunityCard(doc: jsPDF, n: number, title: string, problem: string, action: string, accent: [number, number, number], y: number): number {
-  const w = A4.w - M.x * 2;
-  setFont(doc, 10, "normal", C.sub);
-  const pLines = doc.splitTextToSize(problem || "—", w - 12);
-  const aLines = doc.splitTextToSize(action || "—", w - 12);
-  const cardH = 16 + pLines.length * 5 + 8 + aLines.length * 5 + 8;
-  y = ensure(doc, y, cardH + 4, "");
-  // panel
-  doc.setFillColor(...C.panel);
-  doc.roundedRect(M.x, y, w, cardH, 2, 2, "F");
-  // right accent stripe
-  doc.setFillColor(accent[0], accent[1], accent[2]);
-  doc.roundedRect(M.x + w - 2, y + 2, 1.5, cardH - 4, 0.7, 0.7, "F");
-  // Big number
-  setFont(doc, 22, "bold", accent);
-  doc.text(String(n).padStart(2, "0"), M.x + 6, y + 12);
-  // Title
-  setFont(doc, 12, "bold", C.ink);
-  doc.text(shortText(title, 78), M.x + 22, y + 10);
-  // Problem label + body
-  setFont(doc, 8, "bold", C.faint);
-  doc.text("THE PROBLEM", M.x + 6, y + 20);
-  setFont(doc, 10, "normal", C.sub);
-  doc.text(pLines, M.x + 6, y + 25);
-  const midY = y + 25 + pLines.length * 5 + 3;
-  setFont(doc, 8, "bold", accent);
-  doc.text("YOUR ACTION STEP", M.x + 6, midY);
-  setFont(doc, 10, "normal", C.sub);
-  doc.text(aLines, M.x + 6, midY + 5);
-  return y + cardH + 4;
-}
-
-function weekBlock(doc: jsPDF, week: string, title: string, bullets: string[], accent: [number, number, number], y: number): number {
-  const w = A4.w - M.x * 2;
-  setFont(doc, 10, "normal", C.sub);
-  const bulletLines = bullets.map((b) => doc.splitTextToSize(b, w - 62));
-  const totalBulletH = bulletLines.reduce((s, l) => s + l.length * 5 + 2, 0);
-  const cardH = Math.max(30, 14 + totalBulletH + 6);
-  y = ensure(doc, y, cardH + 6, "");
-  // top gradient/accent line
-  doc.setDrawColor(accent[0], accent[1], accent[2]);
-  doc.setLineWidth(0.8);
-  doc.line(M.x, y, A4.w - M.x, y);
-  // panel
-  doc.setFillColor(...C.panel);
-  doc.roundedRect(M.x, y + 1.4, w, cardH, 2, 2, "F");
-  // week label + title (left column)
-  setFont(doc, 7.5, "bold", accent);
-  doc.text(week, M.x + 6, y + 10);
-  setFont(doc, 12, "bold", C.ink);
-  const titleLines = doc.splitTextToSize(title, 46);
-  doc.text(titleLines, M.x + 6, y + 16);
-  // bullets (right column)
-  let by = y + 10;
-  for (let i = 0; i < bullets.length; i++) {
-    doc.setFillColor(accent[0], accent[1], accent[2]);
-    doc.rect(M.x + 58, by - 2, 2.2, 2.2, "F");
-    setFont(doc, 10, "normal", C.sub);
-    doc.text(bulletLines[i], M.x + 63, by);
-    by += bulletLines[i].length * 5 + 2;
-  }
-  return y + cardH + 6;
-}
-
-function hashtagTiers(doc: jsPDF, dna: any, y: number): number {
-  const tiers = buildHashtagTiers(dna);
-  const w = A4.w - M.x * 2;
-  const colW = (w - 6) / 3;
-  const cardH = 90;
-  y = ensure(doc, y, cardH + 20, "");
-  const labels = [
-    { name: "TIER 1", sub: "Broad Reach", note: "5M+ posts", color: C.orange },
-    { name: "TIER 2", sub: "Niche Authority", note: "500K – 5M posts", color: C.pink },
-    { name: "TIER 3", sub: "Community", note: "Under 500K posts", color: C.purple },
-  ];
-  labels.forEach((l, i) => {
-    const x = M.x + i * (colW + 3);
-    doc.setFillColor(...C.panel);
-    doc.roundedRect(x, y, colW, cardH, 2, 2, "F");
-    // color band
-    doc.setFillColor(l.color[0], l.color[1], l.color[2]);
-    doc.rect(x, y, colW, 1.8, "F");
-    setFont(doc, 9, "bold", l.color);
-    doc.text(l.name, x + 5, y + 8);
-    setFont(doc, 11, "bold", C.ink);
-    doc.text(l.sub, x + 5, y + 14);
-    setFont(doc, 8, "normal", C.faint);
-    doc.text(l.note, x + 5, y + 19);
-    setFont(doc, 9, "normal", C.sub);
-    const tags = tiers[i] || [];
-    const tagText = tags.length ? tags.map((t) => (t.startsWith("#") ? t : `#${t}`)).join("  ") : "—";
-    const lines = doc.splitTextToSize(tagText, colW - 10);
-    doc.text(lines.slice(0, 10), x + 5, y + 28);
-  });
-  let ny = y + cardH + 8;
-  setFont(doc, 9, "bold", C.faint);
-  doc.text("RECOMMENDED MIX PER POST", M.x, ny);
-  ny += 5;
-  const mix = [
-    { label: "Broad Reach (5 tags)", pct: 33, color: C.orange },
-    { label: "Niche Authority (5 tags)", pct: 33, color: C.pink },
-    { label: "Community (5 tags)", pct: 34, color: C.purple },
-  ];
-  mix.forEach((m) => {
-    ny = ensure(doc, ny, 8, "");
-    setFont(doc, 9, "normal", C.sub);
-    doc.text(m.label, M.x, ny);
-    setFont(doc, 9, "bold", C.ink);
-    doc.text(`${m.pct}%`, A4.w - M.x, ny, { align: "right" });
-    // bar
-    const barY = ny + 1.4;
-    doc.setFillColor(...C.panelAlt);
-    doc.rect(M.x + 55, barY, A4.w - M.x * 2 - 70, 2, "F");
-    doc.setFillColor(m.color[0], m.color[1], m.color[2]);
-    doc.rect(M.x + 55, barY, ((A4.w - M.x * 2 - 70) * m.pct) / 100, 2, "F");
-    ny += 7;
-  });
-  ny += 2;
-  setFont(doc, 8, "italic", C.faint);
-  const foot = "Total: 15 hashtags per post. Instagram recommends 3–5 but testing consistently shows 12–20 outperform for accounts under 10K followers.";
-  const footLines = doc.splitTextToSize(foot, A4.w - M.x * 2);
-  doc.text(footLines, M.x, ny + 2);
-  return ny + footLines.length * 4 + 2;
-}
-
-// ─── Score ring + gradient bar ────────────────────────────────────────────
-function scoreRing(doc: jsPDF, cx: number, cy: number, r: number, score: number) {
-  // background track
-  doc.setDrawColor(...C.panelAlt);
-  doc.setLineWidth(2.4);
-  doc.circle(cx, cy, r, "S");
-  // colored arc via segmented lines around circumference
-  const pct = Math.max(0, Math.min(100, score)) / 100;
-  const steps = 60;
-  const segs = Math.round(steps * pct);
-  const grad = [C.orange, C.pink, C.purple, C.blue];
-  doc.setLineWidth(2.4);
-  for (let i = 0; i < segs; i++) {
-    const t0 = i / steps;
-    const t1 = (i + 1) / steps;
-    const a0 = -Math.PI / 2 + t0 * Math.PI * 2;
-    const a1 = -Math.PI / 2 + t1 * Math.PI * 2;
-    const x0 = cx + Math.cos(a0) * r;
-    const y0 = cy + Math.sin(a0) * r;
-    const x1 = cx + Math.cos(a1) * r;
-    const y1 = cy + Math.sin(a1) * r;
-    const c = pickGradient(grad, t0);
-    doc.setDrawColor(c[0], c[1], c[2]);
-    doc.line(x0, y0, x1, y1);
-  }
-  setFont(doc, 14, "bold", C.ink);
-  doc.text(String(score), cx, cy + 1, { align: "center" });
-  setFont(doc, 7, "normal", C.faint);
-  doc.text("/100", cx, cy + 6, { align: "center" });
-}
-
-function gradientBar(doc: jsPDF, x: number, y: number, w: number, h: number) {
-  const stops = [C.g1, C.g2, C.g3, C.g4];
-  const segs = 40;
-  for (let i = 0; i < segs; i++) {
-    const t = i / (segs - 1);
-    const c = pickGradient(stops, t);
-    doc.setFillColor(c[0], c[1], c[2]);
-    doc.rect(x + (w / segs) * i, y, w / segs + 0.2, h, "F");
-  }
-}
-
-function pickGradient(stops: [number, number, number][], t: number): [number, number, number] {
-  if (t <= 0) return stops[0];
-  if (t >= 1) return stops[stops.length - 1];
-  const scaled = t * (stops.length - 1);
-  const i = Math.floor(scaled);
-  const f = scaled - i;
-  const a = stops[i], b = stops[i + 1];
-  return [
-    Math.round(a[0] + (b[0] - a[0]) * f),
-    Math.round(a[1] + (b[1] - a[1]) * f),
-    Math.round(a[2] + (b[2] - a[2]) * f),
-  ];
-}
-
-// ─── Content derivation ───────────────────────────────────────────────────
-function buildSummaryPoints(dna: any): { title: string; body: string }[] {
-  const out: { title: string; body: string }[] = [];
-  const perf = dna?.performanceMetrics ?? {};
-  const eng = String(perf?.engagementRate ?? "").trim();
-  if (eng) {
-    out.push({
-      title: eng.startsWith("0") || eng === "0.00%" ? "Engagement near zero." : `Engagement measured at ${eng}.`,
-      body: perf?.engagementBenchmark
-        ? `Benchmark: ${perf.engagementBenchmark}. ${arr(dna?.growthOpportunities)[0] ?? "A clone-and-improve strategy can outperform quickly."}`
-        : "Content is not resonating at scale. A clone-and-improve strategy targeting this same audience can outperform on day one.",
-    });
-  }
-  const pillars = arr(dna?.contentPillars);
-  if (!pillars.length) {
-    out.push({ title: "Content pillars undefined.", body: "No consistent content format is established. The account posts sporadically across topics without a repeatable structure. This is your opening." });
-  } else {
-    out.push({ title: `Top pillar: ${pillars[0]?.name}.`, body: String(pillars[0]?.description ?? "").slice(0, 220) });
-  }
-  const brand = dna?.brandVoice || dna?.storytellingStyle;
-  if (brand) out.push({ title: "Niche messaging is sharp.", body: String(brand).slice(0, 240) });
-  const opps = arr(dna?.growthOpportunities);
-  if (opps.length) out.push({ title: "Biggest unclaimed opportunity.", body: String(opps[0]).slice(0, 240) });
-  return out.slice(0, 4);
-}
-
-function splitPairs(who: string): [string, string][] {
-  if (!who) return [];
-  const parts = who.split(/[·•|\n]|,\s(?=[A-Z])/).map((s) => s.trim()).filter(Boolean);
-  return parts.slice(0, 6).map((p) => {
-    const [a, ...rest] = p.split(/[—:–\-]\s?/);
-    return [a.trim(), rest.join(" — ").trim() || ""] as [string, string];
-  });
-}
-
-function buildOpportunities(dna: any): { title: string; problem: string; action: string }[] {
-  const raw = arr(dna?.missedOpportunities).length
-    ? arr(dna?.missedOpportunities)
-    : arr(dna?.competitivePosition?.contentGaps).length
-      ? arr(dna?.competitivePosition?.contentGaps)
-      : arr(dna?.growthOpportunities);
-  return raw.slice(0, 6).map((item: any) => {
-    if (typeof item === "string") {
-      const [title, ...rest] = item.split(/[—:–]\s?/);
-      return {
-        title: title.trim().slice(0, 90),
-        problem: rest.join(" — ").trim() || item,
-        action: "Test this angle inside IGCloner's Clone Studio and measure saves in the first 48 hours.",
-      };
-    }
-    return {
-      title: String(item?.title ?? item?.name ?? "Opportunity").slice(0, 90),
-      problem: String(item?.problem ?? item?.description ?? item?.why ?? ""),
-      action: String(item?.action ?? item?.actionStep ?? "Test this angle inside IGCloner's Clone Studio and measure saves in the first 48 hours."),
-    };
-  });
-}
-
-function buildWeeks(dna: any, subject: string): { title: string; bullets: string[] }[] {
-  const opps = arr(dna?.growthOpportunities);
-  const hooks = arr(dna?.commonHooks);
-  const firstHook = hooks[0]?.pattern ?? "the strongest hook";
-  return [
-    {
-      title: "Establish Your Hooks",
-      bullets: [
-        `Clone ${firstHook} — same format, your niche adaptation`,
-        "Post 3 carousel versions using the Steal the Frame mode in Clone Studio",
-        `Use the "Comment [WORD] for blueprint" CTA — set up DM automation first`,
-        `Target hashtags from Distribution page (mix all 3 tiers)`,
-      ],
-    },
-    {
-      title: "Launch Your Reel Strategy",
-      bullets: [
-        `Record your first Reel — 30–45 seconds, one specific angle from ${subject}'s niche`,
-        "Clone the highest-performing Reel format from similar accounts in IGCloner",
-        "Post 3x Reels this week — algorithm rewards new format adoption early",
-        "Measure: which hook in Week 1 got the most saves? Double down on that angle",
-      ],
-    },
-    {
-      title: "Build Your Series",
-      bullets: [
-        `Launch ${opps[0] ? String(opps[0]).slice(0, 60) : "a numbered content series"} (#1 of 10)`,
-        "Post one personal story — your own before-and-after in this niche",
-        "Engage: respond to every comment in the first hour of every post",
-        "Repurpose Week 1 top performer as a Reel with voiceover",
-      ],
-    },
-    {
-      title: "Scale What's Working",
-      bullets: [
-        "Identify your top-performing format from weeks 1–3 — post 5x that format",
-        "DM outreach to 5 similar accounts for cross-promotion",
-        "Post a content-recap carousel — your best insights from the month",
-        "Plan the next 30 days using IGCloner's Content Calendar",
-      ],
-    },
-  ];
-}
-
-function buildHashtagTiers(dna: any): string[][] {
-  const raw = arr(dna?.hookAnalysis?.hashtagStrategy);
-  const flat = typeof dna?.hookAnalysis?.hashtagStrategy === "string"
-    ? dna.hookAnalysis.hashtagStrategy.split(/[,\s]+/).filter(Boolean)
-    : arr(dna?.hashtagTiers?.broad).length
-      ? []
-      : raw;
-  // Prefer structured `hashtagTiers` if present
-  const t1 = arr(dna?.hashtagTiers?.broad);
-  const t2 = arr(dna?.hashtagTiers?.niche);
-  const t3 = arr(dna?.hashtagTiers?.community);
-  if (t1.length || t2.length || t3.length) return [t1, t2, t3].map((t) => t.map(String));
-  // Fallback: split whatever we have across three tiers
-  const all = flat.length ? flat : String(dna?.hookAnalysis?.hashtagStrategy ?? "").split(/[,\s]+/).map((x: string) => x.trim()).filter(Boolean);
-  const chunk = Math.ceil(all.length / 3);
-  return [all.slice(0, chunk), all.slice(chunk, chunk * 2), all.slice(chunk * 2)];
-}
-
-function inferCompetition(score: number): string {
-  if (!score) return "MEDIUM";
-  if (score >= 75) return "LOW";
-  if (score >= 50) return "MEDIUM";
-  return "HIGH";
+  const slug = String(report.subject??"report").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40);
+  buildResearchPdf(report,ideas).save(`igcloner-intel-${slug||"report"}.pdf`);
 }
