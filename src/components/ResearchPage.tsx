@@ -74,6 +74,7 @@ import {
   StickyNote,
   Filter,
   ArrowUpDown,
+  Copy,
 } from "lucide-react";
 import {
   createResearchReport,
@@ -85,6 +86,9 @@ import {
   saveIdeaToPlanner,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IDEA_CATEGORIES } from "@/lib/intel-analytics";
+import { createProject, updateProject } from "@/lib/projects.functions";
 import { exportResearchPdf } from "@/lib/research-pdf";
 
 const routeApi = getRouteApi("/_authenticated/research");
@@ -150,6 +154,7 @@ export function ResearchPage() {
   const [niche, setNiche] = useState<string>("");
   const [competitor, setCompetitor] = useState("");
   const [topic, setTopic] = useState("");
+  const [preferences, setPreferences] = useState({ goal: "", niche: "", toneOfVoice: "", keywords: "" });
 
   useEffect(() => { refresh(); }, []);
   useEffect(() => {
@@ -185,7 +190,7 @@ export function ResearchPage() {
     if (!detail?.report?.id) return;
     setIdeasBusy(true);
     try {
-      const { ideas } = await ideasFn({ data: { id: detail.report.id } });
+      const { ideas } = await ideasFn({ data: { id: detail.report.id, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
       setDetail({ ...detail, ideas });
       toast.success(`Generated ${ideas.length} content ideas`);
     } catch (e) { toast.error((e as Error).message); }
@@ -215,6 +220,8 @@ export function ResearchPage() {
         }}
         ideasBusy={ideasBusy}
         onGenerateIdeas={runIdeas}
+        preferences={preferences}
+        setPreferences={setPreferences}
         onGenerateCampaign={() => navigate({ to: "/calendar" })}
       />
     );
@@ -327,7 +334,7 @@ export function ResearchPage() {
 // ═══════════════════════════════════════════════════════════════════
 
 function ReportDetail({
-  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -338,7 +345,16 @@ function ReportDetail({
   onGenerateIdeas: () => void;
   ideasBusy: boolean;
   onGenerateCampaign: () => void;
+  preferences: { goal: string; niche: string; toneOfVoice: string; keywords: string };
+  setPreferences: (v: { goal: string; niche: string; toneOfVoice: string; keywords: string }) => void;
 }) {
+  // ── Content Opportunity Engine local state ──────────────────────────
+  const saveIdeaFn = useServerFn(saveIdeaToPlanner);
+  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set());
+  const [savingIdea, setSavingIdea] = useState<string | null>(null);
+  const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
+  const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("virality");
+
   if (loading || !detail) {
     return (
       <div className="mx-auto max-w-[1200px] px-4 py-24 text-center text-sm text-muted-foreground">
@@ -351,15 +367,8 @@ function ReportDetail({
   const score = Number(report?.opportunity_score ?? 0);
   const perf = (dna?.performanceMetrics ?? {}) as any;
   const fmt  = (dna?.contentFormatDistribution ?? {}) as any;
-  const limited = !!report?.limited_data;
-  const postsAnalyzed = Number(report?.posts_analyzed ?? perf?.postsAnalyzed ?? 0);
-
-  // ── Content Opportunity Engine local state ──────────────────────────
-  const saveIdeaFn = useServerFn(saveIdeaToPlanner);
-  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set());
-  const [savingIdea, setSavingIdea] = useState<string | null>(null);
-  const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
-  const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("confidence");
+  const limited = !!report?.limited_data || !!dna.reportFlags?.limitedData;
+  const postsAnalyzed = Number(report?.posts_analyzed ?? dna.profileSummary?.postsAnalyzed ?? perf?.postsAnalyzed ?? 0);
 
   async function handleSaveIdea(idea: any) {
     if (savedIdeas.has(idea.id)) return;
@@ -481,26 +490,40 @@ function ReportDetail({
           tone="blue"
           icon={TrendingUp}
           label="Avg likes"
-          value={numOrDash(perf?.avgLikesPerPost)}
+          value={numOrDash(limited ? null : perf?.avgLikesPerPost)}
           hint={postsAnalyzed ? `${postsAnalyzed} posts analyzed` : "No posts scraped"}
         />
         <KpiCard
           tone="purple"
           icon={MessageSquare}
           label="Avg comments"
-          value={numOrDash(perf?.avgCommentsPerPost)}
+          value={numOrDash(limited ? null : perf?.avgCommentsPerPost)}
           hint={perf?.avgViewsPerReel ? `${numOrDash(perf.avgViewsPerReel)} avg reel views` : undefined}
         />
         <KpiCard
           tone={Number(perf?.viralPostCount) > 0 ? "green" : "gray"}
           icon={Rocket}
           label="Viral posts"
-          value={numOrDash(perf?.viralPostCount)}
+          value={numOrDash(limited ? null : perf?.viralPostCount)}
           hint={perf?.viralThreshold ? "3× avg engagement threshold" : undefined}
           sub={postsAnalyzed ? `/ ${postsAnalyzed}` : undefined}
         />
       </div>
 
+      {!limited && <details className="mb-8 rounded-lg border border-border p-4 text-sm">
+        <summary className="cursor-pointer font-semibold">Engagement calculation & source evidence</summary>
+        <p className="mt-3 break-words text-muted-foreground">{perf.engagementRateFormula}</p>
+        <p className="mt-2 text-muted-foreground">Likes: {numOrDash(perf.totalLikesAnalyzed)} · Comments: {numOrDash(perf.totalCommentsAnalyzed)} · Posts: {postsAnalyzed} · Followers: {numOrDash(dna.profileSummary?.followerCount)}</p>
+      </details>}
+      {!limited && arr(dna.topPosts).length > 0 && <section className="mb-8">
+        <SectionHead icon={TrendingUp} tone="green" title="Top posts by engagement" sub="Ranked by observed likes + comments" />
+        <div className="mt-4 grid gap-3 md:grid-cols-3">{arr(dna.topPosts).map((post: any, index: number) => <Card key={post.url ?? index} className="min-w-0 p-4">
+          <div className="mb-3 flex justify-between gap-2"><Badge variant="secondary">#{index+1} · {post.type}</Badge><span className="text-xs font-mono">{numOrDash(post.engagement)} interactions</span></div>
+          <p className="whitespace-pre-line break-words text-sm">{post.caption || "Caption not available"}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{post.timestamp ? new Date(post.timestamp).toLocaleString("en-US", { timeZone: "UTC" }) + " UTC" : "Timestamp not available"}</p>
+          {post.url && <Button asChild variant="outline" className="mt-3 min-h-11 w-full"><a href={post.url} target="_blank" rel="noreferrer">View source post <ArrowRight className="h-4 w-4" /></a></Button>}
+        </Card>)}</div>
+      </section>}
       {/* ── OPPORTUNITY + CADENCE strip ───────────────────────── */}
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard tone="green" icon={Target} label="Opportunity" value={`${score || "—"}`} sub="/ 100"
@@ -617,7 +640,7 @@ function ReportDetail({
           </div>
         </SectionCard>
 
-        <SectionCard value="pillars" icon={Layers3} tone="purple" title="Content Pillars"
+        {!limited && pillars.length > 0 && <SectionCard value="pillars" icon={Layers3} tone="purple" title="Content Pillars"
           summary={`${pillars.length} strategic pillars driving this niche.`}>
           <div className="grid gap-3 md:grid-cols-2">
             {pillars.map((p, i) => (
@@ -643,7 +666,7 @@ function ReportDetail({
               </div>
             ))}
           </div>
-        </SectionCard>
+        </SectionCard>}
 
         <SectionCard value="topics" icon={Sparkles} tone="green" title="Top Topics & Hooks"
           summary="What people are searching for and the hooks that stop the scroll.">
@@ -724,6 +747,14 @@ function ReportDetail({
         </SectionCard>
       </Accordion>
 
+      <Accordion type="single" collapsible className="mt-8">
+        <AccordionItem value="preferences" className="border-border">
+          <AccordionTrigger>Creator preferences</AccordionTrigger>
+          <AccordionContent><div className="grid gap-4 sm:grid-cols-2">{([
+            ["goal", "Your content goal"], ["niche", "Your niche"], ["toneOfVoice", "Tone of voice"], ["keywords", "Keywords & topics (comma-separated)"],
+          ] as const).map(([key, label]) => <div key={key}><Label htmlFor={`intel-${key}`}>{label}</Label><Input id={`intel-${key}`} className="mt-2" value={preferences[key]} onChange={e => setPreferences({ ...preferences, [key]: e.target.value })} /></div>)}</div></AccordionContent>
+        </AccordionItem>
+      </Accordion>
       {/* ── CONTENT OPPORTUNITY ENGINE ─────────────────────────── */}
       <OpportunityEngine
         ideas={ideas}
@@ -736,6 +767,8 @@ function ReportDetail({
         setFormatFilter={setIdeaFormatFilter}
         sort={ideaSort}
         setSort={setIdeaSort}
+        report={report}
+        onExport={handleExportPdf}
       />
 
       {/* ── ACTION CENTER ──────────────────────────────────────── */}
@@ -780,11 +813,12 @@ function ReportDetail({
 // ─── Sub-components ────────────────────────────────────────────────
 
 function numOrDash(n: unknown): string {
+  if (n == null || n === "") return "—";
   const v = Number(n);
-  if (!Number.isFinite(v) || v === 0) return "—";
+  if (!Number.isFinite(v)) return "—";
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
-  return String(Math.round(v));
+  return String(Math.round(v * 100) / 100);
 }
 function capitalize(s: string): string {
   if (!s) return "";
@@ -962,6 +996,7 @@ function KV({ k, v }: { k: string; v?: string }) {
 const FORMAT_META: Record<string, { icon: any; tone: Tone; label: string }> = {
   Reel:     { icon: Film,       tone: "purple", label: "Reel" },
   Carousel: { icon: Images,     tone: "blue",   label: "Carousel" },
+  Image:    { icon: ImageIcon, tone: "green", label: "Image" },
   Post:     { icon: ImageIcon,  tone: "green",  label: "Post" },
   Story:    { icon: StickyNote, tone: "amber",  label: "Story" },
 };
@@ -1010,299 +1045,84 @@ function ConfidenceRing({ value }: { value: number }) {
   );
 }
 
-function IdeaCard({
-  idea, saved, saving, onSave,
-}: { idea: any; saved: boolean; saving: boolean; onSave: () => void }) {
-  const meta = formatMeta(idea.format);
-  const FIcon = meta.icon;
-  const navigate = useNavigate();
-  const useThisIdea = () => {
-    try {
-      sessionStorage.setItem(
-        "ig:seed-idea",
-        JSON.stringify({
-          title: idea.title,
-          hook: idea.hook,
-          caption_opener: idea.caption_opener,
-          cta: idea.cta,
-          format: idea.format,
-          hashtags: idea.hashtags,
-          description: idea.description,
-          why_it_works: idea.why_it_works,
-        }),
-      );
-    } catch {}
-    const f = String(idea.format ?? "").toLowerCase();
-    const dest =
-      f === "reel" ? "/studio/reel" :
-      f === "carousel" ? "/studio/carousel" :
-      f === "image" ? "/studio/image" :
-      "/studio";
-    toast.success("Idea sent to Studio — hook & caption are on your clipboard-ready draft");
-    navigate({ to: dest });
-  };
-  return (
-    <Card className="group flex flex-col overflow-hidden border-border/60 p-0 transition hover:-translate-y-0.5 hover:border-accent-primary/50 hover:shadow-lg">
-      <div className="flex items-start justify-between gap-3 px-5 pt-4">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div className={cn("inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider", TONE[meta.tone])}>
-            <FIcon className="h-3 w-3" />
-            {meta.label}
-          </div>
-          {idea.category && (
-            <Badge variant="outline" className="text-[10px]">
-              {idea.category}
-            </Badge>
-          )}
-          {idea.production_difficulty && (
-            <span className="text-[10px] text-muted-foreground">· {idea.production_difficulty}</span>
-          )}
-        </div>
-        <ConfidenceRing value={idea.confidence_score} />
-      </div>
-
-      <div className="flex-1 px-5 pt-3">
-        <h3 className="mb-2 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
-          {idea.title}
-        </h3>
-        {idea.hook && (
-          <blockquote className="mb-3 border-l-2 border-accent-primary/40 pl-3 text-[13px] italic leading-relaxed text-foreground/80 line-clamp-2">
-            {idea.hook}
-          </blockquote>
-        )}
-        {idea.why_it_works ? (
-          <p className="mb-2 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
-            <span className="font-semibold text-foreground/80">Why it works: </span>{idea.why_it_works}
-          </p>
-        ) : idea.description && (
-          <p className="mb-4 line-clamp-3 text-[12.5px] leading-relaxed text-muted-foreground">
-            {idea.description}
-          </p>
-        )}
-        {idea.caption_opener && (
-          <p className="mb-3 line-clamp-2 rounded-md bg-muted/40 p-2 text-[12px] leading-relaxed text-foreground/75">
-            {idea.caption_opener}
-          </p>
-        )}
-        {idea.viral_mechanism && (
-          <span className="mb-2 inline-block text-[10px] font-medium uppercase tracking-wider text-accent-primary">
-            {idea.viral_mechanism}
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-2.5 border-t border-border/60 bg-muted/20 px-5 py-4">
-        <ScoreBar label="Virality"   value={idea.virality_score}          tone="green" />
-        <ScoreBar label="Audience"   value={idea.audience_interest_score} tone="blue" />
-        <ScoreBar label="Difficulty" value={idea.difficulty_score}        tone="amber" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 px-5 pb-4">
-        <Button
-          size="sm"
-          variant={saved ? "secondary" : "outline"}
-          className="gap-1.5"
-          onClick={onSave}
-          disabled={saving || saved}
-        >
-          {saving ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : saved ? (
-            <CheckCircle2 className="h-3.5 w-3.5" />
-          ) : (
-            <CalendarPlus className="h-3.5 w-3.5" />
-          )}
-          {saved ? "Saved" : saving ? "Saving…" : "Save"}
-        </Button>
-        <Button size="sm" className="gap-1.5" onClick={useThisIdea}>
-          <Sparkles className="h-3.5 w-3.5" /> Use This Idea
-        </Button>
-      </div>
-    </Card>
-  );
+async function seedIntelIdea(idea: any, report: any, createFn: any, updateFn: any) {
+  const format = String(idea.format).toLowerCase();
+  const { project } = await createFn({ data: { format, title: idea.title.slice(0,200), cloneMode: "inspired", userPreferences: {
+    angle: idea.description, angleConcept: idea.description, hook: idea.hook, textOverlay: idea.hook, cta: idea.cta, captionOpener: idea.caption_opener, selectedFormats: [format], researchReportId: report.id,
+  } } });
+  const common = { title: idea.title, concept: idea.description, textOverlay: idea.hook, caption: `${idea.caption_opener}\n\n${idea.cta}`, hashtags: idea.hashtags ?? [], cta: idea.cta, researchReportId: report.id };
+  const projectData = format === "carousel" ? { ...common, hook: idea.hook, slides: [
+    { index: 1, role: "hook", headline: idea.hook, body: "", visualNote: idea.description },
+    { index: 2, role: "value", headline: idea.title, body: idea.description, visualNote: idea.description },
+    { index: 3, role: "cta", headline: idea.cta, body: "", visualNote: "" },
+  ], designBrief: { palette: "", typography: "", layout: "", mood: "", overlays: idea.hook } } : format === "reel" ? { ...common,
+    visualSummary: idea.description, hook: { text: idea.hook, onScreenText: idea.hook, visualNote: idea.description, animationNote: "" },
+    scenes: [], hookVariations: [], musicMood: "", directorNotes: idea.description,
+  } : common;
+  await updateFn({ data: { id: project.id, patch: { project_data: projectData } } });
+  return { projectId: project.id, destination: format === "reel" ? "/studio/reel" : format === "carousel" ? "/studio/carousel" : "/studio/image" };
 }
 
-function OpportunityEngine({
-  ideas, ideasBusy, onGenerate, onSaveIdea, savedIdeas, savingIdea,
-  formatFilter, setFormatFilter, sort, setSort,
-}: {
-  ideas: any[];
-  ideasBusy: boolean;
-  onGenerate: () => void;
-  onSaveIdea: (idea: any) => void;
-  savedIdeas: Set<string>;
-  savingIdea: string | null;
-  formatFilter: string;
-  setFormatFilter: (v: string) => void;
-  sort: "confidence" | "virality" | "easy";
-  setSort: (v: "confidence" | "virality" | "easy") => void;
-}) {
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: ideas.length };
-    for (const i of ideas) c[i.format] = (c[i.format] ?? 0) + 1;
-    return c;
-  }, [ideas]);
-
-  const filtered = useMemo(() => {
-    let out = formatFilter === "all" ? ideas : ideas.filter((i) => i.format === formatFilter);
-    out = [...out].sort((a, b) => {
-      if (sort === "virality") return (b.virality_score || 0) - (a.virality_score || 0);
-      if (sort === "easy") return (a.difficulty_score || 0) - (b.difficulty_score || 0);
-      return (b.confidence_score || 0) - (a.confidence_score || 0);
-    });
-    return out;
-  }, [ideas, formatFilter, sort]);
-
-  const avgViral = ideas.length ? Math.round(ideas.reduce((s, i) => s + (i.virality_score || 0), 0) / ideas.length) : 0;
-  const avgConf  = ideas.length ? Math.round(ideas.reduce((s, i) => s + (i.confidence_score || 0), 0) / ideas.length) : 0;
-  const highCount = ideas.filter((i) => (i.confidence_score || 0) >= 80).length;
-
-  const filterChips: { key: string; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "Reel", label: "Reels" },
-    { key: "Carousel", label: "Carousels" },
-    { key: "Post", label: "Posts" },
-    { key: "Story", label: "Stories" },
-  ];
-
-  return (
-    <div className="mt-10">
-      {/* Header */}
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-start gap-3">
-          <IconTile icon={Sparkles} tone="green" size={24} />
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold tracking-tight lg:text-2xl">Content Opportunity Engine</h2>
-            <p className="text-sm text-muted-foreground">
-              AI-ranked ideas grounded in this DNA report — save straight to your Planner.
-            </p>
-          </div>
-        </div>
-        <Button onClick={onGenerate} disabled={ideasBusy} className="shrink-0 gap-2">
-          {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {ideas.length > 0 ? "Regenerate" : "Generate 50 Ideas"}
-        </Button>
-      </div>
-
-      {ideas.length === 0 ? (
-        <Card className="border-dashed p-10 text-center">
-          <IconTile icon={Lightbulb} tone="amber" size={24} />
-          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-            Run the opportunity engine to get 50 ranked, scored content ideas you can drop straight into a campaign.
-          </p>
-        </Card>
-      ) : (
-        <>
-          {/* KPI strip */}
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MiniStat icon={Lightbulb}    tone="green"  label="Ideas"          value={String(ideas.length)} />
-            <MiniStat icon={TrendingUp}   tone="purple" label="Avg virality"   value={`${avgViral}`} suffix="/100" />
-            <MiniStat icon={Gauge}        tone="blue"   label="Avg confidence" value={`${avgConf}`} suffix="/100" />
-            <MiniStat icon={CheckCircle2} tone="amber"  label="High-conf"      value={String(highCount)} suffix=" · 80+" />
-          </div>
-
-          {/* Controls */}
-          <div className="mb-5 flex flex-col gap-3 rounded-xl border border-border/60 bg-card/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <Filter className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex items-center gap-1.5">
-                {filterChips.map((c) => {
-                  const active = formatFilter === c.key;
-                  const n = counts[c.key] ?? 0;
-                  if (c.key !== "all" && n === 0) return null;
-                  return (
-                    <button
-                      key={c.key}
-                      onClick={() => setFormatFilter(c.key)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition",
-                        active
-                          ? "border-accent-primary/50 bg-accent-primary/10 text-accent-primary"
-                          : "border-border bg-transparent text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      {c.label} <span className="ml-1 font-mono opacity-70">{n}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <span>Sort:</span>
-              {(["confidence", "virality", "easy"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setSort(s)}
-                  className={cn(
-                    "rounded-md px-2 py-1 font-medium transition",
-                    sort === s ? "bg-muted text-foreground" : "hover:text-foreground",
-                  )}
-                >
-                  {s === "confidence" ? "Confidence" : s === "virality" ? "Virality" : "Easiest"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Grouped by category */}
-          {(() => {
-            const CATEGORIES = [
-              "Steal the Frame",
-              "Exploit the Gaps",
-              "Amplify What Works",
-              "Original Authority",
-              "Viral Formats",
-            ];
-            const grouped = new Map<string, any[]>();
-            for (const i of filtered) {
-              const key = i.category || "Other";
-              if (!grouped.has(key)) grouped.set(key, []);
-              grouped.get(key)!.push(i);
-            }
-            const ordered = [
-              ...CATEGORIES.filter((c) => grouped.has(c)).map((c) => [c, grouped.get(c)!] as const),
-              ...Array.from(grouped.entries()).filter(([k]) => !CATEGORIES.includes(k)),
-            ];
-            // If AI didn't tag categories, render a single grid
-            if (ordered.length <= 1 && !ordered[0]?.[0]) {
-              return (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {filtered.map((idea: any) => (
-                    <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
-                  ))}
-                </div>
-              );
-            }
-            return (
-              <Accordion type="multiple" defaultValue={CATEGORIES} className="space-y-3">
-                {ordered.map(([cat, list]) => (
-                  <AccordionItem key={cat} value={cat} className="overflow-hidden rounded-xl border border-border bg-card">
-                    <AccordionTrigger className="px-5 py-4 hover:no-underline">
-                      <div className="flex min-w-0 items-center gap-3 text-left">
-                        <IconTile icon={Sparkles} tone="green" size={20} />
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold">{cat}</div>
-                          <div className="text-xs text-muted-foreground">{list.length} idea{list.length === 1 ? "" : "s"}</div>
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="border-t border-border/60 p-4">
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {list.map((idea: any) => (
-                          <IdeaCard key={idea.id} idea={idea} saved={savedIdeas.has(idea.id)} saving={savingIdea === idea.id} onSave={() => onSaveIdea(idea)} />
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            );
-          })()}
-        </>
-      )}
+function IdeaCard({ idea, saved, saving, onSave, report }: { idea: any; saved: boolean; saving: boolean; onSave: () => void; report: any }) {
+  const navigate = useNavigate(); const createFn = useServerFn(createProject); const updateFn = useServerFn(updateProject);
+  const [opening, setOpening] = useState(false);
+  async function useIdea() {
+    setOpening(true);
+    try { const result = await seedIntelIdea(idea, report, createFn, updateFn); navigate({ to: result.destination, search: { projectId: result.projectId } } as any); }
+    catch (e) { toast.error((e as Error).message); } finally { setOpening(false); }
+  }
+  async function copy(value: string, label: string) { try { await navigator.clipboard.writeText(value); toast.success(`${label} copied`); } catch { toast.error("Clipboard unavailable. Select the text to copy it."); } }
+  return <Card className="flex min-w-0 flex-col gap-4 rounded-lg p-4">
+    <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">Idea {idea.idea_number} · {idea.format}</Badge><span className="text-xs text-muted-foreground">{idea.production_difficulty}</span></div>
+    <ScoreBar label="Predicted viral score" value={idea.virality_score} tone="green" />
+    <blockquote className="border-l-2 border-accent-primary pl-3 whitespace-pre-line break-words text-base font-semibold">{idea.hook}</blockquote>
+    <p className="break-words text-sm"><b>Concept: </b>{idea.description}</p>
+    <p className="break-words text-sm text-muted-foreground"><b className="text-foreground">Why it works: </b>{idea.why_it_works}</p>
+    <p className="whitespace-pre-line break-words text-sm text-muted-foreground">{idea.caption_opener}</p>
+    <p className="break-words text-sm"><b>CTA: </b>{idea.cta}</p>
+    <span className="text-xs text-accent-primary">{idea.viral_mechanism}</span>
+    <div className="mt-auto grid gap-2 sm:grid-cols-2">
+      <Button className="min-h-11" onClick={useIdea} disabled={opening}>{opening ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Use This Idea</Button>
+      <Button className="min-h-11" variant="outline" onClick={onSave} disabled={saved || saving}><CalendarPlus className="h-4 w-4" />{saved ? "Saved" : "Save to Planner"}</Button>
+      <Button className="min-h-11" variant="ghost" onClick={() => copy(idea.hook, "Hook")}><Copy className="h-4 w-4" />Copy Hook</Button>
+      <Button className="min-h-11 whitespace-normal" variant="ghost" onClick={() => copy(idea.caption_opener, "Caption opener")}><Copy className="h-4 w-4 shrink-0" />Copy Caption Opener</Button>
     </div>
-  );
+  </Card>;
+}
+
+function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdeas, savingIdea, formatFilter, setFormatFilter, sort, setSort, report, onExport }: {
+  ideas: any[]; ideasBusy: boolean; onGenerate: () => void; onSaveIdea: (idea: any) => void; savedIdeas: Set<string>; savingIdea: string | null;
+  formatFilter: string; setFormatFilter: (v: string) => void; sort: "confidence" | "virality" | "easy"; setSort: (v: "confidence" | "virality" | "easy") => void; report: any; onExport: () => void;
+}) {
+  const [difficulty, setDifficulty] = useState("all"); const [category, setCategory] = useState("all"); const [minimumScore, setMinimumScore] = useState("0"); const [sending, setSending] = useState(false);
+  const createFn = useServerFn(createProject); const updateFn = useServerFn(updateProject); const navigate = useNavigate();
+  const filtered = ideas.filter(i => (formatFilter === "all" || i.format === formatFilter) && (category === "all" || i.category === category) && (difficulty === "all" || i.production_difficulty?.startsWith(difficulty)) && Number(i.virality_score) >= Number(minimumScore))
+    .sort((a,b) => sort === "easy" ? a.difficulty_score-b.difficulty_score : sort === "confidence" ? b.confidence_score-a.confidence_score : b.virality_score-a.virality_score);
+  async function sendAll() {
+    setSending(true); let count = 0;
+    try { for (const idea of ideas) { await seedIntelIdea(idea, report, createFn, updateFn); count++; } toast.success(`${count} Studio drafts saved`); navigate({ to: "/projects" }); }
+    catch (e) { toast.error(`${count} drafts saved. ${(e as Error).message}`); } finally { setSending(false); }
+  }
+  const control = (label: string, value: string, onChange: (v:string)=>void, options: [string,string][]) => <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([v,l])=><SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>;
+  return <section className="mt-10">
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Content Ideas <span className="text-muted-foreground">({ideas.length} total)</span></h2><Button className="min-h-11" onClick={onGenerate} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{ideas.length ? "Regenerate 50 Ideas" : "Generate 50 Ideas"}</Button></div>
+    {!!ideas.length && <>
+      <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {control("Strategy category", category, setCategory, [["all","All strategies"], ...IDEA_CATEGORIES.map(c => [c,c] as [string,string])])}
+        {control("Content format", formatFilter, setFormatFilter, [["all","All formats"],["Reel","Reel"],["Carousel","Carousel"],["Image","Image"]])}
+        {control("Production difficulty", difficulty, setDifficulty, [["all","All difficulties"],["easy","Easy · 30 min"],["medium","Medium · 2 hours"],["hard","Hard · half day"]])}
+        {control("Minimum viral score", minimumScore, setMinimumScore, [["0","Any viral score"],["70","Viral score 70+"],["85","Viral score 85+"]])}
+        {control("Sort ideas", sort, v => setSort(v as typeof sort), [["virality","Sort: viral score"],["confidence","Sort: confidence"],["easy","Sort: easiest"]])}
+      </div>
+      {!filtered.length && <p className="py-8 text-center text-muted-foreground">No ideas match these filters.</p>}
+      <Accordion type="multiple" defaultValue={[]} className="space-y-3">{IDEA_CATEGORIES.map(cat => {
+        const list = filtered.filter(i=>i.category===cat); if (!list.length) return null;
+        const counts = list.reduce((m:Record<string,number>,i:any)=>({ ...m,[i.format]:(m[i.format]??0)+1 }),{}); const best = Object.entries(counts).sort((a,b)=>Number(b[1])-Number(a[1]))[0]?.[0];
+        return <AccordionItem key={cat} value={cat} className="rounded-lg border border-border"><AccordionTrigger className="min-h-14 px-4 text-left"><span className="min-w-0"><span className="block font-semibold">{cat} ({list.length} ideas)</span><span className="text-xs text-muted-foreground">Best format: {best}</span></span></AccordionTrigger><AccordionContent className="px-4 pb-4"><div className="grid gap-4 lg:grid-cols-2">{list.map(idea=><IdeaCard key={idea.id} idea={idea} report={report} saved={savedIdeas.has(idea.id)} saving={savingIdea===idea.id} onSave={()=>onSaveIdea(idea)} />)}</div></AccordionContent></AccordionItem>;
+      })}</Accordion>
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row"><Button className="min-h-11 whitespace-normal" onClick={sendAll} disabled={sending || ideas.length!==50}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send All 50 to Clone Studio</Button><Button className="min-h-11" variant="outline" onClick={onExport}><Download className="h-4 w-4" />Export as PDF</Button></div>
+    </>}
+  </section>;
 }
 
 function MiniStat({
