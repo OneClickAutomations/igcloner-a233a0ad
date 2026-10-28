@@ -328,11 +328,6 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     if (error || !report) throw new Error("Report not found");
     if (report.status !== "ready") throw new Error("Report is not ready yet");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
-
     const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
 Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
 
