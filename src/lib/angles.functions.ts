@@ -6,6 +6,7 @@ import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
 import { buildAnglesMediumConstraint, mediumLabel, type ContentMedium } from "@/lib/medium";
 import { GOAL_COPY_INSTRUCTIONS, GOAL_LABEL, type PostGoal } from "@/lib/post-goals";
+import { CLONE_LABEL, cloneModeLabel } from "@/lib/clone-modes";
 
 const AngleSchema = z.object({
   angleNumber: z.number(),
@@ -57,9 +58,9 @@ const Input = z.object({
 });
 
 const INTENT_DESCRIPTIONS: Record<string, string> = {
-  A1: "CLONE CONTENT — Clone the image EXACTLY with different words. Visual style, composition, colors and aesthetic must be reproduced. Only text/message/caption changes.",
-  A2: "REMIX THE MESSAGE — Clone the TEXT and caption structure, but use a completely different image. Hook, caption format and message structure stay identical; visual concept is new.",
-  A3: "REIMAGINE THE SCENE — Use the THEME, concept and emotional genre of the source post to generate fully original content in the user's niche. Execution is original; emotional mechanic is preserved.",
+  A1: `${CLONE_LABEL.A1} — Clone the image EXACTLY with different words. Visual style, composition, colors and aesthetic must be reproduced. Only text/message/caption changes.`,
+  A2: `${CLONE_LABEL.A2} — Clone the TEXT and caption structure, but use a completely different image. Hook, caption format and message structure stay identical; visual concept is new.`,
+  A3: `${CLONE_LABEL.A3} — Use the THEME, concept and emotional genre of the source post to generate fully original content in the user's niche. Execution is original; emotional mechanic is preserved.`,
   B1: "Use this post as INSPIRATION to generate an original IMAGE post. Not a clone — something new sparked by it.",
   B2: "Use this post as INSPIRATION to generate an original REEL. Not a clone — something new sparked by it.",
   B3: "Use this post as INSPIRATION to generate an original CAROUSEL. Not a clone — something new sparked by it.",
@@ -70,7 +71,7 @@ const INTENT_TEMPERATURE: Record<string, number> = {
   A1: 0.6, A2: 0.85, A3: 0.9, B1: 0.9, B2: 0.9, B3: 0.9,
 };
 // Isolated per-intent structural rule: must every angle's medium equal the
-// source medium? True only for A1 (Clone Content). Centralized here so the
+// source medium? True only for Steal the Frame. Centralized here so the
 // rule lives in ONE place instead of scattered `intent === "A1"` conditionals.
 const INTENT_MEDIUM_LOCK: Record<string, boolean> = {
   A1: true, A2: false, A3: false, B1: false, B2: false, B3: false,
@@ -141,7 +142,7 @@ RIGHT: same source + niche -> "I love my amazing GAINS ♥" (same handwritten
 
 The TOPIC changes. The SPECIFIC CONCEPT, FORMAT and EMOTIONAL MECHANIC stay.
 
-USER INTENT (${intent}): ${INTENT_DESCRIPTIONS[intent]}
+USER INTENT (${cloneModeLabel(intent)}): ${INTENT_DESCRIPTIONS[intent]}
 
 Return ONLY a JSON object — no prose, no code fences.`;
 
@@ -189,7 +190,7 @@ Caption structure: ${dna.captionDNA?.structure ?? "?"}
 Top emotion: ${topEmotion}
 
 USER PREFERENCES:
-- Intent: ${intent} — ${INTENT_DESCRIPTIONS[intent]}
+- Intent: ${cloneModeLabel(intent)} — ${INTENT_DESCRIPTIONS[intent]}
 ${nicheLine}
 - Goal: ${prefs.contentGoal ?? "not specified"}
 - Tone: ${prefs.toneOfVoice ?? "not specified"}
@@ -207,7 +208,7 @@ ${(prefs.uploadedImageUrls ?? []).length > 0 ? `\nUSER REFERENCE IMAGES are atta
 
 RULES:
 1. Identify a SPECIFIC element from the source post (not vague — e.g. "the handwritten note format", "the over-the-shoulder phone shot").
-2. Show exactly HOW that element translates under the user's intent (${intent}).
+2. Show exactly HOW that element translates under the user's intent (${cloneModeLabel(intent)}).
 3. ${ruleNiche}, on-tone (${prefs.toneOfVoice ?? "—"}), aimed at goal (${prefs.contentGoal ?? "—"}).
 4. Hook line must be specific and ready-to-post — never a template.
 5. Where natural, weave in a user keyword${kw.length ? ` (${kw.join(", ")})` : ""}.
@@ -299,7 +300,7 @@ Return ONLY this JSON object:
             medium: a.medium || String(sourceMediumPrimary),
           }));
 
-          // A1 (Clone Content) structural rule: every angle's medium must equal
+          // Steal the Frame structural rule: every angle's medium must equal
           // the source medium. Retry on drift; on the final attempt, coerce to
           // source rather than ship an inconsistent set.
           if (mediumMustMatch && sourceMediumPrimary !== "unknown") {
@@ -308,7 +309,7 @@ Return ONLY this JSON object:
                 String(a.medium) !== String(sourceMediumPrimary),
             );
             if (drifted && attempt < maxRetries) {
-              lastError = new Error("A1 medium drift — every angle must match source medium");
+              lastError = new Error("Steal the Frame medium drift — every angle must match source medium");
               continue;
             }
             if (drifted) {

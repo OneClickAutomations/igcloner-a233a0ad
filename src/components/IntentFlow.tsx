@@ -15,8 +15,8 @@ import { generateProjectImage } from "@/lib/image.functions";
 import { DEFAULT_BRANDING, loadBranding, saveBranding, POSITION_STYLES, type BrandingSettings } from "@/lib/branding";
 import { POST_GOALS, type PostGoal } from "@/lib/post-goals";
 import { PLATFORM_LIST, type SocialPlatform } from "@/lib/platform-voice";
+import { CLONE_METHODS, CLONE_LABEL, CLONE_SUMMARY, cloneModeLabel, type CloneMethod } from "@/lib/clone-modes";
 
-type CloneMethod = "A1" | "A2" | "A3";
 type OutputFormat = "image" | "reel" | "carousel";
 
 const NICHES = [
@@ -31,33 +31,11 @@ const TONES = [
   "Vulnerable & personal", "Bold & provocative",
 ];
 
-// Display order: Clone Content (A1) → Reimagine the Scene (A3) → Remix the Message (A2).
-// Internal ids stay A1/A2/A3 — they are persisted in user_preferences and drive
-// medium/format logic across the generation pipeline. Only display names change.
-const CLONE_METHODS: { id: CloneMethod; title: string; blurb: string }[] = [
-  { id: "A1", title: "Clone Content", blurb: "Same image, stronger words. Keep the exact visual style, composition, and colors — restyle only the caption, hook, and message." },
-  { id: "A3", title: "Reimagine the Scene", blurb: "Use the source's theme, concept, and emotional genre to generate completely original content in your niche and style." },
-  { id: "A2", title: "Remix the Message", blurb: "Keep the hook, caption structure, and message format — pair it with a completely new visual concept." },
-];
-
 const OUTPUT_FORMATS: { id: OutputFormat; title: string; icon: React.ReactNode; desc: string }[] = [
   { id: "image", title: "Image", icon: <ImageIcon className="h-5 w-5" />, desc: "Single image post with caption" },
   { id: "reel", title: "Reel", icon: <Film className="h-5 w-5" />, desc: "Short video script + VEO 3 + voiceover" },
   { id: "carousel", title: "Carousel", icon: <LayoutGrid className="h-5 w-5" />, desc: "Slide deck ready to build in Canva" },
 ];
-
-const CLONE_SUMMARY: Record<CloneMethod, string> = {
-  A1: "Clone the source post's exact visual; deliver a stronger message.",
-  A2: "Clone the caption/hook structure; pair it with a new visual.",
-  A3: "Reimagine the source's theme into something fully original.",
-};
-
-// Friendly display label for the new names, keyed by stable internal id.
-const CLONE_LABEL: Record<CloneMethod, string> = {
-  A1: "Clone Content",
-  A2: "Remix the Message",
-  A3: "Reimagine the Scene",
-};
 
 const STORAGE_KEY = "igcloner.preferences.v1";
 
@@ -421,7 +399,6 @@ export function IntentFlow({ analysisId }: Props) {
                     </span>
                     <div className="flex-1">
                       <p className="text-sm font-semibold">
-                        <span className="mr-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold">{m.id}</span>
                         {m.title}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{m.blurb}</p>
@@ -475,7 +452,7 @@ export function IntentFlow({ analysisId }: Props) {
           )}
 
           {/* Context + uploads — surfaced directly under the creative brief for
-              Reimagine the Scene (A3) and Remix the Message (A2). If filled, the
+              Reimagine the Scene (A2) and Remix the Message (A3). If filled, the
               AI uses this prompt to steer angle generation; if empty, the AI
               decides everything. A1 keeps its context inside Advanced Features. */}
           {(cloneMethod === "A3" || cloneMethod === "A2") && (
@@ -1057,7 +1034,7 @@ function ChipGrid({ options, selected, onSelect }: { options: string[]; selected
 function AnglesLoading({ step, niche, intent }: { step: number; niche: string | null; intent: string | null }) {
   const steps = [
     "Re-reading the source post…",
-    `Applying intent ${intent ?? ""}…`,
+    `Applying ${cloneModeLabel(intent)}…`,
     `Crafting angles for ${niche ?? "your niche"}…`,
     "Writing ready-to-post hooks…",
     "Scoring viral potential…",
