@@ -2,6 +2,7 @@
 // digital format the source post exists in — handwriting on paper, screenshot,
 // talking-head video, digital graphic, etc. It's separate from visual style.
 // In A1 clone mode the medium must be preserved across angles + studio output.
+import { CLONE_LABEL } from "./clone-modes";
 
 export type ContentMediumType =
   | "handwriting-on-paper"
@@ -162,7 +163,7 @@ export function buildAnglesMediumConstraint(
   const primary = String(medium.primary);
   const isA1 = cloneMethod === "A1";
   if (!isA1) {
-    return `\nMEDIUM GUIDANCE (A2/A3 — user is free to change medium):\nSource medium was: ${primary}${
+    return `\nMEDIUM GUIDANCE (${CLONE_LABEL.A2} / ${CLONE_LABEL.A3} — user is free to change medium):\nSource medium was: ${primary}${
       medium.description ? ` — ${medium.description}` : ""
     }. In this mode you may suggest a different medium if it serves the niche better.\n`;
   }
@@ -170,7 +171,7 @@ export function buildAnglesMediumConstraint(
   const opening = MEDIUM_OPENINGS[primary] || "";
   const isMessage = mediumIsTheMessage(medium);
 
-  return `\nMEDIUM CONSTRAINT — NON-NEGOTIABLE FOR A1 MODE:
+  return `\nMEDIUM CONSTRAINT — NON-NEGOTIABLE FOR ${CLONE_LABEL.A1} MODE:
 The source post's medium is: "${primary}"${medium.description ? ` (${medium.description})` : ""}.
 ALL 5 angles MUST stay in this exact medium. The medium is part of the formula — changing it defeats the clone.
 

@@ -4,6 +4,7 @@ import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
+import { CLONE_LABEL } from "@/lib/clone-modes";
 import {
   buildImageMediumOpening,
   mediumLabel,
@@ -119,7 +120,7 @@ Slide ${slide.index} of ${doc.slides.length} — role: ${slide.role}.
 
 ${
       mediumCtx.primary
-        ? `MEDIUM FOR THIS SLIDE (A1 clone of source — must match the source post's format):
+        ? `MEDIUM FOR THIS SLIDE (${CLONE_LABEL.A1} — must match the source post's format):
 → ${mediumLabel(mediumCtx.primary)} (${mediumCtx.primary})
 ${sourceMedium?.description ? `Source-format notes: ${sourceMedium.description}` : ""}
 ${sourceMedium?.replicationInstructions ? `How to recreate: ${sourceMedium.replicationInstructions}` : ""}

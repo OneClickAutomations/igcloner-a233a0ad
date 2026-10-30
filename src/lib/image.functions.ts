@@ -4,6 +4,7 @@ import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage, buildSourceContextBlock, extractSourceText } from "@/lib/source-context";
+import { CLONE_LABEL } from "@/lib/clone-modes";
 
 const StyleEnum = z.enum([
   "photorealistic",
@@ -58,7 +59,7 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
   const isA1 = intent === "A1";
   const ocr = extractSourceText(dna);
 
-  // A1 = Clone Exactly. Strict rule: reproduce the source image 100% faithfully
+  // Steal the Frame. Strict rule: reproduce the source image 100% faithfully
   // (same subject, composition, colors, lighting, framing, aesthetic) and ONLY
   // change the text overlay — remove the original visible/OCR text and replace
   // it with the user's new text (the selected angle's hook). Nothing else.
@@ -66,7 +67,7 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
     const lines: string[] = [];
     lines.push(`Reproduce the ATTACHED REFERENCE IMAGE exactly as a ${ASPECT_DIMS[input.aspect]} Instagram post.`);
     lines.push(
-      "STRICT CLONE RULES (A1 — Clone Exactly):",
+      `STRICT CLONE RULES (${CLONE_LABEL.A1}):`,
       "1. The output image must be VISUALLY IDENTICAL to the reference: same subject, same pose, same composition, same framing, same lighting, same color palette, same background, same props, same overall aesthetic. Do not reinterpret, restyle, or 'improve' it.",
       "2. REMOVE every piece of original text, caption, watermark, handle, sticker text, and any visible writing that appears in the reference image. The cleaned image must have NO leftover original text or partial letters.",
       `3. ${
