@@ -770,7 +770,7 @@ export function IntentFlow({ analysisId }: Props) {
                   )}
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">
-                      Idea {a.angleNumber} · {a.angleName}
+                      Angle {a.angleNumber} · {a.angleName}
                     </span>
                     <span className="font-mono text-xs font-semibold">{a.viralPotential}/100</span>
                   </div>

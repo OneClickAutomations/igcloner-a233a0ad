@@ -13,7 +13,7 @@ export const CLONE_SUMMARY: Record<CloneMethod, string> = {
   A3: "Same core message, flipped format or platform style.",
 };
 
-export const CLONE_METHODS = (["A1", "A2", "A3"] as const).map((id) => ({
+export const CLONE_METHODS = (["A1", "A3", "A2"] as const).map((id) => ({
   id,
   title: CLONE_LABEL[id],
   blurb: CLONE_SUMMARY[id],
