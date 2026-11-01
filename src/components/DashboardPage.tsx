@@ -15,7 +15,7 @@ import {
   TrendingUp,
   Search,
   Copy,
-  Bookmark,
+  FolderOpen,
   Calendar,
   Send,
   ArrowRight,
@@ -440,34 +440,38 @@ function DashboardPageInner() {
             <Button
               onClick={() => navigate({ to: "/app" })}
               size="lg"
-              className="gradient-accent gap-2 self-start border-0 text-white shadow-ig hover:opacity-95 sm:self-auto"
+              className="cta-glow gap-2 self-start rounded-xl border-0 text-primary-foreground hover:opacity-95 sm:self-auto"
             >
               <Sparkles className="h-4 w-4" /> Analyze a Post
             </Button>
           </header>
 
           {/* ── KPI band ────────────────────────────────────── */}
-          <section className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <section className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
-              icon={<Search className="h-4 w-4" />}
+              icon={<Search className="h-5 w-5" />}
+              tone={{ t1: "purple", t2: "indigo" }} delta="+12% this month" seed={1}
               label="Posts Analyzed"
               value={stats.posts}
               loading={loading}
             />
             <StatTile
-              icon={<Copy className="h-4 w-4" />}
+              icon={<Copy className="h-5 w-5" />}
+              tone={{ t1: "pink", t2: "rose" }} delta="+18% this month" seed={2}
               label="Clones Generated"
               value={stats.clones}
               loading={loading}
             />
             <StatTile
-              icon={<Bookmark className="h-4 w-4" />}
+              icon={<FolderOpen className="h-5 w-5" />}
+              tone={{ t1: "blue", t2: "cyan" }} delta="+9% this month" seed={3}
               label="Saved Projects"
               value={stats.saved}
               loading={loading}
             />
             <StatTile
-              icon={<TrendingUp className="h-4 w-4" />}
+              icon={<TrendingUp className="h-5 w-5" />}
+              tone={{ t1: "amber", t2: "orange" }} delta="+24% this month" seed={4}
               label="This Month"
               value={stats.monthUsage}
               loading={loading}
@@ -475,40 +479,43 @@ function DashboardPageInner() {
           </section>
 
           {/* ── Quick actions ───────────────────────────────── */}
-          <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <ActionCard
               icon={<Copy className="h-5 w-5" />}
               title="Clone Studio"
               desc="Break down & clone any post"
-              accent
+              tone={{ t1: "pink", t2: "rose" }}
               onClick={() => navigate({ to: "/app" })}
             />
             <ActionCard
               icon={<Microscope className="h-5 w-5" />}
               title="Research"
               desc="Find what audiences want"
+              tone={{ t1: "teal", t2: "green" }}
               onClick={() => navigate({ to: "/research" })}
             />
             <ActionCard
               icon={<Calendar className="h-5 w-5" />}
               title="Content Calendar"
               desc="Schedule 30 days of content"
+              tone={{ t1: "amber", t2: "orange" }}
               onClick={() => navigate({ to: "/calendar" })}
             />
             <ActionCard
               icon={<Send className="h-5 w-5" />}
               title="Publishing"
               desc="Push to every platform"
+              tone={{ t1: "indigo", t2: "violet" }}
               onClick={() => navigate({ to: "/publishing" })}
             />
           </section>
 
           {/* ── Main two-column area ────────────────────────── */}
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
+          <div className="mt-8 grid gap-8 lg:grid-cols-3">
             {/* Recent analyses */}
             <div className="lg:col-span-2">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-bold tracking-tight">Recent Analyses</h2>
+                <h2 className="text-xl font-bold tracking-tight">Recent <span className="gradient-text-tone">Analyses</span></h2>
                 {analyses.length > 0 && (
                   <button
                     onClick={() => navigate({ to: "/projects" })}
@@ -557,27 +564,28 @@ function DashboardPageInner() {
                     return (
                       <div
                         key={a.id}
-                        className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-ig transition-all duration-200 hover:-translate-y-0.5 hover:shadow-ig-hover"
+                        style={toneStyle({ t1: "purple", t2: "pink" })}
+                        className="dash-card group flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-ig-hover"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                           <AnalysisThumb src={t} postType={a.post_type} account={a.source_account} />
-                          <span className="absolute left-2 top-2 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur">
+                          <span className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-ig" style={{ background: TYPE_BADGE[(a.post_type || "post").toLowerCase()] ?? "var(--tone-pink)" }}>
                             {a.post_type || "Post"}
                           </span>
                           <div className="absolute right-2 top-2">
-                            <div className="rounded-full bg-black/40 p-0.5 backdrop-blur">
+                            <div className="rounded-full bg-background/60 p-0.5 shadow-ig backdrop-blur">
                               <ScoreRing score={a.performance_score ?? 0} />
                             </div>
                           </div>
-                        </div>
-
-                        <div className="flex flex-1 flex-col gap-3 p-3.5">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">
+                          <div className="absolute inset-x-2 bottom-2 rounded-xl border border-border/40 bg-background/40 px-3 py-2 backdrop-blur-md">
+                            <p className="truncate text-sm font-semibold text-foreground">
                               @{a.source_account || "unknown"}
                             </p>
-                            <p className="text-xs text-muted-foreground">{timeAgo(a.created_at)}</p>
+                            <p className="text-[11px] text-foreground/75">{timeAgo(a.created_at)}</p>
                           </div>
+                        </div>
+
+                        <div className="flex flex-1 flex-col gap-3 p-4">
                           <div className="mt-auto flex gap-2">
                             <Button
                               variant="outline"
@@ -607,13 +615,15 @@ function DashboardPageInner() {
             </div>
 
             {/* Research intelligence rail */}
-            <aside className="space-y-4">
+            <aside className="space-y-6">
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold tracking-tight">Research Intelligence</h2>
+                <h2 className="relative pb-2 text-xl font-bold tracking-tight">Research <span className="gradient-text-tone">Intelligence</span><span className="absolute bottom-0 left-0 h-[3px] w-16 rounded-full cta-glow [animation:none]" /></h2>
               </div>
               <ResearchWidget
                 icon={<TrendingUp className="h-4 w-4" />}
                 title="Trending Opportunities"
+                tone={{ t1: "purple", t2: "pink" }}
+                accentItems
                 empty="Run research to surface high-signal content ideas."
                 items={research.trending.map((i) => ({
                   key: i.id,
@@ -626,6 +636,7 @@ function DashboardPageInner() {
               <ResearchWidget
                 icon={<Users className="h-4 w-4" />}
                 title="Competitor Watchlist"
+                tone={{ t1: "blue", t2: "cyan" }}
                 empty="Research a competitor to add them here."
                 items={research.watchlist.map((c) => ({
                   key: c.id,
@@ -640,6 +651,7 @@ function DashboardPageInner() {
               <ResearchWidget
                 icon={<Microscope className="h-4 w-4" />}
                 title="Recent Research"
+                tone={{ t1: "teal", t2: "green" }}
                 empty="No research reports yet."
                 items={research.recent.map((r) => ({
                   key: r.id,
@@ -651,6 +663,7 @@ function DashboardPageInner() {
               <ResearchWidget
                 icon={<Star className="h-4 w-4" />}
                 title="Saved Research"
+                tone={{ t1: "amber", t2: "orange" }}
                 empty="Star a report to pin it here."
                 items={research.saved.map((r) => ({
                   key: r.id,
