@@ -13,10 +13,18 @@ export const CLONE_SUMMARY: Record<CloneMethod, string> = {
   A3: "Same core message, flipped format or platform style.",
 };
 
+// Mode-picker card text. Generation prompts and the creative brief use CLONE_SUMMARY.
+export const CLONE_BLURB: Record<CloneMethod, string> = {
+  A1: "Same image, stronger words. Keep the exact visual style, composition, and colors — restyle only the caption, hook, and message.",
+  A2: "Same topic, completely different visual approach.",
+  A3: "Same core message, flipped format or platform style.",
+};
+
+// Display order: Steal the Frame (A1) → Remix the Message (A3) → Reimagine the Scene (A2).
 export const CLONE_METHODS = (["A1", "A3", "A2"] as const).map((id) => ({
   id,
   title: CLONE_LABEL[id],
-  blurb: CLONE_SUMMARY[id],
+  blurb: CLONE_BLURB[id],
 }));
 
 export function cloneModeLabel(id: string | null | undefined): string {
