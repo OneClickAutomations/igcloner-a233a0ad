@@ -244,3 +244,112 @@
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
+
+/* ── Dashboard premium tones ─────────────────────────────── */
+:root {
+  --tone-purple: #8B5CF6;
+  --tone-indigo: #6366F1;
+  --tone-pink: #EC4899;
+  --tone-rose: #F43F5E;
+  --tone-blue: #3B82F6;
+  --tone-cyan: #06B6D4;
+  --tone-amber: #F59E0B;
+  --tone-orange: #F97316;
+  --tone-teal: #14B8A6;
+  --tone-green: #22C55E;
+  --tone-violet: #7C3AED;
+  --tone-slate: #64748B;
+  --glow-strength: 18%;
+}
+.dark { --glow-strength: 38%; }
+
+@theme inline {
+  --color-tone-purple: var(--tone-purple);
+  --color-tone-indigo: var(--tone-indigo);
+  --color-tone-pink: var(--tone-pink);
+  --color-tone-rose: var(--tone-rose);
+  --color-tone-blue: var(--tone-blue);
+  --color-tone-cyan: var(--tone-cyan);
+  --color-tone-amber: var(--tone-amber);
+  --color-tone-orange: var(--tone-orange);
+  --color-tone-teal: var(--tone-teal);
+  --color-tone-green: var(--tone-green);
+  --color-tone-violet: var(--tone-violet);
+  --color-tone-slate: var(--tone-slate);
+}
+
+/* Card surface: white + 3px gradient top border in light; glass in dark. Set --t1/--t2 per card. */
+@utility dash-card {
+  --t1: var(--tone-purple);
+  --t2: var(--tone-pink);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--card);
+  border: 1px solid color-mix(in oklab, var(--t1) 14%, var(--border));
+  box-shadow: 0 1px 2px rgb(15 10 30 / 0.04), 0 8px 24px -12px color-mix(in oklab, var(--t1) 28%, transparent);
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--t1), var(--t2));
+    pointer-events: none;
+    z-index: 1;
+  }
+  &:where(.dark *) {
+    background: color-mix(in oklab, var(--card) 62%, transparent);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-color: color-mix(in oklab, var(--t1) 26%, transparent);
+  }
+}
+
+/* Stat card: gradient border + tinted fill + accent glow */
+@utility stat-card {
+  position: relative;
+  border-radius: 1rem;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--t1) 9%, var(--card)), color-mix(in oklab, var(--t2) 4%, var(--card))) padding-box,
+    linear-gradient(135deg, var(--t1), var(--t2)) border-box;
+  box-shadow: 0 0 20px color-mix(in oklab, var(--t1) var(--glow-strength), transparent);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0 28px color-mix(in oklab, var(--t1) calc(var(--glow-strength) + 10%), transparent);
+  }
+  &:where(.dark *) {
+    background:
+      linear-gradient(135deg, color-mix(in oklab, var(--t1) 16%, transparent), color-mix(in oklab, var(--t2) 6%, transparent)) padding-box,
+      linear-gradient(135deg, var(--t1), var(--t2)) border-box;
+    backdrop-filter: blur(16px);
+  }
+}
+
+@utility tone-icon {
+  background: linear-gradient(135deg, var(--t1), var(--t2));
+  color: #fff;
+  box-shadow: 0 4px 12px -4px color-mix(in oklab, var(--t1) 60%, transparent);
+}
+
+@utility gradient-text-tone {
+  background: linear-gradient(90deg, var(--tone-purple), var(--tone-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility cta-glow {
+  background: linear-gradient(90deg, var(--tone-purple), var(--tone-pink));
+  animation: cta-pulse 2.6s ease-in-out infinite;
+}
+@keyframes cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--tone-pink) 45%, transparent), 0 8px 24px -8px color-mix(in oklab, var(--tone-purple) 60%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--tone-pink) 0%, transparent), 0 8px 28px -6px color-mix(in oklab, var(--tone-pink) 60%, transparent); }
+}
+
+@utility nav-active {
+  background: linear-gradient(90deg, var(--tone-purple), var(--tone-pink)) !important;
+  color: #fff !important;
+  box-shadow: -3px 0 12px -2px color-mix(in oklab, var(--tone-pink) 70%, transparent), 0 4px 14px -6px color-mix(in oklab, var(--tone-purple) 70%, transparent);
+}
