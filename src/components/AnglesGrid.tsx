@@ -176,7 +176,7 @@ export function AnglesGrid({ analysisId, initialNiche }: Props) {
                 )}
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">
-                    Angle {a.angleNumber}
+                    Variation {a.angleNumber}
                   </span>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                     {a.angleName}
