@@ -138,36 +138,70 @@ export function DashboardPage() {
   return <DashboardPageInner />;
 }
 
+type Tone = { t1: string; t2: string };
+const toneStyle = (t: Tone) => ({ "--t1": `var(--tone-${t.t1})`, "--t2": `var(--tone-${t.t2})` }) as React.CSSProperties;
+
+// Decorative mock upward trend (visual only).
+function Sparkline({ seed }: { seed: number }) {
+  const pts = [4, 6, 5, 8, 7, 10, 9, 13, 12, 16].map((v, i) => v + ((seed * (i + 3)) % 3));
+  const max = Math.max(...pts);
+  const w = 120;
+  const h = 32;
+  const coords = pts.map((v, i) => [(i / (pts.length - 1)) * w, h - (v / max) * (h - 4) - 2]);
+  const line = coords.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const id = `spark-${seed}`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-8 w-full" preserveAspectRatio="none" aria-hidden>
+      <defs>
+        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="var(--t1)" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="var(--t1)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={line} fill="none" stroke="var(--t1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 // ── KPI tile ───────────────────────────────────────────────
 function StatTile({
   icon,
   label,
   value,
   loading,
+  tone,
+  delta,
+  seed,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   loading: boolean;
+  tone: Tone;
+  delta: string;
+  seed: number;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-ig transition-all duration-200 hover:-translate-y-0.5 hover:shadow-ig-hover sm:p-5">
-      <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-accent-primary/5 blur-2xl transition-opacity duration-300 group-hover:opacity-100 opacity-0" />
+    <div className="stat-card p-5 sm:p-6" style={toneStyle(tone)}>
       <div className="flex items-center justify-between">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-primary/10 text-accent-primary">
-          {icon}
-        </span>
+        <span className="tone-icon flex h-10 w-10 items-center justify-center rounded-xl">{icon}</span>
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
       {loading ? (
-        <div className="mt-4 h-8 w-16 animate-pulse rounded-md bg-muted" />
+        <div className="mt-4 h-9 w-16 animate-pulse rounded-md bg-muted" />
       ) : (
-        <p className="mt-3 font-mono text-3xl font-extrabold tracking-tight tabular-nums">
+        <p className="mt-4 font-mono text-4xl font-extrabold tracking-tight tabular-nums">
           {value.toLocaleString()}
         </p>
       )}
-      <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        {label}
-      </p>
+      <Sparkline seed={seed} />
+      <span
+        className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+        style={{ background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" }}
+      >
+        <TrendingUp className="h-3 w-3" /> {delta}
+      </span>
     </div>
   );
 }
@@ -178,35 +212,39 @@ function ActionCard({
   title,
   desc,
   onClick,
-  accent,
+  tone,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
   onClick: () => void;
-  accent?: boolean;
+  tone: Tone;
 }) {
   return (
     <button
       onClick={onClick}
-      className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-ig transition-all duration-200 hover:-translate-y-0.5 hover:border-accent-primary/30 hover:shadow-ig-hover"
+      style={toneStyle(tone)}
+      className="dash-card group flex items-center gap-3 p-5 text-left transition-all duration-200 hover:-translate-y-1"
     >
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105 ${
-          accent
-            ? "gradient-accent text-white shadow-ig"
-            : "bg-accent-primary/10 text-accent-primary"
-        }`}
-      >
+      <span className="tone-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold tracking-tight">{title}</p>
+        <p className="text-sm font-bold tracking-tight">{title}</p>
         <p className="truncate text-xs text-muted-foreground">{desc}</p>
       </div>
       <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
     </button>
   );
+}
+
+// Format-specific color for trending items.
+function formatTone(sub?: string): string {
+  const s = (sub ?? "").toLowerCase();
+  if (s.includes("reel") || s.includes("video")) return "var(--tone-blue)";
+  if (s.includes("carousel")) return "var(--tone-amber)";
+  if (s.includes("story")) return "var(--tone-teal)";
+  return "var(--tone-pink)";
 }
 
 // ── Research intelligence rail widget ──────────────────────
@@ -215,47 +253,64 @@ function ResearchWidget({
   title,
   empty,
   items,
+  tone,
+  accentItems,
 }: {
   icon: React.ReactNode;
   title: string;
   empty: string;
   items: Array<{ key: string; label: string; sub?: string; onClick: () => void }>;
+  tone: Tone;
+  accentItems?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-ig">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-secondary/10 text-accent-secondary">
-          {icon}
-        </span>
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+    <div className="dash-card p-6" style={toneStyle(tone)}>
+      <div className="mb-3 flex items-center gap-2.5">
+        <span className="tone-icon flex h-8 w-8 items-center justify-center rounded-lg">{icon}</span>
+        <h3 className="text-sm font-bold tracking-tight">{title}</h3>
       </div>
       {items.length === 0 ? (
         <p className="px-1 py-2 text-xs leading-relaxed text-muted-foreground">{empty}</p>
       ) : (
-        <ul className="-mx-1 space-y-0.5">
-          {items.slice(0, 5).map((it) => (
-            <li key={it.key}>
-              <button
-                onClick={it.onClick}
-                className="group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/60"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{it.label}</span>
-                  {it.sub && (
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {it.sub}
-                    </span>
+        <ul className="-mx-1 space-y-1.5">
+          {items.slice(0, 5).map((it) => {
+            const c = accentItems ? formatTone(it.sub) : "var(--t1)";
+            return (
+              <li key={it.key}>
+                <button
+                  onClick={it.onClick}
+                  className="group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg py-2 pl-3.5 pr-2 text-left transition-colors hover:bg-muted/70"
+                >
+                  {accentItems && (
+                    <span
+                      className="absolute inset-y-1 left-0 w-[3px] rounded-full"
+                      style={{ background: `linear-gradient(180deg, ${c}, var(--t2))` }}
+                    />
                   )}
-                </span>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            </li>
-          ))}
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{it.label}</span>
+                    {it.sub && (
+                      <span className="block truncate text-[11px] text-muted-foreground">{it.sub}</span>
+                    )}
+                  </span>
+                  <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
 }
+
+const TYPE_BADGE: Record<string, string> = {
+  reel: "var(--tone-blue)",
+  video: "var(--tone-blue)",
+  carousel: "var(--tone-amber)",
+  sidecar: "var(--tone-amber)",
+};
 
 function DashboardPageInner() {
   const navigate = useNavigate();
