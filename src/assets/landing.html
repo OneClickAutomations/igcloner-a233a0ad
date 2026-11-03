@@ -128,7 +128,35 @@ img { max-width: 100%; display: block }
   padding-left: max(24px, env(safe-area-inset-left, 0px));
   padding-right: max(24px, env(safe-area-inset-right, 0px));
 }
-.section { padding-block: 96px }
+.section { padding-block: 96px; position: relative; overflow: hidden }
+
+/* ── Gradient blob scene: The Process (#how) — purple/violet dominant ── */
+#how::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 75% 55% at 15% 25%, rgba(131,58,180,0.52) 0%, transparent 58%),
+    radial-gradient(ellipse 65% 45% at 85% 15%, rgba(247,119,55,0.35) 0%, transparent 52%),
+    radial-gradient(ellipse 55% 55% at 65% 90%, rgba(225,48,108,0.42) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 5% 80%, rgba(37,117,252,0.28) 0%, transparent 52%),
+    radial-gradient(ellipse 50% 35% at 50% 50%, rgba(193,53,132,0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+#how .wrap { position: relative; z-index: 1 }
+
+/* ── Gradient blob scene: Clone Modes (#features) — orange/amber dominant ── */
+#features::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 55% at 80% 20%, rgba(247,119,55,0.55) 0%, transparent 58%),
+    radial-gradient(ellipse 60% 50% at 10% 30%, rgba(220,80,20,0.42) 0%, transparent 55%),
+    radial-gradient(ellipse 65% 50% at 50% 85%, rgba(200,55,35,0.38) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 85% 75%, rgba(240,160,30,0.32) 0%, transparent 52%),
+    radial-gradient(ellipse 40% 35% at 35% 45%, rgba(180,40,60,0.22) 0%, transparent 55%);
+  pointer-events: none;
+}
+#features .wrap { position: relative; z-index: 1 }
 .section-header { text-align: center; margin-bottom: 56px }
 .section-label {
   display: inline-block;
@@ -419,9 +447,9 @@ img { max-width: 100%; display: block }
   /* 3D liquid-glass base */
   position: relative;
   background: linear-gradient(160deg,
-    rgba(255,255,255,0.11) 0%,
-    rgba(255,255,255,0.05) 50%,
-    rgba(255,255,255,0.02) 100%);
+    rgba(255,255,255,0.09) 0%,
+    rgba(255,255,255,0.03) 40%,
+    rgba(255,255,255,0.015) 100%);
   border-radius: 18px; padding: 28px 22px;
   /* Layered box-shadow: ambient depth + key light + rim */
   box-shadow:
@@ -433,8 +461,8 @@ img { max-width: 100%; display: block }
   border: 1px solid rgba(255,255,255,0.18);
   border-bottom-color: rgba(255,255,255,0.06);
   border-right-color: rgba(255,255,255,0.08);
-  backdrop-filter: blur(24px) saturate(1.6) brightness(1.06);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6) brightness(1.06);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8) brightness(1.1);
   transform-style: preserve-3d;
   transform: perspective(900px) rotateX(0deg) translateZ(0);
   transition: transform 0.35s cubic-bezier(.22,1,.36,1),
@@ -569,25 +597,72 @@ img { max-width: 100%; display: block }
   display: grid; grid-template-columns: repeat(3,1fr); gap: 16px;
 }
 .feat-card {
-  background: var(--surface-2); border-radius: 16px; padding: 28px 24px;
-  border: 1px solid var(--divider); position: relative; overflow: hidden;
-  transition: border-color 0.2s, transform 0.2s;
+  border-radius: 20px; padding: 30px;
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg,
+    rgba(255,255,255,0.09) 0%,
+    rgba(255,255,255,0.03) 40%,
+    rgba(255,255,255,0.015) 100%);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8) brightness(1.1);
+  box-shadow:
+    0 1.5px 0 rgba(255,255,255,0.18) inset,
+    0 -1px 0 rgba(0,0,0,0.4) inset,
+    1px 0 0 rgba(255,255,255,0.08) inset,
+    -1px 0 0 rgba(0,0,0,0.15) inset,
+    0 4px 12px rgba(0,0,0,0.35),
+    0 12px 36px rgba(0,0,0,0.28),
+    0 32px 72px rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-bottom-color: rgba(255,255,255,0.04);
+  border-right-color: rgba(255,255,255,0.06);
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(0deg) translateZ(0);
+  transition: transform 0.4s cubic-bezier(.22,1,.36,1),
+              box-shadow 0.4s cubic-bezier(.22,1,.36,1),
+              border-color 0.2s;
 }
-.feat-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px) }
-.feat-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  border-radius: 16px 16px 0 0;
-}
-.feat-card-a::before { background: linear-gradient(90deg,#F77737,#E1306C) }
-.feat-card-b::before { background: linear-gradient(90deg,#E1306C,#C13584) }
-.feat-card-c::before { background: linear-gradient(90deg,#C13584,#833AB4) }
-/* Light mode feat cards */
+:root[data-theme="light"] .feat-card-a { background: linear-gradient(140deg,rgba(255,240,232,0.85),rgba(255,226,204,0.85)); border-color: rgba(247,119,55,.3) }
+:root[data-theme="light"] .feat-card-b { background: linear-gradient(140deg,rgba(255,240,244,0.85),rgba(255,217,230,0.85)); border-color: rgba(225,48,108,.28) }
+:root[data-theme="light"] .feat-card-c { background: linear-gradient(140deg,rgba(242,255,247,0.85),rgba(214,249,229,0.85)); border-color: rgba(37,211,102,.25) }
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .feat-card { background: #fff; border-color: rgba(0,0,0,0.07) }
-  :root:not([data-theme="dark"]) .feat-card:hover { border-color: rgba(225,48,108,0.2) }
+  :root:not([data-theme="dark"]) .feat-card-a { background: linear-gradient(140deg,rgba(255,240,232,0.85),rgba(255,226,204,0.85)); border-color: rgba(247,119,55,.3) }
+  :root:not([data-theme="dark"]) .feat-card-b { background: linear-gradient(140deg,rgba(255,240,244,0.85),rgba(255,217,230,0.85)); border-color: rgba(225,48,108,.28) }
+  :root:not([data-theme="dark"]) .feat-card-c { background: linear-gradient(140deg,rgba(242,255,247,0.85),rgba(214,249,229,0.85)); border-color: rgba(37,211,102,.25) }
 }
-:root[data-theme="light"] .feat-card { background: #fff; border-color: rgba(0,0,0,0.07) }
-:root[data-theme="light"] .feat-card:hover { border-color: rgba(225,48,108,0.2) }
+.feat-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 52%;
+  background: linear-gradient(178deg,
+    rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 35%,
+    rgba(255,255,255,0.01) 70%, transparent 100%);
+  border-radius: 20px 20px 40% 40%;
+  pointer-events: none; z-index: 2;
+}
+.feat-card::after {
+  content: ''; position: absolute; bottom: 0; left: 12px; right: 12px; height: 1.5px;
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(247,119,55,0.6) 15%, rgba(225,48,108,0.75) 38%,
+    rgba(193,53,132,0.65) 60%, rgba(131,58,180,0.5) 82%, transparent 100%);
+  pointer-events: none; z-index: 2;
+}
+.feat-card-a {
+  border-color: rgba(247,119,55,0.28);
+  box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 4px 12px rgba(0,0,0,0.35), 0 12px 40px rgba(247,119,55,0.2), 0 32px 72px rgba(0,0,0,0.2);
+}
+.feat-card-b {
+  border-color: rgba(225,48,108,0.26);
+  box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 4px 12px rgba(0,0,0,0.35), 0 12px 40px rgba(225,48,108,0.22), 0 32px 72px rgba(0,0,0,0.2);
+}
+.feat-card-c {
+  border-color: rgba(37,211,102,0.22);
+  box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 4px 12px rgba(0,0,0,0.35), 0 12px 40px rgba(37,211,102,0.18), 0 32px 72px rgba(0,0,0,0.2);
+}
+.feat-card:hover {
+  transform: perspective(900px) rotateX(5deg) translateY(-12px) translateZ(14px);
+}
+.feat-card-a:hover { box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 8px 24px rgba(0,0,0,0.4), 0 20px 55px rgba(247,119,55,0.3), 0 40px 80px rgba(0,0,0,0.25) }
+.feat-card-b:hover { box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 8px 24px rgba(0,0,0,0.4), 0 20px 55px rgba(225,48,108,0.3), 0 40px 80px rgba(0,0,0,0.25) }
+.feat-card-c:hover { box-shadow: 0 1.5px 0 rgba(255,255,255,0.18) inset, 0 -1px 0 rgba(0,0,0,0.4) inset, 1px 0 0 rgba(255,255,255,0.08) inset, -1px 0 0 rgba(0,0,0,0.15) inset, 0 8px 24px rgba(0,0,0,0.4), 0 20px 55px rgba(37,211,102,0.26), 0 40px 80px rgba(0,0,0,0.25) }
 .feat-icon {
   width: 50px; height: 50px; border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
