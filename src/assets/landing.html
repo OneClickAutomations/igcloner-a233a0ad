@@ -1161,6 +1161,33 @@ img { max-width: 100%; display: block }
   .ugc-track { padding: 0 48px 16px; gap: 14px; }
   .ugc-arrow { width: 34px; height: 34px; font-size: 22px; }
 }
+
+/* ── UGC TICKER: media band stays dark in BOTH themes ── */
+.ugc-section {
+  background: var(--ugc-band);
+  border-top: 1px solid var(--ugc-band-edge);
+  border-bottom: 1px solid var(--ugc-band-edge);
+}
+.ugc-section .section-label   { color: var(--ig-rose); }
+.ugc-section .section-headline { color: var(--ugc-head-1); }
+.ugc-section .section-sub      { color: var(--ugc-head-2); }
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .ugc-section {
+    --ugc-band: #0B0D14;
+    --ugc-band-edge: rgba(255,255,255,0.08);
+    --ugc-fade: #0B0D14;
+    --ugc-head-1: #F2F0EC;
+    --ugc-head-2: rgba(242,240,236,0.62);
+  }
+}
+:root[data-theme="light"] .ugc-section {
+  --ugc-band: #0B0D14;
+  --ugc-band-edge: rgba(255,255,255,0.08);
+  --ugc-fade: #0B0D14;
+  --ugc-head-1: #F2F0EC;
+  --ugc-head-2: rgba(242,240,236,0.62);
+}
 </style>
 
 <!-- ════════════════════════════════════
