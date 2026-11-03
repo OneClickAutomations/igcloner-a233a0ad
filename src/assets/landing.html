@@ -2049,7 +2049,7 @@ menuBtn?.addEventListener('click', () => {
   document.querySelector('.ugc-arrow-left')?.addEventListener('click', () => {
     pauseAutoScroll();
     const cardW = (cards[0]?.offsetWidth || 260) + 20;
-    if (track.scrollLeft <= 4) {
+    if (track.scrollLeft <= 64) {
       // At start — wrap to end
       track.scrollTo({ left: track.scrollWidth - track.clientWidth, behavior: 'smooth' });
     } else {
