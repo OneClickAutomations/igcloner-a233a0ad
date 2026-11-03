@@ -2049,12 +2049,23 @@ menuBtn?.addEventListener('click', () => {
   document.querySelector('.ugc-arrow-left')?.addEventListener('click', () => {
     pauseAutoScroll();
     const cardW = (cards[0]?.offsetWidth || 260) + 20;
-    track.scrollBy({ left: -cardW, behavior: 'smooth' });
+    if (track.scrollLeft <= 4) {
+      // At start — wrap to end
+      track.scrollTo({ left: track.scrollWidth - track.clientWidth, behavior: 'smooth' });
+    } else {
+      track.scrollBy({ left: -cardW, behavior: 'smooth' });
+    }
   });
   document.querySelector('.ugc-arrow-right')?.addEventListener('click', () => {
     pauseAutoScroll();
     const cardW = (cards[0]?.offsetWidth || 260) + 20;
-    track.scrollBy({ left: cardW, behavior: 'smooth' });
+    const maxScroll = track.scrollWidth - track.clientWidth;
+    if (track.scrollLeft >= maxScroll - 4) {
+      // At end — wrap to start
+      track.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      track.scrollBy({ left: cardW, behavior: 'smooth' });
+    }
   });
 
   // ── Drag-to-scroll ──
