@@ -942,8 +942,8 @@ img { max-width: 100%; display: block }
 .ugc-card {
   flex: 0 0 260px;
   width: 260px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
+  background: #12151E;
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
   overflow: hidden;
   scroll-snap-align: start;
@@ -1153,8 +1153,8 @@ img { max-width: 100%; display: block }
   z-index: 5;
   pointer-events: none;
 }
-.ugc-ticker-wrapper::before { left: 0; background: linear-gradient(to right, var(--bg-base, #080812), transparent); }
-.ugc-ticker-wrapper::after  { right: 0; background: linear-gradient(to left,  var(--bg-base, #080812), transparent); }
+.ugc-ticker-wrapper::before { left: 0; background: linear-gradient(to right, var(--ugc-fade), transparent); }
+.ugc-ticker-wrapper::after  { right: 0; background: linear-gradient(to left,  var(--ugc-fade), transparent); }
 
 @media (max-width: 600px) {
   .ugc-card { flex: 0 0 220px; width: 220px; }
