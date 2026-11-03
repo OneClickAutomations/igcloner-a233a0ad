@@ -1164,6 +1164,12 @@ img { max-width: 100%; display: block }
 
 /* ── UGC TICKER: media band stays dark in BOTH themes ── */
 .ugc-section {
+  /* Defaults = dark theme: page canvas already dark, media surfaces stay dark */
+  --ugc-band: transparent;
+  --ugc-band-edge: transparent;
+  --ugc-fade: #080812;
+  --ugc-head-1: var(--text-1);
+  --ugc-head-2: var(--text-2);
   background: var(--ugc-band);
   border-top: 1px solid var(--ugc-band-edge);
   border-bottom: 1px solid var(--ugc-band-edge);
