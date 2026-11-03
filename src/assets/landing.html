@@ -4,23 +4,11 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap">
 
 <style>
-/*
-  IGCloner — Redesign v3
-  Colors pulled from Instagram brand gradient:
-    Orange-Red #F77737 → Magenta #C13584 → Deep violet accent #833AB4 (minimal)
-  Dark mode: obsidian canvas, IG gradient as accent only
-  Light mode: warm white canvas, colored cards with tinted surfaces — NOT colorless
-*/
-
-/* ── TOKENS ──────────────────────────── */
 :root {
-  /* IG gradient poles */
   --ig-orange:  #F77737;
   --ig-rose:    #E1306C;
   --ig-magenta: #C13584;
   --ig-violet:  #833AB4;
-
-  /* Derived tints for UI */
   --accent-a:   #F77737;
   --accent-b:   #E1306C;
   --accent-mid: linear-gradient(135deg, #F77737 0%, #E1306C 55%, #C13584 100%);
@@ -29,32 +17,22 @@
   --accent-dim-b: rgba(225,48,108,0.12);
   --teal:        #25D366;
   --teal-dim:    rgba(37,211,102,0.12);
-
-  /* Dark canvas */
   --bg:          #09090B;
   --surface:     #121215;
   --surface-2:   #1A1A1F;
   --surface-3:   #222229;
   --divider:     rgba(255,255,255,0.07);
-
-  /* Glass (dark) */
   --glass-bg:    rgba(255,255,255,0.04);
   --glass-border:rgba(255,255,255,0.09);
   --glass-hi:    rgba(255,255,255,0.12);
-
-  /* Text (dark) */
   --text-1: #F2F0EC;
   --text-2: rgba(242,240,236,0.58);
   --text-3: rgba(242,240,236,0.32);
-
   --font-d: 'Syne', system-ui, sans-serif;
   --font-b: 'Inter', system-ui, sans-serif;
   --font-m: 'DM Mono', monospace;
-
   color-scheme: dark;
 }
-
-/* ── LIGHT MODE ─────────────────────── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg:          #FFF8F5;
@@ -62,17 +40,14 @@
     --surface-2:   #FFF0EA;
     --surface-3:   #FFE4D6;
     --divider:     rgba(200,80,30,0.1);
-
     --glass-bg:    rgba(255,255,255,0.75);
     --glass-border:rgba(225,48,108,0.18);
     --glass-hi:    rgba(255,255,255,0.95);
     --accent-dim:  rgba(247,119,55,0.10);
     --accent-dim-b:rgba(225,48,108,0.09);
-
     --text-1: #1A0A06;
     --text-2: rgba(26,10,6,0.58);
     --text-3: rgba(26,10,6,0.36);
-
     color-scheme: light;
   }
 }
@@ -82,21 +57,16 @@
   --surface-2:   #FFF0EA;
   --surface-3:   #FFE4D6;
   --divider:     rgba(200,80,30,0.1);
-
   --glass-bg:    rgba(255,255,255,0.75);
   --glass-border:rgba(225,48,108,0.18);
   --glass-hi:    rgba(255,255,255,0.95);
   --accent-dim:  rgba(247,119,55,0.10);
   --accent-dim-b:rgba(225,48,108,0.09);
-
   --text-1: #1A0A06;
   --text-2: rgba(26,10,6,0.58);
   --text-3: rgba(26,10,6,0.36);
-
   color-scheme: light;
 }
-
-/* ── RESET ───────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
 html { font-size: 16px; scroll-behavior: smooth }
 body {
@@ -110,15 +80,11 @@ body {
 }
 img { max-width: 100%; display: block }
 a { color: inherit; text-decoration: none }
-
-/* ── WRAP ──────────────────────────── */
 .wrap {
   max-width: 1200px; margin: 0 auto;
   padding-left: max(24px, env(safe-area-inset-left, 0px));
   padding-right: max(24px, env(safe-area-inset-right, 0px));
 }
-
-/* ── IG GRADIENT UTILITY ──────────── */
 .ig-text {
   background: linear-gradient(90deg, #F77737, #E1306C, #C13584);
   -webkit-background-clip: text;
@@ -128,10 +94,6 @@ a { color: inherit; text-decoration: none }
 .ig-bg {
   background: linear-gradient(135deg, #F77737 0%, #E1306C 55%, #C13584 100%);
 }
-
-/* ══════════════════════════════════════
-   NAV
-══════════════════════════════════════ */
 .nav {
   position: fixed;
   top: env(safe-area-inset-top, 0px);
@@ -165,15 +127,12 @@ a { color: inherit; text-decoration: none }
   background: rgba(255,255,255,0.28); border-radius: 8px 8px 0 0;
 }
 .logo-mark svg { position: absolute; inset: 0; margin: auto; display: block; top: 50%; left: 50%; transform: translate(-50%,-50%) }
-
 .nav-links {
   display: flex; align-items: center; gap: 28px; list-style: none;
 }
 .nav-links a { font-size: 0.875rem; color: var(--text-2); transition: color 0.2s }
 .nav-links a:hover { color: var(--text-1) }
-
 .nav-actions { display: flex; align-items: center; gap: 10px }
-
 .btn-ghost {
   font-size: 0.875rem; color: var(--text-2);
   padding: 8px 16px; border-radius: 8px;
@@ -182,7 +141,6 @@ a { color: inherit; text-decoration: none }
   font-family: var(--font-b);
 }
 .btn-ghost:hover { color: var(--text-1); background: var(--glass-bg) }
-
 .btn-nav-cta {
   font-size: 0.875rem; font-weight: 600; color: #fff;
   padding: 8px 18px; border-radius: 8px; border: none;
@@ -195,7 +153,6 @@ a { color: inherit; text-decoration: none }
   background: rgba(255,255,255,0.2); border-radius: 8px 8px 0 0;
 }
 .btn-nav-cta:hover { opacity: 0.9; transform: translateY(-1px) }
-
 .theme-btn {
   width: 34px; height: 34px; border-radius: 8px;
   border: 1px solid var(--divider); background: var(--glass-bg);
@@ -204,7 +161,6 @@ a { color: inherit; text-decoration: none }
   transition: color 0.2s, border-color 0.2s;
 }
 .theme-btn:hover { color: var(--text-1); border-color: var(--glass-border) }
-
 .hamburger {
   display: none; width: 34px; height: 34px; border-radius: 8px;
   border: 1px solid var(--divider); background: var(--glass-bg);
@@ -212,17 +168,12 @@ a { color: inherit; text-decoration: none }
   flex-direction: column; align-items: center; justify-content: center; gap: 5px;
 }
 .hamburger span { display: block; width: 16px; height: 1.5px; background: currentColor }
-
-/* ══════════════════════════════════════
-   HERO
-══════════════════════════════════════ */
 .hero {
   padding-top: calc(env(safe-area-inset-top, 0px) + 130px);
   padding-bottom: 80px;
   text-align: center;
   position: relative; overflow: hidden;
 }
-
 .blob {
   position: absolute; border-radius: 50%;
   filter: blur(90px); pointer-events: none; opacity: 0.18;
@@ -230,7 +181,6 @@ a { color: inherit; text-decoration: none }
 .blob-1 { width: 480px; height: 480px; background: #F77737; top: -120px; right: -80px }
 .blob-2 { width: 420px; height: 420px; background: #E1306C; bottom: -80px; left: -100px; opacity: 0.14 }
 .blob-3 { width: 260px; height: 260px; background: #C13584; top: 40%; left: 38%; opacity: 0.1 }
-
 :root[data-theme="light"] .blob-1,
 :root[data-theme="light"] .blob-2,
 :root[data-theme="light"] .blob-3 { opacity: 0.12 }
@@ -239,9 +189,7 @@ a { color: inherit; text-decoration: none }
   :root:not([data-theme="dark"]) .blob-2,
   :root:not([data-theme="dark"]) .blob-3 { opacity: 0.12 }
 }
-
 .hero-inner { position: relative; z-index: 1 }
-
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 0.76rem; font-weight: 500; color: var(--ig-rose);
@@ -252,7 +200,6 @@ a { color: inherit; text-decoration: none }
 }
 .pulse { width: 6px; height: 6px; background: var(--ig-rose); border-radius: 50%; animation: pulse 2s ease-in-out infinite }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
-
 .hero-headline {
   font-family: var(--font-d);
   font-size: clamp(2.6rem, 5.5vw, 4.4rem);
@@ -260,13 +207,10 @@ a { color: inherit; text-decoration: none }
   letter-spacing: -0.035em; text-wrap: balance;
   margin-bottom: 18px;
 }
-
 .hero-sub {
   font-size: 1.05rem; color: var(--text-2); line-height: 1.7;
   max-width: 520px; margin: 0 auto 44px;
 }
-
-/* ── URL Input Box ─────────────────── */
 .url-box {
   max-width: 640px; margin: 0 auto 32px;
   background: var(--surface);
@@ -307,7 +251,6 @@ a { color: inherit; text-decoration: none }
 }
 .url-btn span { position: relative; z-index: 1 }
 .url-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(225,48,108,0.4) }
-
 .url-platforms {
   display: flex; align-items: center; justify-content: center;
   gap: 20px; font-size: 0.78rem; color: var(--text-3); flex-wrap: wrap;
@@ -318,7 +261,6 @@ a { color: inherit; text-decoration: none }
   color: var(--text-3);
 }
 .url-platform-badge svg { flex-shrink: 0 }
-
 .hero-trust {
   margin-top: 48px;
   display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
@@ -334,10 +276,6 @@ a { color: inherit; text-decoration: none }
 .trust-ava:first-child { margin-left: 0 }
 .trust-text { font-size: 0.82rem; color: var(--text-3) }
 .trust-text strong { color: var(--text-2) }
-
-/* ══════════════════════════════════════
-   BRAND STRIP
-══════════════════════════════════════ */
 .brand-strip {
   border-top: 1px solid var(--divider);
   border-bottom: 1px solid var(--divider);
@@ -364,10 +302,6 @@ a { color: inherit; text-decoration: none }
   display: flex; align-items: center; gap: 7px;
 }
 .bdot { font-size: 0.4rem; color: var(--ig-rose) }
-
-/* ══════════════════════════════════════
-   STATS
-══════════════════════════════════════ */
 .stats-section { padding-block: 90px }
 .stats-grid {
   display: grid; grid-template-columns: repeat(4,1fr);
@@ -398,10 +332,6 @@ a { color: inherit; text-decoration: none }
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
 .stat-desc { font-size: 0.83rem; color: var(--text-2); line-height: 1.5 }
-
-/* ══════════════════════════════════════
-   HOW IT WORKS
-══════════════════════════════════════ */
 .section { padding-block: 90px }
 .section-header { text-align: center; margin-bottom: 56px }
 .section-label {
@@ -419,7 +349,6 @@ a { color: inherit; text-decoration: none }
   font-size: 0.98rem; color: var(--text-2);
   max-width: 500px; margin: 0 auto; line-height: 1.7;
 }
-
 .steps-grid {
   display: grid; grid-template-columns: repeat(4,1fr); gap: 14px;
   position: relative;
@@ -469,10 +398,6 @@ a { color: inherit; text-decoration: none }
 .step-n { font-family: var(--font-m); font-size: 0.63rem; color: var(--text-3); letter-spacing: .08em; margin-bottom: 7px; display: block }
 .step-title { font-family: var(--font-d); font-size: 1rem; font-weight: 700; margin-bottom: 9px; letter-spacing: -.01em }
 .step-text { font-size: 0.83rem; color: var(--text-2); line-height: 1.6 }
-
-/* ══════════════════════════════════════
-   FEATURES — Clone Modes
-══════════════════════════════════════ */
 .features-grid {
   display: grid; grid-template-columns: repeat(3,1fr); gap: 14px;
 }
@@ -503,7 +428,6 @@ a { color: inherit; text-decoration: none }
 .feat-card-c { border-color: rgba(37,211,102,.18) }
 .feat-card-c::after { content: ''; position: absolute; top:-40%; right:-20%; width:60%; height:60%; background: radial-gradient(circle,rgba(37,211,102,.07) 0%,transparent 70%); pointer-events:none }
 .feat-card:hover { transform: translateY(-6px); box-shadow: 0 28px 70px rgba(0,0,0,.35) }
-
 .feat-icon {
   width: 68px; height: 68px; border-radius: 16px; margin-bottom: 24px;
   display: flex; align-items: center; justify-content: center;
@@ -521,7 +445,6 @@ a { color: inherit; text-decoration: none }
 .fi-a { background: linear-gradient(160deg,#F77737,#CF5B1C); box-shadow: 0 8px 24px rgba(247,119,55,.35), 0 0 0 1px rgba(247,119,55,.2) }
 .fi-b { background: linear-gradient(160deg,#E1306C,#B81C55); box-shadow: 0 8px 24px rgba(225,48,108,.35), 0 0 0 1px rgba(225,48,108,.2) }
 .fi-c { background: linear-gradient(160deg,#25D366,#1A9E4E); box-shadow: 0 8px 24px rgba(37,211,102,.35), 0 0 0 1px rgba(37,211,102,.2) }
-
 .feat-tag {
   display: inline-block; font-family: var(--font-m); font-size: 0.63rem;
   letter-spacing: .08em; padding: 3px 10px; border-radius: 100px; margin-bottom: 12px;
@@ -529,7 +452,6 @@ a { color: inherit; text-decoration: none }
 .tag-a { background: rgba(247,119,55,.14); color: #F77737; border: 1px solid rgba(247,119,55,.22) }
 .tag-b { background: rgba(225,48,108,.12); color: #E1306C; border: 1px solid rgba(225,48,108,.2) }
 .tag-c { background: rgba(37,211,102,.12); color: #25D366; border: 1px solid rgba(37,211,102,.2) }
-
 .feat-title {
   font-family: var(--font-d); font-size: 1.25rem; font-weight: 700;
   letter-spacing: -.02em; margin-bottom: 11px;
@@ -546,10 +468,6 @@ a { color: inherit; text-decoration: none }
 .feat-card-a .feat-bullets li::before { background: #F77737 }
 .feat-card-b .feat-bullets li::before { background: #E1306C }
 .feat-card-c .feat-bullets li::before { background: #25D366 }
-
-/* ══════════════════════════════════════
-   DEMO
-══════════════════════════════════════ */
 .demo-section { padding-block: 90px }
 .demo-inner {
   display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
@@ -572,7 +490,6 @@ a { color: inherit; text-decoration: none }
 .feat-row-icon svg { position: relative; z-index: 1 }
 .feat-row-text h4 { font-size: 0.88rem; font-weight: 600; margin-bottom: 3px }
 .feat-row-text p { font-size: 0.81rem; color: var(--text-2); line-height: 1.5 }
-
 .analysis-card {
   background: var(--surface);
   border: 1px solid var(--glass-border); border-radius: 18px; overflow: hidden;
@@ -624,10 +541,6 @@ a { color: inherit; text-decoration: none }
 .a-handle { font-size: 0.66rem; color: var(--text-3); font-family: var(--font-m) }
 .a-score { margin-left: auto; font-family: var(--font-d); font-size: .95rem; font-weight: 700; flex-shrink: 0 }
 .score-hi { color: #F77737 } .score-mid { color: #25D366 } .score-lo { color: #E1306C }
-
-/* ══════════════════════════════════════
-   PRICING
-══════════════════════════════════════ */
 .pricing-grid {
   display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; align-items: start;
 }
@@ -698,10 +611,6 @@ a { color: inherit; text-decoration: none }
 }
 .btn-price.ig span { position: relative; z-index: 1 }
 .btn-price.ig:hover { box-shadow: 0 6px 24px rgba(225,48,108,.35); transform: translateY(-1px) }
-
-/* ══════════════════════════════════════
-   TESTIMONIALS
-══════════════════════════════════════ */
 .test-grid {
   display: grid; grid-template-columns: repeat(3,1fr); gap: 14px;
 }
@@ -730,10 +639,6 @@ a { color: inherit; text-decoration: none }
   background: rgba(37,211,102,.1); padding: 3px 10px; border-radius: 100px;
   border: 1px solid rgba(37,211,102,.18); white-space: nowrap;
 }
-
-/* ══════════════════════════════════════
-   FINAL CTA
-══════════════════════════════════════ */
 .cta-section {
   padding-block: 90px 110px; position: relative; overflow: hidden;
 }
@@ -763,10 +668,6 @@ a { color: inherit; text-decoration: none }
 }
 .cta-url-input::placeholder { color: var(--text-3) }
 .cta-note { font-size: 0.76rem; color: var(--text-3) }
-
-/* ══════════════════════════════════════
-   FOOTER
-══════════════════════════════════════ */
 .footer { border-top: 1px solid var(--divider); padding-block: 48px 32px }
 .footer-inner {
   display: grid; grid-template-columns: 1.5fr repeat(3,1fr);
@@ -787,10 +688,6 @@ a { color: inherit; text-decoration: none }
 .footer-links { display: flex; gap: 18px }
 .footer-links a { font-size: 0.76rem; color: var(--text-3); transition: color 0.2s }
 .footer-links a:hover { color: var(--text-1) }
-
-/* ══════════════════════════════════════
-   RESPONSIVE
-══════════════════════════════════════ */
 @media (max-width: 900px) {
   .nav-links { display: none }
   .hamburger { display: flex }
@@ -822,7 +719,6 @@ a { color: inherit; text-decoration: none }
 }
 </style>
 
-<!-- NAV -->
 <nav class="nav" id="nav">
   <div class="nav-inner">
     <div class="logo">
@@ -855,7 +751,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </nav>
 
-<!-- HERO -->
 <section class="hero">
   <div class="blob blob-1"></div>
   <div class="blob blob-2"></div>
@@ -896,7 +791,6 @@ a { color: inherit; text-decoration: none }
       </div>
       <div class="hero-trust">
         <div class="trust-ava-row">
-          <!-- Creator 1: warm brown skin, dark hair -->
           <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg)">
             <defs><clipPath id="c1"><circle cx="15" cy="15" r="13"/></clipPath></defs>
             <circle cx="15" cy="15" r="13" fill="#C68642"/>
@@ -908,7 +802,6 @@ a { color: inherit; text-decoration: none }
             <path d="M12.5 18 Q15 20 17.5 18" stroke="#8B5C2A" stroke-width="1" fill="none" stroke-linecap="round"/>
             <ellipse cx="15" cy="28" rx="10" ry="5" fill="#F77737" clip-path="url(#c1)"/>
           </svg>
-          <!-- Creator 2: light skin, blonde hair -->
           <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
             <defs><clipPath id="c2"><circle cx="15" cy="15" r="13"/></clipPath></defs>
             <circle cx="15" cy="15" r="13" fill="#FDDBB4"/>
@@ -922,7 +815,6 @@ a { color: inherit; text-decoration: none }
             <path d="M12.5 17.5 Q15 19.5 17.5 17.5" stroke="#C08070" stroke-width="1" fill="none" stroke-linecap="round"/>
             <ellipse cx="15" cy="28" rx="10" ry="5" fill="#E1306C" clip-path="url(#c2)"/>
           </svg>
-          <!-- Creator 3: medium brown skin, short dark hair -->
           <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
             <defs><clipPath id="c3"><circle cx="15" cy="15" r="13"/></clipPath></defs>
             <circle cx="15" cy="15" r="13" fill="#8D5524"/>
@@ -934,7 +826,6 @@ a { color: inherit; text-decoration: none }
             <path d="M12.8 17.8 Q15 19.5 17.2 17.8" stroke="#6B3D14" stroke-width="1" fill="none" stroke-linecap="round"/>
             <ellipse cx="15" cy="28" rx="10" ry="5" fill="#25D366" clip-path="url(#c3)"/>
           </svg>
-          <!-- Creator 4: East Asian skin tone, black hair -->
           <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
             <defs><clipPath id="c4"><circle cx="15" cy="15" r="13"/></clipPath></defs>
             <circle cx="15" cy="15" r="13" fill="#F5CBA7"/>
@@ -953,7 +844,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- BRAND STRIP -->
 <div class="brand-strip">
   <div class="brand-strip-inner">
     <div class="brand-strip-label">Used by creators at</div>
@@ -978,7 +868,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </div>
 
-<!-- STATS -->
 <section class="stats-section">
   <div class="wrap">
     <div class="stats-grid">
@@ -1002,7 +891,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
 <section class="section" id="how">
   <div class="wrap">
     <div class="section-header">
@@ -1058,7 +946,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- FEATURES / CLONE MODES -->
 <section class="section" id="features">
   <div class="wrap">
     <div class="section-header">
@@ -1122,7 +1009,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- DEMO -->
 <section class="demo-section">
   <div class="wrap">
     <div class="demo-inner">
@@ -1209,7 +1095,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- TESTIMONIALS -->
 <section class="section" id="stories">
   <div class="wrap">
     <div class="section-header">
@@ -1281,7 +1166,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- PRICING -->
 <section class="section" id="pricing">
   <div class="wrap">
     <div class="section-header">
@@ -1338,7 +1222,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- FINAL CTA -->
 <section class="cta-section">
   <div class="cta-glow"></div>
   <div class="wrap">
@@ -1357,7 +1240,6 @@ a { color: inherit; text-decoration: none }
   </div>
 </section>
 
-<!-- FOOTER -->
 <footer class="footer">
   <div class="wrap">
     <div class="footer-inner">
@@ -1403,12 +1285,10 @@ function setTheme(d) {
 }
 setTheme(true);
 document.getElementById('themeBtn').addEventListener('click', () => setTheme(!dark));
-
 const nav = document.getElementById('nav');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('scrolled', window.scrollY > 36);
 }, { passive: true });
-
 document.querySelectorAll('.a-thumb-canvas').forEach(c => {
   const g = c.dataset.grad.split(',').map(Number);
   c.width = 76; c.height = 76;
@@ -1428,7 +1308,6 @@ document.querySelectorAll('.a-thumb-canvas').forEach(c => {
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.fill();
 });
-
 const urlBox = document.getElementById('urlBox');
 const urlInput = document.getElementById('urlInput');
 document.getElementById('analyzeBtn').addEventListener('click', () => {
@@ -1437,7 +1316,6 @@ document.getElementById('analyzeBtn').addEventListener('click', () => {
   urlBox.style.boxShadow = '0 0 0 6px rgba(225,48,108,0.2)';
   setTimeout(() => { urlBox.style.boxShadow = '' }, 600);
 });
-
 document.getElementById('menuBtn').addEventListener('click', () => {
   const links = document.querySelector('.nav-links');
   const open = links.style.display === 'flex';
