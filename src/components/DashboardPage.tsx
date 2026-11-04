@@ -633,6 +633,78 @@ function DashboardPageInner() {
             />
           </section>
 
+          {/* ── Analyses chart (last 30 days) ───────────────── */}
+          <section className="dash-card mt-8 p-6" style={toneStyle({ t1: "purple", t2: "pink" })}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight">Analyses — last 30 days</h2>
+              {!loading && stats.posts > 0 && (
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {chartSeries.reduce((a, b) => a + b, 0)} in window
+                </span>
+              )}
+            </div>
+            {loading ? (
+              <div className="h-56 animate-pulse rounded-xl bg-muted" />
+            ) : stats.posts === 0 ? (
+              <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+                <TrendingUp className="mb-2 h-5 w-5 text-muted-foreground" />
+                <p className="text-sm font-medium">No analyses yet</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Your daily analysis activity will appear here once you analyze your first post.
+                </p>
+              </div>
+            ) : (
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                    <defs>
+                      <linearGradient id="analysesFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="var(--tone-purple)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--tone-pink)" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="day"
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                      minTickGap={40}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: "var(--tone-purple)", strokeOpacity: 0.3 }}
+                      contentStyle={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "0.75rem",
+                        fontSize: 12,
+                        color: "var(--foreground)",
+                      }}
+                      labelStyle={{ color: "var(--muted-foreground)" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      name="Analyses"
+                      stroke="var(--tone-purple)"
+                      strokeWidth={2.5}
+                      fill="url(#analysesFill)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "var(--tone-pink)", stroke: "var(--card)", strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
+
           {/* ── Main two-column area ────────────────────────── */}
           <div className="mt-8 grid gap-8 lg:grid-cols-3">
             {/* Recent analyses */}
