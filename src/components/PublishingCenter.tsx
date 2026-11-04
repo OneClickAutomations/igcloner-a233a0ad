@@ -83,9 +83,11 @@ export function PublishingCenter() {
           </TabsContent>
           <TabsContent value="publish">
             <PublishTab
-              key={`publish-${refreshKey}`}
+              key={`publish-${refreshKey}-${draftJob?.id ?? "new"}`}
               initialProjectId={search.projectId}
+              initialDraft={draftJob}
               onPublished={() => {
+                setDraftJob(null);
                 setRefreshKey((k) => k + 1);
                 changeTab("queue");
               }}
@@ -98,7 +100,13 @@ export function PublishingCenter() {
             <HistoryTab key={`history-${refreshKey}`} />
           </TabsContent>
           <TabsContent value="drafts">
-            <DraftsTab key={`drafts-${refreshKey}`} onEdit={() => changeTab("publish")} />
+            <DraftsTab
+              key={`drafts-${refreshKey}`}
+              onEdit={(job) => {
+                setDraftJob(job);
+                changeTab("publish");
+              }}
+            />
           </TabsContent>
           <TabsContent value="analytics">
             <AnalyticsTab />
