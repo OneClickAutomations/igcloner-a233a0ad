@@ -42,6 +42,18 @@ describe("UGC ticker videos", () => {
     }
   });
 
+  it("matches the five supplied speech quotes while preserving DeShawn", () => {
+    const quotes = [...landing.matchAll(/<p class="ugc-quote">"([\s\S]*?)"<\/p>/g)].map(match => match[1]);
+    expect(quotes).toEqual([
+      "IGCloner showed me exactly what the top fitness creators were doing. My engagement tripled in six weeks.",
+      "I cloned the posting pattern of a creator who blew up overnight. Now the algorithm actually pushes my reels.",
+      "I reverse-engineered the top food creators' hooks with IGCloner. Two thousand followers to thirty-eight thousand in two months.",
+      "IGCloner broke down why certain travel reels take off. I stopped guessing, and my views went up five times.",
+      "Bro, I was posting fits getting nothing. IGCloner showed me what the algorithm actually rewards — now I'm hitting 50K+ consistently.",
+      "I used IGCloner to study the biggest tech channels. My last three reels all beat everything I'd posted before.",
+    ]);
+  });
+
   it("plays on scroll-in and pauses on scroll-out via IntersectionObserver", () => {
     expect(landing).toContain("new IntersectionObserver(");
     expect(landing).toContain("v.preload = 'auto'");
@@ -68,10 +80,11 @@ describe("UGC ticker videos", () => {
     expect(cards.map(c => c.indicator.hidden)).toEqual([true, true, true, true, false, true]);
     toggle(cards[4]);
     expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, true, true]);
-    toggle(cards[4]);
-    toggle(cards[1]);
-    expect(cards.map(c => c.video.muted)).toEqual([true, false, true, true, true, true]);
-    expect(cards.map(c => c.indicator.hidden)).toEqual([true, false, true, true, true, true]);
+    cards.forEach((card, selected) => {
+      toggle(card);
+      expect(cards.map(c => c.video.muted)).toEqual(cards.map((_, i) => i !== selected));
+      expect(cards.map(c => c.indicator.hidden)).toEqual(cards.map((_, i) => i !== selected));
+    });
   });
 
   it("ignores clicks after pointer movement greater than six pixels", () => {
