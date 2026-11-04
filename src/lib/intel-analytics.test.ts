@@ -34,6 +34,17 @@ describe("Intel evidence rules", () => {
     expect(calculateIntelMetrics([{...posts[0],likesCount:-1}],1000).performanceMetrics.engagementRate).toBe("Not available");
     expect(calculateIntelMetrics([{...posts[0],likesCount:0,commentsCount:0}],1000).performanceMetrics.engagementRate).toBe("0.00%");
   });
+  it("preserves pillars and hooks of reports stored before evidence-grounding", () => {
+    const legacy = groundIntelReport({
+      contentPillars:[{name:"Tutorials",share:40},{name:"Behind the scenes",share:60}],
+      hookAnalysis:{provenHooks:[{hookType:"Question",actualOpeningLine:"Want more reach?"}]},
+      commonHooks:[{pattern:"Question",example:"Want more reach?"}],
+    },{posts,profile:{followersCount:1000}});
+    expect(legacy.contentPillars.map((p:any)=>p.name)).toEqual(["Tutorials","Behind the scenes"]);
+    expect(legacy.contentPillars.some((p:any)=>p.name==="Unclassified caption themes")).toBe(false);
+    expect(legacy.hookAnalysis.provenHooks).toHaveLength(1);
+    expect(legacy.commonHooks).toEqual([{pattern:"Question",example:"Want more reach?"}]);
+  });
 });
 const ideas = Array.from({length:50},(_,i)=>({idea_number:i+1,category:IDEA_CATEGORIES[Math.floor(i/10)], title:`Specific idea ${i}`,format:"Reel",hook:`A completely unique ready-to-post hook ${i}`,description:"A specific concept grounded in this audience.",why_it_works:"Uses the actual caption and observed source engagement.",caption_opener:"Specific caption opening the creator can use.",cta:"Save this example",viral_mechanism:"save-worthy",production_difficulty:"easy (30 min)",virality_score:87,source_post_index:i%12}));
 it("requires exactly 50 unique ideas, ten per category",()=>{

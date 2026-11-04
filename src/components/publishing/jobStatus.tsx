@@ -18,6 +18,8 @@ export interface JobRow {
   created_at: string;
   published_at: string | null;
   last_error_message: string | null;
+  caption_per_platform?: Record<string, string>;
+  media_urls?: string[];
   results?: ResultRow[];
 }
 

@@ -42,6 +42,8 @@ const PublishInput = z.object({
   platforms: z.array(PlatformEnum).min(1).max(12),
   scheduledAt: z.string().datetime().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
+  /** Existing draft job to update instead of inserting a new row. */
+  draftJobId: z.string().uuid().nullable().optional(),
   /** When true, persist as a draft and do not submit to the provider. */
   saveAsDraft: z.boolean().optional(),
 });
@@ -112,26 +114,43 @@ export const publishContent = createServerFn({ method: "POST" })
 
     // ── 3. Create the job row (status reflects draft/scheduled/queued) ──
     const status = data.saveAsDraft ? "draft" : data.scheduledAt ? "scheduled" : "queued";
-    const { data: job, error: jobError } = await supabase
-      .from("publishing_jobs")
-      .insert({
-        user_id: userId,
-        project_id: data.projectId ?? null,
-        content_type: data.contentType,
-        title: data.title ?? null,
-        caption_per_platform: data.captionPerPlatform,
-        hashtags_per_platform: data.hashtagsPerPlatform,
-        media_urls: data.mediaUrls,
-        platforms: data.platforms,
-        status,
-        scheduled_at: data.scheduledAt ?? null,
-        facebook_page_id: fbAccount?.facebook_page_id ?? null,
-        linkedin_org_urn: liAccount?.linkedin_org_urn ?? null,
-        pinterest_board_id: pinAccount?.pinterest_default_board_id ?? null,
-      })
-      .select("*")
-      .single();
-    if (jobError) throw new Error(jobError.message);
+    const jobFields = {
+      project_id: data.projectId ?? null,
+      content_type: data.contentType,
+      title: data.title ?? null,
+      caption_per_platform: data.captionPerPlatform,
+      hashtags_per_platform: data.hashtagsPerPlatform,
+      media_urls: data.mediaUrls,
+      platforms: data.platforms,
+      status,
+      scheduled_at: data.scheduledAt ?? null,
+      facebook_page_id: fbAccount?.facebook_page_id ?? null,
+      linkedin_org_urn: liAccount?.linkedin_org_urn ?? null,
+      pinterest_board_id: pinAccount?.pinterest_default_board_id ?? null,
+    };
+    let job: any;
+    if (data.draftJobId) {
+      // Reopening a draft updates that row, so publishing a draft actually
+      // submits it instead of leaving an uneditable draft behind.
+      const { data: updated, error: updError } = await supabase
+        .from("publishing_jobs")
+        .update(jobFields)
+        .eq("id", data.draftJobId)
+        .eq("user_id", userId)
+        .eq("status", "draft")
+        .select("*")
+        .single();
+      if (updError || !updated) throw new Error(updError?.message ?? "Draft not found");
+      job = updated;
+    } else {
+      const { data: inserted, error: jobError } = await supabase
+        .from("publishing_jobs")
+        .insert({ user_id: userId, ...jobFields })
+        .select("*")
+        .single();
+      if (jobError) throw new Error(jobError.message);
+      job = inserted;
+    }
 
     // Drafts stop here — nothing submitted to the provider.
     if (data.saveAsDraft) return { jobId: job.id, status: "draft" as const };

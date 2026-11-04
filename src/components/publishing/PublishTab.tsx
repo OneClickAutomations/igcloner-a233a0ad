@@ -38,9 +38,11 @@ interface Account {
 
 export function PublishTab({
   initialProjectId,
+  initialDraft,
   onPublished,
 }: {
   initialProjectId?: string;
+  initialDraft?: any;
   onPublished?: () => void;
 }) {
   const listAccountsFn = useServerFn(listAccounts);
@@ -78,6 +80,24 @@ export function PublishTab({
       if (p) seedFromProject(p);
     }
   }, [initialProjectId, projects]);
+
+  // Reopening a saved draft restores everything the user had entered.
+  useEffect(() => {
+    if (!initialDraft) return;
+    setTitle(initialDraft.title ?? "");
+    const ct = initialDraft.content_type;
+    if (CONTENT_TYPES.some((c) => c.value === ct)) setContentType(ct);
+    setMediaUrls(Array.isArray(initialDraft.media_urls) ? initialDraft.media_urls : []);
+    setCaptions(initialDraft.caption_per_platform ?? {});
+    setSelected(
+      new Set(
+        (initialDraft.platforms ?? []).filter((p: string) =>
+          (PUBLISHING_PLATFORMS as readonly string[]).includes(p),
+        ),
+      ),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDraft]);
 
   const seedFromProject = (p: any) => {
     setTitle(p.title ?? "");
@@ -164,6 +184,7 @@ export function PublishTab({
           platforms: [...selected],
           scheduledAt,
           projectId: initialProjectId ?? null,
+          draftJobId: initialDraft?.id ?? null,
           saveAsDraft: draft,
         },
       })) as { status: string };

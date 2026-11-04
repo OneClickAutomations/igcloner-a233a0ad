@@ -1047,7 +1047,14 @@ function ConfidenceRing({ value }: { value: number }) {
 }
 
 async function seedIntelIdea(idea: any, report: any, createFn: any, updateFn: any) {
-  const format = String(idea.format).toLowerCase();
+  // Ideas saved before the Reel/Carousel/Image schema may say "Story" or
+  // "Post"; map every legacy/unknown format to a Studio project type.
+  const raw = String(idea.format ?? "").toLowerCase();
+  const format = raw === "reel" || raw === "story" || raw === "video" ? "reel"
+    : raw === "carousel" ? "carousel"
+    : raw === "caption" ? "caption"
+    : raw === "voiceover" ? "voiceover"
+    : "image";
   const { project } = await createFn({ data: { format, title: idea.title.slice(0,200), cloneMode: "inspired", userPreferences: {
     angle: idea.description, angleConcept: idea.description, hook: idea.hook, textOverlay: idea.hook, cta: idea.cta, captionOpener: idea.caption_opener, selectedFormats: [format], researchReportId: report.id,
   } } });

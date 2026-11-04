@@ -29,6 +29,8 @@ export function PublishingCenter() {
   const createProfileFn = useServerFn(createUploadPostProfile);
 
   const [tab, setTab] = useState<string>(search.tab ?? "accounts");
+  // Draft being edited in the Publish tab (set from the Drafts tab).
+  const [draftJob, setDraftJob] = useState<any>(null);
   // Bumping this key forces dependent tabs to refetch after a publish/connect.
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -81,9 +83,11 @@ export function PublishingCenter() {
           </TabsContent>
           <TabsContent value="publish">
             <PublishTab
-              key={`publish-${refreshKey}`}
+              key={`publish-${refreshKey}-${draftJob?.id ?? "new"}`}
               initialProjectId={search.projectId}
+              initialDraft={draftJob}
               onPublished={() => {
+                setDraftJob(null);
                 setRefreshKey((k) => k + 1);
                 changeTab("queue");
               }}
@@ -96,7 +100,13 @@ export function PublishingCenter() {
             <HistoryTab key={`history-${refreshKey}`} />
           </TabsContent>
           <TabsContent value="drafts">
-            <DraftsTab key={`drafts-${refreshKey}`} onEdit={() => changeTab("publish")} />
+            <DraftsTab
+              key={`drafts-${refreshKey}`}
+              onEdit={(job) => {
+                setDraftJob(job);
+                changeTab("publish");
+              }}
+            />
           </TabsContent>
           <TabsContent value="analytics">
             <AnalyticsTab />

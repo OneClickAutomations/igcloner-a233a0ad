@@ -62,15 +62,34 @@ export function groundIntelReport(dna: any, signals: any) {
   const posts: any[] = signals.posts ?? [];
   const metrics = calculateIntelMetrics(posts, signals.profile?.followersCount);
   const used = new Set<number>();
-  const pillars = (Array.isArray(dna.contentPillars) ? dna.contentPillars : []).map((p: any) => {
+  const rawPillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
+  // Reports stored before evidence-grounding have no postIndices; re-grounding
+  // must not throw their analyst-written pillars away.
+  const legacyPillars = rawPillars.length > 0 && rawPillars.every((p: any) => !Array.isArray(p?.postIndices));
+  const pillars = legacyPillars
+    ? rawPillars.map((p: any) => ({
+        ...p,
+        name: p.name ?? p.pillarName,
+        postIndices: [],
+        postCount: 0,
+        share: p.share ?? p.percentage ?? 0,
+        percentage: p.percentage ?? p.share ?? 0,
+        topPerformingExample: p.topPerformingExample ?? "Not available",
+      }))
+    : rawPillars.map((p: any) => {
     const indices: number[] = (Array.isArray(p.postIndices) ? p.postIndices : []).filter((i: number) => Number.isInteger(i) && i >= 0 && i < posts.length && !used.has(i));
     indices.forEach(i => used.add(i));
     const best = indices.map(i => posts[i]).sort((a,b) => (Number(b.likesCount)+Number(b.commentsCount))-(Number(a.likesCount)+Number(a.commentsCount)))[0];
     return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share: posts.length ? round(indices.length/posts.length*100) : 0, percentage: posts.length ? round(indices.length/posts.length*100) : 0, topPerformingExample: best?.caption ?? "Not available" };
   }).filter((p: any) => p.postCount > 0);
-  const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
-  if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
-  const provenHooks = (dna.hookAnalysis?.provenHooks ?? []).flatMap((h: any) => {
+  if (!legacyPillars) {
+    const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
+    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
+  }
+  const rawProvenHooks: any[] = dna.hookAnalysis?.provenHooks ?? [];
+  // Legacy reports store hooks without postIndex evidence; keep them as written.
+  const legacyHooks = rawProvenHooks.length > 0 && rawProvenHooks.every((h: any) => !Number.isInteger(h?.postIndex));
+  const provenHooks = legacyHooks ? rawProvenHooks : rawProvenHooks.flatMap((h: any) => {
     const p = posts[h.postIndex];
     const actual = String(p?.caption ?? "").split(/\n/).find(line => line.trim())?.trim();
     return actual ? [{ ...h, actualOpeningLine: actual, engagementOnThisPost: metric(p.likesCount) != null && metric(p.commentsCount) != null ? Number(p.likesCount)+Number(p.commentsCount) : null, sourceUrl: p.url }] : [];
@@ -78,7 +97,7 @@ export function groundIntelReport(dna: any, signals: any) {
   const dates = posts.map(p => new Date(p.timestamp).getTime()).filter(Number.isFinite).sort((a,b)=>a-b);
   const frequency = dates.length > 1 && dates[dates.length-1] !== dates[0] ? `${round((dates.length-1)/((Number(dates[dates.length-1])-Number(dates[0]))/86400000)*7)} posts per week` : "Not available";
   return { ...dna, ...metrics, profileSummary: { ...dna.profileSummary, ...signals.profile, username: signals.profile?.username ?? signals.subject, displayName: signals.profile?.fullName ?? "Not available", bio: signals.profile?.biography ?? "Not available", followerCount: metric(signals.profile?.followersCount), followingCount: metric(signals.profile?.followingCount ?? signals.profile?.followsCount), totalPosts: metric(signals.profile?.postsCount), postsAnalyzed: posts.length },
-    contentPillars: posts.length ? pillars : [], hookAnalysis: { ...dna.hookAnalysis, provenHooks }, commonHooks: provenHooks.map((h:any) => ({ pattern:h.hookType, example:h.actualOpeningLine })),
+    contentPillars: posts.length ? pillars : [], hookAnalysis: { ...dna.hookAnalysis, provenHooks }, commonHooks: legacyHooks && Array.isArray(dna.commonHooks) && dna.commonHooks.length ? dna.commonHooks : provenHooks.map((h:any) => ({ pattern: h.hookType ?? h.pattern, example: h.actualOpeningLine ?? h.example })),
     postingStrategy: { ...dna.postingStrategy, frequency, bestPerformingDays: [...new Set(metrics.topPostTimestamps.map(t => t.day))], bestPerformingTimes: metrics.topPostTimestamps.map(t => `${t.day} ${t.time}`), evidence: metrics.topPostTimestamps },
     postingFrequency: frequency, postingTimes: metrics.topPostTimestamps.map(t => `${t.day} ${t.time}`).join(" · ") || "Not available", mostSaved: "Not available", mostShared: "Not available",
     reportFlags: { limitedData: posts.length === 0, limitedDataReason: posts.length ? null : "This account's posts could not be scraped. Profile intelligence is based on bio and public profile data only." },

@@ -243,8 +243,15 @@ export function getUploadStatus(
   });
 }
 
-export function getAccountAnalytics(username: string, apiKey?: string | null) {
-  return request(`/analytics/${encodeURIComponent(username)}`, { apiKey });
+export function getAccountAnalytics(
+  username: string,
+  apiKey?: string | null,
+  platforms?: string[],
+) {
+  return request(`/analytics/${encodeURIComponent(username)}`, {
+    apiKey,
+    query: platforms?.length ? { platforms: platforms.join(",") } : undefined,
+  });
 }
 
 export function getPostAnalytics(requestId: string, apiKey?: string | null) {

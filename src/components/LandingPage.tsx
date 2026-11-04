@@ -26,7 +26,11 @@ document.addEventListener('click', function(e) {
 </script>
 `;
 
-const srcDoc = landingHtml.replace(/<\/body>/i, `${clickScript}</body>`);
+// landing.html may be a fragment without a closing </body>; append the
+// delegator in that case so anchor smooth-scroll and link bubbling still work.
+const srcDoc = /<\/body>/i.test(landingHtml)
+  ? landingHtml.replace(/<\/body>/i, `${clickScript}</body>`)
+  : `${landingHtml}\n${clickScript}`;
 
 export function LandingPage() {
   const navigate = useNavigate();
