@@ -96,8 +96,9 @@ describe("UGC speaker button placement", () => {
 
   it("leaves the speaker button as the only thing in each card's band", () => {
     cardBlocks().forEach((card, i) => {
+      const open = card.indexOf('<div class="ugc-media-wrap');
       const band = card.slice(
-        card.indexOf('<div class="ugc-media-wrap'),
+        card.indexOf(">", open) + 1,
         card.indexOf('<div class="ugc-card-info'),
       );
       expect(band, `card ${i + 1} band`).toContain('<button class="ugc-vol-btn"');
