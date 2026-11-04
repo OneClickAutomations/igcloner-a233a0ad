@@ -963,6 +963,22 @@ img { max-width: 100%; display: block }
   object-fit: cover;
   display: block;
 }
+.ugc-sound-indicator {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ugc-sound-bg);
+  color: var(--ugc-sound-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+}
+.ugc-sound-indicator[hidden] { display: none; }
 
 
 /* Card info row */
@@ -1025,6 +1041,8 @@ img { max-width: 100%; display: block }
 /* ── UGC TICKER: media band stays dark in BOTH themes ── */
 .ugc-section {
   /* Defaults = dark theme: page canvas already dark, media surfaces stay dark */
+  --ugc-sound-bg: rgba(0,0,0,0.5);
+  --ugc-sound-color: #fff;
   --ugc-band: transparent;
   --ugc-band-edge: transparent;
   --ugc-fade: #080812;
@@ -1901,6 +1919,16 @@ menuBtn?.addEventListener('click', () => {
   });
 
   // ── Drag-to-scroll ──
+  let pointerStartX = 0, pointerStartY = 0, pointerMoved = false;
+  track.addEventListener('pointerdown', e => {
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
+    pointerMoved = false;
+  });
+  track.addEventListener('pointermove', e => {
+    if (Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY) > 6) pointerMoved = true;
+  });
+  track.addEventListener('pointercancel', () => { pointerMoved = true; });
   let isDown = false, startX = 0, scrollStartX = 0;
   track.addEventListener('mousedown', e => {
     isDown = true;
@@ -1913,9 +1941,53 @@ menuBtn?.addEventListener('click', () => {
   track.addEventListener('mouseup', () => { isDown = false; track.classList.remove('is-grabbing'); pauseAutoScroll(); });
   track.addEventListener('mousemove', e => {
     if (!isDown) return;
-    e.preventDefault();
     const x = e.pageX - track.offsetLeft;
+    if (Math.abs(x - startX) <= 6) return;
+    e.preventDefault();
     track.scrollLeft = scrollStartX - (x - startX);
+  });
+
+  // ── One talking head audible at a time ──
+  function updateSoundState(card, video) {
+    const indicator = card.querySelector('.ugc-sound-indicator');
+    if (indicator) indicator.hidden = video.muted;
+    card.setAttribute('aria-pressed', String(!video.muted));
+  }
+  function toggleCardSound(card) {
+    const video = card.querySelector('.ugc-video');
+    if (!video) return;
+    const shouldUnmute = video.muted;
+    cards.forEach(other => {
+      const otherVideo = other.querySelector('.ugc-video');
+      if (!otherVideo) return;
+      otherVideo.muted = !(other === card && shouldUnmute);
+      updateSoundState(other, otherVideo);
+    });
+    pauseAutoScroll();
+  }
+  cards.forEach(card => {
+    const video = card.querySelector('.ugc-video');
+    const media = card.querySelector('.ugc-media-wrap');
+    if (!video || !media) return;
+    const indicator = document.createElement('span');
+    indicator.className = 'ugc-sound-indicator';
+    indicator.hidden = true;
+    indicator.setAttribute('aria-hidden', 'true');
+    indicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+    media.appendChild(indicator);
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', 'Toggle sound for ' + card.querySelector('.ugc-name').textContent);
+    updateSoundState(card, video);
+    card.addEventListener('click', () => {
+      if (!pointerMoved) toggleCardSound(card);
+    });
+    card.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      toggleCardSound(card);
+    });
+    video.addEventListener('volumechange', () => updateSoundState(card, video));
   });
 
   // ── Lazy video playback ──
