@@ -978,7 +978,6 @@ img { max-width: 100%; display: block }
   pointer-events: none;
   z-index: 3;
 }
-.ugc-sound-indicator[hidden] { display: none; }
 
 
 /* Card info row */
@@ -1950,7 +1949,12 @@ menuBtn?.addEventListener('click', () => {
   // ── One talking head audible at a time ──
   function updateSoundState(card, video) {
     const indicator = card.querySelector('.ugc-sound-indicator');
-    if (indicator) indicator.hidden = video.muted;
+    if (indicator) {
+      indicator.hidden = false;
+      indicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>' + (video.muted
+        ? '<line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'
+        : '<path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>') + '</svg>';
+    }
     card.setAttribute('aria-pressed', String(!video.muted));
   }
   function toggleCardSound(card) {
@@ -1971,7 +1975,6 @@ menuBtn?.addEventListener('click', () => {
     if (!video || !media) return;
     const indicator = document.createElement('span');
     indicator.className = 'ugc-sound-indicator';
-    indicator.hidden = true;
     indicator.setAttribute('aria-hidden', 'true');
     indicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
     media.appendChild(indicator);
