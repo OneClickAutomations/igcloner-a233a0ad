@@ -320,7 +320,7 @@
   }
   &:where(.dark *) {
     background:
-      linear-gradient(135deg, color-mix(in oklab, var(--t1) 16%, transparent), color-mix(in oklab, var(--t2) 6%, transparent)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--t1) 22%, var(--card)), color-mix(in oklab, var(--t2) 10%, var(--card))) padding-box,
       linear-gradient(135deg, var(--t1), var(--t2)) border-box;
     backdrop-filter: blur(16px);
   }
