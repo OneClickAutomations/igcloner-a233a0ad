@@ -42,6 +42,18 @@ describe("UGC ticker videos", () => {
     }
   });
 
+  it("matches the five supplied speech quotes while preserving DeShawn", () => {
+    const quotes = [...landing.matchAll(/<p class="ugc-quote">"([\s\S]*?)"<\/p>/g)].map(match => match[1]);
+    expect(quotes).toEqual([
+      "IGCloner showed me exactly what the top fitness creators were doing. My engagement tripled in six weeks.",
+      "I cloned the posting pattern of a creator who blew up overnight. Now the algorithm actually pushes my reels.",
+      "I reverse-engineered the top food creators' hooks with IGCloner. Two thousand followers to thirty-eight thousand in two months.",
+      "IGCloner broke down why certain travel reels take off. I stopped guessing, and my views went up five times.",
+      "Bro, I was posting fits getting nothing. IGCloner showed me what the algorithm actually rewards — now I'm hitting 50K+ consistently.",
+      "I used IGCloner to study the biggest tech channels. My last three reels all beat everything I'd posted before.",
+    ]);
+  });
+
   it("plays on scroll-in and pauses on scroll-out via IntersectionObserver", () => {
     expect(landing).toContain("new IntersectionObserver(");
     expect(landing).toContain("v.preload = 'auto'");
