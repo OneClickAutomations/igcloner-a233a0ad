@@ -40,9 +40,11 @@ describe("UGC ticker voiceover audio", () => {
     });
   });
 
-  it("keeps the audio wave animating regardless of play state", () => {
+  it("has no wave bars or large avatar letters left in the media area", () => {
+    expect(landing).not.toContain("ugc-audio-wave");
+    expect(landing).not.toContain("ugc-avatar-large");
+    expect(landing).not.toContain("ugc-wave");
     expect(landing).not.toContain("animation-play-state: paused");
-    expect(landing).toContain("animation: ugc-wave 1.2s ease-in-out infinite;");
   });
 
   it("plays the card's own clip, swaps the icon, and stops the previous card", () => {
