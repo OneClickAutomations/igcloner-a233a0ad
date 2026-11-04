@@ -20,6 +20,13 @@ describe("UGC ticker videos", () => {
     expect((landing.match(/<div class="ugc-card">/g) ?? []).length).toBe(6);
   });
 
+  it("each video has a poster matching its src", () => {
+    videoTags.forEach((tag, i) => {
+      expect(tag).toContain(`poster="${VIDEOS[i].replace(/\.mp4$/, ".jpg")}"`);
+    });
+    expect(videoTags).toHaveLength(6);
+  });
+
   it("each video is muted, looped, inline and not autoplay", () => {
     for (const tag of videoTags) {
       expect(tag).toMatch(/\smuted[\s>]/);
