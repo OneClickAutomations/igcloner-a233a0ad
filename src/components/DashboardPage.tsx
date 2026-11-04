@@ -483,6 +483,37 @@ function DashboardPageInner() {
     day: "numeric",
   });
 
+  // ── Real KPI metrics ─────────────────────────────────────
+  const now = new Date();
+  const analysesDelta = monthDelta(countThisMonth(dates.analyses, now), countPreviousMonth(dates.analyses, now));
+  const clonesDelta = monthDelta(countThisMonth(dates.clones, now), countPreviousMonth(dates.clones, now));
+  const savedDelta = monthDelta(countThisMonth(dates.saved, now), countPreviousMonth(dates.saved, now));
+  // Tile 4: "Active Days" — distinct days with ≥1 analysis in the last 30,
+  // compared against the 30 days before that (a like-for-like window).
+  const activeNow = activeDays(dates.analyses, 30, now);
+  const priorStart = new Date(now);
+  priorStart.setDate(priorStart.getDate() - 60);
+  const activePrev = activeDays(
+    dates.analyses.filter((iso) => new Date(iso) < new Date(now.getTime() - 30 * 86400000)),
+    30,
+    priorStart,
+  );
+  const activeDelta = monthDelta(activeNow, activePrev);
+
+  const spark = {
+    analyses: dailySeries(dates.analyses, 14, now),
+    clones: dailySeries(dates.clones, 14, now),
+    saved: dailySeries(dates.saved, 14, now),
+  };
+
+  // Chart: analyses per day, last 30 days, zero days included.
+  const chartSeries = dailySeries(dates.analyses, 30, now);
+  const chartData = chartSeries.map((count, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (29 - i));
+    return { day: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), count };
+  });
+
   return (
     <div className="min-h-full">
       {/* Ambient gradient wash behind the header */}
