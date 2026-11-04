@@ -66,7 +66,7 @@ describe("UGC ticker videos", () => {
     expect(soundFunctions).toBeDefined();
     const cards = VIDEOS.map(() => {
       const video = { muted: true };
-      const indicator = { hidden: true };
+      const indicator = { hidden: true, innerHTML: "" };
       return {
         video,
         indicator,
@@ -74,16 +74,21 @@ describe("UGC ticker videos", () => {
         setAttribute: () => {},
       };
     });
-    const toggle = new Function("cards", "pauseAutoScroll", `${soundFunctions}\nreturn toggleCardSound;`)(cards, () => {});
+    const { toggle, update } = new Function("cards", "pauseAutoScroll", `${soundFunctions}\nreturn { toggle: toggleCardSound, update: updateSoundState };`)(cards, () => {});
+    cards.forEach(card => update(card, card.video));
+    expect(cards.every(c => !c.indicator.hidden)).toBe(true);
+    expect(cards.every(c => c.indicator.innerHTML.includes("<line"))).toBe(true);
     toggle(cards[4]);
     expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, false, true]);
-    expect(cards.map(c => c.indicator.hidden)).toEqual([true, true, true, true, false, true]);
+    expect(cards.every(c => !c.indicator.hidden)).toBe(true);
+    expect(cards[4].indicator.innerHTML).toContain("<path");
     toggle(cards[4]);
     expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, true, true]);
     cards.forEach((card, selected) => {
       toggle(card);
       expect(cards.map(c => c.video.muted)).toEqual(cards.map((_, i) => i !== selected));
-      expect(cards.map(c => c.indicator.hidden)).toEqual(cards.map((_, i) => i !== selected));
+      expect(cards.every(c => !c.indicator.hidden)).toBe(true);
+      expect(cards.map(c => c.indicator.innerHTML.includes("<path"))).toEqual(cards.map((_, i) => i === selected));
     });
   });
 

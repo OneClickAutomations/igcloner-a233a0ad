@@ -9,47 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as CookiesRouteImport } from './routes/cookies'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
-import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
-import { Route as AuthenticatedPublishingRouteImport } from './routes/_authenticated/publishing'
-import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
-import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as CookiesRouteImport } from './routes/cookies'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
+import { Route as AuthenticatedPublishingRouteImport } from './routes/_authenticated/publishing'
+import { Route as AuthenticatedResearchRouteImport } from './routes/_authenticated/research'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStudioIndexRouteImport } from './routes/_authenticated/studio.index'
-import { Route as ApiPublicUploadPostWebhookRouteImport } from './routes/api/public/upload-post-webhook'
-import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
-import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
-import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
-import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
 import { Route as AuthenticatedStudioCarouselRouteImport } from './routes/_authenticated/studio.carousel'
+import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
+import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
+import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
+import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
+import { Route as ApiPublicUploadPostWebhookRouteImport } from './routes/api/public/upload-post-webhook'
 
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CookiesRoute = CookiesRouteImport.update({
-  id: '/cookies',
-  path: '/cookies',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -57,43 +46,29 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthenticatedRoute,
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
-  id: '/research',
-  path: '/research',
-  getParentRoute: () => AuthenticatedRoute,
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedPublishingRoute = AuthenticatedPublishingRouteImport.update({
-  id: '/publishing',
-  path: '/publishing',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
@@ -101,9 +76,34 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPublishingRoute = AuthenticatedPublishingRouteImport.update({
+  id: '/publishing',
+  path: '/publishing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedResearchRoute = AuthenticatedResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedStudioIndexRoute =
@@ -112,21 +112,16 @@ const AuthenticatedStudioIndexRoute =
     path: '/studio/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const ApiPublicUploadPostWebhookRoute =
-  ApiPublicUploadPostWebhookRouteImport.update({
-    id: '/api/public/upload-post-webhook',
-    path: '/api/public/upload-post-webhook',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedStudioCarouselRoute =
+  AuthenticatedStudioCarouselRouteImport.update({
+    id: '/studio/carousel',
+    path: '/studio/carousel',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
-const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
-  id: '/api/public/img',
-  path: '/api/public/img',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedStudioVoiceoverRoute =
-  AuthenticatedStudioVoiceoverRouteImport.update({
-    id: '/studio/voiceover',
-    path: '/studio/voiceover',
+const AuthenticatedStudioImageRoute =
+  AuthenticatedStudioImageRouteImport.update({
+    id: '/studio/image',
+    path: '/studio/image',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedStudioReelRoute = AuthenticatedStudioReelRouteImport.update({
@@ -134,17 +129,22 @@ const AuthenticatedStudioReelRoute = AuthenticatedStudioReelRouteImport.update({
   path: '/studio/reel',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedStudioImageRoute =
-  AuthenticatedStudioImageRouteImport.update({
-    id: '/studio/image',
-    path: '/studio/image',
+const AuthenticatedStudioVoiceoverRoute =
+  AuthenticatedStudioVoiceoverRouteImport.update({
+    id: '/studio/voiceover',
+    path: '/studio/voiceover',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedStudioCarouselRoute =
-  AuthenticatedStudioCarouselRouteImport.update({
-    id: '/studio/carousel',
-    path: '/studio/carousel',
-    getParentRoute: () => AuthenticatedRoute,
+const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
+  id: '/api/public/img',
+  path: '/api/public/img',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicUploadPostWebhookRoute =
+  ApiPublicUploadPostWebhookRouteImport.update({
+    id: '/api/public/upload-post-webhook',
+    path: '/api/public/upload-post-webhook',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -305,39 +305,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cookies': {
-      id: '/cookies'
-      path: '/cookies'
-      fullPath: '/cookies'
-      preLoaderRoute: typeof CookiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -347,53 +319,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/settings': {
-      id: '/_authenticated/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/research': {
-      id: '/_authenticated/research'
-      path: '/research'
-      fullPath: '/research'
-      preLoaderRoute: typeof AuthenticatedResearchRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/publishing': {
-      id: '/_authenticated/publishing'
-      path: '/publishing'
-      fullPath: '/publishing'
-      preLoaderRoute: typeof AuthenticatedPublishingRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/projects': {
-      id: '/_authenticated/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/calendar': {
-      id: '/_authenticated/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app': {
@@ -403,11 +368,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admin': {
-      id: '/_authenticated/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/projects': {
+      id: '/_authenticated/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof AuthenticatedProjectsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/publishing': {
+      id: '/_authenticated/publishing'
+      path: '/publishing'
+      fullPath: '/publishing'
+      preLoaderRoute: typeof AuthenticatedPublishingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/research': {
+      id: '/_authenticated/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof AuthenticatedResearchRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/studio/': {
@@ -417,32 +417,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/public/upload-post-webhook': {
-      id: '/api/public/upload-post-webhook'
-      path: '/api/public/upload-post-webhook'
-      fullPath: '/api/public/upload-post-webhook'
-      preLoaderRoute: typeof ApiPublicUploadPostWebhookRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/img': {
-      id: '/api/public/img'
-      path: '/api/public/img'
-      fullPath: '/api/public/img'
-      preLoaderRoute: typeof ApiPublicImgRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/studio/voiceover': {
-      id: '/_authenticated/studio/voiceover'
-      path: '/studio/voiceover'
-      fullPath: '/studio/voiceover'
-      preLoaderRoute: typeof AuthenticatedStudioVoiceoverRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/studio/reel': {
-      id: '/_authenticated/studio/reel'
-      path: '/studio/reel'
-      fullPath: '/studio/reel'
-      preLoaderRoute: typeof AuthenticatedStudioReelRouteImport
+    '/_authenticated/studio/carousel': {
+      id: '/_authenticated/studio/carousel'
+      path: '/studio/carousel'
+      fullPath: '/studio/carousel'
+      preLoaderRoute: typeof AuthenticatedStudioCarouselRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/studio/image': {
@@ -452,12 +431,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioImageRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/studio/carousel': {
-      id: '/_authenticated/studio/carousel'
-      path: '/studio/carousel'
-      fullPath: '/studio/carousel'
-      preLoaderRoute: typeof AuthenticatedStudioCarouselRouteImport
+    '/_authenticated/studio/reel': {
+      id: '/_authenticated/studio/reel'
+      path: '/studio/reel'
+      fullPath: '/studio/reel'
+      preLoaderRoute: typeof AuthenticatedStudioReelRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/studio/voiceover': {
+      id: '/_authenticated/studio/voiceover'
+      path: '/studio/voiceover'
+      fullPath: '/studio/voiceover'
+      preLoaderRoute: typeof AuthenticatedStudioVoiceoverRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/img': {
+      id: '/api/public/img'
+      path: '/api/public/img'
+      fullPath: '/api/public/img'
+      preLoaderRoute: typeof ApiPublicImgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/upload-post-webhook': {
+      id: '/api/public/upload-post-webhook'
+      path: '/api/public/upload-post-webhook'
+      fullPath: '/api/public/upload-post-webhook'
+      preLoaderRoute: typeof ApiPublicUploadPostWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
