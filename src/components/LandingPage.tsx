@@ -40,15 +40,25 @@ export function LandingPage() {
       if (session) navigate({ to: "/dashboard", replace: true });
     });
     const onMsg = (ev: MessageEvent) => {
-      const data = ev.data as { __igcloner_nav?: string } | null;
-      if (!data || typeof data.__igcloner_nav !== "string") return;
-      const href = data.__igcloner_nav;
-      if (/^https?:/.test(href)) {
-        window.location.href = href;
-      } else {
-        navigate({ to: href });
+      const data = ev.data as
+        | { __igcloner_nav?: string; type?: string; url?: string }
+        | null;
+      if (!data) return;
+      if (typeof data.__igcloner_nav === "string") {
+        const href = data.__igcloner_nav;
+        if (/^https?:/.test(href)) {
+          window.location.href = href;
+        } else {
+          navigate({ to: href });
+        }
+        return;
+      }
+      if (data.type === "NAVIGATE_APP") {
+        const url = typeof data.url === "string" ? data.url.trim() : "";
+        navigate({ to: url.startsWith("/") ? url : "/auth" });
       }
     };
+
     window.addEventListener("message", onMsg);
     return () => {
       window.removeEventListener("message", onMsg);
