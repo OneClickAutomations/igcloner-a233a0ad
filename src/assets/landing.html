@@ -924,20 +924,36 @@ img { max-width: 100%; display: block }
 .ugc-ticker-wrapper {
   position: relative;
   margin-top: 40px;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
 }
 .ugc-track {
   display: flex;
-  gap: 20px;
-  padding: 0 60px 16px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  cursor: grab;
-  -webkit-overflow-scrolling: touch;
+  width: max-content;
+  padding-bottom: 16px;
+  animation: ugc-marquee var(--ugc-duration, 79.13s) linear infinite;
+  will-change: transform;
 }
-.ugc-track::-webkit-scrollbar { display: none; }
-.ugc-track.is-grabbing { cursor: grabbing; }
+.ugc-group {
+  display: flex;
+  flex-shrink: 0;
+  gap: 20px;
+  padding-right: 20px;
+}
+@keyframes ugc-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.ugc-ticker-wrapper:hover .ugc-track,
+.ugc-ticker-wrapper:focus-within .ugc-track,
+.ugc-track.is-paused { animation-play-state: paused; }
+.ugc-ticker-wrapper.is-grabbing { cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) {
+  .ugc-ticker-wrapper { overflow-x: auto; touch-action: auto; }
+  .ugc-track { animation: none; transform: none; will-change: auto; }
+  .ugc-group[aria-hidden="true"] { display: none; }
+}
 
 .ugc-card {
   flex: 0 0 260px;
@@ -945,7 +961,6 @@ img { max-width: 100%; display: block }
   background: #12151E;
   border-radius: 10px;
   overflow: hidden;
-  scroll-snap-align: start;
   box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
 
@@ -1034,7 +1049,7 @@ img { max-width: 100%; display: block }
 
 @media (max-width: 600px) {
   .ugc-card { flex: 0 0 220px; width: 220px; }
-  .ugc-track { padding: 0 48px 16px; gap: 14px; }
+  .ugc-group { gap: 14px; padding-right: 14px; }
 }
 
 /* ── UGC TICKER: media band stays dark in BOTH themes ── */
@@ -1226,6 +1241,7 @@ img { max-width: 100%; display: block }
 
   <div class="ugc-ticker-wrapper">
     <div class="ugc-track" id="ugcTrack">
+      <div class="ugc-group" id="ugcOriginal">
 
       <!-- Card 1 – Jasmine / Fitness (audio only) -->
       <div class="ugc-card">
@@ -1317,6 +1333,7 @@ img { max-width: 100%; display: block }
         <p class="ugc-quote">"I used IGCloner to study the biggest tech channels. My last three reels all beat everything I'd posted before."</p>
       </div>
 
+      </div><!-- /ugc-group -->
     </div><!-- /ugc-track -->
   </div><!-- /ugc-ticker-wrapper -->
 </section>
@@ -1857,93 +1874,86 @@ menuBtn?.addEventListener('click', () => {
 // ── UGC TICKER ──
 (function() {
   const track = document.getElementById('ugcTrack');
-  const cards = track ? Array.from(track.querySelectorAll('.ugc-card')) : [];
-  if (!track || !cards.length) return;
+  const wrapper = track?.parentElement;
+  const original = document.getElementById('ugcOriginal');
+  if (!track || !wrapper || !original) return;
+  const originals = Array.from(original.querySelectorAll('.ugc-card'));
+  if (!originals.length) return;
 
-  let autoScrollInterval = null;
-  let isPaused = false;
-
-  // ── Auto-scroll ──
-  function startAutoScroll() {
-    if (autoScrollInterval) return;
-    autoScrollInterval = setInterval(() => {
-      if (isPaused) return;
-      const cardW = cards[0].offsetWidth + 20;
-      const maxScroll = track.scrollWidth - track.clientWidth;
-      if (track.scrollLeft + cardW >= maxScroll - 4) {
-        track.scrollTo({ left: 0, behavior: 'smooth' });
-      } else {
-        track.scrollBy({ left: cardW, behavior: 'smooth' });
-      }
-    }, 4000);
+  // Equal groups include their trailing gap, so -50% aligns exactly.
+  function loopMetrics(width) {
+    return { distance: width, duration: width / 21.23 * 1000 };
   }
-  function pauseAutoScroll() {
-    isPaused = true;
-    clearTimeout(pauseAutoScroll._timer);
-    pauseAutoScroll._timer = setTimeout(() => { isPaused = false; }, 3000);
+  function createLoopCopy(group) {
+    const copy = group.cloneNode(true);
+    copy.removeAttribute('id');
+    copy.setAttribute('aria-hidden', 'true');
+    copy.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+    copy.querySelectorAll('.ugc-card').forEach(card => card.setAttribute('tabindex', '-1'));
+    return copy;
   }
+  const copy = createLoopCopy(original);
+  track.appendChild(copy);
+  const cards = Array.from(track.querySelectorAll('.ugc-card'));
+  cards.forEach((card, index) => { card.dataset.creator = String(index % originals.length); });
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let metrics = loopMetrics(original.getBoundingClientRect().width);
+  function measureLoop() {
+    const animation = track.getAnimations()[0];
+    const phase = animation && metrics.duration ? (animation.currentTime || 0) / metrics.duration : 0;
+    metrics = loopMetrics(original.getBoundingClientRect().width);
+    track.style.setProperty('--ugc-duration', metrics.duration + 'ms');
+    if (animation) animation.currentTime = phase * metrics.duration;
+  }
+  measureLoop();
+  new ResizeObserver(measureLoop).observe(original);
 
-  startAutoScroll();
-
-  // ── Pause on hover / touch ──
-  track.addEventListener('mouseenter', () => { isPaused = true; });
-  track.addEventListener('mouseleave', () => { isPaused = false; });
-  track.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
-  track.addEventListener('touchend',   () => {
-    clearTimeout(pauseAutoScroll._timer);
-    pauseAutoScroll._timer = setTimeout(() => { isPaused = false; }, 2500);
-  }, { passive: true });
-
-  // ── Arrow navigation ──
-  document.querySelector('.ugc-arrow-left')?.addEventListener('click', () => {
-    pauseAutoScroll();
-    const cardW = (cards[0]?.offsetWidth || 260) + 20;
-    if (track.scrollLeft <= 64) {
-      // At start — wrap to end
-      track.scrollTo({ left: track.scrollWidth - track.clientWidth, behavior: 'smooth' });
-    } else {
-      track.scrollBy({ left: -cardW, behavior: 'smooth' });
-    }
-  });
-  document.querySelector('.ugc-arrow-right')?.addEventListener('click', () => {
-    pauseAutoScroll();
-    const cardW = (cards[0]?.offsetWidth || 260) + 20;
-    const maxScroll = track.scrollWidth - track.clientWidth;
-    if (track.scrollLeft >= maxScroll - 4) {
-      // At end — wrap to start
-      track.scrollTo({ left: 0, behavior: 'smooth' });
-    } else {
-      track.scrollBy({ left: cardW, behavior: 'smooth' });
-    }
-  });
-
-  // ── Drag-to-scroll ──
+  // Pointer movement seeks the existing CSS animation; no scroll timers or snap.
   let pointerStartX = 0, pointerStartY = 0, pointerMoved = false;
+  let activePointer = null, startTime = 0;
   track.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
     pointerStartX = e.clientX;
     pointerStartY = e.clientY;
     pointerMoved = false;
+    activePointer = e.pointerId;
+    startTime = Number(track.getAnimations()[0]?.currentTime || 0);
+    track.classList.add('is-paused');
   });
   track.addEventListener('pointermove', e => {
+    if (activePointer === null) return;
     if (Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY) > 6) pointerMoved = true;
-  });
-  track.addEventListener('pointercancel', () => { pointerMoved = true; });
-  let isDown = false, startX = 0, scrollStartX = 0;
-  track.addEventListener('mousedown', e => {
-    isDown = true;
-    startX = e.pageX - track.offsetLeft;
-    scrollStartX = track.scrollLeft;
-    track.classList.add('is-grabbing');
-    isPaused = true;
-  });
-  track.addEventListener('mouseleave', () => { isDown = false; track.classList.remove('is-grabbing'); });
-  track.addEventListener('mouseup', () => { isDown = false; track.classList.remove('is-grabbing'); pauseAutoScroll(); });
-  track.addEventListener('mousemove', e => {
-    if (!isDown) return;
-    const x = e.pageX - track.offsetLeft;
-    if (Math.abs(x - startX) <= 6) return;
+    if (!pointerMoved || reducedMotion.matches) return;
+    const animation = track.getAnimations()[0];
+    if (!animation) return;
+    if (Math.abs(e.clientX - pointerStartX) <= Math.abs(e.clientY - pointerStartY)) return;
     e.preventDefault();
-    track.scrollLeft = scrollStartX - (x - startX);
+    wrapper.classList.add('is-grabbing');
+    track.setPointerCapture(e.pointerId);
+    const time = startTime - (e.clientX - pointerStartX) / 21.23 * 1000;
+    animation.currentTime = ((time % metrics.duration) + metrics.duration) % metrics.duration;
+  });
+  function endPointer(e) {
+    if (activePointer !== e.pointerId) return;
+    activePointer = null;
+    track.classList.remove('is-paused');
+    wrapper.classList.remove('is-grabbing');
+    if (track.hasPointerCapture(e.pointerId)) track.releasePointerCapture(e.pointerId);
+  }
+  window.addEventListener('pointerup', endPointer);
+  window.addEventListener('pointercancel', e => { pointerMoved = true; endPointer(e); });
+  track.addEventListener('dragstart', e => e.preventDefault());
+  // Bring keyboard-focused originals into view before freezing their position.
+  track.addEventListener('focusin', e => {
+    const card = e.target.closest('.ugc-card');
+    if (!card || reducedMotion.matches) return;
+    const animation = track.getAnimations()[0];
+    const rect = card.getBoundingClientRect(), viewport = wrapper.getBoundingClientRect();
+    if (animation && (rect.left < viewport.left || rect.right > viewport.right)) {
+      const offset = card.offsetLeft - original.offsetLeft;
+      animation.currentTime = offset / 21.23 * 1000;
+    }
+    wrapper.scrollLeft = 0;
   });
 
   // ── One talking head audible at a time ──
@@ -1967,7 +1977,6 @@ menuBtn?.addEventListener('click', () => {
       otherVideo.muted = !(other === card && shouldUnmute);
       updateSoundState(other, otherVideo);
     });
-    pauseAutoScroll();
   }
   cards.forEach(card => {
     const video = card.querySelector('.ugc-video');
@@ -1979,7 +1988,7 @@ menuBtn?.addEventListener('click', () => {
     indicator.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
     media.appendChild(indicator);
     card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
+    card.setAttribute('tabindex', card.closest('[aria-hidden="true"]') ? '-1' : '0');
     card.setAttribute('aria-label', 'Toggle sound for ' + card.querySelector('.ugc-name').textContent);
     updateSoundState(card, video);
     card.addEventListener('click', () => {
@@ -1993,21 +2002,42 @@ menuBtn?.addEventListener('click', () => {
     video.addEventListener('volumechange', () => updateSoundState(card, video));
   });
 
-  // ── Lazy video playback ──
+  // Only the visible copy of each creator can play (six-video ceiling).
+  const visibility = new Map();
+  function selectVisibleCopies(list, ratios, limit) {
+    const selected = new Map();
+    list.forEach(card => {
+      const ratio = ratios.get(card) || 0;
+      const previous = selected.get(card.dataset.creator);
+      if (ratio >= 0.25 && (!previous || ratio > (ratios.get(previous) || 0))) {
+        selected.set(card.dataset.creator, card);
+      }
+    });
+    return Array.from(selected.values()).slice(0, limit);
+  }
+  function reconcilePlayback() {
+    const visible = new Set(selectVisibleCopies(cards, visibility, 6));
+    // Pause first, then play, so crossing the seam cannot exceed the ceiling.
+    cards.forEach(card => {
+      const v = card.querySelector('.ugc-video');
+      if (!v || visible.has(card)) return;
+      v.pause();
+      v.muted = true;
+      updateSoundState(card, v);
+    });
+    visible.forEach(card => {
+      const v = card.querySelector('.ugc-video');
+      if (!v) return;
+      v.preload = 'auto';
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    });
+  }
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const v = entry.target.querySelector('.ugc-video');
-        if (!v) return;
-        if (entry.isIntersecting) {
-          v.preload = 'auto';
-          const p = v.play();
-          if (p && p.catch) p.catch(() => {});
-        } else {
-          v.pause();
-        }
-      });
-    }, { threshold: 0.25 });
+      entries.forEach(entry => visibility.set(entry.target, entry.isIntersecting ? entry.intersectionRatio : 0));
+      reconcilePlayback();
+    }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
     cards.forEach(card => io.observe(card));
   }
 })();
