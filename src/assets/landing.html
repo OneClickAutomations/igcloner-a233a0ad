@@ -943,15 +943,10 @@ img { max-width: 100%; display: block }
   flex: 0 0 260px;
   width: 260px;
   background: #12151E;
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 18px;
+  border-radius: 10px;
   overflow: hidden;
   scroll-snap-align: start;
-  transition: transform 0.25s, box-shadow 0.25s;
-}
-.ugc-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(247,119,55,0.18);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
 
 /* Media area */
@@ -978,6 +973,7 @@ img { max-width: 100%; display: block }
   gap: 16px;
 }
 .ugc-poster-food     { background: linear-gradient(160deg, #1a120a 0%, #3d2000 100%); }
+.ugc-poster-beauty   { background: linear-gradient(160deg, #1a0a12 0%, #3d0030 100%); }
 .ugc-poster-travel   { background: linear-gradient(160deg, #071a2e 0%, #0a3d62 100%); }
 .ugc-poster-fashion  { background: linear-gradient(160deg, #1a0a1a 0%, #3d003d 100%); }
 .ugc-poster-tech     { background: linear-gradient(160deg, #0a1a0a 0%, #003d1a 100%); }
@@ -1024,29 +1020,21 @@ img { max-width: 100%; display: block }
 }
 .ugc-card-audio:not(.ugc-playing) .ugc-audio-wave span { animation-play-state: paused; }
 
-/* Play button overlay */
-.ugc-play-btn {
+/* Tiny per-card mute toggle */
+.ugc-vol-btn {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
-  width: 40px;
-  height: 40px;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.5);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
   z-index: 2;
-}
-.ugc-play-btn:hover { background: rgba(247,119,55,0.85); transform: scale(1.1); }
-.ugc-playing .ugc-play-btn svg polygon { display: none; }
-.ugc-playing .ugc-play-btn::after {
-  content: '⏸';
-  color: white;
-  font-size: 14px;
 }
 
 /* Card info row */
@@ -1078,17 +1066,7 @@ img { max-width: 100%; display: block }
 .ugc-meta { flex: 1; min-width: 0; }
 .ugc-name   { font-size: 13px; font-weight: 600; color: #f0f0f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ugc-handle { font-size: 11px; color: rgba(255,255,255,0.58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ugc-growth {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 700;
-  color: #f77737;
-  background: rgba(247,119,55,0.12);
-  border: 1px solid rgba(247,119,55,0.25);
-  padding: 2px 6px;
-  border-radius: 20px;
-  white-space: nowrap;
-}
+.ugc-meta { flex: 1; min-width: 0; }
 .ugc-quote {
   font-size: 12px;
   line-height: 1.5;
@@ -1097,51 +1075,7 @@ img { max-width: 100%; display: block }
   margin: 0;
 }
 
-/* Nav arrows */
-.ugc-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(15,15,30,0.85);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  font-size: 26px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  backdrop-filter: blur(8px);
-}
-.ugc-arrow:hover { background: rgba(247,119,55,0.7); transform: translateY(-50%) scale(1.1); }
-.ugc-arrow-left  { left: 12px; }
-.ugc-arrow-right { right: 12px; }
-
-/* Mute toggle */
-.ugc-mute-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 10;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(15,15,30,0.85);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-  backdrop-filter: blur(8px);
-}
-.ugc-mute-btn:hover { background: rgba(247,119,55,0.7); }
+/* (nav arrows and global mute button removed — per-card .ugc-vol-btn only) */
 
 /* Fade edges */
 .ugc-ticker-wrapper::before,
@@ -1159,7 +1093,6 @@ img { max-width: 100%; display: block }
 @media (max-width: 600px) {
   .ugc-card { flex: 0 0 220px; width: 220px; }
   .ugc-track { padding: 0 48px 16px; gap: 14px; }
-  .ugc-arrow { width: 34px; height: 34px; font-size: 22px; }
 }
 
 /* ── UGC TICKER: media band stays dark in BOTH themes ── */
@@ -1342,26 +1275,22 @@ img { max-width: 100%; display: block }
   <div class="wrap">
     <div class="section-header">
       <span class="section-label">creator stories</span>
-      <h2 class="section-headline">See what real creators are saying</h2>
+      <h2 class="section-headline">The numbers don't lie. Neither do they.</h2>
       <p class="section-sub">IGCloner is already powering growth for thousands of creators across every niche.</p>
     </div>
   </div>
 
   <div class="ugc-ticker-wrapper">
-    <button class="ugc-arrow ugc-arrow-left" aria-label="Previous">&#8249;</button>
-    <button class="ugc-arrow ugc-arrow-right" aria-label="Next">&#8250;</button>
-    <button class="ugc-mute-btn" id="ugcMuteBtn" aria-label="Toggle sound">
-      <svg id="ugcIconOn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-      <svg id="ugcIconOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
-    </button>
-
     <div class="ugc-track" id="ugcTrack">
 
-      <!-- Card 1 – Jasmine / Fitness (real video) -->
-      <div class="ugc-card" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/QKBTNwrO3CCY115LEw4k/UA9MkDGa5X0vOUeK3mbm/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=63NL7DqTXq1eNIm3DW91hBjrcho=">
-        <div class="ugc-media-wrap">
-          <video class="ugc-video" src="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/8ZW6J50Q6dMcKN63NHV4/HyqqETnLdJ0SJeQFSPZP/content.mp4?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=KDyxtZEaPL5tA6U_-rQxHZx9ewU=" playsinline muted loop></video>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+      <!-- Card 1 – Jasmine / Fitness (audio only) -->
+      <div class="ugc-card ugc-card-audio">
+        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-food">
+          <div class="ugc-avatar-large">J</div>
+          <div class="ugc-audio-wave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-fitness">J</div>
@@ -1369,16 +1298,18 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">Jasmine L.</div>
             <div class="ugc-handle">@jasminefitlife · Fitness</div>
           </div>
-          <span class="ugc-growth">3K → 47K</span>
         </div>
         <p class="ugc-quote">"IGCloner helped me decode exactly what top fitness creators were doing. My engagement tripled in 6 weeks."</p>
       </div>
 
-      <!-- Card 2 – Sofia / Beauty (real video) -->
-      <div class="ugc-card" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/JcNwHpK9IIMxRiNco8ma/FffHW08cC5JNxWOFDbeT/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=tFoB72t1q4YMnepFqx7ZvcazBs4=">
-        <div class="ugc-media-wrap">
-          <video class="ugc-video" src="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/0Wa6VMLiGDxsuNu5CWYj/T7ar88Pr3P5xVUwmubPd/content.mp4?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=yvKGMcSc0jrdHCtnCkU_1CkjbjQ=" playsinline muted loop></video>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+      <!-- Card 2 – Sofia / Beauty (audio only) -->
+      <div class="ugc-card ugc-card-audio">
+        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-beauty">
+          <div class="ugc-avatar-large">S</div>
+          <div class="ugc-audio-wave">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-beauty">S</div>
@@ -1386,19 +1317,18 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">Sofia M.</div>
             <div class="ugc-handle">@sofiaglow · Beauty</div>
           </div>
-          <span class="ugc-growth">10K → 400K</span>
         </div>
         <p class="ugc-quote">"I cloned the exact posting pattern of a creator who blew up overnight. Now the algorithm is finally pushing my reels."</p>
       </div>
 
       <!-- Card 3 – Marcus / Food (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/llD1uPFhAt6UuKMsGu4v/9owkJhc1ieLFULqGd7qF/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=zwGrfd3_lK5AZKJJD5R6ZVm3OUw=">
+      <div class="ugc-card ugc-card-audio">
         <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-food">
           <div class="ugc-avatar-large">M</div>
           <div class="ugc-audio-wave">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-food">M</div>
@@ -1406,19 +1336,18 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">Marcus A.</div>
             <div class="ugc-handle">@marcuseats · Food</div>
           </div>
-          <span class="ugc-growth">2K → 38K</span>
         </div>
         <p class="ugc-quote">"I reverse-engineered the top food creators' hook strategies. Went from 2K to 38K in two months."</p>
       </div>
 
       <!-- Card 4 – Chloe / Travel (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/3M9HZwH27hLQK6XDN7Dx/60WTeNMAmmc3T8m2vhfA/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=KpiKS46B9YL3t9ij98pxX4KhKPs=">
+      <div class="ugc-card ugc-card-audio">
         <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-travel">
           <div class="ugc-avatar-large">C</div>
           <div class="ugc-audio-wave">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-travel">C</div>
@@ -1426,19 +1355,18 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">Chloe R.</div>
             <div class="ugc-handle">@chloeexplores · Travel</div>
           </div>
-          <span class="ugc-growth">3K → 47K</span>
         </div>
         <p class="ugc-quote">"The analytics breakdown is insane. I reverse-engineered 20 top travel creators and went from 3K to 47K in 3 months."</p>
       </div>
 
       <!-- Card 5 – DeShawn / Fashion (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/6viAaZTa3SQ6rSwHatoM/Me5nD5OUV2Ihd7aJIaFJ/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=DnA8HDLKUJeEbPpkDhAuGBwN1Yc=">
+      <div class="ugc-card ugc-card-audio">
         <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-fashion">
           <div class="ugc-avatar-large">D</div>
           <div class="ugc-audio-wave">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-fashion">D</div>
@@ -1446,19 +1374,18 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">DeShawn B.</div>
             <div class="ugc-handle">@deshawnfits · Fashion</div>
           </div>
-          <span class="ugc-growth">200 → 50K+</span>
         </div>
         <p class="ugc-quote">"Bro, I was posting fits getting nothing. IGCloner showed me what the algorithm actually rewards — now I'm hitting 50K+ consistently."</p>
       </div>
 
       <!-- Card 6 – Priya / Tech (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/WsFDWHpZWEq7V21c4is1/gwTLNNBjs4TL5s8Zvb9y/content.mp3?Expires=1793736000&KeyName=assets-cdn-key-1&Signature=3jZnxkBm3RO68QVsc84lAkobxA8=">
+      <div class="ugc-card ugc-card-audio">
         <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-tech">
           <div class="ugc-avatar-large">P</div>
           <div class="ugc-audio-wave">
             <span></span><span></span><span></span><span></span><span></span>
           </div>
-          <div class="ugc-play-btn" aria-label="Play"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+          <button class="ugc-vol-btn" aria-label="Toggle sound"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-tech">P</div>
@@ -1466,7 +1393,6 @@ img { max-width: 100%; display: block }
             <div class="ugc-name">Priya K.</div>
             <div class="ugc-handle">@priyatech · Tech/Gaming</div>
           </div>
-          <span class="ugc-growth">1K → 30K</span>
         </div>
         <p class="ugc-quote">"I analyze gaming and tech creators constantly now. IGCloner's data is wild — 1K to 30K in two months. The data doesn't lie."</p>
       </div>
