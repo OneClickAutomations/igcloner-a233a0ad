@@ -953,8 +953,8 @@ img { max-width: 100%; display: block }
 .ugc-media-wrap {
   position: relative;
   width: 100%;
-  height: 96px;
-  background: #0d0d1a;
+  aspect-ratio: 9/16;
+  background: #12151E;
   overflow: hidden;
 }
 .ugc-video {
@@ -964,34 +964,6 @@ img { max-width: 100%; display: block }
   display: block;
 }
 
-/* Audio-only poster cards */
-.ugc-poster-food     { background: linear-gradient(160deg, #1a120a 0%, #3d2000 100%); }
-.ugc-poster-beauty   { background: linear-gradient(160deg, #1a0a12 0%, #3d0030 100%); }
-.ugc-poster-travel   { background: linear-gradient(160deg, #071a2e 0%, #0a3d62 100%); }
-.ugc-poster-fashion  { background: linear-gradient(160deg, #1a0a1a 0%, #3d003d 100%); }
-.ugc-poster-tech     { background: linear-gradient(160deg, #0a1a0a 0%, #003d1a 100%); }
-
-/* Tiny per-card mute toggle */
-.ugc-vol-btn {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.5);
-  border: none;
-  outline: none;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 3;
-  flex-shrink: 0;
-  align-self: auto;
-  pointer-events: auto;
-}
 
 /* Card info row */
 .ugc-card-info {
@@ -1031,7 +1003,6 @@ img { max-width: 100%; display: block }
   margin: 0;
 }
 
-/* (nav arrows and global mute button removed — per-card .ugc-vol-btn only) */
 
 /* Fade edges */
 .ugc-ticker-wrapper::before,
@@ -1240,9 +1211,9 @@ img { max-width: 100%; display: block }
     <div class="ugc-track" id="ugcTrack">
 
       <!-- Card 1 – Jasmine / Fitness (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/dE0M75YXBoz1OmzbNpHi/cHymoenR0A1ND6jiZw8F/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=ibvG_i20HssQtMR2-iSJ1zOVUAM=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-food">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/jasmine-fitness.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-fitness">J</div>
@@ -1255,9 +1226,9 @@ img { max-width: 100%; display: block }
       </div>
 
       <!-- Card 2 – Sofia / Beauty (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/GNqdiNnseGnEZW0tWTRk/gLgIQWt6omhSbLNAvJko/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=nBs6fjaHLmZfnVJ4KYoRmFu6P0I=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-beauty">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/sofia-beauty.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-beauty">S</div>
@@ -1270,9 +1241,9 @@ img { max-width: 100%; display: block }
       </div>
 
       <!-- Card 3 – Marcus / Food (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/BCtmOcnJjrVzBulvpxiY/L0OsDyQX2XYdw2E6RTRh/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=INKhLGWrC89p7ObGrW0AzrVVJDI=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-food">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/marcus-food.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-food">M</div>
@@ -1285,9 +1256,9 @@ img { max-width: 100%; display: block }
       </div>
 
       <!-- Card 4 – Chloe / Travel (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/pfQT7bRX9JPLrgrKA2Rc/4J8AvDMW2WapT8j6S4IH/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=V5Nvb9gIh__qK9lN0e9imP-ZhZ8=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-travel">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/chloe-travel.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-travel">C</div>
@@ -1300,9 +1271,9 @@ img { max-width: 100%; display: block }
       </div>
 
       <!-- Card 5 – DeShawn / Fashion (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/8NuL9WTI7Hp05FfMt7is/qufsdg6zS3h3kZIz4sj6/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=vSTiRzVN0AhY_PiXqlCsl8-uwAE=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-fashion">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/deshawn-fashion.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-fashion">D</div>
@@ -1315,9 +1286,9 @@ img { max-width: 100%; display: block }
       </div>
 
       <!-- Card 6 – Priya / Tech (audio only) -->
-      <div class="ugc-card ugc-card-audio" data-audio="https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/iGESU970jju5idCkLePP/GidsTtbhXWVxdWEuaNbV/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=3dGR4M5OSGE4I5jnz_Tz5p_Z7NQ=">
-        <div class="ugc-media-wrap ugc-avatar-poster ugc-poster-tech">
-          <button class="ugc-vol-btn" aria-label="Play voiceover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>
+      <div class="ugc-card">
+        <div class="ugc-media-wrap">
+          <video class="ugc-video" src="/ugc/priya-tech.mp4" muted loop playsinline preload="none"></video>
         </div>
         <div class="ugc-card-info">
           <div class="ugc-avatar ugc-avatar-tech">P</div>
@@ -1872,13 +1843,8 @@ menuBtn?.addEventListener('click', () => {
   const cards = track ? Array.from(track.querySelectorAll('.ugc-card')) : [];
   if (!track || !cards.length) return;
 
-  const ICON_ON  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
-  const ICON_OFF = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
-
   let autoScrollInterval = null;
   let isPaused = false;
-  let currentAudio = null;
-  let currentBtn   = null;
 
   // ── Auto-scroll ──
   function startAutoScroll() {
@@ -1952,38 +1918,23 @@ menuBtn?.addEventListener('click', () => {
     track.scrollLeft = scrollStartX - (x - startX);
   });
 
-  // ── Per-card voiceover audio ──
-  function stopCurrent(finalIcon) {
-    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-    if (currentBtn) {
-      currentBtn.innerHTML = finalIcon || ICON_OFF;
-      currentBtn.setAttribute('aria-label', 'Play voiceover');
-      currentBtn.classList.remove('is-playing');
-      currentBtn = null;
-    }
+  // ── Lazy video playback ──
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        const v = entry.target.querySelector('.ugc-video');
+        if (!v) return;
+        if (entry.isIntersecting) {
+          v.preload = 'auto';
+          const p = v.play();
+          if (p && p.catch) p.catch(() => {});
+        } else {
+          v.pause();
+        }
+      });
+    }, { threshold: 0.25 });
+    cards.forEach(card => io.observe(card));
   }
-
-  cards.forEach(card => {
-    const btn = card.querySelector('.ugc-vol-btn');
-    const src = card.dataset.audio;
-    if (!btn || !src) return;
-
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const isActive = currentBtn === btn && currentAudio;
-      stopCurrent(ICON_OFF);
-      if (isActive) return;
-
-      const aud = new Audio(src);
-      aud.play().catch(() => {});
-      aud.addEventListener('ended', () => { if (currentAudio === aud) stopCurrent(ICON_ON); });
-      currentAudio = aud;
-      currentBtn = btn;
-      btn.innerHTML = ICON_ON;
-      btn.setAttribute('aria-label', 'Pause voiceover');
-      btn.classList.add('is-playing');
-      pauseAutoScroll();
-    });
   });
 })();
 </script>
