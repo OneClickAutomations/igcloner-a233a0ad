@@ -1,6 +1,6 @@
 # Intel report rebuild
-- [ ] Inspect the three reference tickers and report measured behavior before ticker changes.
-- [ ] Replace UGC stepped scrolling with seamless motion while preserving playback and sound controls.
+- [x] Inspect the three reference tickers and report measured behavior before ticker changes.
+- [x] Replace UGC stepped scrolling with seamless motion while preserving playback and sound controls.
 - [ ] Test duplication, measure speed/loop/pauses and video counts in the browser.
 - [x] Verify five replacement UGC speech clips; compress passing clips with audio, refresh posters and quotes, and test all six sound toggles.
 - [x] Rename Clone Mode angles across screens and prompts without changing generation or saved data.

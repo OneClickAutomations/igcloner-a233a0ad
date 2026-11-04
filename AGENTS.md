@@ -4,3 +4,4 @@
 - Intel AI requests use native streaming Claude Messages in a server-only helper; credentials and prompts never enter browser bundles.
 - Intel-to-Studio handoff creates ordinary saved projects using existing project fields and routes, so other studio modules need no changes.
 - Research PDF generation stays client-side with jsPDF and nine fixed editorial pages, avoiding server-only rendering dependencies.
+- UGC motion uses equal-width repeated groups and a CSS transform loop; visibility arbitration pauses every nonselected copy before playing at most one copy per creator to avoid duplicate playback.
