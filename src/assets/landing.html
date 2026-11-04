@@ -1936,17 +1936,17 @@ menuBtn?.addEventListener('click', () => {
 });
 // ── UGC TICKER ──
 (function() {
-  const track    = document.getElementById('ugcTrack');
-  const muteBtn  = document.getElementById('ugcMuteBtn');
-  const iconOn   = document.getElementById('ugcIconOn');
-  const iconOff  = document.getElementById('ugcIconOff');
-  const cards    = track ? Array.from(track.querySelectorAll('.ugc-card')) : [];
+  const track = document.getElementById('ugcTrack');
+  const cards = track ? Array.from(track.querySelectorAll('.ugc-card')) : [];
   if (!track || !cards.length) return;
 
-  let muted = true;
+  const ICON_ON  = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+  const ICON_OFF = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+
   let autoScrollInterval = null;
   let isPaused = false;
   let currentAudio = null;
+  let currentBtn   = null;
 
   // ── Auto-scroll ──
   function startAutoScroll() {
@@ -2020,60 +2020,38 @@ menuBtn?.addEventListener('click', () => {
     track.scrollLeft = scrollStartX - (x - startX);
   });
 
-  // ── Mute toggle ──
-  function setMuted(val) {
-    muted = val;
-    if (iconOn)  iconOn.style.display  = muted ? 'none' : '';
-    if (iconOff) iconOff.style.display = muted ? '' : 'none';
-    if (currentAudio) currentAudio.muted = muted;
-    document.querySelectorAll('.ugc-video').forEach(v => { v.muted = muted; });
-  }
-  muteBtn?.addEventListener('click', () => setMuted(!muted));
-
-  // ── Play on click ──
-  function stopCurrent() {
-    document.querySelectorAll('.ugc-card.ugc-playing').forEach(c => {
-      c.classList.remove('ugc-playing');
-      c.querySelectorAll('video').forEach(v => { v.pause(); v.currentTime = 0; });
-    });
-    if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null; }
+  // ── Per-card voiceover audio ──
+  function stopCurrent(finalIcon) {
+    if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if (currentBtn) {
+      currentBtn.innerHTML = finalIcon || ICON_OFF;
+      currentBtn.setAttribute('aria-label', 'Play voiceover');
+      currentBtn.classList.remove('is-playing');
+      currentBtn = null;
+    }
   }
 
   cards.forEach(card => {
-    const playBtn = card.querySelector('.ugc-play-btn');
-    const video   = card.querySelector('video');
-    const audioSrc = card.dataset.audio;
+    const btn = card.querySelector('.ugc-vol-btn');
+    const src = card.dataset.audio;
+    if (!btn || !src) return;
 
-    function togglePlay() {
-      const playing = card.classList.contains('ugc-playing');
-      stopCurrent();
-      if (playing) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const isActive = currentBtn === btn && currentAudio;
+      stopCurrent(ICON_OFF);
+      if (isActive) return;
 
-      card.classList.add('ugc-playing');
-      isPaused = true;
-
-      if (video) {
-        video.muted = muted;
-        video.play().catch(() => {});
-        if (!muted && audioSrc) {
-          // video has its own audio from ElevenLabs veo-3.1
-        }
-      } else if (audioSrc) {
-        const aud = new Audio(audioSrc);
-        aud.muted = muted;
-        aud.play().catch(() => {});
-        aud.addEventListener('ended', () => { card.classList.remove('ugc-playing'); currentAudio = null; });
-        currentAudio = aud;
-      }
-    }
-
-    playBtn?.addEventListener('click', e => { e.stopPropagation(); togglePlay(); });
-    card.addEventListener('click', togglePlay);
-  });
-
-  // ── Videos: unmute when card is playing and user unmutes ──
-  muteBtn?.addEventListener('click', () => {
-    document.querySelectorAll('.ugc-card.ugc-playing video').forEach(v => { v.muted = muted; });
+      const aud = new Audio(src);
+      aud.play().catch(() => {});
+      aud.addEventListener('ended', () => { if (currentAudio === aud) stopCurrent(ICON_ON); });
+      currentAudio = aud;
+      currentBtn = btn;
+      btn.innerHTML = ICON_ON;
+      btn.setAttribute('aria-label', 'Pause voiceover');
+      btn.classList.add('is-playing');
+      pauseAutoScroll();
+    });
   });
 })();
 </script>
