@@ -49,3 +49,11 @@ describe("UGC ticker videos", () => {
     expect(landing).toContain("v.pause()");
   });
 });
+
+describe("landing scripts", () => {
+  it("every inline script parses", () => {
+    const scripts = [...landing.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const code of scripts) expect(() => new Function(code)).not.toThrow();
+  });
+});
