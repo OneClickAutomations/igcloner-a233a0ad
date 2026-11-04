@@ -68,10 +68,11 @@ describe("UGC ticker videos", () => {
     expect(cards.map(c => c.indicator.hidden)).toEqual([true, true, true, true, false, true]);
     toggle(cards[4]);
     expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, true, true]);
-    toggle(cards[4]);
-    toggle(cards[1]);
-    expect(cards.map(c => c.video.muted)).toEqual([true, false, true, true, true, true]);
-    expect(cards.map(c => c.indicator.hidden)).toEqual([true, false, true, true, true, true]);
+    cards.forEach((card, selected) => {
+      toggle(card);
+      expect(cards.map(c => c.video.muted)).toEqual(cards.map((_, i) => i !== selected));
+      expect(cards.map(c => c.indicator.hidden)).toEqual(cards.map((_, i) => i !== selected));
+    });
   });
 
   it("ignores clicks after pointer movement greater than six pixels", () => {
