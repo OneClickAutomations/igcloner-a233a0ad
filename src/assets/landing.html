@@ -1028,12 +1028,17 @@ img { max-width: 100%; display: block }
   height: 28px;
   border-radius: 50%;
   background: rgba(0,0,0,0.5);
+  border: none;
+  outline: none;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 2;
+  z-index: 3;
+  flex-shrink: 0;
+  align-self: auto;
+  pointer-events: auto;
 }
 
 /* Card info row */

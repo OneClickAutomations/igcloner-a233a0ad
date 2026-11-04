@@ -60,3 +60,31 @@ describe("UGC ticker voiceover audio", () => {
     expect(landing).not.toContain("ugc-play-btn");
   });
 });
+
+describe("UGC speaker button placement", () => {
+  const ruleStart = landing.indexOf(".ugc-vol-btn {");
+  const rule = landing.slice(ruleStart, landing.indexOf("}", ruleStart));
+  const wrapStart = landing.indexOf(".ugc-media-wrap {");
+  const wrap = landing.slice(wrapStart, landing.indexOf("}", wrapStart));
+
+  it("is a 28px circle pinned to the media area's bottom-right corner", () => {
+    expect(rule).toContain("position: absolute;");
+    expect(rule).toContain("bottom: 8px;");
+    expect(rule).toContain("right: 8px;");
+    expect(rule).toContain("width: 28px;");
+    expect(rule).toContain("height: 28px;");
+    expect(rule).toContain("border-radius: 50%;");
+    expect(rule).toContain("background: rgba(0,0,0,0.5);");
+    expect(rule).toContain("border: none;");
+    expect(rule).toContain("outline: none;");
+    expect(rule).toContain("z-index: 3;");
+    expect(rule).toContain("flex-shrink: 0;");
+  });
+
+  it("positions against the media area, not the card", () => {
+    expect(wrap).toContain("position: relative;");
+    expect(wrap).toContain("overflow: hidden;");
+    expect(wrap).toContain("width: 100%;");
+  });
+});
+
