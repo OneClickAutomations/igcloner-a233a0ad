@@ -82,9 +82,14 @@ export function groundIntelReport(dna: any, signals: any) {
     const best = indices.map(i => posts[i]).sort((a,b) => (Number(b.likesCount)+Number(b.commentsCount))-(Number(a.likesCount)+Number(a.commentsCount)))[0];
     return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share: posts.length ? round(indices.length/posts.length*100) : 0, percentage: posts.length ? round(indices.length/posts.length*100) : 0, topPerformingExample: best?.caption ?? "Not available" };
   }).filter((p: any) => p.postCount > 0);
-  const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
-  if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
-  const provenHooks = (dna.hookAnalysis?.provenHooks ?? []).flatMap((h: any) => {
+  if (!legacyPillars) {
+    const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
+    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
+  }
+  const rawProvenHooks: any[] = dna.hookAnalysis?.provenHooks ?? [];
+  // Legacy reports store hooks without postIndex evidence; keep them as written.
+  const legacyHooks = rawProvenHooks.length > 0 && rawProvenHooks.every((h: any) => !Number.isInteger(h?.postIndex));
+  const provenHooks = legacyHooks ? rawProvenHooks : rawProvenHooks.flatMap((h: any) => {
     const p = posts[h.postIndex];
     const actual = String(p?.caption ?? "").split(/\n/).find(line => line.trim())?.trim();
     return actual ? [{ ...h, actualOpeningLine: actual, engagementOnThisPost: metric(p.likesCount) != null && metric(p.commentsCount) != null ? Number(p.likesCount)+Number(p.commentsCount) : null, sourceUrl: p.url }] : [];
