@@ -521,15 +521,14 @@ function DashboardPageInner() {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 gradient-glow" />
 
         <div className="relative mx-auto max-w-[1200px] px-4 py-8 sm:px-6 lg:py-10">
-          {/* ── Greeting header ─────────────────────────────── */}
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+          {/* ── Welcome banner ──────────────────────────────── */}
+          <header className="welcome-banner flex items-center gap-6 p-6 sm:p-8">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {today}
               </p>
               <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                {greeting}
-                {firstName ? (
+                Welcome back{firstName ? (
                   <>
                     , <span className="gradient-text">{firstName}</span>
                   </>
@@ -538,16 +537,36 @@ function DashboardPageInner() {
                 )}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Here's what's happening across your content studio.
+                {greeting} — here's what's happening across your content studio.
               </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "purple", t2: "indigo" })}>
+                    <Search className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.posts.toLocaleString()}</span>
+                  <span className="text-muted-foreground">posts analyzed</span>
+                </span>
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "pink", t2: "rose" })}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.clones.toLocaleString()}</span>
+                  <span className="text-muted-foreground">clones generated</span>
+                </span>
+              </div>
+              <Button
+                onClick={() => navigate({ to: "/app" })}
+                size="lg"
+                className="cta-glow mt-5 gap-2 rounded-xl border-0 text-primary-foreground hover:opacity-95"
+              >
+                <Sparkles className="h-4 w-4" /> Analyze a Post
+              </Button>
             </div>
-            <Button
-              onClick={() => navigate({ to: "/app" })}
-              size="lg"
-              className="cta-glow gap-2 self-start rounded-xl border-0 text-primary-foreground hover:opacity-95 sm:self-auto"
-            >
-              <Sparkles className="h-4 w-4" /> Analyze a Post
-            </Button>
+            {/* Decorative character — hidden below lg so text never gets crushed */}
+            <div className="hidden h-40 shrink-0 lg:block xl:h-44">
+              <WelcomeCharacter />
+            </div>
           </header>
 
           {/* ── KPI band ────────────────────────────────────── */}
