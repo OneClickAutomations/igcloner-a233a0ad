@@ -1,4 +1,5 @@
 # Intel report rebuild
+- [ ] Verify five replacement UGC speech clips; compress passing clips with audio, refresh posters and quotes, and test all six sound toggles.
 - [x] Rename Clone Mode angles across screens and prompts without changing generation or saved data.
 - [ ] Calculate analytics from complete scraped posts, with evidence and limited-data handling.
 - [ ] Generate and validate 50 account-specific ideas with creator preferences.
