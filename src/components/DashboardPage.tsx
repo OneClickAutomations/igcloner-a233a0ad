@@ -385,7 +385,7 @@ function DashboardPageInner() {
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState<string>("");
-  const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
+  const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0 });
   // created_at dates per metric, used for real deltas and sparklines.
   const [dates, setDates] = useState<{ analyses: string[]; clones: string[]; saved: string[] }>({
     analyses: [],
@@ -459,7 +459,6 @@ function DashboardPageInner() {
       posts: data?.length || 0,
       clones: cloneDates.length,
       saved: savedDates.length,
-      monthUsage: countThisMonth(analysisDates),
     });
     setLoading(false);
   }
