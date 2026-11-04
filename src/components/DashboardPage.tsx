@@ -13,6 +13,9 @@ import {
   Users,
   Star,
   TrendingUp,
+  TrendingDown,
+  Minus,
+  Flame,
   Search,
   Copy,
   FolderOpen,
@@ -23,6 +26,23 @@ import {
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
 import { ensureAnalysisThumbnails } from "@/lib/analysis-thumbs.functions";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  activeDays,
+  countPreviousMonth,
+  countThisMonth,
+  dailySeries,
+  monthDelta,
+  type MonthDelta,
+} from "@/lib/dashboard-metrics";
 
 // Deterministic premium gradient per account handle so the fallback tile
 // feels branded and consistent, not random.
