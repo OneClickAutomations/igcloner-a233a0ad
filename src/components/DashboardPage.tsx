@@ -215,15 +215,17 @@ function StatTile({
   loading,
   tone,
   delta,
-  seed,
+  series,
+  id,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   loading: boolean;
   tone: Tone;
-  delta: string;
-  seed: number;
+  delta: MonthDelta;
+  series: number[];
+  id: string;
 }) {
   return (
     <div className="stat-card p-5 sm:p-6" style={toneStyle(tone)}>
@@ -238,13 +240,8 @@ function StatTile({
           {value.toLocaleString()}
         </p>
       )}
-      <Sparkline seed={seed} />
-      <span
-        className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-        style={{ background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" }}
-      >
-        <TrendingUp className="h-3 w-3" /> {delta}
-      </span>
+      <Sparkline data={series} id={id} />
+      <DeltaPill delta={delta} />
     </div>
   );
 }
