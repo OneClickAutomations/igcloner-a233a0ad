@@ -573,30 +573,30 @@ function DashboardPageInner() {
           <section className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               icon={<Search className="h-5 w-5" />}
-              tone={{ t1: "purple", t2: "indigo" }} delta="+12% this month" seed={1}
+              tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses"
               label="Posts Analyzed"
               value={stats.posts}
               loading={loading}
             />
             <StatTile
               icon={<Copy className="h-5 w-5" />}
-              tone={{ t1: "pink", t2: "rose" }} delta="+18% this month" seed={2}
+              tone={{ t1: "pink", t2: "rose" }} delta={clonesDelta} series={spark.clones} id="clones"
               label="Clones Generated"
               value={stats.clones}
               loading={loading}
             />
             <StatTile
               icon={<FolderOpen className="h-5 w-5" />}
-              tone={{ t1: "blue", t2: "cyan" }} delta="+9% this month" seed={3}
+              tone={{ t1: "blue", t2: "cyan" }} delta={savedDelta} series={spark.saved} id="saved"
               label="Saved Projects"
               value={stats.saved}
               loading={loading}
             />
             <StatTile
-              icon={<TrendingUp className="h-5 w-5" />}
-              tone={{ t1: "amber", t2: "orange" }} delta="+24% this month" seed={4}
-              label="This Month"
-              value={stats.monthUsage}
+              icon={<Flame className="h-5 w-5" />}
+              tone={{ t1: "amber", t2: "orange" }} delta={activeDelta} series={spark.analyses} id="active"
+              label="Active Days · 30d"
+              value={activeNow}
               loading={loading}
             />
           </section>
