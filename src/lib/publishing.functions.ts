@@ -42,6 +42,8 @@ const PublishInput = z.object({
   platforms: z.array(PlatformEnum).min(1).max(12),
   scheduledAt: z.string().datetime().nullable().optional(),
   projectId: z.string().uuid().nullable().optional(),
+  /** Existing draft job to update instead of inserting a new row. */
+  draftJobId: z.string().uuid().nullable().optional(),
   /** When true, persist as a draft and do not submit to the provider. */
   saveAsDraft: z.boolean().optional(),
 });

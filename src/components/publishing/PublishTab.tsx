@@ -184,6 +184,7 @@ export function PublishTab({
           platforms: [...selected],
           scheduledAt,
           projectId: initialProjectId ?? null,
+          draftJobId: initialDraft?.id ?? null,
           saveAsDraft: draft,
         },
       })) as { status: string };
