@@ -57,9 +57,19 @@ export const fetchAnalytics = createServerFn({ method: "POST" })
       .single();
     if (!profile) throw new Error("PROFILE_NOT_FOUND");
 
+    // The provider requires an explicit platforms list; use the user's
+    // connected accounts so we only ask for stats that can exist.
+    const { data: connected } = await supabase
+      .from("social_accounts")
+      .select("platform")
+      .eq("user_id", userId)
+      .eq("is_connected", true);
+    const platforms = (connected ?? []).map((a: any) => a.platform).filter(Boolean);
+    if (platforms.length === 0) throw new Error("ACCOUNTS_NOT_CONNECTED");
+
     let raw: any;
     try {
-      raw = await uploadPost.getAccountAnalytics(profile.upload_post_username, apiKey);
+      raw = await uploadPost.getAccountAnalytics(profile.upload_post_username, apiKey, platforms);
     } catch (e) {
       rethrow(e);
     }

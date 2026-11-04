@@ -62,7 +62,21 @@ export function groundIntelReport(dna: any, signals: any) {
   const posts: any[] = signals.posts ?? [];
   const metrics = calculateIntelMetrics(posts, signals.profile?.followersCount);
   const used = new Set<number>();
-  const pillars = (Array.isArray(dna.contentPillars) ? dna.contentPillars : []).map((p: any) => {
+  const rawPillars: any[] = Array.isArray(dna.contentPillars) ? dna.contentPillars : [];
+  // Reports stored before evidence-grounding have no postIndices; re-grounding
+  // must not throw their analyst-written pillars away.
+  const legacyPillars = rawPillars.length > 0 && rawPillars.every((p: any) => !Array.isArray(p?.postIndices));
+  const pillars = legacyPillars
+    ? rawPillars.map((p: any) => ({
+        ...p,
+        name: p.name ?? p.pillarName,
+        postIndices: [],
+        postCount: 0,
+        share: p.share ?? p.percentage ?? 0,
+        percentage: p.percentage ?? p.share ?? 0,
+        topPerformingExample: p.topPerformingExample ?? "Not available",
+      }))
+    : rawPillars.map((p: any) => {
     const indices: number[] = (Array.isArray(p.postIndices) ? p.postIndices : []).filter((i: number) => Number.isInteger(i) && i >= 0 && i < posts.length && !used.has(i));
     indices.forEach(i => used.add(i));
     const best = indices.map(i => posts[i]).sort((a,b) => (Number(b.likesCount)+Number(b.commentsCount))-(Number(a.likesCount)+Number(a.commentsCount)))[0];
