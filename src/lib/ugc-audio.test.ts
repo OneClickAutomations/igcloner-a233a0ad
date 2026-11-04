@@ -88,5 +88,21 @@ describe("UGC speaker button placement", () => {
     expect(wrap).toContain("overflow: hidden;");
     expect(wrap).toContain("width: 100%;");
   });
+
+  it("is a short 96px gradient band, not a tall 9:16 void", () => {
+    expect(wrap).toContain("height: 96px;");
+    expect(wrap).not.toContain("aspect-ratio");
+  });
+
+  it("leaves the speaker button as the only thing in each card's band", () => {
+    cardBlocks().forEach((card, i) => {
+      const band = card.slice(
+        card.indexOf('<div class="ugc-media-wrap'),
+        card.indexOf('<div class="ugc-card-info'),
+      );
+      expect(band, `card ${i + 1} band`).toContain('<button class="ugc-vol-btn"');
+      expect(band, `card ${i + 1} band has no extra children`).not.toMatch(/<div/);
+    });
+  });
 });
 
