@@ -6,7 +6,12 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("igcloner_theme") : null;
-    const initial = saved === "dark";
+    // No saved choice → follow the OS preference instead of forcing light.
+    const initial =
+      saved === "dark" ||
+      (saved === null &&
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-color-scheme: dark)").matches === true);
     setDark(initial);
     if (typeof document !== "undefined") {
       document.documentElement.classList.toggle("dark", initial);

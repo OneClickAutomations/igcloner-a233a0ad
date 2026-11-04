@@ -13,6 +13,9 @@ import {
   Users,
   Star,
   TrendingUp,
+  TrendingDown,
+  Minus,
+  Flame,
   Search,
   Copy,
   FolderOpen,
@@ -23,6 +26,23 @@ import {
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
 import { ensureAnalysisThumbnails } from "@/lib/analysis-thumbs.functions";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  activeDays,
+  countPreviousMonth,
+  countThisMonth,
+  dailySeries,
+  monthDelta,
+  type MonthDelta,
+} from "@/lib/dashboard-metrics";
 
 // Deterministic premium gradient per account handle so the fallback tile
 // feels branded and consistent, not random.
@@ -138,29 +158,80 @@ export function DashboardPage() {
   return <DashboardPageInner />;
 }
 
+// Decorative welcome-banner character. Colours come from the --wc-* tokens
+// defined on .welcome-banner so the figure recolours with the theme.
+function WelcomeCharacter() {
+  return (
+    <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="welcome-character h-full w-auto" aria-hidden="true">
+      <circle cx="118" cy="92" r="72" fill="var(--wc-blob)" />
+      <path d="M176 54c7 6 11 14 11 23s-4 17-11 23" stroke="var(--wc-wave)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M191 42c11 9 17 23 17 35s-6 26-17 35" stroke="var(--wc-wave)" strokeWidth="4" strokeLinecap="round" opacity=".55" />
+      <path d="M96 128h34l-4 42h-12l-3-26-4 26H95z" fill="var(--wc-pants)" />
+      <path d="M92 76c0-12 10-22 22-22h4c12 0 22 10 22 22v40c0 7-5 12-12 12h-24c-7 0-12-5-12-12z" fill="var(--wc-shirt)" />
+      <path d="M134 82c6-6 14-14 20-18l10 11c-6 4-13 11-19 17z" fill="var(--wc-shirt)" />
+      <circle cx="166" cy="76" r="9" fill="var(--wc-skin)" />
+      <path d="M158 62l24-13c3-2 7 0 7 4v34c0 4-4 6-7 4l-24-13z" fill="var(--wc-mega)" />
+      <rect x="150" y="62" width="12" height="28" rx="4" fill="var(--wc-mega-dark)" />
+      <path d="M92 86c-6 3-10 9-11 16l-2 18 12 2 2-17z" fill="var(--wc-shirt)" />
+      <circle cx="86" cy="124" r="8" fill="var(--wc-skin)" />
+      <rect x="108" y="46" width="16" height="16" rx="7" fill="var(--wc-skin-shade)" />
+      <circle cx="116" cy="34" r="20" fill="var(--wc-skin)" />
+      <path d="M96 32c0-12 9-21 20-21s20 9 20 21c0-6-6-9-12-9-8 0-10 4-18 4-6 0-10 2-10 5z" fill="var(--wc-hair)" />
+      <path d="M110 40c2 3 10 3 12 0" stroke="var(--wc-ink)" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="109" cy="32" r="2" fill="var(--wc-ink)" />
+      <circle cx="125" cy="32" r="2" fill="var(--wc-ink)" />
+      <path d="M60 44l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="var(--wc-spark)" />
+      <path d="M76 96l1.8 4.3 4.3 1.8-4.3 1.8-1.8 4.3-1.8-4.3-4.3-1.8 4.3-1.8z" fill="var(--wc-spark)" opacity=".7" />
+    </svg>
+  );
+}
+
 type Tone = { t1: string; t2: string };
 const toneStyle = (t: Tone) => ({ "--t1": `var(--tone-${t.t1})`, "--t2": `var(--tone-${t.t2})` }) as React.CSSProperties;
 
-// Decorative mock upward trend (visual only).
-function Sparkline({ seed }: { seed: number }) {
-  const pts = [4, 6, 5, 8, 7, 10, 9, 13, 12, 16].map((v, i) => v + ((seed * (i + 3)) % 3));
-  const max = Math.max(...pts);
+// Real 14-day daily-count sparkline. Returns null for an all-zero series so
+// a new account doesn't get a flat line implying data that isn't there.
+function Sparkline({ data, id }: { data: number[]; id: string }) {
+  if (data.length < 2 || data.every((v) => v === 0)) return null;
+  const max = Math.max(...data);
   const w = 120;
   const h = 32;
-  const coords = pts.map((v, i) => [(i / (pts.length - 1)) * w, h - (v / max) * (h - 4) - 2]);
+  const coords = data.map((v, i) => [(i / (data.length - 1)) * w, h - (v / max) * (h - 4) - 2]);
   const line = coords.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const id = `spark-${seed}`;
+  const gid = `spark-${id}`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-8 w-full" preserveAspectRatio="none" aria-hidden>
       <defs>
-        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--t1)" stopOpacity="0.35" />
           <stop offset="100%" stopColor="var(--t1)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${gid})`} />
       <path d={line} fill="none" stroke="var(--t1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+// Delta pill: up = tone colour + up arrow, down = red + down arrow,
+// flat = neutral, new = "New" badge when the previous month was zero.
+function DeltaPill({ delta }: { delta: MonthDelta }) {
+  const style: React.CSSProperties =
+    delta.kind === "down"
+      ? { background: "color-mix(in oklab, var(--tone-rose) 14%, transparent)", color: "var(--tone-rose)" }
+      : delta.kind === "flat"
+        ? { background: "color-mix(in oklab, var(--tone-slate) 14%, transparent)", color: "var(--tone-slate)" }
+        : { background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" };
+  return (
+    <span
+      className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      style={style}
+    >
+      {delta.kind === "up" && <TrendingUp className="h-3 w-3" />}
+      {delta.kind === "down" && <TrendingDown className="h-3 w-3" />}
+      {delta.kind === "flat" && <Minus className="h-3 w-3" />}
+      {delta.label}
+    </span>
   );
 }
 
@@ -172,15 +243,17 @@ function StatTile({
   loading,
   tone,
   delta,
-  seed,
+  series,
+  id,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   loading: boolean;
   tone: Tone;
-  delta: string;
-  seed: number;
+  delta: MonthDelta;
+  series: number[];
+  id: string;
 }) {
   return (
     <div className="stat-card p-5 sm:p-6" style={toneStyle(tone)}>
@@ -195,13 +268,8 @@ function StatTile({
           {value.toLocaleString()}
         </p>
       )}
-      <Sparkline seed={seed} />
-      <span
-        className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
-        style={{ background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" }}
-      >
-        <TrendingUp className="h-3 w-3" /> {delta}
-      </span>
+      <Sparkline data={series} id={id} />
+      <DeltaPill delta={delta} />
     </div>
   );
 }
@@ -317,7 +385,13 @@ function DashboardPageInner() {
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState<string>("");
-  const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
+  const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0 });
+  // created_at dates per metric, used for real deltas and sparklines.
+  const [dates, setDates] = useState<{ analyses: string[]; clones: string[]; saved: string[] }>({
+    analyses: [],
+    clones: [],
+    saved: [],
+  });
   const dashFn = useServerFn(getResearchDashboard);
   const cacheThumbsFn = useServerFn(ensureAnalysisThumbnails);
   const [cachedThumbs, setCachedThumbs] = useState<Record<string, string | null>>({});
@@ -370,23 +444,21 @@ function DashboardPageInner() {
         .catch(() => {});
     }
 
+    // Select created_at (not head-only counts) so deltas and sparklines are real.
     const [clonesRes, savedRes] = await Promise.all([
-      supabase.from("clones").select("*", { count: "exact", head: true }).eq("user_id", uid),
-      supabase.from("saved_projects").select("*", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("clones").select("created_at").eq("user_id", uid),
+      supabase.from("saved_projects").select("created_at").eq("user_id", uid),
     ]);
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const thisMonth = (data ?? []).filter(
-      (a) => a.created_at && new Date(a.created_at) >= monthStart,
-    ).length;
+    const analysisDates = (data ?? []).map((a) => a.created_at).filter(Boolean) as string[];
+    const cloneDates = (clonesRes.data ?? []).map((c: any) => c.created_at).filter(Boolean) as string[];
+    const savedDates = (savedRes.data ?? []).map((s: any) => s.created_at).filter(Boolean) as string[];
+    setDates({ analyses: analysisDates, clones: cloneDates, saved: savedDates });
 
     setStats({
       posts: data?.length || 0,
-      clones: clonesRes.count ?? 0,
-      saved: savedRes.count ?? 0,
-      monthUsage: thisMonth,
+      clones: cloneDates.length,
+      saved: savedDates.length,
     });
     setLoading(false);
   }
@@ -410,6 +482,37 @@ function DashboardPageInner() {
     day: "numeric",
   });
 
+  // ── Real KPI metrics ─────────────────────────────────────
+  const now = new Date();
+  const analysesDelta = monthDelta(countThisMonth(dates.analyses, now), countPreviousMonth(dates.analyses, now));
+  const clonesDelta = monthDelta(countThisMonth(dates.clones, now), countPreviousMonth(dates.clones, now));
+  const savedDelta = monthDelta(countThisMonth(dates.saved, now), countPreviousMonth(dates.saved, now));
+  // Tile 4: "Active Days" — distinct days with ≥1 analysis in the last 30,
+  // compared against the 30 days before that (a like-for-like window).
+  const activeNow = activeDays(dates.analyses, 30, now);
+  const priorStart = new Date(now);
+  priorStart.setDate(priorStart.getDate() - 60);
+  const activePrev = activeDays(
+    dates.analyses.filter((iso) => new Date(iso) < new Date(now.getTime() - 30 * 86400000)),
+    30,
+    priorStart,
+  );
+  const activeDelta = monthDelta(activeNow, activePrev);
+
+  const spark = {
+    analyses: dailySeries(dates.analyses, 14, now),
+    clones: dailySeries(dates.clones, 14, now),
+    saved: dailySeries(dates.saved, 14, now),
+  };
+
+  // Chart: analyses per day, last 30 days, zero days included.
+  const chartSeries = dailySeries(dates.analyses, 30, now);
+  const chartData = chartSeries.map((count, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (29 - i));
+    return { day: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }), count };
+  });
+
   return (
     <div className="min-h-full">
       {/* Ambient gradient wash behind the header */}
@@ -417,15 +520,14 @@ function DashboardPageInner() {
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 gradient-glow" />
 
         <div className="relative mx-auto max-w-[1200px] px-4 py-8 sm:px-6 lg:py-10">
-          {/* ── Greeting header ─────────────────────────────── */}
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+          {/* ── Welcome banner ──────────────────────────────── */}
+          <header className="welcome-banner flex items-center gap-6 p-6 sm:p-8">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {today}
               </p>
               <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                {greeting}
-                {firstName ? (
+                Welcome back{firstName ? (
                   <>
                     , <span className="gradient-text">{firstName}</span>
                   </>
@@ -434,46 +536,66 @@ function DashboardPageInner() {
                 )}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Here's what's happening across your content studio.
+                {greeting} — here's what's happening across your content studio.
               </p>
+              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "purple", t2: "indigo" })}>
+                    <Search className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.posts.toLocaleString()}</span>
+                  <span className="text-muted-foreground">posts analyzed</span>
+                </span>
+                <span className="inline-flex items-center gap-2 text-sm">
+                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "pink", t2: "rose" })}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.clones.toLocaleString()}</span>
+                  <span className="text-muted-foreground">clones generated</span>
+                </span>
+              </div>
+              <Button
+                onClick={() => navigate({ to: "/app" })}
+                size="lg"
+                className="cta-glow mt-5 gap-2 rounded-xl border-0 text-primary-foreground hover:opacity-95"
+              >
+                <Sparkles className="h-4 w-4" /> Analyze a Post
+              </Button>
             </div>
-            <Button
-              onClick={() => navigate({ to: "/app" })}
-              size="lg"
-              className="cta-glow gap-2 self-start rounded-xl border-0 text-primary-foreground hover:opacity-95 sm:self-auto"
-            >
-              <Sparkles className="h-4 w-4" /> Analyze a Post
-            </Button>
+            {/* Decorative character — hidden below lg so text never gets crushed */}
+            <div className="hidden h-40 shrink-0 lg:block xl:h-44">
+              <WelcomeCharacter />
+            </div>
           </header>
 
           {/* ── KPI band ────────────────────────────────────── */}
           <section className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               icon={<Search className="h-5 w-5" />}
-              tone={{ t1: "purple", t2: "indigo" }} delta="+12% this month" seed={1}
+              tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses"
               label="Posts Analyzed"
               value={stats.posts}
               loading={loading}
             />
             <StatTile
               icon={<Copy className="h-5 w-5" />}
-              tone={{ t1: "pink", t2: "rose" }} delta="+18% this month" seed={2}
+              tone={{ t1: "pink", t2: "rose" }} delta={clonesDelta} series={spark.clones} id="clones"
               label="Clones Generated"
               value={stats.clones}
               loading={loading}
             />
             <StatTile
               icon={<FolderOpen className="h-5 w-5" />}
-              tone={{ t1: "blue", t2: "cyan" }} delta="+9% this month" seed={3}
+              tone={{ t1: "blue", t2: "cyan" }} delta={savedDelta} series={spark.saved} id="saved"
               label="Saved Projects"
               value={stats.saved}
               loading={loading}
             />
             <StatTile
-              icon={<TrendingUp className="h-5 w-5" />}
-              tone={{ t1: "amber", t2: "orange" }} delta="+24% this month" seed={4}
-              label="This Month"
-              value={stats.monthUsage}
+              icon={<Flame className="h-5 w-5" />}
+              tone={{ t1: "amber", t2: "orange" }} delta={activeDelta} series={spark.analyses} id="active"
+              label="Active Days · 30d"
+              value={activeNow}
               loading={loading}
             />
           </section>
@@ -508,6 +630,78 @@ function DashboardPageInner() {
               tone={{ t1: "indigo", t2: "violet" }}
               onClick={() => navigate({ to: "/publishing" })}
             />
+          </section>
+
+          {/* ── Analyses chart (last 30 days) ───────────────── */}
+          <section className="dash-card mt-8 p-6" style={toneStyle({ t1: "purple", t2: "pink" })}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-sm font-bold tracking-tight">Analyses — last 30 days</h2>
+              {!loading && stats.posts > 0 && (
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  {chartSeries.reduce((a, b) => a + b, 0)} in window
+                </span>
+              )}
+            </div>
+            {loading ? (
+              <div className="h-56 animate-pulse rounded-xl bg-muted" />
+            ) : stats.posts === 0 ? (
+              <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+                <TrendingUp className="mb-2 h-5 w-5 text-muted-foreground" />
+                <p className="text-sm font-medium">No analyses yet</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Your daily analysis activity will appear here once you analyze your first post.
+                </p>
+              </div>
+            ) : (
+              <div className="h-56 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                    <defs>
+                      <linearGradient id="analysesFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stopColor="var(--tone-purple)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--tone-pink)" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis
+                      dataKey="day"
+                      tickLine={false}
+                      axisLine={false}
+                      interval="preserveStartEnd"
+                      minTickGap={40}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: "var(--tone-purple)", strokeOpacity: 0.3 }}
+                      contentStyle={{
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "0.75rem",
+                        fontSize: 12,
+                        color: "var(--foreground)",
+                      }}
+                      labelStyle={{ color: "var(--muted-foreground)" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      name="Analyses"
+                      stroke="var(--tone-purple)"
+                      strokeWidth={2.5}
+                      fill="url(#analysesFill)"
+                      dot={false}
+                      activeDot={{ r: 4, fill: "var(--tone-pink)", stroke: "var(--card)", strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </section>
 
           {/* ── Main two-column area ────────────────────────── */}
