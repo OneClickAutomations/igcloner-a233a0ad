@@ -95,7 +95,7 @@ describe("UGC ticker videos", () => {
   it("ignores clicks after pointer movement greater than six pixels", () => {
     const pointerHandler = landing.match(/track\.addEventListener\('pointermove', e => \{([\s\S]*?)\n  \}\);/)?.[1];
     expect(pointerHandler).toBeDefined();
-    const moved = new Function("e", `let pointerStartX = 0, pointerStartY = 0, pointerMoved = false, activePointer = 1; const reducedMotion = {matches:true}; ${pointerHandler}; return pointerMoved;`);
+    const moved = new Function("e", `let pointerStartX = 0, pointerStartY = 0, pointerMoved = false, activePointer = 1; const reducedMotion = {matches:true}; (() => { ${pointerHandler} })(); return pointerMoved;`);
     expect(moved({ clientX: 3, clientY: 3 })).toBe(false);
     expect(moved({ clientX: 7, clientY: 0 })).toBe(true);
     const clickHandler = landing.match(/card\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);/)?.[1];
