@@ -82,6 +82,7 @@ describe("UGC ticker videos", () => {
     expect(moved({ clientX: 7, clientY: 0 })).toBe(true);
     const clickHandler = landing.match(/card\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);/)?.[1];
     expect(clickHandler).toBeDefined();
+    if (!clickHandler) throw new Error("Missing card click handler");
     let toggles = 0;
     const click = new Function("pointerMoved", "toggleCardSound", "card", clickHandler);
     click(true, () => toggles++, {});
