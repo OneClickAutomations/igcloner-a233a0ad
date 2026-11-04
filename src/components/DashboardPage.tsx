@@ -386,6 +386,12 @@ function DashboardPageInner() {
   const [loading, setLoading] = useState(true);
   const [firstName, setFirstName] = useState<string>("");
   const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0, monthUsage: 0 });
+  // created_at dates per metric, used for real deltas and sparklines.
+  const [dates, setDates] = useState<{ analyses: string[]; clones: string[]; saved: string[] }>({
+    analyses: [],
+    clones: [],
+    saved: [],
+  });
   const dashFn = useServerFn(getResearchDashboard);
   const cacheThumbsFn = useServerFn(ensureAnalysisThumbnails);
   const [cachedThumbs, setCachedThumbs] = useState<Record<string, string | null>>({});
@@ -438,23 +444,22 @@ function DashboardPageInner() {
         .catch(() => {});
     }
 
+    // Select created_at (not head-only counts) so deltas and sparklines are real.
     const [clonesRes, savedRes] = await Promise.all([
-      supabase.from("clones").select("*", { count: "exact", head: true }).eq("user_id", uid),
-      supabase.from("saved_projects").select("*", { count: "exact", head: true }).eq("user_id", uid),
+      supabase.from("clones").select("created_at").eq("user_id", uid),
+      supabase.from("saved_projects").select("created_at").eq("user_id", uid),
     ]);
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const thisMonth = (data ?? []).filter(
-      (a) => a.created_at && new Date(a.created_at) >= monthStart,
-    ).length;
+    const analysisDates = (data ?? []).map((a) => a.created_at).filter(Boolean) as string[];
+    const cloneDates = (clonesRes.data ?? []).map((c: any) => c.created_at).filter(Boolean) as string[];
+    const savedDates = (savedRes.data ?? []).map((s: any) => s.created_at).filter(Boolean) as string[];
+    setDates({ analyses: analysisDates, clones: cloneDates, saved: savedDates });
 
     setStats({
       posts: data?.length || 0,
-      clones: clonesRes.count ?? 0,
-      saved: savedRes.count ?? 0,
-      monthUsage: thisMonth,
+      clones: cloneDates.length,
+      saved: savedDates.length,
+      monthUsage: countThisMonth(analysisDates),
     });
     setLoading(false);
   }
