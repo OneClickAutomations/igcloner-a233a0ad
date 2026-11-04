@@ -20,6 +20,13 @@ describe("UGC ticker videos", () => {
     expect((landing.match(/<div class="ugc-card">/g) ?? []).length).toBe(6);
   });
 
+  it("each video has a poster matching its src", () => {
+    videoTags.forEach((tag, i) => {
+      expect(tag).toContain(`poster="${VIDEOS[i].replace(/\.mp4$/, ".jpg")}"`);
+    });
+    expect(videoTags).toHaveLength(6);
+  });
+
   it("each video is muted, looped, inline and not autoplay", () => {
     for (const tag of videoTags) {
       expect(tag).toMatch(/\smuted[\s>]/);
@@ -40,5 +47,13 @@ describe("UGC ticker videos", () => {
     expect(landing).toContain("v.preload = 'auto'");
     expect(landing).toContain("v.play()");
     expect(landing).toContain("v.pause()");
+  });
+});
+
+describe("landing scripts", () => {
+  it("every inline script parses", () => {
+    const scripts = [...landing.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    expect(scripts.length).toBeGreaterThan(0);
+    for (const code of scripts) expect(() => new Function(code)).not.toThrow();
   });
 });
