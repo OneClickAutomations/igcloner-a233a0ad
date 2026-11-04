@@ -348,6 +348,46 @@
   50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--tone-pink) 0%, transparent), 0 8px 28px -6px color-mix(in oklab, var(--tone-pink) 60%, transparent); }
 }
 
+/* ── Welcome banner + character ──────────────────────────── */
+@utility welcome-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in oklab, var(--tone-purple) 22%, var(--border));
+  background:
+    radial-gradient(ellipse 480px 260px at 88% 20%, color-mix(in oklab, var(--tone-pink) 14%, transparent), transparent 70%),
+    linear-gradient(135deg, color-mix(in oklab, var(--tone-purple) 12%, var(--card)), color-mix(in oklab, var(--tone-pink) 6%, var(--card)));
+  box-shadow: 0 1px 2px rgb(15 10 30 / 0.04), 0 12px 32px -16px color-mix(in oklab, var(--tone-purple) 35%, transparent);
+  /* Character palette (light): warm skin, dark hair/ink, brand-purple shirt,
+     amber megaphone, very light purple blob. */
+  --wc-blob: color-mix(in oklab, var(--tone-purple) 10%, transparent);
+  --wc-wave: var(--tone-pink);
+  --wc-pants: var(--tone-indigo);
+  --wc-shirt: var(--tone-purple);
+  --wc-skin: #F2C49B;
+  --wc-skin-shade: #E0A878;
+  --wc-mega: var(--tone-amber);
+  --wc-mega-dark: var(--tone-orange);
+  --wc-hair: #23283B;
+  --wc-ink: #23283B;
+  --wc-spark: var(--tone-amber);
+  &:where(.dark *) {
+    background:
+      radial-gradient(ellipse 480px 260px at 88% 20%, color-mix(in oklab, var(--tone-pink) 18%, transparent), transparent 70%),
+      linear-gradient(135deg, color-mix(in oklab, var(--tone-purple) 20%, transparent), color-mix(in oklab, var(--tone-pink) 8%, transparent));
+    border-color: color-mix(in oklab, var(--tone-purple) 34%, transparent);
+    backdrop-filter: blur(16px);
+    /* Dark: blob becomes a low-opacity light wash; shirt/megaphone lifted a
+       step so they don't sink into the panel. */
+    --wc-blob: color-mix(in oklab, #fff 6%, transparent);
+    --wc-shirt: var(--tone-violet);
+    --wc-mega: var(--tone-orange);
+    --wc-mega-dark: var(--tone-amber);
+    --wc-hair: #12141F;
+    --wc-ink: #12141F;
+  }
+}
+
 @utility nav-active {
   background: linear-gradient(90deg, var(--tone-purple), var(--tone-pink)) !important;
   color: #fff !important;
