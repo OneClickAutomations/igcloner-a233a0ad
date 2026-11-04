@@ -3,107 +3,42 @@ import { readFileSync } from "node:fs";
 
 const landing = readFileSync(new URL("../assets/landing.html", import.meta.url), "utf8");
 
-const AUDIO_URLS = [
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/dE0M75YXBoz1OmzbNpHi/cHymoenR0A1ND6jiZw8F/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=ibvG_i20HssQtMR2-iSJ1zOVUAM=",
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/GNqdiNnseGnEZW0tWTRk/gLgIQWt6omhSbLNAvJko/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=nBs6fjaHLmZfnVJ4KYoRmFu6P0I=",
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/BCtmOcnJjrVzBulvpxiY/L0OsDyQX2XYdw2E6RTRh/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=INKhLGWrC89p7ObGrW0AzrVVJDI=",
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/pfQT7bRX9JPLrgrKA2Rc/4J8AvDMW2WapT8j6S4IH/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=V5Nvb9gIh__qK9lN0e9imP-ZhZ8=",
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/8NuL9WTI7Hp05FfMt7is/qufsdg6zS3h3kZIz4sj6/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=vSTiRzVN0AhY_PiXqlCsl8-uwAE=",
-  "https://elevenlabsusercontent.com/database/workspace/eaa2d5fd1dc34066b3b0fac6721720cf/content_generation/iGESU970jju5idCkLePP/GidsTtbhXWVxdWEuaNbV/content.mp3?Expires=1793768400&KeyName=assets-cdn-key-1&Signature=3dGR4M5OSGE4I5jnz_Tz5p_Z7NQ=",
+const VIDEOS = [
+  "/ugc/jasmine-fitness.mp4",
+  "/ugc/sofia-beauty.mp4",
+  "/ugc/marcus-food.mp4",
+  "/ugc/chloe-travel.mp4",
+  "/ugc/deshawn-fashion.mp4",
+  "/ugc/priya-tech.mp4",
 ];
 
-const ICON_ON =
-  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+const videoTags = landing.match(/<video class="ugc-video"[^>]*>/g) ?? [];
 
-function cardBlocks() {
-  const blocks = landing.split('<div class="ugc-card ugc-card-audio"');
-  expect(blocks.length - 1, "expected six UGC cards").toBe(6);
-  // each block runs from one card's opening tag to the next card's
-  return blocks.slice(1);
-}
-
-
-describe("UGC ticker voiceover audio", () => {
-  const cards = cardBlocks();
-
-  it("gives every card its own data-audio URL, in order", () => {
-    cards.forEach((card, i) => {
-      expect(card, `card ${i + 1} data-audio`).toContain(`data-audio="${AUDIO_URLS[i]}"`);
-    });
+describe("UGC ticker videos", () => {
+  it("has one video per card pointing at the right file in order", () => {
+    expect(videoTags.map((t) => t.match(/src="([^"]+)"/)?.[1])).toEqual(VIDEOS);
+    expect((landing.match(/<div class="ugc-card">/g) ?? []).length).toBe(6);
   });
 
-  it("gives every card a speaker toggle showing the unmuted icon by default", () => {
-    cards.forEach((card, i) => {
-      expect(card, `card ${i + 1} speaker button`).toContain(
-        `<button class="ugc-vol-btn" aria-label="Play voiceover">${ICON_ON}</button>`,
-      );
-    });
+  it("each video is muted, looped, inline and not autoplay", () => {
+    for (const tag of videoTags) {
+      expect(tag).toMatch(/\smuted[\s>]/);
+      expect(tag).toMatch(/\sloop[\s>]/);
+      expect(tag).toMatch(/\splaysinline[\s>]/);
+      expect(tag).not.toMatch(/autoplay/);
+    }
   });
 
-  it("has no wave bars or large avatar letters left in the media area", () => {
-    expect(landing).not.toContain("ugc-audio-wave");
-    expect(landing).not.toContain("ugc-avatar-large");
-    expect(landing).not.toContain("ugc-wave");
-    expect(landing).not.toContain("animation-play-state: paused");
+  it("has no leftovers from the audio-poster system", () => {
+    for (const s of ["data-audio", "ugc-vol-btn", "ugc-audio-wave", "ugc-avatar-large", "new Audio("]) {
+      expect(landing).not.toContain(s);
+    }
   });
 
-  it("plays the card's own clip, swaps the icon, and stops the previous card", () => {
-    expect(landing).toContain("const src = card.dataset.audio;");
-    expect(landing).toContain("const aud = new Audio(src);");
-    expect(landing).toContain("stopCurrent(ICON_OFF)");
-    expect(landing).toContain("currentBtn.innerHTML = finalIcon || ICON_OFF;");
-    expect(landing).toContain("btn.innerHTML = ICON_ON;");
-    // the muted (speaker-off) icon is the crossed-out variant
-    expect(landing).toContain('<line x1="23" y1="9" x2="17" y2="15"/>');
-  });
-
-  it("no longer depends on the removed global mute button or play overlays", () => {
-    expect(landing).not.toContain("ugcMuteBtn");
-    expect(landing).not.toContain("ugc-play-btn");
+  it("plays on scroll-in and pauses on scroll-out via IntersectionObserver", () => {
+    expect(landing).toContain("new IntersectionObserver(");
+    expect(landing).toContain("v.preload = 'auto'");
+    expect(landing).toContain("v.play()");
+    expect(landing).toContain("v.pause()");
   });
 });
-
-describe("UGC speaker button placement", () => {
-  const ruleStart = landing.indexOf(".ugc-vol-btn {");
-  const rule = landing.slice(ruleStart, landing.indexOf("}", ruleStart));
-  const wrapStart = landing.indexOf(".ugc-media-wrap {");
-  const wrap = landing.slice(wrapStart, landing.indexOf("}", wrapStart));
-
-  it("is a 28px circle pinned to the media area's bottom-right corner", () => {
-    expect(rule).toContain("position: absolute;");
-    expect(rule).toContain("bottom: 8px;");
-    expect(rule).toContain("right: 8px;");
-    expect(rule).toContain("width: 28px;");
-    expect(rule).toContain("height: 28px;");
-    expect(rule).toContain("border-radius: 50%;");
-    expect(rule).toContain("background: rgba(0,0,0,0.5);");
-    expect(rule).toContain("border: none;");
-    expect(rule).toContain("outline: none;");
-    expect(rule).toContain("z-index: 3;");
-    expect(rule).toContain("flex-shrink: 0;");
-  });
-
-  it("positions against the media area, not the card", () => {
-    expect(wrap).toContain("position: relative;");
-    expect(wrap).toContain("overflow: hidden;");
-    expect(wrap).toContain("width: 100%;");
-  });
-
-  it("is a short 96px gradient band, not a tall 9:16 void", () => {
-    expect(wrap).toContain("height: 96px;");
-    expect(wrap).not.toContain("aspect-ratio");
-  });
-
-  it("leaves the speaker button as the only thing in each card's band", () => {
-    cardBlocks().forEach((card, i) => {
-      const open = card.indexOf('<div class="ugc-media-wrap');
-      const band = card.slice(
-        card.indexOf(">", open) + 1,
-        card.indexOf('<div class="ugc-card-info'),
-      );
-      expect(band, `card ${i + 1} band`).toContain('<button class="ugc-vol-btn"');
-      expect(band, `card ${i + 1} band has no extra children`).not.toMatch(/<div/);
-    });
-  });
-});
-
