@@ -161,26 +161,49 @@ export function DashboardPage() {
 type Tone = { t1: string; t2: string };
 const toneStyle = (t: Tone) => ({ "--t1": `var(--tone-${t.t1})`, "--t2": `var(--tone-${t.t2})` }) as React.CSSProperties;
 
-// Decorative mock upward trend (visual only).
-function Sparkline({ seed }: { seed: number }) {
-  const pts = [4, 6, 5, 8, 7, 10, 9, 13, 12, 16].map((v, i) => v + ((seed * (i + 3)) % 3));
-  const max = Math.max(...pts);
+// Real 14-day daily-count sparkline. Returns null for an all-zero series so
+// a new account doesn't get a flat line implying data that isn't there.
+function Sparkline({ data, id }: { data: number[]; id: string }) {
+  if (data.length < 2 || data.every((v) => v === 0)) return null;
+  const max = Math.max(...data);
   const w = 120;
   const h = 32;
-  const coords = pts.map((v, i) => [(i / (pts.length - 1)) * w, h - (v / max) * (h - 4) - 2]);
+  const coords = data.map((v, i) => [(i / (data.length - 1)) * w, h - (v / max) * (h - 4) - 2]);
   const line = coords.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const id = `spark-${seed}`;
+  const gid = `spark-${id}`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-8 w-full" preserveAspectRatio="none" aria-hidden>
       <defs>
-        <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--t1)" stopOpacity="0.35" />
           <stop offset="100%" stopColor="var(--t1)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${id})`} />
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${gid})`} />
       <path d={line} fill="none" stroke="var(--t1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
+  );
+}
+
+// Delta pill: up = tone colour + up arrow, down = red + down arrow,
+// flat = neutral, new = "New" badge when the previous month was zero.
+function DeltaPill({ delta }: { delta: MonthDelta }) {
+  const style: React.CSSProperties =
+    delta.kind === "down"
+      ? { background: "color-mix(in oklab, var(--tone-rose) 14%, transparent)", color: "var(--tone-rose)" }
+      : delta.kind === "flat"
+        ? { background: "color-mix(in oklab, var(--tone-slate) 14%, transparent)", color: "var(--tone-slate)" }
+        : { background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" };
+  return (
+    <span
+      className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      style={style}
+    >
+      {delta.kind === "up" && <TrendingUp className="h-3 w-3" />}
+      {delta.kind === "down" && <TrendingDown className="h-3 w-3" />}
+      {delta.kind === "flat" && <Minus className="h-3 w-3" />}
+      {delta.label}
+    </span>
   );
 }
 
