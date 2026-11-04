@@ -40,9 +40,11 @@ describe("UGC ticker voiceover audio", () => {
     });
   });
 
-  it("keeps the audio wave animating regardless of play state", () => {
+  it("has no wave bars or large avatar letters left in the media area", () => {
+    expect(landing).not.toContain("ugc-audio-wave");
+    expect(landing).not.toContain("ugc-avatar-large");
+    expect(landing).not.toContain("ugc-wave");
     expect(landing).not.toContain("animation-play-state: paused");
-    expect(landing).toContain("animation: ugc-wave 1.2s ease-in-out infinite;");
   });
 
   it("plays the card's own clip, swaps the icon, and stops the previous card", () => {
@@ -85,6 +87,23 @@ describe("UGC speaker button placement", () => {
     expect(wrap).toContain("position: relative;");
     expect(wrap).toContain("overflow: hidden;");
     expect(wrap).toContain("width: 100%;");
+  });
+
+  it("is a short 96px gradient band, not a tall 9:16 void", () => {
+    expect(wrap).toContain("height: 96px;");
+    expect(wrap).not.toContain("aspect-ratio");
+  });
+
+  it("leaves the speaker button as the only thing in each card's band", () => {
+    cardBlocks().forEach((card, i) => {
+      const open = card.indexOf('<div class="ugc-media-wrap');
+      const band = card.slice(
+        card.indexOf(">", open) + 1,
+        card.indexOf('<div class="ugc-card-info'),
+      );
+      expect(band, `card ${i + 1} band`).toContain('<button class="ugc-vol-btn"');
+      expect(band, `card ${i + 1} band has no extra children`).not.toMatch(/<div/);
+    });
   });
 });
 
