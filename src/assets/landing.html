@@ -1075,51 +1075,7 @@ img { max-width: 100%; display: block }
   margin: 0;
 }
 
-/* Nav arrows */
-.ugc-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: rgba(15,15,30,0.85);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  font-size: 26px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  backdrop-filter: blur(8px);
-}
-.ugc-arrow:hover { background: rgba(247,119,55,0.7); transform: translateY(-50%) scale(1.1); }
-.ugc-arrow-left  { left: 12px; }
-.ugc-arrow-right { right: 12px; }
-
-/* Mute toggle */
-.ugc-mute-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 10;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(15,15,30,0.85);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-  backdrop-filter: blur(8px);
-}
-.ugc-mute-btn:hover { background: rgba(247,119,55,0.7); }
+/* (nav arrows and global mute button removed — per-card .ugc-vol-btn only) */
 
 /* Fade edges */
 .ugc-ticker-wrapper::before,
