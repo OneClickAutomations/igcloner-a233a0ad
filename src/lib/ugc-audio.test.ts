@@ -18,8 +18,10 @@ const ICON_ON =
 function cardBlocks() {
   const blocks = landing.split('<div class="ugc-card ugc-card-audio"');
   expect(blocks.length - 1, "expected six UGC cards").toBe(6);
-  return blocks.slice(1).map((b) => b.slice(0, b.indexOf("</div><!-- /ugc-track -->") === -1 ? b.length : b.length));
+  // each block runs from one card's opening tag to the next card's
+  return blocks.slice(1);
 }
+
 
 describe("UGC ticker voiceover audio", () => {
   const cards = cardBlocks();
