@@ -971,32 +971,6 @@ img { max-width: 100%; display: block }
 .ugc-poster-fashion  { background: linear-gradient(160deg, #1a0a1a 0%, #3d003d 100%); }
 .ugc-poster-tech     { background: linear-gradient(160deg, #0a1a0a 0%, #003d1a 100%); }
 
-
-/* Audio waveform animation */
-.ugc-audio-wave {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 32px;
-  z-index: 1;
-}
-.ugc-audio-wave span {
-  display: block;
-  width: 4px;
-  background: rgba(247,119,55,0.7);
-  border-radius: 2px;
-  animation: ugc-wave 1.2s ease-in-out infinite;
-}
-.ugc-audio-wave span:nth-child(1) { height: 12px; animation-delay: 0s; }
-.ugc-audio-wave span:nth-child(2) { height: 22px; animation-delay: 0.15s; }
-.ugc-audio-wave span:nth-child(3) { height: 30px; animation-delay: 0.3s; }
-.ugc-audio-wave span:nth-child(4) { height: 22px; animation-delay: 0.45s; }
-.ugc-audio-wave span:nth-child(5) { height: 12px; animation-delay: 0.6s; }
-@keyframes ugc-wave {
-  0%, 100% { transform: scaleY(0.5); opacity: 0.5; }
-  50%       { transform: scaleY(1);   opacity: 1; }
-}
-
 /* Tiny per-card mute toggle */
 .ugc-vol-btn {
   position: absolute;
