@@ -48,6 +48,47 @@ describe("UGC ticker videos", () => {
     expect(landing).toContain("v.play()");
     expect(landing).toContain("v.pause()");
   });
+
+  it("unmutes only the selected video, toggles it off, and transfers sound", () => {
+    const soundFunctions = landing.match(/  function updateSoundState[\s\S]*?(?=  cards\.forEach\(card => \{)/)?.[0];
+    expect(soundFunctions).toBeDefined();
+    const cards = VIDEOS.map(() => {
+      const video = { muted: true };
+      const indicator = { hidden: true };
+      return {
+        video,
+        indicator,
+        querySelector: (selector: string) => selector === ".ugc-video" ? video : indicator,
+        setAttribute: () => {},
+      };
+    });
+    const toggle = new Function("cards", "pauseAutoScroll", `${soundFunctions}\nreturn toggleCardSound;`)(cards, () => {});
+    toggle(cards[4]);
+    expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, false, true]);
+    expect(cards.map(c => c.indicator.hidden)).toEqual([true, true, true, true, false, true]);
+    toggle(cards[4]);
+    expect(cards.map(c => c.video.muted)).toEqual([true, true, true, true, true, true]);
+    toggle(cards[4]);
+    toggle(cards[1]);
+    expect(cards.map(c => c.video.muted)).toEqual([true, false, true, true, true, true]);
+    expect(cards.map(c => c.indicator.hidden)).toEqual([true, false, true, true, true, true]);
+  });
+
+  it("ignores clicks after pointer movement greater than six pixels", () => {
+    const pointerHandler = landing.match(/track\.addEventListener\('pointermove', e => \{([\s\S]*?)\n  \}\);/)?.[1];
+    expect(pointerHandler).toBeDefined();
+    const moved = new Function("e", `let pointerStartX = 0, pointerStartY = 0, pointerMoved = false; ${pointerHandler}; return pointerMoved;`);
+    expect(moved({ clientX: 3, clientY: 3 })).toBe(false);
+    expect(moved({ clientX: 7, clientY: 0 })).toBe(true);
+    const clickHandler = landing.match(/card\.addEventListener\('click', \(\) => \{([\s\S]*?)\n    \}\);/)?.[1];
+    expect(clickHandler).toBeDefined();
+    let toggles = 0;
+    const click = new Function("pointerMoved", "toggleCardSound", "card", clickHandler);
+    click(true, () => toggles++, {});
+    expect(toggles).toBe(0);
+    click(false, () => toggles++, {});
+    expect(toggles).toBe(1);
+  });
 });
 
 describe("landing scripts", () => {
