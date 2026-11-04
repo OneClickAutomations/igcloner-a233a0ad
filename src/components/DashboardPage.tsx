@@ -158,6 +158,34 @@ export function DashboardPage() {
   return <DashboardPageInner />;
 }
 
+// Decorative welcome-banner character. Colours come from the --wc-* tokens
+// defined on .welcome-banner so the figure recolours with the theme.
+function WelcomeCharacter() {
+  return (
+    <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="welcome-character h-full w-auto" aria-hidden="true">
+      <circle cx="118" cy="92" r="72" fill="var(--wc-blob)" />
+      <path d="M176 54c7 6 11 14 11 23s-4 17-11 23" stroke="var(--wc-wave)" strokeWidth="4" strokeLinecap="round" />
+      <path d="M191 42c11 9 17 23 17 35s-6 26-17 35" stroke="var(--wc-wave)" strokeWidth="4" strokeLinecap="round" opacity=".55" />
+      <path d="M96 128h34l-4 42h-12l-3-26-4 26H95z" fill="var(--wc-pants)" />
+      <path d="M92 76c0-12 10-22 22-22h4c12 0 22 10 22 22v40c0 7-5 12-12 12h-24c-7 0-12-5-12-12z" fill="var(--wc-shirt)" />
+      <path d="M134 82c6-6 14-14 20-18l10 11c-6 4-13 11-19 17z" fill="var(--wc-shirt)" />
+      <circle cx="166" cy="76" r="9" fill="var(--wc-skin)" />
+      <path d="M158 62l24-13c3-2 7 0 7 4v34c0 4-4 6-7 4l-24-13z" fill="var(--wc-mega)" />
+      <rect x="150" y="62" width="12" height="28" rx="4" fill="var(--wc-mega-dark)" />
+      <path d="M92 86c-6 3-10 9-11 16l-2 18 12 2 2-17z" fill="var(--wc-shirt)" />
+      <circle cx="86" cy="124" r="8" fill="var(--wc-skin)" />
+      <rect x="108" y="46" width="16" height="16" rx="7" fill="var(--wc-skin-shade)" />
+      <circle cx="116" cy="34" r="20" fill="var(--wc-skin)" />
+      <path d="M96 32c0-12 9-21 20-21s20 9 20 21c0-6-6-9-12-9-8 0-10 4-18 4-6 0-10 2-10 5z" fill="var(--wc-hair)" />
+      <path d="M110 40c2 3 10 3 12 0" stroke="var(--wc-ink)" strokeWidth="2.5" strokeLinecap="round" />
+      <circle cx="109" cy="32" r="2" fill="var(--wc-ink)" />
+      <circle cx="125" cy="32" r="2" fill="var(--wc-ink)" />
+      <path d="M60 44l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="var(--wc-spark)" />
+      <path d="M76 96l1.8 4.3 4.3 1.8-4.3 1.8-1.8 4.3-1.8-4.3-4.3-1.8 4.3-1.8z" fill="var(--wc-spark)" opacity=".7" />
+    </svg>
+  );
+}
+
 type Tone = { t1: string; t2: string };
 const toneStyle = (t: Tone) => ({ "--t1": `var(--tone-${t.t1})`, "--t2": `var(--tone-${t.t2})` }) as React.CSSProperties;
 
