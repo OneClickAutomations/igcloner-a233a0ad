@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, FolderOpen, Search, Send, Sparkles } from "lucide-react";
+import { Loader2, FolderOpen, Search, Send, Sparkles, Coins } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { getUsage } from "@/lib/settings.functions";
+import { getCreditBalance, getCreditHistory } from "@/lib/credits.functions";
+
+interface CreditEntry {
+  id: string;
+  delta: number;
+  label: string;
+  creditKind: string;
+  createdAt: string;
+  subject: string | null;
+}
 
 interface UsageData {
   projects: number;
@@ -25,14 +35,19 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
 
 export function UsageSection() {
   const usageFn = useServerFn(getUsage);
+  const balanceFn = useServerFn(getCreditBalance);
+  const historyFn = useServerFn(getCreditHistory);
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [credits, setCredits] = useState<{ balance: number; planBalance: number; purchasedBalance: number } | null>(null);
+  const [history, setHistory] = useState<CreditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    usageFn()
-      .then((res) => setUsage(res as UsageData))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      usageFn().then((res) => setUsage(res as UsageData)).catch(() => {}),
+      balanceFn().then(setCredits).catch(() => {}),
+      historyFn().then((r) => setHistory(r.entries as CreditEntry[])).catch(() => {}),
+    ]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
