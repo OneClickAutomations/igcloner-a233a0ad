@@ -557,7 +557,7 @@ function DashboardPageInner() {
           </section>
 
           {/* ── Main two-column area ────────────────────────── */}
-          <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-3 [&>*]:min-w-0">
             {/* Recent analyses */}
             <div className="space-y-6 lg:col-span-2">
             {/* ── Analyses chart (last 30 days) ───────────────── */}
