@@ -301,7 +301,7 @@ export const createResearchReport = createServerFn({ method: "POST" })
       if (!data.forceRefresh) {
         const { data: candidates } = await supabase
           .from("research_reports")
-          .select("id, raw_data, created_at")
+          .select("id, raw_data, created_at, status")
           .eq("user_id", userId)
           .eq("mode", data.mode)
           .ilike("subject", data.subject.trim())
@@ -311,6 +311,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
         const reusable = (candidates ?? []).find(
           (c: any) => c.id !== row.id
             && Array.isArray(c.raw_data?.posts)
+            // A failed run with no posts is not a sample worth reusing (e.g. the
+            // cutoff bug's empty report); a failed run WITH posts still is.
+            && !(c.status === "failed" && c.raw_data.posts.length === 0)
             && isWithinReuseWindow(c.created_at),
         );
         if (reusable) {
