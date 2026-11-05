@@ -321,7 +321,7 @@ export function ResearchPage() {
         <div className="mt-5 flex justify-end">
           <Button onClick={submit} disabled={creating} className="gap-2">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {creating ? "Analyzing… this can take up to a minute" : "Run Research"}
+            {creating ? "Analyzing… this can take up to a minute" : `Run Research — ${ACTION_COSTS.report} credits`}
           </Button>
         </div>
       </Card>
@@ -376,6 +376,31 @@ export function ResearchPage() {
 // ═══════════════════════════════════════════════════════════════════
 // REPORT DETAIL — the redesigned dashboard
 // ═══════════════════════════════════════════════════════════════════
+
+function InsufficientCreditsPanel({ info, onDismiss }: { info: InsufficientCreditsInfo; onDismiss: () => void }) {
+  const short = Math.max(info.required - info.available, 0);
+  return (
+    <Card className="mb-6 flex items-start gap-3 border-amber-500/40 bg-amber-500/5 p-4">
+      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">Not enough credits</p>
+        <p className="text-xs text-muted-foreground">
+          This action costs {info.required} credits and you have {info.available} — you're {short} short.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {/* Placeholders until Stripe checkout is wired — honestly inert. */}
+          <Button size="sm" variant="outline" disabled title="Top-ups are coming once billing is connected">
+            Top up (coming soon)
+          </Button>
+          <Button size="sm" variant="outline" disabled title="Plan upgrades are coming once billing is connected">
+            Upgrade plan (coming soon)
+          </Button>
+          <Button size="sm" variant="ghost" onClick={onDismiss}>Dismiss</Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 function ReportDetail({
   detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
@@ -540,7 +565,7 @@ function ReportDetail({
               </Button>
               <Button variant="outline" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
                 {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {ideas.length > 0 ? "Regenerate Ideas" : "Generate Content Ideas"}
+                {ideas.length > 0 ? `Regenerate 50 Ideas — ${ACTION_COSTS.ideas} credits` : `Generate 50 Ideas — ${ACTION_COSTS.ideas} credits`}
               </Button>
             </div>
           </div>
@@ -559,7 +584,7 @@ function ReportDetail({
             {hasRawPosts ? (
               <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={handleRetry} disabled={retrying}>
                 {retrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Retry analysis — reuses the data already collected
+                Retry analysis — {ACTION_COSTS.retry} credits, reuses the data already collected
               </Button>
             ) : (
               <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={onForceRefresh} disabled={refreshBusy}>
