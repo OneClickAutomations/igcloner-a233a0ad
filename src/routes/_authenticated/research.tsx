@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/research")({
       },
       { name: "robots", content: "noindex" },
       { property: "og:title", content: "Intel Research Reports — IGCloner" },
-      { property: "og:description", content: "Evidence-based competitor intelligence, 50 content ideas, and premium client reports." },
+      { property: "og:description", content: "Evidence-based competitor intelligence, 25 content ideas per batch, and premium client reports." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
