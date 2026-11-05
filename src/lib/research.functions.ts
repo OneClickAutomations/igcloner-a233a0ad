@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
+import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence, toPromptPost, IDEAS_PER_BATCH, IDEAS_PER_CATEGORY, MAX_IDEAS_PER_REPORT } from "@/lib/intel-analytics";
+import { SAMPLING, COMPETITOR_WINDOW_DAYS, NICHE_WINDOW_DAYS, COMPETITOR_RELAX_MIN_POSTS, COMPETITOR_RELAX_LIMIT, NICHE_FILTER_MIN_POSTS, cutoffDate, filterPostsByCutoff, type CutoffMeta } from "@/lib/research-sampling";
 import { generateIntelJson } from "@/lib/intel-ai.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
@@ -45,7 +46,7 @@ async function apifyRun(actor: string, input: unknown, token: string): Promise<a
 }
 
 // Real sample provenance, stored on the report so the UI and the AI both see it.
-function buildSampleMeta(posts: any[], sources: string[]) {
+function buildSampleMeta(posts: any[], sources: string[], cutoff: CutoffMeta) {
   const times = posts
     .map((p) => new Date(p.timestamp).getTime())
     .filter(Number.isFinite)
@@ -57,6 +58,7 @@ function buildSampleMeta(posts: any[], sources: string[]) {
     dateRange: times.length
       ? { earliest: new Date(times[0]).toISOString(), latest: new Date(times[times.length - 1]).toISOString() }
       : null,
+    cutoff,
   };
 }
 
