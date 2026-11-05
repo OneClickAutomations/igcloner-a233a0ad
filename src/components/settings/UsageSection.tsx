@@ -71,6 +71,8 @@ export function UsageSection() {
     );
   }
 
+  const creditBalance = credits?.balance ?? 0;
+
   const pct = Math.min(Math.round((usage.analysesUsed / usage.analysesLimit) * 100), 100);
   const monthName = new Date().toLocaleString("default", { month: "long" });
 
@@ -80,6 +82,29 @@ export function UsageSection() {
         <h2 className="text-lg font-bold tracking-tight">Usage</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Your activity in {monthName} {new Date().getFullYear()}.
+        </p>
+      </div>
+
+      {/* Credit balance */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-ig">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent text-white">
+              <Coins className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Credit Balance</p>
+              <p className="text-xs text-muted-foreground">
+                {credits
+                  ? `${credits.planBalance} plan · ${credits.purchasedBalance} purchased`
+                  : "Loading balance…"}
+              </p>
+            </div>
+          </div>
+          <span className="text-3xl font-extrabold font-mono tabular-nums">{creditBalance}</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Plan credits reset each billing cycle; purchased credits never expire and are spent last.
         </p>
       </div>
 
