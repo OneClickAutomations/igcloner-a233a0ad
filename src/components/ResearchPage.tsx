@@ -235,6 +235,8 @@ export function ResearchPage() {
 
   if (search.reportId) {
     return (
+      <>
+      {insufficient && <InsufficientCreditsPanel info={insufficient} onDismiss={() => setInsufficient(null)} />}
       <ReportDetail
         detail={detail}
         loading={loadingDetail}
@@ -263,6 +265,7 @@ export function ResearchPage() {
         setPreferences={setPreferences}
         onGenerateCampaign={() => navigate({ to: "/calendar" })}
       />
+      </>
     );
   }
 
@@ -277,6 +280,8 @@ export function ResearchPage() {
           </p>
         </div>
       </div>
+
+      {insufficient && <InsufficientCreditsPanel info={insufficient} onDismiss={() => setInsufficient(null)} />}
 
       <Card className="mb-10 p-5 lg:p-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
