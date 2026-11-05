@@ -923,6 +923,18 @@ function capitalize(s: string): string {
   if (!s) return "";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+function fmtDay(iso?: string | null): string {
+  const d = new Date(iso ?? "");
+  if (!Number.isFinite(d.getTime())) return "unknown date";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+function hoursAgo(iso?: string | null): string {
+  const ms = Date.now() - new Date(iso ?? "").getTime();
+  if (!Number.isFinite(ms) || ms < 0) return "recently";
+  const h = Math.floor(ms / 3_600_000);
+  if (h < 1) return "less than an hour ago";
+  return h === 1 ? "1 hour ago" : `${h} hours ago`;
+}
 function engagementTone(bench?: string): Tone {
   const b = String(bench ?? "").toLowerCase();
   if (b.includes("above")) return "green";
@@ -1181,6 +1193,12 @@ function IdeaCard({ idea, saved, saving, onSave, report }: { idea: any; saved: b
   return <Card className="flex min-w-0 flex-col gap-4 rounded-lg p-4">
     <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">Idea {idea.idea_number} · {idea.format}</Badge><span className="text-xs text-muted-foreground">{idea.production_difficulty}</span></div>
     <ScoreBar label="Predicted viral score" value={idea.virality_score} tone="green" />
+    <div className="flex items-center gap-3">
+      <ConfidenceRing value={idea.confidence_score} />
+      <p className="text-xs leading-snug text-muted-foreground">
+        Confidence — computed from source-post performance and sample size, not a prediction of your results.
+      </p>
+    </div>
     <blockquote className="border-l-2 border-accent-primary pl-3 whitespace-pre-line break-words text-base font-semibold">{idea.hook}</blockquote>
     <p className="break-words text-sm"><b>Concept: </b>{idea.description}</p>
     <p className="break-words text-sm text-muted-foreground"><b className="text-foreground">Why it works: </b>{idea.why_it_works}</p>
