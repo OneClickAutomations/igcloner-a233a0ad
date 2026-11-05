@@ -8,6 +8,13 @@
       "when": 1793849471466,
       "tag": "0000_add_predicted_virality_basis_to_content_ideas",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793857399147,
+      "tag": "0001_credit_ledger",
+      "breakpoints": true
     }
   ]
 }

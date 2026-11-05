@@ -492,6 +492,50 @@ export type Database = {
           },
         ]
       }
+      credit_ledger: {
+        Row: {
+          created_at: string
+          credit_kind: string
+          delta: number
+          expires_at: string | null
+          id: string
+          reason: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credit_kind: string
+          delta: number
+          expires_at?: string | null
+          id?: string
+          reason: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credit_kind?: string
+          delta?: number
+          expires_at?: string | null
+          id?: string
+          reason?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       multiplied_content: {
         Row: {
           analysis_id: string
@@ -1318,11 +1362,43 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      credit_balance: {
+        Args: { p_kind?: string; p_user_id: string }
+        Returns: number
+      }
+      debit_credits: {
+        Args: {
+          p_amount: number
+          p_entity_id?: string
+          p_entity_type?: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      grant_credits: {
+        Args: {
+          p_amount: number
+          p_expires_at?: string
+          p_kind: string
+          p_reason: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      refund_credits: {
+        Args: {
+          p_amount: number
+          p_entity_id: string
+          p_entity_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "user"
-      plan_type: "free" | "creator" | "pro"
+      plan_type: "free" | "creator" | "pro" | "agency" | "trial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1451,7 +1527,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
-      plan_type: ["free", "creator", "pro"],
+      plan_type: ["free", "creator", "pro", "agency", "trial"],
     },
   },
 } as const

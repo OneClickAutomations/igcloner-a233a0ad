@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
 import { generateIntelJson } from "@/lib/intel-ai.server";
+import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
+import { debitCredits, refundCredits } from "@/lib/credits.server";
 
 // ─────────────────────────────────────────────────────────────────────
 // Content Intelligence Engine — Research module (Phase 1)
@@ -238,6 +240,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
       .single();
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
 
+    // Set when credits were debited for a fresh scrape, so the catch block
+    // can refund them if the paid work fails. Cache hits stay at 0.
+    let debitedCredits = 0;
     try {
       // Reuse a scrape this user already paid for: same mode + subject
       // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
@@ -271,6 +276,10 @@ export const createResearchReport = createServerFn({ method: "POST" })
       }
 
       if (!signals) {
+        // Cache miss — this run pays for a fresh scrape. Debit atomically
+        // before any paid external call; refunded below if the work fails.
+        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id);
+        debitedCredits = ACTION_COSTS.report;
         const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
         let apifyToken = process.env.APIFY_TOKEN;
         if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
@@ -312,6 +321,18 @@ export const createResearchReport = createServerFn({ method: "POST" })
       }
       return { id: row.id };
     } catch (e) {
+      // A user must never pay for a failed scrape or AI call. The refund is
+      // idempotent per report id, so a retry storm cannot mint credits.
+      if (debitedCredits > 0) {
+        await refundCredits(userId, debitedCredits, "research_report", row.id);
+      }
+      if (e instanceof InsufficientCreditsError) {
+        await supabase
+          .from("research_reports")
+          .update({ status: "failed", error_message: "Insufficient credits" })
+          .eq("id", row.id);
+        throw e;
+      }
       const msg = e instanceof Error ? e.message : String(e);
       await supabase
         .from("research_reports")
@@ -340,6 +361,9 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
       throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
     }
     await supabase.from("research_reports").update({ status: "analyzing", error_message: null }).eq("id", report.id);
+    // Retry reuses the existing scrape — cheaper than a fresh report, but
+    // still a paid AI call. Debit atomically first; refunded on failure.
+    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
       await supabase
@@ -348,6 +372,7 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
         .eq("id", report.id);
       return { id: report.id };
     } catch (e) {
+      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id);
       const msg = e instanceof Error ? e.message : String(e);
       await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
       throw new Error(msg);
@@ -426,6 +451,11 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
       .single();
     if (error || !report) throw new Error("Report not found");
     if (report.status !== "ready") throw new Error("Report is not ready yet");
+
+    // Paid AI call — debit atomically before invoking the model; the whole
+    // generation below is wrapped so a failure refunds the exact amount.
+    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
+    try {
 
     const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
 Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
@@ -536,6 +566,10 @@ Return a flat JSON array of 50 objects. Nothing else.`;
       .select("*");
     if (insErr) throw new Error(insErr.message);
     return { ideas: inserted ?? [] };
+    } catch (e) {
+      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
+      throw e;
+    }
   });
 
 // ── Dashboard widgets ────────────────────────────────────────────────

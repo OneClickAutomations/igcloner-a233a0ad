@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, FolderOpen, Search, Send, Sparkles } from "lucide-react";
+import { Loader2, FolderOpen, Search, Send, Sparkles, Coins } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { getUsage } from "@/lib/settings.functions";
+import { getCreditBalance, getCreditHistory } from "@/lib/credits.functions";
+
+interface CreditEntry {
+  id: string;
+  delta: number;
+  label: string;
+  creditKind: string;
+  createdAt: string;
+  subject: string | null;
+}
 
 interface UsageData {
   projects: number;
@@ -25,14 +35,19 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
 
 export function UsageSection() {
   const usageFn = useServerFn(getUsage);
+  const balanceFn = useServerFn(getCreditBalance);
+  const historyFn = useServerFn(getCreditHistory);
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [credits, setCredits] = useState<{ balance: number; planBalance: number; purchasedBalance: number } | null>(null);
+  const [history, setHistory] = useState<CreditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    usageFn()
-      .then((res) => setUsage(res as UsageData))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      usageFn().then((res) => setUsage(res as UsageData)).catch(() => {}),
+      balanceFn().then(setCredits).catch(() => {}),
+      historyFn().then((r) => setHistory(r.entries as CreditEntry[])).catch(() => {}),
+    ]).finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -56,6 +71,8 @@ export function UsageSection() {
     );
   }
 
+  const creditBalance = credits?.balance ?? 0;
+
   const pct = Math.min(Math.round((usage.analysesUsed / usage.analysesLimit) * 100), 100);
   const monthName = new Date().toLocaleString("default", { month: "long" });
 
@@ -65,6 +82,29 @@ export function UsageSection() {
         <h2 className="text-lg font-bold tracking-tight">Usage</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Your activity in {monthName} {new Date().getFullYear()}.
+        </p>
+      </div>
+
+      {/* Credit balance */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-ig">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent text-white">
+              <Coins className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Credit Balance</p>
+              <p className="text-xs text-muted-foreground">
+                {credits
+                  ? `${credits.planBalance} plan · ${credits.purchasedBalance} purchased`
+                  : "Loading balance…"}
+              </p>
+            </div>
+          </div>
+          <span className="text-3xl font-extrabold font-mono tabular-nums">{creditBalance}</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          Plan credits reset each billing cycle; purchased credits never expire and are spent last.
         </p>
       </div>
 
@@ -118,6 +158,48 @@ export function UsageSection() {
               No activity this month yet — start analyzing content to see your stats here.
             </p>
           </div>
+        )}
+      </div>
+
+      {/* Credit history */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-ig">
+        <p className="text-sm font-semibold mb-4">Credit History</p>
+        {history.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              No credit activity yet — your grants, spends, and refunds will appear here.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {history.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {e.label}
+                    {e.subject && <span className="text-muted-foreground font-normal"> — {e.subject}</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(e.createdAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    {" · "}
+                    {e.creditKind === "plan" ? "plan credits" : "purchased credits"}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 font-mono text-sm font-bold tabular-nums ${
+                    e.delta > 0 ? "text-status-success" : "text-foreground"
+                  }`}
+                >
+                  {e.delta > 0 ? `+${e.delta}` : e.delta}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
