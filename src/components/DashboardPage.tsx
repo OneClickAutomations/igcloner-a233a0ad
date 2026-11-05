@@ -453,6 +453,8 @@ function DashboardPageInner() {
 
   return (
     <div className="min-h-full">
+      {/* Ambient colour clouds behind the whole dashboard (landing-page blob treatment) */}
+      <div className="dash-aurora" aria-hidden="true" />
       {/* Ambient gradient wash behind the header */}
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 gradient-glow" />
