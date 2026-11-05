@@ -26,7 +26,7 @@ describe("cutoffDate", () => {
     expect(cutoffDate(180, new Date("2026-11-05T06:00:00Z"))).toBe("2026-05-09");
   });
   it("crosses month and year boundaries correctly", () => {
-    expect(cutoffDate(90, new Date("2026-03-01T12:00:00Z"))).toBe("2025-11-30");
+    expect(cutoffDate(90, new Date("2026-03-01T12:00:00Z"))).toBe("2025-12-01");
     expect(cutoffDate(180, new Date("2026-01-15T00:00:00Z"))).toBe("2025-07-19");
     expect(cutoffDate(1, new Date("2026-01-01T00:00:00Z"))).toBe("2025-12-31");
   });
