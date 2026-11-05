@@ -68,14 +68,38 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
     const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    // Always run the posts scrape (60) and merge with whatever latestPosts
+    // Recency cutoff: a concrete UTC date passed to the actor AND enforced
+    // in code. The actor docs warn pinned posts may leak through the filter,
+    // and say nothing about how it interacts with resultsLimit — the code
+    // filter is the safety net for both.
+    const cutoff = cutoffDate(COMPETITOR_WINDOW_DAYS);
+    const cfg = SAMPLING.standard;
+    // Always run the posts scrape and merge with whatever latestPosts
     // returned — 12 posts cannot support the precision this report claims.
     let postsCall: any[] = [];
     if (profile && !profile.private) {
-      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 60 }, token);
+      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: cfg.competitorPosts, onlyPostsNewerThan: cutoff }, token);
     }
-    const merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
-    const posts = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    let merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
+    let filter = filterPostsByCutoff(merged, cutoff);
+    let relaxed = false;
+    // Relax rule: a weekly poster must not be stuck with a tiny sample.
+    // ONE fallback scrape, no cutoff, smaller limit — then dedupe again.
+    if (profile && !profile.private && filter.kept.length < COMPETITOR_RELAX_MIN_POSTS) {
+      const fallback = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: COMPETITOR_RELAX_LIMIT }, token);
+      merged = dedupePostsByShortCode([...merged, ...fallback]);
+      filter = filterPostsByCutoff(merged, cutoff);
+      relaxed = true;
+    }
+    const posts = filter.kept.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    const cutoffMeta: CutoffMeta = {
+      date: cutoff,
+      windowDays: COMPETITOR_WINDOW_DAYS,
+      appliedAt: relaxed ? "code" : "both",
+      relaxed,
+      skipped: false,
+      droppedStale: filter.droppedStale,
+    };
     return {
       subject: handle,
       profile: profile
