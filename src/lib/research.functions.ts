@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
 import { generateIntelJson } from "@/lib/intel-ai.server";
+import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
+import { debitCredits, refundCredits } from "@/lib/credits.server";
 
 // ─────────────────────────────────────────────────────────────────────
 // Content Intelligence Engine — Research module (Phase 1)
@@ -238,6 +240,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
       .single();
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
 
+    // Set when credits were debited for a fresh scrape, so the catch block
+    // can refund them if the paid work fails. Cache hits stay at 0.
+    let debitedCredits = 0;
     try {
       // Reuse a scrape this user already paid for: same mode + subject
       // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
