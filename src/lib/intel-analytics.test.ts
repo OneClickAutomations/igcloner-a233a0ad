@@ -55,3 +55,110 @@ it("requires exactly 50 unique ideas, ten per category",()=>{
 it("requires real source evidence for cloned and amplified formulas",()=>{
   expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===0?{...v,source_post_index:99}:v),posts)).toThrow();
 });
+
+describe("sampleConfidence thresholds", () => {
+  it("maps every boundary to the right word", () => {
+    expect(sampleConfidence(0)).toBe("none");
+    expect(sampleConfidence(1)).toBe("very low");
+    expect(sampleConfidence(7)).toBe("very low");
+    expect(sampleConfidence(8)).toBe("low");
+    expect(sampleConfidence(19)).toBe("low");
+    expect(sampleConfidence(20)).toBe("moderate");
+    expect(sampleConfidence(39)).toBe("moderate");
+    expect(sampleConfidence(40)).toBe("high");
+    expect(sampleConfidence(120)).toBe("high");
+  });
+});
+
+describe("shareFor precision by sample size", () => {
+  it("returns null shares below 8 posts — a 1-in-5 post is not 20.00% of a strategy", () => {
+    expect(shareFor(1, 5)).toBeNull();
+    expect(shareFor(4, 5)).toBeNull();
+  });
+  it("rounds to whole integers for n of 12 and 29", () => {
+    expect(shareFor(1, 12)).toBe(8);      // 8.33… → 8, not 8.33
+    expect(shareFor(7, 29)).toBe(24);     // 24.13… → 24
+  });
+  it("keeps two decimals at n of 30 and above", () => {
+    expect(shareFor(1, 30)).toBe(3.33);
+    expect(shareFor(7, 60)).toBe(11.67);
+  });
+  it("flows into format distribution and pillar shares", () => {
+    const five = posts.slice(0, 5);
+    const m5 = calculateIntelMetrics(five, 1000).contentFormatDistribution;
+    expect(m5.imagePercent).toBeNull();
+    const twelve = calculateIntelMetrics(posts, 1000).contentFormatDistribution;
+    expect(twelve.imagePercent).toBe(50);
+    const grounded = groundIntelReport({ contentPillars: [{ name: "A", postIndices: [0] }] }, { posts, profile: {} });
+    expect(grounded.contentPillars[0].share).toBe(8);
+  });
+});
+
+describe("deriveHashtagQueries", () => {
+  it("keeps the full de-spaced term plus meaningful words, capped at 3", () => {
+    expect(deriveHashtagQueries("fitness coaching")).toEqual(["fitnesscoaching", "fitness", "coaching"]);
+  });
+  it("drops stopwords and short words", () => {
+    expect(deriveHashtagQueries("the best home workouts")).toEqual(["thebesthomeworkouts", "home", "workouts"]);
+  });
+  it("returns a single tag for one-word subjects and dedupes repeats", () => {
+    expect(deriveHashtagQueries("SaaS")).toEqual(["saas"]);
+    expect(deriveHashtagQueries("travel travel")).toEqual(["travel"]);
+  });
+});
+
+describe("dedupePostsByShortCode", () => {
+  it("removes overlap by shortCode and falls back to url", () => {
+    const a = { shortCode: "ABC", caption: "one" };
+    const b = { shortCode: "ABC", caption: "one duplicate" };
+    const c = { url: "https://x/p/1", caption: "two" };
+    const d = { url: "https://x/p/1", caption: "two duplicate" };
+    const e = { caption: "three", timestamp: "2026-01-01" };
+    expect(dedupePostsByShortCode([a, b, c, d, e])).toEqual([a, c, e]);
+  });
+});
+
+describe("isWithinReuseWindow", () => {
+  const now = new Date("2026-11-05T12:00:00Z");
+  it("accepts scrapes younger than 12 hours and rejects older ones", () => {
+    expect(isWithinReuseWindow("2026-11-05T00:00:01Z", now)).toBe(true);
+    expect(isWithinReuseWindow("2026-11-05T00:00:00Z", now)).toBe(false); // exactly 12h is stale
+    expect(isWithinReuseWindow("2026-11-04T23:59:59Z", now)).toBe(false);
+  });
+  it("rejects invalid or future timestamps", () => {
+    expect(isWithinReuseWindow("not-a-date", now)).toBe(false);
+    expect(isWithinReuseWindow("2026-11-05T13:00:00Z", now)).toBe(false);
+  });
+});
+
+describe("computeIdeaConfidence", () => {
+  // 20 posts averaging 100 engagement; post 0 is viral (3x+), post 1 is average.
+  const samplePosts = [
+    { caption: "Stop doing this one thing\nMore detail", likesCount: 400, commentsCount: 50 },
+    { caption: "A normal post", likesCount: 90, commentsCount: 10 },
+    ...Array.from({ length: 18 }, () => ({ caption: " filler", likesCount: 60, commentsCount: 10 })),
+  ];
+  it("floors when there is no evidence and the sample is tiny", () => {
+    const score = computeIdeaConfidence({ idea: { source_post_index: null, hook: "A brand new invented hook line" }, posts: [], sample: "very low" });
+    expect(score).toBe(CONFIDENCE_WEIGHTS.base + CONFIDENCE_WEIGHTS.sampleVeryLow);
+    expect(score).toBeLessThanOrEqual(UNEVIDENCED_CONFIDENCE_CAP);
+  });
+  it("caps unevidenced ideas even with a high-confidence sample", () => {
+    const score = computeIdeaConfidence({ idea: { source_post_index: null, hook: "A brand new invented hook line" }, posts: samplePosts, sample: "high" });
+    expect(score).toBe(UNEVIDENCED_CONFIDENCE_CAP);
+  });
+  it("reaches the ceiling with a 3x-viral source, caption-derived hook and high sample confidence", () => {
+    const score = computeIdeaConfidence({ idea: { source_post_index: 0, hook: "Stop doing this one thing" }, posts: samplePosts, sample: "high" });
+    expect(score).toBe(100);
+  });
+  it("scores a below-average source lower than a viral one", () => {
+    const viral = computeIdeaConfidence({ idea: { source_post_index: 0, hook: "invented hook here" }, posts: samplePosts, sample: "moderate" });
+    const weak = computeIdeaConfidence({ idea: { source_post_index: 1, hook: "invented hook here" }, posts: samplePosts, sample: "moderate" });
+    expect(viral).toBeGreaterThan(weak);
+  });
+  it("clamps into 0–100", () => {
+    const score = computeIdeaConfidence({ idea: { source_post_index: 0, hook: "Stop doing this one thing" }, posts: samplePosts, sample: "high" });
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThanOrEqual(100);
+  });
+});
