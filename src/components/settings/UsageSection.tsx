@@ -160,6 +160,48 @@ export function UsageSection() {
           </div>
         )}
       </div>
+
+      {/* Credit history */}
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-ig">
+        <p className="text-sm font-semibold mb-4">Credit History</p>
+        {history.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              No credit activity yet — your grants, spends, and refunds will appear here.
+            </p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-border">
+            {history.map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {e.label}
+                    {e.subject && <span className="text-muted-foreground font-normal"> — {e.subject}</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(e.createdAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                    {" · "}
+                    {e.creditKind === "plan" ? "plan credits" : "purchased credits"}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 font-mono text-sm font-bold tabular-nums ${
+                    e.delta > 0 ? "text-status-success" : "text-foreground"
+                  }`}
+                >
+                  {e.delta > 0 ? `+${e.delta}` : e.delta}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
