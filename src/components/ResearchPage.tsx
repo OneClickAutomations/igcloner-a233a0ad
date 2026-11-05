@@ -198,6 +198,26 @@ export function ResearchPage() {
     } catch (e) { toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
+  async function retryAnalysis() {
+    if (!detail?.report?.id) return;
+    try {
+      await retryFn({ data: { id: detail.report.id } });
+      toast.success("Analysis complete — reused the existing sample");
+      await openReport(detail.report.id);
+      refresh();
+    } catch (e) { toast.error((e as Error).message); }
+  }
+  async function forceRefresh() {
+    if (!detail?.report) return;
+    setCreating(true);
+    try {
+      const { id } = await createFn({ data: { mode: detail.report.mode, subject: detail.report.subject, forceRefresh: true } });
+      toast.success("Fresh sample collected");
+      await refresh();
+      navigate({ to: "/research", search: { reportId: id } });
+    } catch (e) { toast.error((e as Error).message); }
+    setCreating(false);
+  }
 
   if (search.reportId) {
     return (
@@ -222,6 +242,9 @@ export function ResearchPage() {
         }}
         ideasBusy={ideasBusy}
         onGenerateIdeas={runIdeas}
+        onRetryAnalysis={retryAnalysis}
+        onForceRefresh={forceRefresh}
+        refreshBusy={creating}
         preferences={preferences}
         setPreferences={setPreferences}
         onGenerateCampaign={() => navigate({ to: "/calendar" })}
