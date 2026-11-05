@@ -190,42 +190,46 @@ export function ResearchPage() {
     const subject = tab === "niche" ? niche.trim() : tab === "competitor" ? competitor.trim() : topic.trim();
     if (!subject) { toast.error("Please enter a subject"); return; }
     setCreating(true);
+    setInsufficient(null);
     try {
       const { id } = await createFn({ data: { mode: tab, subject } });
       toast.success("Research report generated");
       await refresh();
       navigate({ to: "/research", search: { reportId: id } });
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setCreating(false);
   }
   async function runIdeas() {
     if (!detail?.report?.id) return;
     setIdeasBusy(true);
+    setInsufficient(null);
     try {
       const { ideas } = await ideasFn({ data: { id: detail.report.id, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
       setDetail({ ...detail, ideas });
       toast.success(`Generated ${ideas.length} content ideas`);
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
   async function retryAnalysis() {
     if (!detail?.report?.id) return;
+    setInsufficient(null);
     try {
       await retryFn({ data: { id: detail.report.id } });
       toast.success("Analysis complete — reused the existing sample");
       await openReport(detail.report.id);
       refresh();
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
   }
   async function forceRefresh() {
     if (!detail?.report) return;
     setCreating(true);
+    setInsufficient(null);
     try {
       const { id } = await createFn({ data: { mode: detail.report.mode, subject: detail.report.subject, forceRefresh: true } });
       toast.success("Fresh sample collected");
       await refresh();
       navigate({ to: "/research", search: { reportId: id } });
-    } catch (e) { toast.error((e as Error).message); }
+    } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setCreating(false);
   }
 
