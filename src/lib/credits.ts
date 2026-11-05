@@ -88,3 +88,6 @@ export function parseInsufficientCredits(err: unknown): InsufficientCreditsInfo 
   }
   return null;
 }
+
+/** Query key for the shared credit balance; invalidate after any credit move. */
+export const CREDIT_BALANCE_KEY = ["credit-balance"] as const;
