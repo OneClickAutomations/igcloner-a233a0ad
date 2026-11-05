@@ -1,6 +1,6 @@
 // Pure dashboard metric helpers — no DOM, no supabase. Unit-tested.
 
-export type DeltaKind = "up" | "down" | "flat" | "new";
+export type DeltaKind = "up" | "down" | "flat" | "new" | "none";
 
 export interface MonthDelta {
   current: number;
@@ -14,6 +14,10 @@ export interface MonthDelta {
 
 /** Month-over-month delta for a count metric. */
 export function monthDelta(current: number, previous: number): MonthDelta {
+  if (previous === 0 && current === 0) {
+    // No activity in either window: nothing to report, render no pill.
+    return { current, previous, pct: null, kind: "none", label: "" };
+  }
   if (previous === 0) {
     return {
       current,
