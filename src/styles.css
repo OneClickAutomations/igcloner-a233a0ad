@@ -402,7 +402,7 @@
     filter: blur(80px);
   }
   &:where(.dark *)::before {
-    opacity: 0.38;
+    opacity: 0.22;
   }
 }
 
