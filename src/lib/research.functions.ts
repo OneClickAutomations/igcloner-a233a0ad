@@ -81,24 +81,27 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
       postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: cfg.competitorPosts, onlyPostsNewerThan: cutoff }, token);
     }
     let merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
-    let filter = filterPostsByCutoff(merged, cutoff);
+    const filter = filterPostsByCutoff(merged, cutoff);
     let relaxed = false;
     // Relax rule: a weekly poster must not be stuck with a tiny sample.
     // ONE fallback scrape, no cutoff, smaller limit — then dedupe again.
+    // When it fires, the cutoff is ABANDONED and the older posts are kept:
+    // re-filtering the fallback would discard the very posts it was paid
+    // for (observed live: an infrequent poster ended with 0 posts).
     if (profile && !profile.private && filter.kept.length < COMPETITOR_RELAX_MIN_POSTS) {
       const fallback = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: COMPETITOR_RELAX_LIMIT }, token);
       merged = dedupePostsByShortCode([...merged, ...fallback]);
-      filter = filterPostsByCutoff(merged, cutoff);
       relaxed = true;
     }
-    const posts = filter.kept.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    const finalMerged = relaxed ? merged : filter.kept;
+    const posts = finalMerged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
     const cutoffMeta: CutoffMeta = {
       date: cutoff,
       windowDays: COMPETITOR_WINDOW_DAYS,
-      appliedAt: relaxed ? "code" : "both",
+      appliedAt: relaxed ? "none" : "both",
       relaxed,
       skipped: false,
-      droppedStale: filter.droppedStale,
+      droppedStale: relaxed ? 0 : filter.droppedStale,
     };
     return {
       subject: handle,
