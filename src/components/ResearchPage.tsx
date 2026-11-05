@@ -459,8 +459,16 @@ function ReportDetail({
   const rangeText = dateRange
     ? `, ${fmtDay(dateRange.earliest)} – ${fmtDay(dateRange.latest)}`
     : "";
+  const cutoffMeta = raw?.cutoff ?? null;
+  const cutoffClause = !cutoffMeta || cutoffMeta.appliedAt === "none"
+    ? cutoffMeta?.skipped
+      ? " Includes older posts because this topic has sparse recent activity."
+      : ""
+    : cutoffMeta.relaxed
+      ? " Includes older posts because this account posts infrequently."
+      : ` Posts from the last ${Math.round((cutoffMeta.windowDays ?? 180) / 30)} months only.`;
   const sampleLine = sampleSize > 0
-    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}. Sample confidence: ${confidence}.`
+    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}.${cutoffClause} Sample confidence: ${confidence}.`
     : null;
 
   async function handleRetry() {
@@ -570,8 +578,19 @@ function ReportDetail({
               </Button>
               <Button variant="outline" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
                 {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {ideas.length > 0 ? `Regenerate 50 Ideas — ${ACTION_COSTS.ideas} credits` : `Generate 50 Ideas — ${ACTION_COSTS.ideas} credits`}
+                {ideas.length > 0 ? `Regenerate 25 ideas — ${ACTION_COSTS.ideas} credits` : `Generate 25 ideas — ${ACTION_COSTS.ideas} credits`}
               </Button>
+              {ideas.length > 0 && ideas.length < MAX_IDEAS_PER_REPORT && (
+                <Button variant="outline" onClick={onAppendIdeas} disabled={ideasBusy} className="gap-2">
+                  {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add 25 more — {ACTION_COSTS.ideas} credits
+                </Button>
+              )}
+              {ideas.length >= MAX_IDEAS_PER_REPORT && (
+                <Button variant="outline" disabled className="gap-2" title={`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`}>
+                  <Plus className="h-4 w-4" /> Idea limit reached ({MAX_IDEAS_PER_REPORT})
+                </Button>
+              )}
             </div>
           </div>
 
