@@ -109,6 +109,8 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   const posts: any[] = Array.isArray(signals?.posts) ? signals.posts : [];
   const profile = signals?.profile ?? null;
   const postsAnalyzed = posts.length;
+  const confidence = sampleConfidence(postsAnalyzed);
+  const dateRange = signals?.dateRange ?? null;
 
   const system = `You are IGCloner's senior content intelligence analyst.
 You receive raw Instagram scrape data and produce a complete, precise intelligence report.
@@ -121,11 +123,17 @@ CRITICAL DATA RULES:
 3. Best posting times MUST be derived from timestamps of highest-performing posts (UTC)
 4. Every hook pattern MUST be extracted from ACTUAL caption opening lines, quoted verbatim — never invented
 5. Content format distribution MUST be counted from actual post types in the data
-6. Return ONLY valid JSON. No markdown fences, no explanation.`;
+6. Return ONLY valid JSON. No markdown fences, no explanation.
+
+SAMPLE HONESTY RULES:
+7. When sample confidence is "low" or "very low", phrase pillar and format findings as observed tendencies in the sampled posts — never as the account's strategy.
+8. Never assert posting-time recommendations from fewer than 10 timestamped posts; say "Not available" instead.`;
 
   const user = `SUBJECT: ${subject} (mode: ${mode})
 PROFILE: ${JSON.stringify(profile)}
 POSTS ANALYZED: ${postsAnalyzed}
+SAMPLE CONFIDENCE: ${confidence}
+SAMPLE DATE RANGE: ${dateRange ? `${dateRange.earliest} to ${dateRange.latest}` : "Not available"}
 POSTS DATA:
 ${JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p })))}
 
