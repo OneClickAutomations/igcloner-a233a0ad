@@ -1,10 +1,10 @@
 // Claude uses the gateway's native Messages stream, consumed server-side.
-export async function generateIntelJson(system: string, prompt: string) {
+export async function generateIntelJson(system: string, prompt: string, opts?: { maxTokens?: number }) {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("AI connection is not configured.");
   const response = await fetch("https://ai.gateway.lovable.dev/v1/messages", {
     method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-    body: JSON.stringify({ model: "anthropic/claude-sonnet-5", max_tokens: 24000, stream: true, system, messages: [{ role: "user", content: prompt }] }),
+    body: JSON.stringify({ model: "anthropic/claude-sonnet-5", max_tokens: opts?.maxTokens ?? 24000, stream: true, system, messages: [{ role: "user", content: prompt }] }),
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({})) as any;
@@ -23,7 +23,7 @@ export async function generateIntelJson(system: string, prompt: string) {
       if (event.type === "error") throw new Error(event.error?.message ?? "AI generation failed.");
       if (event.delta?.type === "text_delta") text += event.delta.text;
       if (event.delta?.stop_reason === "refusal") throw new Error("The AI declined this request.");
-      if (event.delta?.stop_reason === "max_tokens") throw new Error("The report exceeded the AI output budget. No incomplete report was saved.");
+      if (event.delta?.stop_reason === "max_tokens") throw new Error("The report exceeded the AI output budget. No incomplete report was saved — you can retry the analysis without paying for a new scrape.");
       if (event.type === "message_stop") stopped = true;
     }
     if (done) break;

@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793849471466,
+      "tag": "0000_add_predicted_virality_basis_to_content_ideas",
+      "breakpoints": true
+    }
+  ]
+}

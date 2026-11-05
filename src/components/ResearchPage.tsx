@@ -84,10 +84,11 @@ import {
   deleteResearchReport,
   generateContentIdeas,
   saveIdeaToPlanner,
+  retryResearchAnalysis,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IDEA_CATEGORIES } from "@/lib/intel-analytics";
+import { IDEA_CATEGORIES, sampleConfidence } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
 import { exportResearchPdf } from "@/lib/research-pdf";
 
@@ -142,6 +143,7 @@ export function ResearchPage() {
   const saveFn = useServerFn(toggleSaveResearch);
   const delFn = useServerFn(deleteResearchReport);
   const ideasFn = useServerFn(generateContentIdeas);
+  const retryFn = useServerFn(retryResearchAnalysis);
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -196,6 +198,26 @@ export function ResearchPage() {
     } catch (e) { toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
+  async function retryAnalysis() {
+    if (!detail?.report?.id) return;
+    try {
+      await retryFn({ data: { id: detail.report.id } });
+      toast.success("Analysis complete — reused the existing sample");
+      await openReport(detail.report.id);
+      refresh();
+    } catch (e) { toast.error((e as Error).message); }
+  }
+  async function forceRefresh() {
+    if (!detail?.report) return;
+    setCreating(true);
+    try {
+      const { id } = await createFn({ data: { mode: detail.report.mode, subject: detail.report.subject, forceRefresh: true } });
+      toast.success("Fresh sample collected");
+      await refresh();
+      navigate({ to: "/research", search: { reportId: id } });
+    } catch (e) { toast.error((e as Error).message); }
+    setCreating(false);
+  }
 
   if (search.reportId) {
     return (
@@ -220,6 +242,9 @@ export function ResearchPage() {
         }}
         ideasBusy={ideasBusy}
         onGenerateIdeas={runIdeas}
+        onRetryAnalysis={retryAnalysis}
+        onForceRefresh={forceRefresh}
+        refreshBusy={creating}
         preferences={preferences}
         setPreferences={setPreferences}
         onGenerateCampaign={() => navigate({ to: "/calendar" })}
@@ -334,7 +359,7 @@ export function ResearchPage() {
 // ═══════════════════════════════════════════════════════════════════
 
 function ReportDetail({
-  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -347,6 +372,9 @@ function ReportDetail({
   onGenerateCampaign: () => void;
   preferences: { goal: string; niche: string; toneOfVoice: string; keywords: string };
   setPreferences: (v: { goal: string; niche: string; toneOfVoice: string; keywords: string }) => void;
+  onRetryAnalysis: () => Promise<void>;
+  onForceRefresh: () => Promise<void>;
+  refreshBusy: boolean;
 }) {
   // ── Content Opportunity Engine local state ──────────────────────────
   const saveIdeaFn = useServerFn(saveIdeaToPlanner);
@@ -354,6 +382,7 @@ function ReportDetail({
   const [savingIdea, setSavingIdea] = useState<string | null>(null);
   const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
   const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("virality");
+  const [retrying, setRetrying] = useState(false);
 
   if (loading || !detail) {
     return (
@@ -369,6 +398,26 @@ function ReportDetail({
   const fmt  = (dna?.contentFormatDistribution ?? {}) as any;
   const limited = !!report?.limited_data || !!dna.reportFlags?.limitedData;
   const postsAnalyzed = Number(report?.posts_analyzed ?? dna.profileSummary?.postsAnalyzed ?? perf?.postsAnalyzed ?? 0);
+
+  // ── Sample provenance (stored on the scrape, computed in code) ──────
+  const raw = (report?.raw_data ?? {}) as any;
+  const sampleSize = Number(raw?.sampleSize ?? postsAnalyzed) || 0;
+  const confidence = sampleConfidence(sampleSize);
+  const sources: string[] = Array.isArray(raw?.sources) ? raw.sources : [];
+  const dateRange = raw?.dateRange ?? null;
+  const reuse = raw?.sampleReuse ?? null;
+  const hasRawPosts = Array.isArray(raw?.posts) && raw.posts.length > 0;
+  const rangeText = dateRange
+    ? `, ${fmtDay(dateRange.earliest)} – ${fmtDay(dateRange.latest)}`
+    : "";
+  const sampleLine = sampleSize > 0
+    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}. Sample confidence: ${confidence}.`
+    : null;
+
+  async function handleRetry() {
+    setRetrying(true);
+    try { await onRetryAnalysis(); } finally { setRetrying(false); }
+  }
 
   async function handleSaveIdea(idea: any) {
     if (savedIdeas.has(idea.id)) return;
@@ -437,15 +486,33 @@ function ReportDetail({
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="uppercase tracking-wide">{report.mode}</Badge>
-              <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" /> Ready
-              </Badge>
+              {report.status === "failed" ? (
+                <Badge variant="outline" className="gap-1 text-rose-600 dark:text-rose-400">
+                  <TriangleAlert className="h-3 w-3" /> Failed
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" /> Ready
+                </Badge>
+              )}
               {topPillar && <Badge variant="outline" className="gap-1"><Target className="h-3 w-3" /> {topPillar}</Badge>}
             </div>
             <h1 className="mb-3 text-3xl font-bold tracking-tight lg:text-4xl">{report.subject}</h1>
             {dna.executiveSummary && (
               <p className="max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
                 {dna.executiveSummary}
+              </p>
+            )}
+            {sampleLine && (
+              <p className="mt-3 text-xs text-muted-foreground">{sampleLine}</p>
+            )}
+            {reuse && (
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>Sample reused from a scrape {hoursAgo(reuse.originalCollectedAt)}.</span>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onForceRefresh} disabled={refreshBusy}>
+                  {refreshBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Fetch fresh data
+                </Button>
               </p>
             )}
             <div className="mt-6 flex flex-wrap gap-2">
@@ -462,6 +529,37 @@ function ReportDetail({
           <OpportunityGauge score={score} />
         </div>
       </Card>
+
+      {/* ── FAILED ANALYSIS BANNER ──────────────────────────────── */}
+      {report.status === "failed" && (
+        <Card className="mb-6 flex items-start gap-3 border-rose-500/40 bg-rose-500/5 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Analysis failed</p>
+            <p className="text-xs text-muted-foreground">{report.error_message ?? "Something went wrong while analyzing this report."}</p>
+            {hasRawPosts ? (
+              <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={handleRetry} disabled={retrying}>
+                {retrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Retry analysis — reuses the data already collected
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={onForceRefresh} disabled={refreshBusy}>
+                {refreshBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Run again with a fresh scrape
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* ── SMALL SAMPLE CAUTION ────────────────────────────────── */}
+      {sampleSize > 0 && (confidence === "low" || confidence === "very low") && report.status !== "failed" && (
+        <div className="mb-6">
+          <InsightCallout tone="amber" icon={TriangleAlert} title="Small sample">
+            Only {sampleSize} posts were collected, so the percentages in this report are indicative only — treat them as observed tendencies in the sample, not this account's strategy.
+          </InsightCallout>
+        </div>
+      )}
 
       {/* ── LIMITED DATA BANNER ─────────────────────────────────── */}
       {limited && (
@@ -825,6 +923,18 @@ function capitalize(s: string): string {
   if (!s) return "";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+function fmtDay(iso?: string | null): string {
+  const d = new Date(iso ?? "");
+  if (!Number.isFinite(d.getTime())) return "unknown date";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+}
+function hoursAgo(iso?: string | null): string {
+  const ms = Date.now() - new Date(iso ?? "").getTime();
+  if (!Number.isFinite(ms) || ms < 0) return "recently";
+  const h = Math.floor(ms / 3_600_000);
+  if (h < 1) return "less than an hour ago";
+  return h === 1 ? "1 hour ago" : `${h} hours ago`;
+}
 function engagementTone(bench?: string): Tone {
   const b = String(bench ?? "").toLowerCase();
   if (b.includes("above")) return "green";
@@ -1083,6 +1193,12 @@ function IdeaCard({ idea, saved, saving, onSave, report }: { idea: any; saved: b
   return <Card className="flex min-w-0 flex-col gap-4 rounded-lg p-4">
     <div className="flex flex-wrap items-center gap-2"><Badge variant="secondary">Idea {idea.idea_number} · {idea.format}</Badge><span className="text-xs text-muted-foreground">{idea.production_difficulty}</span></div>
     <ScoreBar label="Predicted viral score" value={idea.virality_score} tone="green" />
+    <div className="flex items-center gap-3">
+      <ConfidenceRing value={idea.confidence_score} />
+      <p className="text-xs leading-snug text-muted-foreground">
+        Confidence — computed from source-post performance and sample size, not a prediction of your results.
+      </p>
+    </div>
     <blockquote className="border-l-2 border-accent-primary pl-3 whitespace-pre-line break-words text-base font-semibold">{idea.hook}</blockquote>
     <p className="break-words text-sm"><b>Concept: </b>{idea.description}</p>
     <p className="break-words text-sm text-muted-foreground"><b className="text-foreground">Why it works: </b>{idea.why_it_works}</p>

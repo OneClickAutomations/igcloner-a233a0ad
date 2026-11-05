@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { normalizeIntelPost, groundIntelReport, validateIntelIdeas } from "@/lib/intel-analytics";
+import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
 import { generateIntelJson } from "@/lib/intel-ai.server";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -42,18 +42,36 @@ async function apifyRun(actor: string, input: unknown, token: string): Promise<a
   return Array.isArray(data) ? data : [];
 }
 
+// Real sample provenance, stored on the report so the UI and the AI both see it.
+function buildSampleMeta(posts: any[], sources: string[]) {
+  const times = posts
+    .map((p) => new Date(p.timestamp).getTime())
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  return {
+    sampleSize: posts.length,
+    sources,
+    collectedAt: new Date().toISOString(),
+    dateRange: times.length
+      ? { earliest: new Date(times[0]).toISOString(), latest: new Date(times[times.length - 1]).toISOString() }
+      : null,
+  };
+}
+
 async function collectSignals(mode: "niche" | "competitor" | "topic", subject: string, token: string) {
   if (mode === "competitor") {
     // Handle the handle: strip @ / URL fragments.
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
     const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    let scrapedPosts = profile?.latestPosts ?? [];
-    // Profile actor frequently omits latestPosts despite a public post count.
-    if (!scrapedPosts.length && profile && !profile.private) {
-      scrapedPosts = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 12 }, token);
+    // Always run the posts scrape (60) and merge with whatever latestPosts
+    // returned — 12 posts cannot support the precision this report claims.
+    let postsCall: any[] = [];
+    if (profile && !profile.private) {
+      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 60 }, token);
     }
-    const posts = scrapedPosts.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    const merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
+    const posts = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
     return {
       subject: handle,
       profile: profile
@@ -72,19 +90,18 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
           }
         : null,
       posts,
+      ...buildSampleMeta(posts, [`@${handle}`]),
     };
   }
 
-  // Niche / topic — hashtag scrape to surface real, currently-performing posts.
-  const term = subject
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "")
-    .slice(0, 40);
-  const items = await apifyRun("apify~instagram-hashtag-scraper", {
-    hashtags: [term],
-    resultsLimit: 40,
-  }, token);
-  return { subject, profile: null, posts: items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]).filter(p => p.caption != null || p.type != null).map(normalizeIntelPost) };
+  // Niche / topic — up to 3 derived hashtags, 30 posts each, merged + deduped.
+  const tags = deriveHashtagQueries(subject);
+  const items = tags.length
+    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: 30 }, token)
+    : [];
+  const merged = dedupePostsByShortCode(items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]));
+  const posts = merged.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
+  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`)) };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
@@ -92,6 +109,8 @@ async function generateDnaReport(mode: string, subject: string, signals: any) {
   const posts: any[] = Array.isArray(signals?.posts) ? signals.posts : [];
   const profile = signals?.profile ?? null;
   const postsAnalyzed = posts.length;
+  const confidence = sampleConfidence(postsAnalyzed);
+  const dateRange = signals?.dateRange ?? null;
 
   const system = `You are IGCloner's senior content intelligence analyst.
 You receive raw Instagram scrape data and produce a complete, precise intelligence report.
@@ -104,11 +123,17 @@ CRITICAL DATA RULES:
 3. Best posting times MUST be derived from timestamps of highest-performing posts (UTC)
 4. Every hook pattern MUST be extracted from ACTUAL caption opening lines, quoted verbatim — never invented
 5. Content format distribution MUST be counted from actual post types in the data
-6. Return ONLY valid JSON. No markdown fences, no explanation.`;
+6. Return ONLY valid JSON. No markdown fences, no explanation.
+
+SAMPLE HONESTY RULES:
+7. When sample confidence is "low" or "very low", phrase pillar and format findings as observed tendencies in the sampled posts — never as the account's strategy.
+8. Never assert posting-time recommendations from fewer than 10 timestamped posts; say "Not available" instead.`;
 
   const user = `SUBJECT: ${subject} (mode: ${mode})
 PROFILE: ${JSON.stringify(profile)}
 POSTS ANALYZED: ${postsAnalyzed}
+SAMPLE CONFIDENCE: ${confidence}
+SAMPLE DATE RANGE: ${dateRange ? `${dateRange.earliest} to ${dateRange.latest}` : "Not available"}
 POSTS DATA:
 ${JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p })))}
 
@@ -183,7 +208,9 @@ IMPORTANT:
 - If posts array is empty, still return the JSON but set pillars to [] and mark performanceMetrics numeric fields to 0.
 - Legacy compact keys (executiveSummary, audienceProfile, contentPillars, commonHooks, captionStructure, etc.) MUST be filled and stay consistent with the detailed ones.`;
 
-  const dna = groundIntelReport(await generateIntelJson(system, user), signals);
+  // The full DNA schema plus legacy keys can exceed 24k tokens on larger
+  // samples; 32k matches the ideas call and keeps retries worthwhile.
+  const dna = groundIntelReport(await generateIntelJson(system, user, { maxTokens: 32000 }), signals);
   const score =
     Number(dna?.opportunityScore ?? dna?.competitivePosition?.opportunityScore ?? 0) || 0;
   return { dna, score, postsAnalyzed };
@@ -196,6 +223,7 @@ IMPORTANT:
 const CreateInput = z.object({
   mode: z.enum(["niche", "competitor", "topic"]),
   subject: z.string().min(1).max(200),
+  forceRefresh: z.boolean().optional(),
 });
 
 export const createResearchReport = createServerFn({ method: "POST" })
@@ -211,14 +239,47 @@ export const createResearchReport = createServerFn({ method: "POST" })
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
 
     try {
-      const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
-      let apifyToken = process.env.APIFY_TOKEN;
-      if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
-        const { decryptApiKey } = await import("@/lib/encryption.server");
-        apifyToken = decryptApiKey(keyRow.encrypted_key);
+      // Reuse a scrape this user already paid for: same mode + subject
+      // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
+      // Scoped to user_id so samples never leak across accounts.
+      let signals: any = null;
+      if (!data.forceRefresh) {
+        const { data: candidates } = await supabase
+          .from("research_reports")
+          .select("id, raw_data, created_at")
+          .eq("user_id", userId)
+          .eq("mode", data.mode)
+          .ilike("subject", data.subject.trim())
+          .not("raw_data", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const reusable = (candidates ?? []).find(
+          (c: any) => c.id !== row.id
+            && Array.isArray(c.raw_data?.posts)
+            && isWithinReuseWindow(c.created_at),
+        );
+        if (reusable) {
+          const rawData = reusable.raw_data as any;
+          signals = {
+            ...rawData,
+            sampleReuse: {
+              reusedFromReportId: reusable.id,
+              originalCollectedAt: rawData.collectedAt ?? reusable.created_at,
+            },
+          };
+        }
       }
-      if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
-      const signals = await collectSignals(data.mode, data.subject, apifyToken);
+
+      if (!signals) {
+        const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
+        let apifyToken = process.env.APIFY_TOKEN;
+        if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
+          const { decryptApiKey } = await import("@/lib/encryption.server");
+          apifyToken = decryptApiKey(keyRow.encrypted_key);
+        }
+        if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
+        signals = await collectSignals(data.mode, data.subject, apifyToken);
+      }
       const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
       const limited = postsCount === 0;
       await supabase
@@ -256,6 +317,39 @@ export const createResearchReport = createServerFn({ method: "POST" })
         .from("research_reports")
         .update({ status: "failed", error_message: msg })
         .eq("id", row.id);
+      throw new Error(msg);
+    }
+  });
+
+// Re-run only the AI analysis on data already scraped — no new Apify call,
+// so a failed analysis never re-charges for the same sample.
+export const retryResearchAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: report, error } = await supabase
+      .from("research_reports")
+      .select("id, mode, subject, raw_data")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !report) throw new Error("Report not found");
+    const signals = report.raw_data as any;
+    if (!signals || !Array.isArray(signals.posts)) {
+      throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
+    }
+    await supabase.from("research_reports").update({ status: "analyzing", error_message: null }).eq("id", report.id);
+    try {
+      const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
+      await supabase
+        .from("research_reports")
+        .update({ status: "ready", dna_report: dna, opportunity_score: score })
+        .eq("id", report.id);
+      return { id: report.id };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
       throw new Error(msg);
     }
   });
@@ -400,7 +494,10 @@ ${shape}
 
 Return a flat JSON array of 50 objects. Nothing else.`;
 
-    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt), (report.raw_data as any)?.posts ?? []);
+    const posts = (report.raw_data as any)?.posts ?? [];
+    // 50 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
+    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts);
+    const sample = sampleConfidence(posts.length);
 
     // Wipe prior ideas so re-runs don't duplicate.
     const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
@@ -428,7 +525,10 @@ Return a flat JSON array of 50 objects. Nothing else.`;
       business_value_score: Number(i.business_value_score) || 0,
       audience_interest_score: Number(i.audience_interest_score) || 0,
       production_time_score: Number(i.production_time_score) || 0,
-      confidence_score: Number(i.confidence_score) || 0,
+      // Confidence is computed from evidence, not the model's guess; the
+      // model's number is kept only as a debugging basis.
+      confidence_score: computeIdeaConfidence({ idea: i, posts, sample }),
+      predicted_virality_basis: Number(i.confidence_score) || null,
     }));
     const { data: inserted, error: insErr } = await supabase
       .from("content_ideas")

@@ -3,6 +3,136 @@ import { z } from "zod";
 export const IDEA_CATEGORIES = ["Steal the Frame", "Exploit the Gaps", "Amplify What Works", "Original Authority", "Viral Formats"] as const;
 const metric = (v: unknown): number | null => v == null || v === "" || !Number.isFinite(Number(v)) || Number(v) < 0 ? null : Number(v);
 const round = (n: number) => Math.round(n * 100) / 100;
+
+// ── Sample honesty ─────────────────────────────────────────────────
+// How much trust a percentage deserves, computed in code — never by the AI.
+export type SampleConfidence = "high" | "moderate" | "low" | "very low" | "none";
+export function sampleConfidence(n: number): SampleConfidence {
+  if (n >= 40) return "high";
+  if (n >= 20) return "moderate";
+  if (n >= 8) return "low";
+  if (n > 0) return "very low";
+  return "none";
+}
+
+// Report shares only at the precision the sample supports: below 8 posts a
+// 1-in-5 post is not "20.00%" of a strategy, so return null and let the UI
+// show raw counts; below 30, whole integers; otherwise two decimals.
+export function shareFor(count: number, n: number): number | null {
+  if (n < 8) return null;
+  const pct = (count / n) * 100;
+  return n < 30 ? Math.round(pct) : round(pct);
+}
+
+// ── Query derivation & dedupe ──────────────────────────────────────
+const HASHTAG_STOPWORDS = new Set([
+  "the", "and", "for", "with", "your", "you", "how", "what", "tips",
+  "guide", "best", "from", "that", "this", "into", "over", "about",
+]);
+// Up to 3 hashtags: the full de-spaced term plus each meaningful word.
+export function deriveHashtagQueries(subject: string): string[] {
+  const full = subject.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 40);
+  const words = subject
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 3 && !HASHTAG_STOPWORDS.has(w));
+  return [...new Set([full, ...words].filter(Boolean))].slice(0, 3);
+}
+
+// Merge post lists from several scrapes; identity is shortCode, then url,
+// then a caption+timestamp fingerprint for items missing both.
+export function dedupePostsByShortCode<T extends { shortCode?: unknown; url?: unknown; caption?: unknown; timestamp?: unknown }>(posts: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const p of posts) {
+    const key = p.shortCode != null ? `sc:${p.shortCode}`
+      : p.url != null ? `url:${p.url}`
+      : `ct:${String(p.caption ?? "").slice(0, 80)}|${String(p.timestamp ?? "")}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+  }
+  return out;
+}
+
+// ── Scrape reuse window ────────────────────────────────────────────
+export function isWithinReuseWindow(createdAt: string | Date, now: Date = new Date(), windowHours = 12): boolean {
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  const age = now.getTime() - t;
+  return age >= 0 && age < windowHours * 3_600_000;
+}
+
+// ── Idea confidence, computed from evidence — not model guesses ────
+// Each weight is named so the formula can be tuned without archaeology.
+export const CONFIDENCE_WEIGHTS = {
+  base: 20,            // every idea starts here; the rest must be earned from evidence
+  citedSource: 25,     // the idea cites a real scraped source post
+  sourceViral: 30,     // that source post hit >= 3x the account's average engagement
+  sourceAboveAvg: 20,  // source post performed above the account average
+  sourceBelowAvg: 8,   // source post exists but underperformed the average
+  sampleHigh: 15,      // report sample confidence: high
+  sampleModerate: 10,  // report sample confidence: moderate
+  sampleLow: 5,        // report sample confidence: low
+  sampleVeryLow: 2,    // report sample confidence: very low
+  sampleNone: 0,       // report sample confidence: none
+  hookFromCaption: 10, // the hook is derived from a real caption line of the source post
+} as const;
+// Ideas without a cited source post can never look well-evidenced.
+export const UNEVIDENCED_CONFIDENCE_CAP = 45;
+
+const SAMPLE_WEIGHT: Record<SampleConfidence, number> = {
+  high: CONFIDENCE_WEIGHTS.sampleHigh,
+  moderate: CONFIDENCE_WEIGHTS.sampleModerate,
+  low: CONFIDENCE_WEIGHTS.sampleLow,
+  "very low": CONFIDENCE_WEIGHTS.sampleVeryLow,
+  none: CONFIDENCE_WEIGHTS.sampleNone,
+};
+
+function postEngagement(p: any): number | null {
+  const likes = metric(p?.likesCount);
+  const comments = metric(p?.commentsCount);
+  return likes != null && comments != null ? likes + comments : null;
+}
+
+function hookFromCaptionLine(hook: unknown, caption: unknown): boolean {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const h = norm(String(hook ?? ""));
+  if (h.length < 12) return false;
+  return String(caption ?? "")
+    .split(/\n/)
+    .map(norm)
+    .some((line) => line.length >= 12 && (h.includes(line) || line.includes(h)));
+}
+
+export function computeIdeaConfidence(opts: {
+  idea: { source_post_index?: number | null; hook?: unknown };
+  posts: any[];
+  sample: SampleConfidence;
+}): number {
+  const { idea, posts, sample } = opts;
+  const idx = idea.source_post_index;
+  const source = idx != null && Number.isInteger(idx) ? posts[idx] : null;
+
+  let score = CONFIDENCE_WEIGHTS.base + SAMPLE_WEIGHT[sample];
+
+  if (source) {
+    score += CONFIDENCE_WEIGHTS.citedSource;
+    const eng = postEngagement(source);
+    const engagements = posts.map(postEngagement).filter((v): v is number => v != null);
+    const avg = engagements.length ? engagements.reduce((s, v) => s + v, 0) / engagements.length : null;
+    if (eng != null && avg != null && avg > 0) {
+      score += eng >= 3 * avg ? CONFIDENCE_WEIGHTS.sourceViral
+        : eng >= avg ? CONFIDENCE_WEIGHTS.sourceAboveAvg
+        : CONFIDENCE_WEIGHTS.sourceBelowAvg;
+    }
+    if (hookFromCaptionLine(idea.hook, source.caption)) score += CONFIDENCE_WEIGHTS.hookFromCaption;
+  } else {
+    score = Math.min(score, UNEVIDENCED_CONFIDENCE_CAP);
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
 export function normalizeIntelPost(p: any) {
   return {
     type: p.type ?? p.productType ?? "Unknown", timestamp: p.timestamp ?? null,
@@ -52,7 +182,8 @@ export function calculateIntelMetrics(posts: any[], followers: unknown) {
       viralPostCount: avg == null ? null : avg > 0 ? ranked.filter(p => Number(p.engagement) >= 3*avg).length : 0,
       viralThreshold: "posts with 3x or more avg engagement", engagementBenchmark: "Not available — no verified niche benchmark supplied",
     },
-    contentFormatDistribution: { imagePercent: n ? round(image/n*100) : null, reelPercent: n ? round(reels.length/n*100) : null, carouselPercent: n ? round(carousel/n*100) : null, unknownPercent: n ? round((n-image-reels.length-carousel)/n*100) : null, dominantFormat: n ? formats[0]?.name : "Not available" },
+    contentFormatDistribution: { imagePercent: n ? shareFor(image, n) : null, reelPercent: n ? shareFor(reels.length, n) : null, carouselPercent: n ? shareFor(carousel, n) : null, unknownPercent: n ? shareFor(n-image-reels.length-carousel, n) : null, dominantFormat: n ? formats[0]?.name : "Not available" },
+    sampleSize: n, sampleConfidence: sampleConfidence(n),
     topPosts: ranked.slice(0,3), topPostTimestamps: topTimes,
     rawDataSummary: { postsWithZeroLikes: n ? likes.filter(v => v === 0).length : null, postsWithZeroComments: n ? comments.filter(v => v === 0).length : null, dataQualityNote: !n ? "No posts scraped" : !complete ? "Some likes or comments are unavailable; aggregate engagement cannot be calculated." : "Likes and comments available for all analyzed posts. Views, saves, shares, visual evidence, and niche benchmarks may be unavailable." },
   };
@@ -80,11 +211,13 @@ export function groundIntelReport(dna: any, signals: any) {
     const indices: number[] = (Array.isArray(p.postIndices) ? p.postIndices : []).filter((i: number) => Number.isInteger(i) && i >= 0 && i < posts.length && !used.has(i));
     indices.forEach(i => used.add(i));
     const best = indices.map(i => posts[i]).sort((a,b) => (Number(b.likesCount)+Number(b.commentsCount))-(Number(a.likesCount)+Number(a.commentsCount)))[0];
-    return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share: posts.length ? round(indices.length/posts.length*100) : 0, percentage: posts.length ? round(indices.length/posts.length*100) : 0, topPerformingExample: best?.caption ?? "Not available" };
+    const share = shareFor(indices.length, posts.length);
+    return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share, percentage: share, topPerformingExample: best?.caption ?? "Not available" };
   }).filter((p: any) => p.postCount > 0);
   if (!legacyPillars) {
     const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
-    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
+    const share = shareFor(unclassified.length, posts.length);
+    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share, percentage: share, topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
   }
   const rawProvenHooks: any[] = dna.hookAnalysis?.provenHooks ?? [];
   // Legacy reports store hooks without postIndex evidence; keep them as written.
