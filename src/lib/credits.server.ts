@@ -29,8 +29,8 @@ export async function debitCredits(
     p_user_id: userId,
     p_amount: amount,
     p_reason: reason,
-    p_entity_type: entityType ?? null,
-    p_entity_id: entityId ?? null,
+      p_entity_type: entityType ?? undefined,
+      p_entity_id: entityId ?? undefined,
   });
   if (error) throw new Error(`Credit debit failed: ${error.message}`);
   const result = data as unknown as DebitResult;
