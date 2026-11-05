@@ -42,7 +42,7 @@ describe("filterPostsByCutoff", () => {
     expect(r.droppedStale).toBe(1);
   });
   it("keeps posts with missing or invalid timestamps and counts them separately", () => {
-    const noTs = { caption: "no timestamp" };
+    const noTs: { timestamp?: unknown; caption: string } = { caption: "no timestamp" };
     const badTs = { timestamp: "not-a-date", caption: "bad" };
     const r = filterPostsByCutoff([noTs, badTs], cutoff);
     expect(r.kept).toHaveLength(2);

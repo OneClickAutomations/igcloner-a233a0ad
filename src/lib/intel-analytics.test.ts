@@ -222,6 +222,6 @@ describe("toPromptPost lean serialization", () => {
     const report = groundIntelReport({ hookAnalysis: { provenHooks: [{ postIndex: 11, actualOpeningLine: "Invented" }] } }, { posts: stored, profile: { followersCount: 1000 } });
     expect(report.hookAnalysis.provenHooks[0].sourceUrl).toBe("https://www.instagram.com/p/post11/");
     const metrics = calculateIntelMetrics(stored, 1000).performanceMetrics;
-    expect(metrics.highestLikedPost.url).toBe("https://www.instagram.com/p/post11/");
+    expect(metrics.highestLikedPost?.url).toBe("https://www.instagram.com/p/post11/");
   });
 });
