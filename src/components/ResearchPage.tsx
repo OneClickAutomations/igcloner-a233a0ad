@@ -399,6 +399,26 @@ function ReportDetail({
   const limited = !!report?.limited_data || !!dna.reportFlags?.limitedData;
   const postsAnalyzed = Number(report?.posts_analyzed ?? dna.profileSummary?.postsAnalyzed ?? perf?.postsAnalyzed ?? 0);
 
+  // ── Sample provenance (stored on the scrape, computed in code) ──────
+  const raw = (report?.raw_data ?? {}) as any;
+  const sampleSize = Number(raw?.sampleSize ?? postsAnalyzed) || 0;
+  const confidence = sampleConfidence(sampleSize);
+  const sources: string[] = Array.isArray(raw?.sources) ? raw.sources : [];
+  const dateRange = raw?.dateRange ?? null;
+  const reuse = raw?.sampleReuse ?? null;
+  const hasRawPosts = Array.isArray(raw?.posts) && raw.posts.length > 0;
+  const rangeText = dateRange
+    ? `, ${fmtDay(dateRange.earliest)} – ${fmtDay(dateRange.latest)}`
+    : "";
+  const sampleLine = sampleSize > 0
+    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}. Sample confidence: ${confidence}.`
+    : null;
+
+  async function handleRetry() {
+    setRetrying(true);
+    try { await onRetryAnalysis(); } finally { setRetrying(false); }
+  }
+
   async function handleSaveIdea(idea: any) {
     if (savedIdeas.has(idea.id)) return;
     setSavingIdea(idea.id);
