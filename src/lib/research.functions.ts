@@ -257,11 +257,12 @@ export const createResearchReport = createServerFn({ method: "POST" })
             && isWithinReuseWindow(c.created_at),
         );
         if (reusable) {
+          const rawData = reusable.raw_data as any;
           signals = {
-            ...reusable.raw_data,
+            ...rawData,
             sampleReuse: {
               reusedFromReportId: reusable.id,
-              originalCollectedAt: reusable.raw_data.collectedAt ?? reusable.created_at,
+              originalCollectedAt: rawData.collectedAt ?? reusable.created_at,
             },
           };
         }
