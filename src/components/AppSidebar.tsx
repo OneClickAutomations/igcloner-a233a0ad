@@ -27,11 +27,16 @@ const items = [
 ] as const;
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const navigate = useNavigate();
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p || currentPath.startsWith(p + "/");
+  // Close the mobile sheet when a destination is picked; the Sheet's own
+  // slide-out transition plays while the page navigates underneath.
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -53,6 +58,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link
                       to={item.url}
+                      onClick={closeMobile}
                       className={`flex items-center gap-2.5 rounded-xl transition-colors ${
                         isActive(item.url)
                           ? "nav-active font-semibold"
@@ -84,6 +90,7 @@ export function AppSidebar() {
           size="sm"
           className="justify-start gap-2 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
           onClick={async () => {
+            closeMobile();
             await supabase.auth.signOut();
             navigate({ to: "/" });
           }}
