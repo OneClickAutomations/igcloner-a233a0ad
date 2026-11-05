@@ -101,9 +101,9 @@ describe("deriveHashtagQueries", () => {
   it("drops stopwords and short words", () => {
     expect(deriveHashtagQueries("the best home workouts")).toEqual(["thebesthomeworkouts", "home", "workouts"]);
   });
-  it("returns a single tag for one-word subjects and dedupes repeats", () => {
+  it("returns a single tag for one-word subjects and dedupes repeated words", () => {
     expect(deriveHashtagQueries("SaaS")).toEqual(["saas"]);
-    expect(deriveHashtagQueries("travel travel")).toEqual(["travel"]);
+    expect(deriveHashtagQueries("home workout home")).toEqual(["homeworkouthome", "home", "workout"]);
   });
 });
 
@@ -143,9 +143,10 @@ describe("computeIdeaConfidence", () => {
     expect(score).toBe(CONFIDENCE_WEIGHTS.base + CONFIDENCE_WEIGHTS.sampleVeryLow);
     expect(score).toBeLessThanOrEqual(UNEVIDENCED_CONFIDENCE_CAP);
   });
-  it("caps unevidenced ideas even with a high-confidence sample", () => {
+  it("keeps unevidenced ideas low even with a high-confidence sample", () => {
     const score = computeIdeaConfidence({ idea: { source_post_index: null, hook: "A brand new invented hook line" }, posts: samplePosts, sample: "high" });
-    expect(score).toBe(UNEVIDENCED_CONFIDENCE_CAP);
+    expect(score).toBe(CONFIDENCE_WEIGHTS.base + CONFIDENCE_WEIGHTS.sampleHigh);
+    expect(score).toBeLessThanOrEqual(UNEVIDENCED_CONFIDENCE_CAP);
   });
   it("reaches the ceiling with a 3x-viral source, caption-derived hook and high sample confidence", () => {
     const score = computeIdeaConfidence({ idea: { source_post_index: 0, hook: "Stop doing this one thing" }, posts: samplePosts, sample: "high" });
