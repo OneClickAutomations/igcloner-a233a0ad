@@ -318,11 +318,14 @@ export function ResearchPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="mt-5 flex justify-end">
+        <div className="mt-5 flex flex-col items-end gap-1.5">
           <Button onClick={submit} disabled={creating} className="gap-2">
             {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {creating ? "Analyzing… this can take up to a minute" : `Run Research — ${ACTION_COSTS.report} credits`}
           </Button>
+          <p className="text-xs text-muted-foreground">
+            Re-run (free — cached) when the same subject was scraped in the last 12 hours.
+          </p>
         </div>
       </Card>
 
@@ -555,7 +558,7 @@ function ReportDetail({
                 <span>Sample reused from a scrape {hoursAgo(reuse.originalCollectedAt)}.</span>
                 <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onForceRefresh} disabled={refreshBusy}>
                   {refreshBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                  Fetch fresh data
+                  Fetch fresh data — {ACTION_COSTS.report} credits
                 </Button>
               </p>
             )}
@@ -589,7 +592,7 @@ function ReportDetail({
             ) : (
               <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={onForceRefresh} disabled={refreshBusy}>
                 {refreshBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Run again with a fresh scrape
+                Run again with a fresh scrape — {ACTION_COSTS.report} credits
               </Button>
             )}
           </div>
