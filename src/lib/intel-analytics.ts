@@ -182,7 +182,8 @@ export function calculateIntelMetrics(posts: any[], followers: unknown) {
       viralPostCount: avg == null ? null : avg > 0 ? ranked.filter(p => Number(p.engagement) >= 3*avg).length : 0,
       viralThreshold: "posts with 3x or more avg engagement", engagementBenchmark: "Not available — no verified niche benchmark supplied",
     },
-    contentFormatDistribution: { imagePercent: n ? round(image/n*100) : null, reelPercent: n ? round(reels.length/n*100) : null, carouselPercent: n ? round(carousel/n*100) : null, unknownPercent: n ? round((n-image-reels.length-carousel)/n*100) : null, dominantFormat: n ? formats[0]?.name : "Not available" },
+    contentFormatDistribution: { imagePercent: n ? shareFor(image, n) : null, reelPercent: n ? shareFor(reels.length, n) : null, carouselPercent: n ? shareFor(carousel, n) : null, unknownPercent: n ? shareFor(n-image-reels.length-carousel, n) : null, dominantFormat: n ? formats[0]?.name : "Not available" },
+    sampleSize: n, sampleConfidence: sampleConfidence(n),
     topPosts: ranked.slice(0,3), topPostTimestamps: topTimes,
     rawDataSummary: { postsWithZeroLikes: n ? likes.filter(v => v === 0).length : null, postsWithZeroComments: n ? comments.filter(v => v === 0).length : null, dataQualityNote: !n ? "No posts scraped" : !complete ? "Some likes or comments are unavailable; aggregate engagement cannot be calculated." : "Likes and comments available for all analyzed posts. Views, saves, shares, visual evidence, and niche benchmarks may be unavailable." },
   };
@@ -210,11 +211,13 @@ export function groundIntelReport(dna: any, signals: any) {
     const indices: number[] = (Array.isArray(p.postIndices) ? p.postIndices : []).filter((i: number) => Number.isInteger(i) && i >= 0 && i < posts.length && !used.has(i));
     indices.forEach(i => used.add(i));
     const best = indices.map(i => posts[i]).sort((a,b) => (Number(b.likesCount)+Number(b.commentsCount))-(Number(a.likesCount)+Number(a.commentsCount)))[0];
-    return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share: posts.length ? round(indices.length/posts.length*100) : 0, percentage: posts.length ? round(indices.length/posts.length*100) : 0, topPerformingExample: best?.caption ?? "Not available" };
+    const share = shareFor(indices.length, posts.length);
+    return { ...p, name: p.name ?? p.pillarName, postIndices: indices, postCount: indices.length, share, percentage: share, topPerformingExample: best?.caption ?? "Not available" };
   }).filter((p: any) => p.postCount > 0);
   if (!legacyPillars) {
     const unclassified = posts.map((_,i) => i).filter(i => !used.has(i));
-    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share: round(unclassified.length/posts.length*100), percentage: round(unclassified.length/posts.length*100), topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
+    const share = shareFor(unclassified.length, posts.length);
+    if (unclassified.length) pillars.push({ name: "Unclassified caption themes", description: "Posts not assigned a supported theme by the analyst.", postIndices: unclassified, postCount: unclassified.length, share, percentage: share, topPerformingExample: posts[unclassified[0] ?? 0]?.caption ?? "Not available" });
   }
   const rawProvenHooks: any[] = dna.hookAnalysis?.provenHooks ?? [];
   // Legacy reports store hooks without postIndex evidence; keep them as written.
