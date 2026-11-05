@@ -461,13 +461,15 @@ function ReportDetail({
     ? `, ${fmtDay(dateRange.earliest)} – ${fmtDay(dateRange.latest)}`
     : "";
   const cutoffMeta = raw?.cutoff ?? null;
-  const cutoffClause = !cutoffMeta || cutoffMeta.appliedAt === "none"
-    ? cutoffMeta?.skipped
-      ? " Includes older posts because this topic has sparse recent activity."
-      : ""
+  const cutoffClause = !cutoffMeta
+    ? ""
     : cutoffMeta.relaxed
       ? " Includes older posts because this account posts infrequently."
-      : ` Posts from the last ${Math.round((cutoffMeta.windowDays ?? 180) / 30)} months only.`;
+      : cutoffMeta.skipped
+        ? " Includes older posts because this topic has sparse recent activity."
+        : cutoffMeta.appliedAt === "none"
+          ? ""
+          : ` Posts from the last ${Math.round((cutoffMeta.windowDays ?? 180) / 30)} months only.`;
   const sampleLine = sampleSize > 0
     ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}.${cutoffClause} Sample confidence: ${confidence}.`
     : null;
