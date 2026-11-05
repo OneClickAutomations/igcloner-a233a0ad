@@ -361,6 +361,9 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
       throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
     }
     await supabase.from("research_reports").update({ status: "analyzing", error_message: null }).eq("id", report.id);
+    // Retry reuses the existing scrape — cheaper than a fresh report, but
+    // still a paid AI call. Debit atomically first; refunded on failure.
+    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
       await supabase
@@ -369,6 +372,7 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
         .eq("id", report.id);
       return { id: report.id };
     } catch (e) {
+      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id);
       const msg = e instanceof Error ? e.message : String(e);
       await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
       throw new Error(msg);
@@ -447,6 +451,11 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
       .single();
     if (error || !report) throw new Error("Report not found");
     if (report.status !== "ready") throw new Error("Report is not ready yet");
+
+    // Paid AI call — debit atomically before invoking the model; the whole
+    // generation below is wrapped so a failure refunds the exact amount.
+    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
+    try {
 
     const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
 Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
