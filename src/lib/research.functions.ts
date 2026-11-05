@@ -625,12 +625,17 @@ Return a flat JSON array of 25 objects. Nothing else.`;
       confidence_score: computeIdeaConfidence({ idea: i, posts, sample }),
       predicted_virality_basis: Number(i.confidence_score) || null,
     }));
-    const { data: inserted, error: insErr } = await supabase
+    const { error: insErr } = await supabase
       .from("content_ideas")
-      .insert(rows)
-      .select("*");
+      .insert(rows);
     if (insErr) throw new Error(insErr.message);
-    return { ideas: inserted ?? [] };
+    // Return the full idea list (append mode keeps prior batches).
+    const { data: all } = await supabase
+      .from("content_ideas")
+      .select("*")
+      .eq("research_report_id", data.id)
+      .order("idea_number", { ascending: true });
+    return { ideas: all ?? [] };
     } catch (e) {
       await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
       throw e;
