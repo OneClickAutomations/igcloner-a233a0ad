@@ -19,9 +19,6 @@ import {
   Search,
   Copy,
   FolderOpen,
-  Calendar,
-  Send,
-  ArrowRight,
   ChevronRight,
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
@@ -200,7 +197,7 @@ function Sparkline({ data, id }: { data: number[]; id: string }) {
   const line = coords.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
   const gid = `spark-${id}`;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 h-8 w-full" preserveAspectRatio="none" aria-hidden>
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-6 w-full" preserveAspectRatio="none" aria-hidden>
       <defs>
         <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
           <stop offset="0%" stopColor="var(--t1)" stopOpacity="0.35" />
@@ -224,7 +221,7 @@ function DeltaPill({ delta }: { delta: MonthDelta }) {
         : { background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" };
   return (
     <span
-      className="mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
       style={style}
     >
       {delta.kind === "up" && <TrendingUp className="h-3 w-3" />}
@@ -256,53 +253,25 @@ function StatTile({
   id: string;
 }) {
   return (
-    <div className="stat-card p-5 sm:p-6" style={toneStyle(tone)}>
-      <div className="flex items-center justify-between">
-        <span className="tone-icon flex h-10 w-10 items-center justify-center rounded-xl">{icon}</span>
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+    <div className="stat-card p-4" style={toneStyle(tone)}>
+      <div className="flex items-center gap-2">
+        <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+        <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
       {loading ? (
-        <div className="mt-4 h-9 w-16 animate-pulse rounded-md bg-muted" />
+        <div className="mt-2 h-8 w-16 animate-pulse rounded-md bg-muted" />
       ) : (
-        <p className="mt-4 font-mono text-4xl font-extrabold tracking-tight tabular-nums">
+        <p className="mt-2 font-mono text-3xl font-extrabold leading-none tracking-tight tabular-nums">
           {value.toLocaleString()}
         </p>
       )}
-      <Sparkline data={series} id={id} />
-      <DeltaPill delta={delta} />
-    </div>
-  );
-}
-
-// ── Quick action card ──────────────────────────────────────
-function ActionCard({
-  icon,
-  title,
-  desc,
-  onClick,
-  tone,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  onClick: () => void;
-  tone: Tone;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      style={toneStyle(tone)}
-      className="dash-card group flex items-center gap-3 p-5 text-left transition-all duration-200 hover:-translate-y-1"
-    >
-      <span className="tone-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold tracking-tight">{title}</p>
-        <p className="truncate text-xs text-muted-foreground">{desc}</p>
+      <div className="mt-3 flex items-center gap-3">
+        <DeltaPill delta={delta} />
+        <div className="min-w-0 flex-1">
+          <Sparkline data={series} id={id} />
+        </div>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
-    </button>
+    </div>
   );
 }
 
@@ -332,7 +301,7 @@ function ResearchWidget({
   accentItems?: boolean;
 }) {
   return (
-    <div className="dash-card p-6" style={toneStyle(tone)}>
+    <div className="dash-card p-5" style={toneStyle(tone)}>
       <div className="mb-3 flex items-center gap-2.5">
         <span className="tone-icon flex h-8 w-8 items-center justify-center rounded-lg">{icon}</span>
         <h3 className="text-sm font-bold tracking-tight">{title}</h3>
@@ -473,15 +442,6 @@ function DashboardPageInner() {
     }
   }
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const today = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
   // ── Real KPI metrics ─────────────────────────────────────
   const now = new Date();
   const analysesDelta = monthDelta(countThisMonth(dates.analyses, now), countPreviousMonth(dates.analyses, now));
@@ -519,57 +479,48 @@ function DashboardPageInner() {
       <div className="relative">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-72 gradient-glow" />
 
-        <div className="relative mx-auto max-w-[1200px] px-4 py-8 sm:px-6 lg:py-10">
-          {/* ── Welcome banner ──────────────────────────────── */}
-          <header className="welcome-banner flex items-center gap-6 p-6 sm:p-8">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {today}
-              </p>
-              <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                Welcome back{firstName ? (
-                  <>
-                    , <span className="gradient-text">{firstName}</span>
-                  </>
-                ) : (
-                  ""
-                )}
+        <div className="relative mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:py-8">
+          {/* ── Page header: CTA lives here, outside the banner ── */}
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Dashboard</h2>
+            <Button
+              onClick={() => navigate({ to: "/app" })}
+              className="cta-glow gap-2 rounded-xl border-0 text-primary-foreground hover:opacity-95"
+            >
+              <Sparkles className="h-4 w-4" /> Analyze a Post
+            </Button>
+          </div>
+
+          {/* ── Welcome banner: filled panel, character full height ── */}
+          <header className="welcome-banner flex h-[176px] items-center px-6 sm:px-8 lg:mt-6">
+            <div className="relative z-10 min-w-0 flex-1 lg:pr-[240px]">
+              <h1 className="truncate text-2xl font-extrabold tracking-tight sm:text-3xl">
+                Welcome back{firstName ? `, ${firstName}` : ""}
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {greeting} — here's what's happening across your content studio.
+              <p className="mt-1 truncate text-sm" style={{ color: "var(--wb-fg-soft)" }}>
+                Here's what's happening across your content studio.
               </p>
-              <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-                <span className="inline-flex items-center gap-2 text-sm">
-                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "purple", t2: "indigo" })}>
-                    <Search className="h-3.5 w-3.5" />
-                  </span>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium" style={{ background: "var(--wb-chip)", borderColor: "var(--wb-chip-border)" }}>
+                  <Search className="h-3.5 w-3.5" />
                   <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.posts.toLocaleString()}</span>
-                  <span className="text-muted-foreground">posts analyzed</span>
+                  posts analyzed
                 </span>
-                <span className="inline-flex items-center gap-2 text-sm">
-                  <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg" style={toneStyle({ t1: "pink", t2: "rose" })}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium" style={{ background: "var(--wb-chip)", borderColor: "var(--wb-chip-border)" }}>
+                  <Copy className="h-3.5 w-3.5" />
                   <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.clones.toLocaleString()}</span>
-                  <span className="text-muted-foreground">clones generated</span>
+                  clones generated
                 </span>
               </div>
-              <Button
-                onClick={() => navigate({ to: "/app" })}
-                size="lg"
-                className="cta-glow mt-5 gap-2 rounded-xl border-0 text-primary-foreground hover:opacity-95"
-              >
-                <Sparkles className="h-4 w-4" /> Analyze a Post
-              </Button>
             </div>
-            {/* Decorative character — hidden below lg so text never gets crushed */}
-            <div className="hidden h-40 shrink-0 lg:block xl:h-44">
+            {/* Character: bottom-aligned, taller than the panel so it stands in it */}
+            <div className="pointer-events-none absolute bottom-0 right-6 hidden h-[200px] lg:block xl:right-10">
               <WelcomeCharacter />
             </div>
           </header>
 
           {/* ── KPI band ────────────────────────────────────── */}
-          <section className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               icon={<Search className="h-5 w-5" />}
               tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses"
@@ -600,114 +551,82 @@ function DashboardPageInner() {
             />
           </section>
 
-          {/* ── Quick actions ───────────────────────────────── */}
-          <section className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <ActionCard
-              icon={<Copy className="h-5 w-5" />}
-              title="Clone Studio"
-              desc="Break down & clone any post"
-              tone={{ t1: "pink", t2: "rose" }}
-              onClick={() => navigate({ to: "/app" })}
-            />
-            <ActionCard
-              icon={<Microscope className="h-5 w-5" />}
-              title="Research"
-              desc="Find what audiences want"
-              tone={{ t1: "teal", t2: "green" }}
-              onClick={() => navigate({ to: "/research" })}
-            />
-            <ActionCard
-              icon={<Calendar className="h-5 w-5" />}
-              title="Content Calendar"
-              desc="Schedule 30 days of content"
-              tone={{ t1: "amber", t2: "orange" }}
-              onClick={() => navigate({ to: "/calendar" })}
-            />
-            <ActionCard
-              icon={<Send className="h-5 w-5" />}
-              title="Publishing"
-              desc="Push to every platform"
-              tone={{ t1: "indigo", t2: "violet" }}
-              onClick={() => navigate({ to: "/publishing" })}
-            />
-          </section>
-
-          {/* ── Analyses chart (last 30 days) ───────────────── */}
-          <section className="dash-card mt-8 p-6" style={toneStyle({ t1: "purple", t2: "pink" })}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-bold tracking-tight">Analyses — last 30 days</h2>
-              {!loading && stats.posts > 0 && (
-                <span className="text-[11px] font-medium text-muted-foreground">
-                  {chartSeries.reduce((a, b) => a + b, 0)} in window
-                </span>
-              )}
-            </div>
-            {loading ? (
-              <div className="h-56 animate-pulse rounded-xl bg-muted" />
-            ) : stats.posts === 0 ? (
-              <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
-                <TrendingUp className="mb-2 h-5 w-5 text-muted-foreground" />
-                <p className="text-sm font-medium">No analyses yet</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Your daily analysis activity will appear here once you analyze your first post.
-                </p>
-              </div>
-            ) : (
-              <div className="h-56 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
-                    <defs>
-                      <linearGradient id="analysesFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="var(--tone-purple)" stopOpacity={0.35} />
-                        <stop offset="100%" stopColor="var(--tone-pink)" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis
-                      dataKey="day"
-                      tickLine={false}
-                      axisLine={false}
-                      interval="preserveStartEnd"
-                      minTickGap={40}
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tickLine={false}
-                      axisLine={false}
-                      tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                    />
-                    <Tooltip
-                      cursor={{ stroke: "var(--tone-purple)", strokeOpacity: 0.3 }}
-                      contentStyle={{
-                        background: "var(--card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "0.75rem",
-                        fontSize: 12,
-                        color: "var(--foreground)",
-                      }}
-                      labelStyle={{ color: "var(--muted-foreground)" }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="count"
-                      name="Analyses"
-                      stroke="var(--tone-purple)"
-                      strokeWidth={2.5}
-                      fill="url(#analysesFill)"
-                      dot={false}
-                      activeDot={{ r: 4, fill: "var(--tone-pink)", stroke: "var(--card)", strokeWidth: 2 }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </section>
-
           {/* ── Main two-column area ────────────────────────── */}
-          <div className="mt-8 grid gap-8 lg:grid-cols-3">
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-3">
             {/* Recent analyses */}
-            <div className="lg:col-span-2">
+            <div className="space-y-6 lg:col-span-2">
+            {/* ── Analyses chart (last 30 days) ───────────────── */}
+            <section className="dash-card p-5" style={toneStyle({ t1: "purple", t2: "pink" })}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-bold tracking-tight">Analyses — last 30 days</h2>
+                {!loading && stats.posts > 0 && (
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    {chartSeries.reduce((a, b) => a + b, 0)} in window
+                  </span>
+                )}
+              </div>
+              {loading ? (
+                <div className="h-48 animate-pulse rounded-xl bg-muted" />
+              ) : stats.posts === 0 ? (
+                <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+                  <TrendingUp className="mb-2 h-5 w-5 text-muted-foreground" />
+                  <p className="text-sm font-medium">No analyses yet</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Your daily analysis activity will appear here once you analyze your first post.
+                  </p>
+                </div>
+              ) : (
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                      <defs>
+                        <linearGradient id="analysesFill" x1="0" x2="0" y1="0" y2="1">
+                          <stop offset="0%" stopColor="var(--tone-purple)" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="var(--tone-pink)" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis
+                        dataKey="day"
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                        minTickGap={40}
+                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                      />
+                      <Tooltip
+                        cursor={{ stroke: "var(--tone-purple)", strokeOpacity: 0.3 }}
+                        contentStyle={{
+                          background: "var(--card)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "0.75rem",
+                          fontSize: 12,
+                          color: "var(--foreground)",
+                        }}
+                        labelStyle={{ color: "var(--muted-foreground)" }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        name="Analyses"
+                        stroke="var(--tone-purple)"
+                        strokeWidth={2.5}
+                        fill="url(#analysesFill)"
+                        dot={false}
+                        activeDot={{ r: 4, fill: "var(--tone-pink)", stroke: "var(--card)", strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </section>
+              <div>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold tracking-tight">Recent <span className="gradient-text-tone">Analyses</span></h2>
                 {analyses.length > 0 && (
@@ -806,10 +725,11 @@ function DashboardPageInner() {
                   })}
                 </div>
               )}
+              </div>
             </div>
 
             {/* Research intelligence rail */}
-            <aside className="space-y-6">
+            <aside className="space-y-4">
               <div className="flex items-center gap-2">
                 <h2 className="relative pb-2 text-xl font-bold tracking-tight">Research <span className="gradient-text-tone">Intelligence</span><span className="absolute bottom-0 left-0 h-[3px] w-16 rounded-full cta-glow [animation:none]" /></h2>
               </div>
