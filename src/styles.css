@@ -375,18 +375,6 @@
   --wb-fg-soft: oklch(0.99 0 0 / 0.86);
   --wb-chip: oklch(1 0 0 / 0.16);
   --wb-chip-border: oklch(1 0 0 / 0.28);
-  /* Character palette tuned for the saturated panel. */
-  --wc-blob: oklch(1 0 0 / 0.14);
-  --wc-wave: oklch(1 0 0 / 0.85);
-  --wc-pants: #1E1B4B;
-  --wc-shirt: var(--tone-pink);
-  --wc-skin: #F2C49B;
-  --wc-skin-shade: #E0A878;
-  --wc-mega: var(--tone-amber);
-  --wc-mega-dark: var(--tone-orange);
-  --wc-hair: #1A1530;
-  --wc-ink: #1A1530;
-  --wc-spark: oklch(0.92 0.15 90);
   &:where(.dark *) {
     border: 1px solid oklch(1 0 0 / 0.1);
   }
