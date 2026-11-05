@@ -118,18 +118,35 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
           }
         : null,
       posts,
-      ...buildSampleMeta(posts, [`@${handle}`]),
+      ...buildSampleMeta(posts, [`@${handle}`], cutoffMeta),
     };
   }
 
-  // Niche / topic — up to 3 derived hashtags, 30 posts each, merged + deduped.
-  const tags = deriveHashtagQueries(subject);
+  // Niche / topic — up to 3 derived hashtags, merged + deduped. The hashtag
+  // actor has NO date filter, so recency is enforced in code only — and only
+  // when it leaves enough posts, so a sparse hashtag is never filtered to
+  // nothing.
+  const cfg = SAMPLING.standard;
+  const tags = deriveHashtagQueries(subject).slice(0, cfg.nicheTagCount);
   const items = tags.length
-    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: 30 }, token)
+    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: cfg.nichePerTag }, token)
     : [];
   const merged = dedupePostsByShortCode(items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]));
-  const posts = merged.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
-  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`)) };
+  const cutoff = cutoffDate(NICHE_WINDOW_DAYS);
+  const filter = filterPostsByCutoff(merged, cutoff);
+  const applyFilter = filter.kept.length >= NICHE_FILTER_MIN_POSTS;
+  const finalPosts = applyFilter ? filter.kept : merged;
+  const cutoffMeta: CutoffMeta = {
+    date: applyFilter ? cutoff : null,
+    windowDays: NICHE_WINDOW_DAYS,
+    appliedAt: applyFilter ? "code" : "none",
+    relaxed: false,
+    skipped: !applyFilter,
+    droppedStale: applyFilter ? filter.droppedStale : 0,
+    ...(applyFilter ? {} : { skippedReason: `Filtering to the last ${NICHE_WINDOW_DAYS} days would leave only ${filter.kept.length} posts, so older posts were kept.` }),
+  };
+  const posts = finalPosts.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
+  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`), cutoffMeta) };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
