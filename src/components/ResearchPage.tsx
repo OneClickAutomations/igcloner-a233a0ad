@@ -35,6 +35,7 @@ import {
   Hash,
   Loader2,
   Sparkles,
+  Plus,
   Star,
   Trash2,
   ArrowLeft,
@@ -89,7 +90,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ACTION_COSTS, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IDEA_CATEGORIES, sampleConfidence } from "@/lib/intel-analytics";
+import { IDEA_CATEGORIES, sampleConfidence, MAX_IDEAS_PER_REPORT } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
 import { exportResearchPdf } from "@/lib/research-pdf";
 
@@ -949,7 +950,7 @@ function ReportDetail({
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ActionCard tone="purple" icon={Rocket}       title="Generate 30-Day Campaign" desc="AI-plan a full month grounded in this research." onClick={onGenerateCampaign} />
-          <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="50 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
+          <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="25 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
           <ActionCard tone="blue"   icon={Send}         title="Publishing Schedule"      desc="Push to connected accounts."                    onClick={() => toast.info("Open Publishing Center from the sidebar")} />
           <ActionCard tone="amber"  icon={Download}     title="Export PDF Report"        desc="Agency-ready deliverable."                      onClick={handleExportPdf} />
         </div>
