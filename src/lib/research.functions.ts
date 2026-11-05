@@ -208,7 +208,9 @@ IMPORTANT:
 - If posts array is empty, still return the JSON but set pillars to [] and mark performanceMetrics numeric fields to 0.
 - Legacy compact keys (executiveSummary, audienceProfile, contentPillars, commonHooks, captionStructure, etc.) MUST be filled and stay consistent with the detailed ones.`;
 
-  const dna = groundIntelReport(await generateIntelJson(system, user), signals);
+  // The full DNA schema plus legacy keys can exceed 24k tokens on larger
+  // samples; 32k matches the ideas call and keeps retries worthwhile.
+  const dna = groundIntelReport(await generateIntelJson(system, user, { maxTokens: 32000 }), signals);
   const score =
     Number(dna?.opportunityScore ?? dna?.competitivePosition?.opportunityScore ?? 0) || 0;
   return { dna, score, postsAnalyzed };
