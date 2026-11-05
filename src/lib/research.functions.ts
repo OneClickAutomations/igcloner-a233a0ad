@@ -180,7 +180,7 @@ POSTS ANALYZED: ${postsAnalyzed}
 SAMPLE CONFIDENCE: ${confidence}
 SAMPLE DATE RANGE: ${dateRange ? `${dateRange.earliest} to ${dateRange.latest}` : "Not available"}
 POSTS DATA:
-${JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p })))}
+${JSON.stringify(posts.map(toPromptPost))}
 
 Return a single JSON object with BOTH the detailed schema AND the compact legacy keys used by the UI.
 Schema:
@@ -479,11 +479,11 @@ export const deleteResearchReport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ── Content Opportunity Engine — 50 ranked ideas per report ──────────
+// ── Content Opportunity Engine — batches of 25 ranked ideas per report ──
 
 export const generateContentIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), preferences: z.object({ goal: z.string().max(200).optional(), niche: z.string().max(200).optional(), toneOfVoice: z.string().max(200).optional(), keywords: z.array(z.string().max(100)).max(20).optional() }).optional() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), mode: z.enum(["replace", "append"]).default("replace"), preferences: z.object({ goal: z.string().max(200).optional(), niche: z.string().max(200).optional(), toneOfVoice: z.string().max(200).optional(), keywords: z.array(z.string().max(100)).max(20).optional() }).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -495,12 +495,29 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     if (error || !report) throw new Error("Report not found");
     if (report.status !== "ready") throw new Error("Report is not ready yet");
 
+    // Append mode continues numbering from the current max and must not
+    // repeat concepts or hooks already on the report. Capped at 4 batches.
+    let existingIdeas: any[] = [];
+    if (data.mode === "append") {
+      const { data: existing } = await supabase
+        .from("content_ideas")
+        .select("idea_number, hook, title")
+        .eq("research_report_id", report.id);
+      existingIdeas = existing ?? [];
+      if (existingIdeas.length >= MAX_IDEAS_PER_REPORT) {
+        throw new Error(`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`);
+      }
+    }
+    const offset = data.mode === "append" ? Math.max(0, ...existingIdeas.map((i: any) => Number(i.idea_number) || 0)) : 0;
+    const existingHooks = existingIdeas.map((i: any) => String(i.hook ?? ""));
+    const range = (cat: number) => `${offset + cat * IDEAS_PER_CATEGORY + 1}-${offset + (cat + 1) * IDEAS_PER_CATEGORY}`;
+
     // Paid AI call — debit atomically before invoking the model; the whole
     // generation below is wrapped so a failure refunds the exact amount.
     await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
     try {
 
-    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
+    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 25 content ideas.
 Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
 
 REJECT an idea if it:
