@@ -533,11 +533,11 @@ APPROVE an idea if it:
 - Has a hook line the user can literally copy and post tomorrow
 - Is informed by what ALREADY performed on this account or this niche
 
-Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no wrapper object.`;
+Return ONLY a JSON array of exactly 25 objects. No prose, no markdown fences, no wrapper object.`;
 
     const shape = `{
   "source_post_index": number | null, // exact source post index for Steal the Frame and Amplify What Works
-  "idea_number": 1..50,
+  "idea_number": ${offset + 1}..${offset + IDEAS_PER_BATCH},
   "category": "Steal the Frame" | "Exploit the Gaps" | "Amplify What Works" | "Original Authority" | "Viral Formats",
   "title": string,
   "format": "Reel" | "Carousel" | "Image",
@@ -565,33 +565,38 @@ Do not invent first-person earnings, results, testimonials, credentials, or expe
 Content DNA report (grounded in real scrape):
 ${JSON.stringify(report.dna_report)}
 INDEXED SOURCE POSTS (complete evidence):
-${JSON.stringify(((report.raw_data as any)?.posts ?? []).map((p: any, postIndex: number) => ({ postIndex, ...p })))}
+${JSON.stringify(((report.raw_data as any)?.posts ?? []).map(toPromptPost))}
 USER PREFERENCES (prioritize selected values over inferred niche or tone):
 ${JSON.stringify(data.preferences ?? {})}
 If no user niche is selected, use the account's audience. No posts means PROFILE-ONLY suggestions: never claim a scraped best performer. Explain the specific bio/audience inference instead and use null source_post_index.
 For Steal the Frame and Amplify What Works with posts, source_post_index MUST reference an actual post and why_it_works MUST quote or describe that specific post and its observed engagement. Scores are predictions, not measured probabilities.
+${data.mode === "append" ? `ALREADY GENERATED — do not repeat these concepts or hooks:
+${JSON.stringify(existingIdeas.map((i: any) => ({ title: i.title, hook: i.hook })))}
+` : ""}
+Generate EXACTLY 25 content ideas distributed across 5 strategy categories, 5 ideas each:
 
-Generate EXACTLY 50 content ideas distributed across 5 strategy categories, 10 ideas each:
-
-CATEGORY 1 — "Steal the Frame" (ideas 1-10): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
-CATEGORY 2 — "Exploit the Gaps" (ideas 11-20): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
-CATEGORY 3 — "Amplify What Works" (ideas 21-30): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
-CATEGORY 4 — "Original Authority" (ideas 31-40): Original angles NOT present on this account that position the user as a trusted authority.
-CATEGORY 5 — "Viral Formats" (ideas 41-50): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
+CATEGORY 1 — "Steal the Frame" (ideas ${range(0)}): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
+CATEGORY 2 — "Exploit the Gaps" (ideas ${range(1)}): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
+CATEGORY 3 — "Amplify What Works" (ideas ${range(2)}): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
+CATEGORY 4 — "Original Authority" (ideas ${range(3)}): Original angles NOT present on this account that position the user as a trusted authority.
+CATEGORY 5 — "Viral Formats" (ideas ${range(4)}): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
 
 Each object MUST match this shape:
 ${shape}
 
-Return a flat JSON array of 50 objects. Nothing else.`;
+Return a flat JSON array of 25 objects. Nothing else.`;
 
     const posts = (report.raw_data as any)?.posts ?? [];
-    // 50 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
-    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts);
+    // 25 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
+    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts, { offset, existingHooks });
     const sample = sampleConfidence(posts.length);
 
-    // Wipe prior ideas so re-runs don't duplicate.
-    const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
-    if (deleteError) throw new Error(deleteError.message);
+    // Replace mode wipes prior ideas so re-runs don't duplicate; append
+    // mode keeps them and continues numbering.
+    if (data.mode === "replace") {
+      const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
+      if (deleteError) throw new Error(deleteError.message);
+    }
 
     const rows = ideas.map((i: any, idx: number) => ({
       user_id: userId,
