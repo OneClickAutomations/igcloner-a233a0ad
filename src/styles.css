@@ -380,6 +380,32 @@
   }
 }
 
+/* Ambient colour clouds behind the dashboard, ported from landing.html's
+   .blob scene (blur(80px), violet/magenta/pink/orange stops). Fixed so it
+   never scrolls or shifts layout; sits under the glass cards so their blur
+   has colour to pick up. Kept subtle in dark mode. */
+@utility dash-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -12%;
+    background:
+      radial-gradient(ellipse 42% 36% at 12% 8%, rgba(131, 58, 180, 0.34) 0%, transparent 60%),
+      radial-gradient(ellipse 38% 32% at 88% 4%, rgba(247, 119, 55, 0.2) 0%, transparent 55%),
+      radial-gradient(ellipse 46% 40% at 78% 55%, rgba(225, 48, 108, 0.26) 0%, transparent 58%),
+      radial-gradient(ellipse 40% 34% at 8% 78%, rgba(193, 53, 132, 0.24) 0%, transparent 58%),
+      radial-gradient(ellipse 30% 26% at 45% 35%, rgba(81, 91, 212, 0.18) 0%, transparent 60%);
+    filter: blur(80px);
+  }
+  &:where(.dark *)::before {
+    opacity: 0.38;
+  }
+}
+
 @utility nav-active {
   background: linear-gradient(90deg, var(--tone-purple), var(--tone-pink)) !important;
   color: #fff !important;
