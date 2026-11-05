@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES } from "./intel-analytics";
+import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES, sampleConfidence, shareFor, deriveHashtagQueries, dedupePostsByShortCode, isWithinReuseWindow, computeIdeaConfidence, CONFIDENCE_WEIGHTS, UNEVIDENCED_CONFIDENCE_CAP } from "./intel-analytics";
 const posts = Array.from({ length: 12 }, (_,i) => ({ type: i < 6 ? "Image" : i < 9 ? "Video" : "Sidecar", caption: `Actual caption ${i}\nDetails`, likesCount: i+1, commentsCount: 1, timestamp: `2026-10-${String(i+1).padStart(2,"0")}T12:00:00Z`, url: `https://www.instagram.com/p/post${i}/` }));
 describe("Intel evidence rules", () => {
   it("calculates engagement using all 12 scraped posts and follower count", () => {
