@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { normalizeIntelPost, groundIntelReport, validateIntelIdeas } from "@/lib/intel-analytics";
+import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
 import { generateIntelJson } from "@/lib/intel-ai.server";
 
 // ─────────────────────────────────────────────────────────────────────
@@ -42,18 +42,36 @@ async function apifyRun(actor: string, input: unknown, token: string): Promise<a
   return Array.isArray(data) ? data : [];
 }
 
+// Real sample provenance, stored on the report so the UI and the AI both see it.
+function buildSampleMeta(posts: any[], sources: string[]) {
+  const times = posts
+    .map((p) => new Date(p.timestamp).getTime())
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  return {
+    sampleSize: posts.length,
+    sources,
+    collectedAt: new Date().toISOString(),
+    dateRange: times.length
+      ? { earliest: new Date(times[0]).toISOString(), latest: new Date(times[times.length - 1]).toISOString() }
+      : null,
+  };
+}
+
 async function collectSignals(mode: "niche" | "competitor" | "topic", subject: string, token: string) {
   if (mode === "competitor") {
     // Handle the handle: strip @ / URL fragments.
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
     const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    let scrapedPosts = profile?.latestPosts ?? [];
-    // Profile actor frequently omits latestPosts despite a public post count.
-    if (!scrapedPosts.length && profile && !profile.private) {
-      scrapedPosts = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 12 }, token);
+    // Always run the posts scrape (60) and merge with whatever latestPosts
+    // returned — 12 posts cannot support the precision this report claims.
+    let postsCall: any[] = [];
+    if (profile && !profile.private) {
+      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 60 }, token);
     }
-    const posts = scrapedPosts.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    const merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
+    const posts = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
     return {
       subject: handle,
       profile: profile
@@ -72,19 +90,18 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
           }
         : null,
       posts,
+      ...buildSampleMeta(posts, [`@${handle}`]),
     };
   }
 
-  // Niche / topic — hashtag scrape to surface real, currently-performing posts.
-  const term = subject
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "")
-    .slice(0, 40);
-  const items = await apifyRun("apify~instagram-hashtag-scraper", {
-    hashtags: [term],
-    resultsLimit: 40,
-  }, token);
-  return { subject, profile: null, posts: items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]).filter(p => p.caption != null || p.type != null).map(normalizeIntelPost) };
+  // Niche / topic — up to 3 derived hashtags, 30 posts each, merged + deduped.
+  const tags = deriveHashtagQueries(subject);
+  const items = tags.length
+    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: 30 }, token)
+    : [];
+  const merged = dedupePostsByShortCode(items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]));
+  const posts = merged.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
+  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`)) };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
