@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES, sampleConfidence, shareFor, deriveHashtagQueries, dedupePostsByShortCode, isWithinReuseWindow, computeIdeaConfidence, CONFIDENCE_WEIGHTS, UNEVIDENCED_CONFIDENCE_CAP } from "./intel-analytics";
+import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES, sampleConfidence, shareFor, deriveHashtagQueries, dedupePostsByShortCode, isWithinReuseWindow, computeIdeaConfidence, CONFIDENCE_WEIGHTS, UNEVIDENCED_CONFIDENCE_CAP, toPromptPost, IDEAS_PER_BATCH, IDEAS_PER_CATEGORY, MAX_IDEA_BATCHES, MAX_IDEAS_PER_REPORT } from "./intel-analytics";
 const posts = Array.from({ length: 12 }, (_,i) => ({ type: i < 6 ? "Image" : i < 9 ? "Video" : "Sidecar", caption: `Actual caption ${i}\nDetails`, likesCount: i+1, commentsCount: 1, timestamp: `2026-10-${String(i+1).padStart(2,"0")}T12:00:00Z`, url: `https://www.instagram.com/p/post${i}/` }));
 describe("Intel evidence rules", () => {
   it("calculates engagement using all 12 scraped posts and follower count", () => {
@@ -46,11 +46,33 @@ describe("Intel evidence rules", () => {
     expect(legacy.commonHooks).toEqual([{pattern:"Question",example:"Want more reach?"}]);
   });
 });
-const ideas = Array.from({length:50},(_,i)=>({idea_number:i+1,category:IDEA_CATEGORIES[Math.floor(i/10)], title:`Specific idea ${i}`,format:"Reel",hook:`A completely unique ready-to-post hook ${i}`,description:"A specific concept grounded in this audience.",why_it_works:"Uses the actual caption and observed source engagement.",caption_opener:"Specific caption opening the creator can use.",cta:"Save this example",viral_mechanism:"save-worthy",production_difficulty:"easy (30 min)",virality_score:87,source_post_index:i%12}));
-it("requires exactly 50 unique ideas, ten per category",()=>{
-  expect(validateIntelIdeas(ideas,posts)).toHaveLength(50);
-  expect(()=>validateIntelIdeas(ideas.slice(0,49),posts)).toThrow();
-  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===10?{...v,category:"Steal the Frame"}:v),posts)).toThrow();
+const makeIdeas = (offset = 0) => Array.from({length:IDEAS_PER_BATCH},(_,i)=>({idea_number:offset+i+1,category:IDEA_CATEGORIES[Math.floor(i/IDEAS_PER_CATEGORY)], title:`Specific idea ${offset+i}`,format:"Reel",hook:`A completely unique ready-to-post hook ${offset+i}`,description:"A specific concept grounded in this audience.",why_it_works:"Uses the actual caption and observed source engagement.",caption_opener:"Specific caption opening the creator can use.",cta:"Save this example",viral_mechanism:"save-worthy",production_difficulty:"easy (30 min)",virality_score:87,source_post_index:i%12}));
+const ideas = makeIdeas();
+it("requires exactly 25 unique ideas, five per category",()=>{
+  expect(validateIntelIdeas(ideas,posts)).toHaveLength(25);
+  expect(()=>validateIntelIdeas(ideas.slice(0,24),posts)).toThrow();
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===5?{...v,category:"Steal the Frame"}:v),posts)).toThrow();
+});
+it("enforces category numbering ranges 1-5 … 21-25",()=>{
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===0?{...v,idea_number:6}:v),posts)).toThrow();
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===24?{...v,idea_number:25}:v),posts)).not.toThrow();
+});
+it("rejects duplicate hooks within a batch, case-insensitive trimmed",()=>{
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===1?{...v,hook:`  ${ideas[0].hook.toUpperCase()} `}:v),posts)).toThrow();
+});
+it("append mode numbers from the offset and applies category ranges relative to it",()=>{
+  const batch2 = makeIdeas(25);
+  expect(validateIntelIdeas(batch2,posts,{offset:25,existingHooks:ideas.map(i=>i.hook)})).toHaveLength(25);
+  expect(()=>validateIntelIdeas(makeIdeas(0),posts,{offset:25})).toThrow();
+});
+it("rejects a hook that duplicates one already on the report",()=>{
+  const batch2 = makeIdeas(25).map((v,i)=>i===0?{...v,hook:ideas[3].hook}:v);
+  expect(()=>validateIntelIdeas(batch2,posts,{offset:25,existingHooks:ideas.map(i=>i.hook)})).toThrow();
+});
+it("caps a report at 4 batches (100 ideas)",()=>{
+  expect(MAX_IDEAS_PER_REPORT).toBe(IDEAS_PER_BATCH*MAX_IDEA_BATCHES);
+  expect(()=>validateIntelIdeas(makeIdeas(100),posts,{offset:100})).toThrow(/maximum of 100/);
+  expect(()=>validateIntelIdeas(makeIdeas(75),posts,{offset:75})).not.toThrow();
 });
 it("requires real source evidence for cloned and amplified formulas",()=>{
   expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===0?{...v,source_post_index:99}:v),posts)).toThrow();
