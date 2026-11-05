@@ -412,6 +412,7 @@ export type Database = {
           id: string
           idea_number: number | null
           platform: string | null
+          predicted_virality_basis: number | null
           production_difficulty: string | null
           production_time_score: number | null
           research_report_id: string | null
@@ -440,6 +441,7 @@ export type Database = {
           id?: string
           idea_number?: number | null
           platform?: string | null
+          predicted_virality_basis?: number | null
           production_difficulty?: string | null
           production_time_score?: number | null
           research_report_id?: string | null
@@ -468,6 +470,7 @@ export type Database = {
           id?: string
           idea_number?: number | null
           platform?: string | null
+          predicted_virality_basis?: number | null
           production_difficulty?: string | null
           production_time_score?: number | null
           research_report_id?: string | null
