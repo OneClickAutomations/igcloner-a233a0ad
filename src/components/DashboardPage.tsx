@@ -213,6 +213,7 @@ function Sparkline({ data, id }: { data: number[]; id: string }) {
 // Delta pill: up = tone colour + up arrow, down = red + down arrow,
 // flat = neutral, new = "New" badge when the previous month was zero.
 function DeltaPill({ delta }: { delta: MonthDelta }) {
+  if (delta.kind === "none") return null;
   const style: React.CSSProperties =
     delta.kind === "down"
       ? { background: "color-mix(in oklab, var(--tone-rose) 14%, transparent)", color: "var(--tone-rose)" }
@@ -253,24 +254,28 @@ function StatTile({
   id: string;
 }) {
   return (
-    <div className="stat-card p-4" style={toneStyle(tone)}>
+    <div className="stat-card flex flex-col p-3 sm:p-4" style={toneStyle(tone)}>
       <div className="flex items-center gap-2">
         <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-        <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="min-w-0 text-[10px] font-semibold uppercase leading-tight tracking-wider text-muted-foreground sm:truncate sm:text-[11px]">{label}</span>
       </div>
       {loading ? (
         <div className="mt-2 h-8 w-16 animate-pulse rounded-md bg-muted" />
       ) : (
-        <p className="mt-2 font-mono text-3xl font-extrabold leading-none tracking-tight tabular-nums">
+        <p className="mt-2 font-mono text-2xl font-extrabold leading-none tracking-tight tabular-nums sm:mt-3 sm:text-3xl">
           {value.toLocaleString()}
         </p>
       )}
+      {(delta.kind !== "none" || series.some((v) => v > 0)) ? (
       <div className="mt-3 flex items-center gap-3">
         <DeltaPill delta={delta} />
         <div className="min-w-0 flex-1">
           <Sparkline data={series} id={id} />
         </div>
       </div>
+      ) : (
+        <p className="mt-2 text-[11px] text-muted-foreground">All time</p>
+      )}
     </div>
   );
 }
@@ -492,12 +497,12 @@ function DashboardPageInner() {
           </div>
 
           {/* ── Welcome banner: filled panel, character full height ── */}
-          <header className="welcome-banner flex h-[176px] items-center px-6 sm:px-8 lg:mt-6">
-            <div className="relative z-10 min-w-0 flex-1 lg:pr-[240px]">
-              <h1 className="truncate text-2xl font-extrabold tracking-tight sm:text-3xl">
+          <header className="welcome-banner flex min-h-[176px] items-center overflow-hidden py-5 pl-5 pr-[112px] sm:px-8 sm:pr-[170px] lg:mt-6 lg:h-[176px] lg:overflow-visible lg:py-0 lg:pr-[260px]">
+            <div className="relative z-10 min-w-0 flex-1">
+              <h1 className="text-xl leading-tight sm:truncate sm:text-3xl font-extrabold tracking-tight sm:text-3xl">
                 Welcome back{firstName ? `, ${firstName}` : ""}
               </h1>
-              <p className="mt-1 truncate text-sm" style={{ color: "var(--wb-fg-soft)" }}>
+              <p className="mt-1 text-xs sm:truncate sm:text-sm" style={{ color: "var(--wb-fg-soft)" }}>
                 Here's what's happening across your content studio.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -514,13 +519,13 @@ function DashboardPageInner() {
               </div>
             </div>
             {/* Character: bottom-aligned, taller than the panel so it stands in it */}
-            <div className="pointer-events-none absolute bottom-0 right-6 hidden h-[200px] lg:block xl:right-10">
+            <div className="pointer-events-none absolute -bottom-3 -right-4 h-[130px] sm:right-4 sm:bottom-0 sm:h-[170px] lg:right-6 lg:h-[200px] xl:right-10">
               <WelcomeCharacter />
             </div>
           </header>
 
           {/* ── KPI band ────────────────────────────────────── */}
-          <section className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <StatTile
               icon={<Search className="h-5 w-5" />}
               tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses"
