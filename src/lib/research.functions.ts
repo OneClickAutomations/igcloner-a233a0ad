@@ -276,6 +276,10 @@ export const createResearchReport = createServerFn({ method: "POST" })
       }
 
       if (!signals) {
+        // Cache miss — this run pays for a fresh scrape. Debit atomically
+        // before any paid external call; refunded below if the work fails.
+        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id);
+        debitedCredits = ACTION_COSTS.report;
         const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
         let apifyToken = process.env.APIFY_TOKEN;
         if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
@@ -317,6 +321,18 @@ export const createResearchReport = createServerFn({ method: "POST" })
       }
       return { id: row.id };
     } catch (e) {
+      // A user must never pay for a failed scrape or AI call. The refund is
+      // idempotent per report id, so a retry storm cannot mint credits.
+      if (debitedCredits > 0) {
+        await refundCredits(userId, debitedCredits, "research_report", row.id);
+      }
+      if (e instanceof InsufficientCreditsError) {
+        await supabase
+          .from("research_reports")
+          .update({ status: "failed", error_message: "Insufficient credits" })
+          .eq("id", row.id);
+        throw e;
+      }
       const msg = e instanceof Error ? e.message : String(e);
       await supabase
         .from("research_reports")
