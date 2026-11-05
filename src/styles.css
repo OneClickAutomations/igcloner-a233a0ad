@@ -351,40 +351,32 @@
 /* ── Welcome banner + character ──────────────────────────── */
 @utility welcome-banner {
   position: relative;
-  overflow: hidden;
   border-radius: 1.25rem;
-  border: 1px solid color-mix(in oklab, var(--tone-purple) 22%, var(--border));
+  /* Filled brand panel (purple -> indigo), same in both themes so it always
+     stands apart from the page background. Text on it uses --wb-fg. */
   background:
-    radial-gradient(ellipse 480px 260px at 88% 20%, color-mix(in oklab, var(--tone-pink) 14%, transparent), transparent 70%),
-    linear-gradient(135deg, color-mix(in oklab, var(--tone-purple) 12%, var(--card)), color-mix(in oklab, var(--tone-pink) 6%, var(--card)));
-  box-shadow: 0 1px 2px rgb(15 10 30 / 0.04), 0 12px 32px -16px color-mix(in oklab, var(--tone-purple) 35%, transparent);
-  /* Character palette (light): warm skin, dark hair/ink, brand-purple shirt,
-     amber megaphone, very light purple blob. */
-  --wc-blob: color-mix(in oklab, var(--tone-purple) 10%, transparent);
-  --wc-wave: var(--tone-pink);
-  --wc-pants: var(--tone-indigo);
-  --wc-shirt: var(--tone-purple);
+    radial-gradient(ellipse 420px 220px at 82% 10%, color-mix(in oklab, var(--tone-pink) 45%, transparent), transparent 70%),
+    linear-gradient(120deg, var(--tone-purple), var(--tone-indigo));
+  color: var(--wb-fg);
+  box-shadow: 0 14px 34px -16px color-mix(in oklab, var(--tone-indigo) 70%, transparent);
+  --wb-fg: oklch(0.99 0 0);
+  --wb-fg-soft: oklch(0.99 0 0 / 0.86);
+  --wb-chip: oklch(1 0 0 / 0.16);
+  --wb-chip-border: oklch(1 0 0 / 0.28);
+  /* Character palette tuned for the saturated panel. */
+  --wc-blob: oklch(1 0 0 / 0.14);
+  --wc-wave: oklch(1 0 0 / 0.85);
+  --wc-pants: #1E1B4B;
+  --wc-shirt: var(--tone-pink);
   --wc-skin: #F2C49B;
   --wc-skin-shade: #E0A878;
   --wc-mega: var(--tone-amber);
   --wc-mega-dark: var(--tone-orange);
-  --wc-hair: #23283B;
-  --wc-ink: #23283B;
-  --wc-spark: var(--tone-amber);
+  --wc-hair: #1A1530;
+  --wc-ink: #1A1530;
+  --wc-spark: oklch(0.92 0.15 90);
   &:where(.dark *) {
-    background:
-      radial-gradient(ellipse 480px 260px at 88% 20%, color-mix(in oklab, var(--tone-pink) 18%, transparent), transparent 70%),
-      linear-gradient(135deg, color-mix(in oklab, var(--tone-purple) 20%, transparent), color-mix(in oklab, var(--tone-pink) 8%, transparent));
-    border-color: color-mix(in oklab, var(--tone-purple) 34%, transparent);
-    backdrop-filter: blur(16px);
-    /* Dark: blob becomes a low-opacity light wash; shirt/megaphone lifted a
-       step so they don't sink into the panel. */
-    --wc-blob: color-mix(in oklab, #fff 6%, transparent);
-    --wc-shirt: var(--tone-violet);
-    --wc-mega: var(--tone-orange);
-    --wc-mega-dark: var(--tone-amber);
-    --wc-hair: #12141F;
-    --wc-ink: #12141F;
+    border: 1px solid oklch(1 0 0 / 0.1);
   }
 }
 
