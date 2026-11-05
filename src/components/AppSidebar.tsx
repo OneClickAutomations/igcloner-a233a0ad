@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins } from "lucide-react";
+import { getCreditBalance } from "@/lib/credits.functions";
 import {
   Sidebar,
   SidebarContent,
@@ -37,6 +40,14 @@ export function AppSidebar() {
   const closeMobile = () => {
     if (isMobile) setOpenMobile(false);
   };
+  const balanceFn = useServerFn(getCreditBalance);
+  const [credits, setCredits] = useState<number | null>(null);
+  useEffect(() => {
+    balanceFn()
+      .then((r) => setCredits(r.balance))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPath]);
 
   return (
     <Sidebar collapsible="icon">
@@ -85,6 +96,21 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <Link
+          to="/settings"
+          search={{ section: "usage" } as any}
+          onClick={closeMobile}
+          className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm transition-colors hover:bg-accent-primary/8"
+          title="Credit balance — see Settings → Usage for history"
+        >
+          <Coins className="h-4 w-4 shrink-0 text-accent-primary" />
+          {!collapsed && (
+            <>
+              <span className="font-mono font-bold tabular-nums">{credits ?? "…"}</span>
+              <span className="text-muted-foreground">credits</span>
+            </>
+          )}
+        </Link>
         <Button
           variant="ghost"
           size="sm"
