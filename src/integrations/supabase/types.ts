@@ -1031,6 +1031,7 @@ export type Database = {
           error_message: string | null
           id: string
           is_saved: boolean
+          last_progress_at: string
           limited_data: boolean
           limited_data_reason: string | null
           mode: string
@@ -1048,6 +1049,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           is_saved?: boolean
+          last_progress_at?: string
           limited_data?: boolean
           limited_data_reason?: string | null
           mode: string
@@ -1065,6 +1067,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           is_saved?: boolean
+          last_progress_at?: string
           limited_data?: boolean
           limited_data_reason?: string | null
           mode?: string
@@ -1393,6 +1396,10 @@ export type Database = {
           p_entity_type: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      sweep_stale_research_reports: {
+        Args: { p_user_id?: string }
         Returns: Json
       }
     }

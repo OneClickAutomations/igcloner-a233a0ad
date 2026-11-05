@@ -15,6 +15,13 @@
       "when": 1793857399147,
       "tag": "0001_credit_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793861476905,
+      "tag": "0002_research_heartbeat_and_sweep",
+      "breakpoints": true
     }
   ]
 }

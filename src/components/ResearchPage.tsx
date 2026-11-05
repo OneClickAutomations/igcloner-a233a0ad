@@ -88,7 +88,8 @@ import {
   retryResearchAnalysis,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
-import { ACTION_COSTS, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
+import { useQueryClient } from "@tanstack/react-query";
+import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IDEA_CATEGORIES, sampleConfidence, MAX_IDEAS_PER_REPORT } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
@@ -146,6 +147,10 @@ export function ResearchPage() {
   const delFn = useServerFn(deleteResearchReport);
   const ideasFn = useServerFn(generateContentIdeas);
   const retryFn = useServerFn(retryResearchAnalysis);
+  const queryClient = useQueryClient();
+  // Every action below can move credits (debit, refund, or the list's lazy
+  // stale-run sweep), so refetch the shared balance after each one.
+  const refreshCredits = () => queryClient.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -179,6 +184,7 @@ export function ResearchPage() {
     setLoadingList(true);
     try { const { reports } = await listFn(); setReports(reports as any); }
     catch (e) { toast.error((e as Error).message); }
+    refreshCredits();
     setLoadingList(false);
   }
   async function openReport(id: string) {
@@ -198,6 +204,7 @@ export function ResearchPage() {
       await refresh();
       navigate({ to: "/research", search: { reportId: id } });
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
+    refreshCredits();
     setCreating(false);
   }
   async function runIdeas(mode: "replace" | "append" = "replace") {
@@ -209,6 +216,7 @@ export function ResearchPage() {
       setDetail({ ...detail, ideas });
       toast.success(mode === "append" ? `Added 25 more ideas — ${ideas.length} total` : `Generated ${ideas.length} content ideas`);
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
+    refreshCredits();
     setIdeasBusy(false);
   }
   async function retryAnalysis() {
@@ -220,6 +228,7 @@ export function ResearchPage() {
       await openReport(detail.report.id);
       refresh();
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
+    refreshCredits();
   }
   async function forceRefresh() {
     if (!detail?.report) return;
@@ -231,6 +240,7 @@ export function ResearchPage() {
       await refresh();
       navigate({ to: "/research", search: { reportId: id } });
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
+    refreshCredits();
     setCreating(false);
   }
 

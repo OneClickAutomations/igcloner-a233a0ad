@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins } from "lucide-react";
 import { getCreditBalance } from "@/lib/credits.functions";
+import { useQuery } from "@tanstack/react-query";
+import { CREDIT_BALANCE_KEY } from "@/lib/credits";
 import {
   Sidebar,
   SidebarContent,
@@ -41,13 +42,14 @@ export function AppSidebar() {
     if (isMobile) setOpenMobile(false);
   };
   const balanceFn = useServerFn(getCreditBalance);
-  const [credits, setCredits] = useState<number | null>(null);
-  useEffect(() => {
-    balanceFn()
-      .then((r) => setCredits(r.balance))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPath]);
+  // Shared "credit-balance" query: any action that moves credits
+  // invalidates it, so the chip updates without navigation.
+  const { data: balanceData } = useQuery({
+    queryKey: CREDIT_BALANCE_KEY,
+    queryFn: () => balanceFn(),
+    staleTime: 15_000,
+  });
+  const credits = balanceData?.balance ?? null;
 
   return (
     <Sidebar collapsible="icon">

@@ -6,6 +6,7 @@ import { SAMPLING, COMPETITOR_WINDOW_DAYS, NICHE_WINDOW_DAYS, COMPETITOR_RELAX_M
 import { generateIntelJson } from "@/lib/intel-ai.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
+import { assertSampleSurvivedFiltering } from "@/lib/research-invariants";
 
 // ─────────────────────────────────────────────────────────────────────
 // Content Intelligence Engine — Research module (Phase 1)
@@ -94,6 +95,7 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
       relaxed = true;
     }
     const finalMerged = relaxed ? merged : filter.kept;
+    const scrapedUsable = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).length;
     const posts = finalMerged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
     const cutoffMeta: CutoffMeta = {
       date: cutoff,
@@ -122,6 +124,7 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
         : null,
       posts,
       ...buildSampleMeta(posts, [`@${handle}`], cutoffMeta),
+      scrapedUsable,
     };
   }
 
@@ -149,7 +152,8 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
     ...(applyFilter ? {} : { skippedReason: `Filtering to the last ${NICHE_WINDOW_DAYS} days would leave only ${filter.kept.length} posts, so older posts were kept.` }),
   };
   const posts = finalPosts.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
-  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`), cutoffMeta) };
+  const scrapedUsable = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).length;
+  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`), cutoffMeta), scrapedUsable };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
@@ -281,7 +285,7 @@ export const createResearchReport = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: row, error } = await supabase
       .from("research_reports")
-      .insert({ user_id: userId, mode: data.mode, subject: data.subject, status: "scraping" })
+      .insert({ user_id: userId, mode: data.mode, subject: data.subject, status: "scraping", last_progress_at: new Date().toISOString() })
       .select("id")
       .single();
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
@@ -297,7 +301,7 @@ export const createResearchReport = createServerFn({ method: "POST" })
       if (!data.forceRefresh) {
         const { data: candidates } = await supabase
           .from("research_reports")
-          .select("id, raw_data, created_at")
+          .select("id, raw_data, created_at, status")
           .eq("user_id", userId)
           .eq("mode", data.mode)
           .ilike("subject", data.subject.trim())
@@ -307,6 +311,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
         const reusable = (candidates ?? []).find(
           (c: any) => c.id !== row.id
             && Array.isArray(c.raw_data?.posts)
+            // A failed run with no posts is not a sample worth reusing (e.g. the
+            // cutoff bug's empty report); a failed run WITH posts still is.
+            && !(c.status === "failed" && c.raw_data.posts.length === 0)
             && isWithinReuseWindow(c.created_at),
         );
         if (reusable) {
@@ -333,28 +340,48 @@ export const createResearchReport = createServerFn({ method: "POST" })
           apifyToken = decryptApiKey(keyRow.encrypted_key);
         }
         if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
-        signals = await collectSignals(data.mode, data.subject, apifyToken);
+        const { scrapedUsable, ...collected } = await collectSignals(data.mode, data.subject, apifyToken);
+        signals = collected;
+        // Posts came back but filtering ate all of them: a bug, not a result.
+        // The genuine profile-only case (actor returned nothing) passes.
+        assertSampleSurvivedFiltering(scrapedUsable, Array.isArray(signals.posts) ? signals.posts.length : 0);
       }
       const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
       const limited = postsCount === 0;
-      await supabase
-        .from("research_reports")
-        .update({
-          status: "analyzing",
+      const toAnalyzing = {
           raw_data: signals,
           posts_analyzed: postsCount,
           limited_data: limited,
           limited_data_reason: limited
             ? "This account's posts could not be scraped. Profile intelligence is based on bio and public profile data only."
             : null,
-        })
-        .eq("id", row.id);
+      };
+      // Conditional on still being in-flight: if the sweep already failed
+      // and refunded this row, keep the collected data but not the status.
+      const { data: advanced } = await supabase
+        .from("research_reports")
+        .update({ ...toAnalyzing, status: "analyzing", last_progress_at: new Date().toISOString() })
+        .eq("id", row.id)
+        .eq("status", "scraping")
+        .select("id");
+      if (!advanced?.length) {
+        await supabase.from("research_reports").update(toAnalyzing).eq("id", row.id);
+        console.warn("[research] report was swept during scraping; kept data, status stays failed", row.id);
+        return { id: row.id };
+      }
 
       const { dna, score } = await generateDnaReport(data.mode, data.subject, signals);
-      await supabase
+      const { data: finished } = await supabase
         .from("research_reports")
-        .update({ status: "ready", dna_report: dna, opportunity_score: score })
-        .eq("id", row.id);
+        .update({ status: "ready", dna_report: dna, opportunity_score: score, last_progress_at: new Date().toISOString() })
+        .eq("id", row.id)
+        .eq("status", "analyzing")
+        .select("id");
+      if (!finished?.length) {
+        await supabase.from("research_reports").update({ dna_report: dna, opportunity_score: score }).eq("id", row.id);
+        console.warn("[research] report was swept during analysis; kept DNA, status stays failed", row.id);
+        return { id: row.id };
+      }
 
       // Auto-register competitor into watchlist for the Dashboard widget.
       if (data.mode === "competitor") {
@@ -406,16 +433,22 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
     if (!signals || !Array.isArray(signals.posts)) {
       throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
     }
-    await supabase.from("research_reports").update({ status: "analyzing", error_message: null }).eq("id", report.id);
+    await supabase.from("research_reports").update({ status: "analyzing", error_message: null, last_progress_at: new Date().toISOString() }).eq("id", report.id);
     // Retry reuses the existing scrape — cheaper than a fresh report, but
     // still a paid AI call. Debit atomically first; refunded on failure.
     await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
-      await supabase
+      const { data: finished } = await supabase
         .from("research_reports")
-        .update({ status: "ready", dna_report: dna, opportunity_score: score })
-        .eq("id", report.id);
+        .update({ status: "ready", dna_report: dna, opportunity_score: score, last_progress_at: new Date().toISOString() })
+        .eq("id", report.id)
+        .eq("status", "analyzing")
+        .select("id");
+      if (!finished?.length) {
+        await supabase.from("research_reports").update({ dna_report: dna, opportunity_score: score }).eq("id", report.id);
+        console.warn("[research] retry was swept during analysis; kept DNA, status stays failed", report.id);
+      }
       return { id: report.id };
     } catch (e) {
       await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id);
@@ -428,6 +461,14 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
 export const listResearchReports = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Lazy self-heal: fail + refund this user's stale in-flight runs. Uses
+    // the partial in-flight index, so it touches only scraping/analyzing rows.
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.rpc("sweep_stale_research_reports", { p_user_id: context.userId });
+    } catch (e) {
+      console.error("[research] lazy sweep failed", e);
+    }
     const { data, error } = await context.supabase
       .from("research_reports")
       .select("id, mode, subject, status, opportunity_score, is_saved, error_message, created_at")
