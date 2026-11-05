@@ -84,10 +84,11 @@ import {
   deleteResearchReport,
   generateContentIdeas,
   saveIdeaToPlanner,
+  retryResearchAnalysis,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IDEA_CATEGORIES } from "@/lib/intel-analytics";
+import { IDEA_CATEGORIES, sampleConfidence } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
 import { exportResearchPdf } from "@/lib/research-pdf";
 
@@ -142,6 +143,7 @@ export function ResearchPage() {
   const saveFn = useServerFn(toggleSaveResearch);
   const delFn = useServerFn(deleteResearchReport);
   const ideasFn = useServerFn(generateContentIdeas);
+  const retryFn = useServerFn(retryResearchAnalysis);
 
   const [reports, setReports] = useState<Report[]>([]);
   const [loadingList, setLoadingList] = useState(true);
