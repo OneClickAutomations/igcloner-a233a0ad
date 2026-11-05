@@ -199,14 +199,14 @@ export function ResearchPage() {
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setCreating(false);
   }
-  async function runIdeas() {
+  async function runIdeas(mode: "replace" | "append" = "replace") {
     if (!detail?.report?.id) return;
     setIdeasBusy(true);
     setInsufficient(null);
     try {
-      const { ideas } = await ideasFn({ data: { id: detail.report.id, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
+      const { ideas } = await ideasFn({ data: { id: detail.report.id, mode, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
       setDetail({ ...detail, ideas });
-      toast.success(`Generated ${ideas.length} content ideas`);
+      toast.success(mode === "append" ? `Added 25 more ideas — ${ideas.length} total` : `Generated ${ideas.length} content ideas`);
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
@@ -257,7 +257,8 @@ export function ResearchPage() {
           refresh();
         }}
         ideasBusy={ideasBusy}
-        onGenerateIdeas={runIdeas}
+        onGenerateIdeas={() => runIdeas("replace")}
+        onAppendIdeas={() => runIdeas("append")}
         onRetryAnalysis={retryAnalysis}
         onForceRefresh={forceRefresh}
         refreshBusy={creating}
