@@ -486,15 +486,33 @@ function ReportDetail({
           <div className="min-w-0">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="uppercase tracking-wide">{report.mode}</Badge>
-              <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" /> Ready
-              </Badge>
+              {report.status === "failed" ? (
+                <Badge variant="outline" className="gap-1 text-rose-600 dark:text-rose-400">
+                  <TriangleAlert className="h-3 w-3" /> Failed
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" /> Ready
+                </Badge>
+              )}
               {topPillar && <Badge variant="outline" className="gap-1"><Target className="h-3 w-3" /> {topPillar}</Badge>}
             </div>
             <h1 className="mb-3 text-3xl font-bold tracking-tight lg:text-4xl">{report.subject}</h1>
             {dna.executiveSummary && (
               <p className="max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
                 {dna.executiveSummary}
+              </p>
+            )}
+            {sampleLine && (
+              <p className="mt-3 text-xs text-muted-foreground">{sampleLine}</p>
+            )}
+            {reuse && (
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>Sample reused from a scrape {hoursAgo(reuse.originalCollectedAt)}.</span>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={onForceRefresh} disabled={refreshBusy}>
+                  {refreshBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Fetch fresh data
+                </Button>
               </p>
             )}
             <div className="mt-6 flex flex-wrap gap-2">
@@ -511,6 +529,37 @@ function ReportDetail({
           <OpportunityGauge score={score} />
         </div>
       </Card>
+
+      {/* ── FAILED ANALYSIS BANNER ──────────────────────────────── */}
+      {report.status === "failed" && (
+        <Card className="mb-6 flex items-start gap-3 border-rose-500/40 bg-rose-500/5 p-4">
+          <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Analysis failed</p>
+            <p className="text-xs text-muted-foreground">{report.error_message ?? "Something went wrong while analyzing this report."}</p>
+            {hasRawPosts ? (
+              <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={handleRetry} disabled={retrying}>
+                {retrying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Retry analysis — reuses the data already collected
+              </Button>
+            ) : (
+              <Button size="sm" variant="outline" className="mt-3 gap-1" onClick={onForceRefresh} disabled={refreshBusy}>
+                {refreshBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                Run again with a fresh scrape
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* ── SMALL SAMPLE CAUTION ────────────────────────────────── */}
+      {sampleSize > 0 && (confidence === "low" || confidence === "very low") && report.status !== "failed" && (
+        <div className="mb-6">
+          <InsightCallout tone="amber" icon={TriangleAlert} title="Small sample">
+            Only {sampleSize} posts were collected, so the percentages in this report are indicative only — treat them as observed tendencies in the sample, not this account's strategy.
+          </InsightCallout>
+        </div>
+      )}
 
       {/* ── LIMITED DATA BANNER ─────────────────────────────────── */}
       {limited && (
