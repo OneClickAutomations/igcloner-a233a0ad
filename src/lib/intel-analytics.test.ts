@@ -185,3 +185,43 @@ describe("computeIdeaConfidence", () => {
     expect(score).toBeLessThanOrEqual(100);
   });
 });
+describe("toPromptPost lean serialization", () => {
+  // Fixture shaped like a real stored normalized post.
+  const full = {
+    type: "Video", timestamp: "2026-09-01T10:00:00Z", caption: "Real caption line\nMore detail",
+    likesCount: 120, commentsCount: 14, videoViewCount: 9000, videoPlayCount: 9100,
+    hashtags: ["fitness"], mentions: [], isSponsored: null, locationName: null, musicInfo: null,
+    carouselSlides: null, url: "https://www.instagram.com/p/ABC/", shortCode: "ABC",
+    displayUrl: "https://cdn.example.com/img.jpg",
+  };
+  it("omits displayUrl, url, shortCode and null/empty fields, keeps postIndex", () => {
+    const lean = toPromptPost(full, 3) as any;
+    expect(lean.postIndex).toBe(3);
+    expect(lean.displayUrl).toBeUndefined();
+    expect(lean.url).toBeUndefined();
+    expect(lean.shortCode).toBeUndefined();
+    expect(lean.isSponsored).toBeUndefined();
+    expect(lean.locationName).toBeUndefined();
+    expect(lean.musicInfo).toBeUndefined();
+    expect(lean.mentions).toBeUndefined();
+    expect(lean.caption).toBe("Real caption line\nMore detail");
+    expect(lean.likesCount).toBe(120);
+  });
+  it("is at least 15% shorter than the full post on a real-shaped fixture", () => {
+    const posts = Array.from({ length: 20 }, (_, i) => ({
+      ...full,
+      caption: `Caption ${i} with a realistic amount of text, hashtags and a call to action that creators actually write.`,
+      likesCount: 100 + i, shortCode: `SC${i}`, url: `https://www.instagram.com/p/SC${i}/`,
+    }));
+    const fullLen = JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p }))).length;
+    const leanLen = JSON.stringify(posts.map(toPromptPost)).length;
+    expect(leanLen).toBeLessThanOrEqual(fullLen * 0.85);
+  });
+  it("grounding still resolves sourceUrl and highest-post url from stored posts, not prompt posts", () => {
+    const stored = posts.map((p, i) => ({ ...p, url: `https://www.instagram.com/p/post${i}/` }));
+    const report = groundIntelReport({ hookAnalysis: { provenHooks: [{ postIndex: 11, actualOpeningLine: "Invented" }] } }, { posts: stored, profile: { followersCount: 1000 } });
+    expect(report.hookAnalysis.provenHooks[0].sourceUrl).toBe("https://www.instagram.com/p/post11/");
+    const metrics = calculateIntelMetrics(stored, 1000).performanceMetrics;
+    expect(metrics.highestLikedPost.url).toBe("https://www.instagram.com/p/post11/");
+  });
+});
