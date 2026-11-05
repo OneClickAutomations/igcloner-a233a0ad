@@ -237,23 +237,61 @@ export function groundIntelReport(dna: any, signals: any) {
   };
 }
 
+// ── Idea batches ───────────────────────────────────────────────────
+// Ideas are generated in batches of 25 (5 per category). Append mode
+// continues numbering from the current max; a report caps at 4 batches.
+export const IDEAS_PER_BATCH = 25;
+export const IDEAS_PER_CATEGORY = 5;
+export const MAX_IDEA_BATCHES = 4;
+export const MAX_IDEAS_PER_REPORT = IDEAS_PER_BATCH * MAX_IDEA_BATCHES;
+
 const IdeaSchema = z.object({
-  idea_number: z.number().int().min(1).max(50), category: z.enum(IDEA_CATEGORIES), title: z.string().min(5), format: z.enum(["Reel","Carousel","Image"]),
+  idea_number: z.number().int().min(1).max(MAX_IDEAS_PER_REPORT), category: z.enum(IDEA_CATEGORIES), title: z.string().min(5), format: z.enum(["Reel","Carousel","Image"]),
   hook: z.string().min(15), description: z.string().min(20), why_it_works: z.string().min(30), caption_opener: z.string().min(20), cta: z.string().min(5),
   viral_mechanism: z.enum(["save-worthy","share-worthy","comment-triggering","scroll-stopping"]), production_difficulty: z.enum(["easy (30 min)","medium (2 hours)","hard (half day)"]),
   virality_score: z.number().min(0).max(100), source_post_index: z.number().int().nullable(), hashtags: z.array(z.string()).default([]),
 }).passthrough();
-export function validateIntelIdeas(raw: unknown, posts: any[]) {
-  const ideas = z.array(IdeaSchema).length(50).parse(raw);
-  if (new Set(ideas.map(i => i.idea_number)).size !== 50) throw new Error("Ideas must have unique numbers 1–50.");
-  if (new Set(ideas.map(i => i.hook.toLowerCase().trim())).size !== 50) throw new Error("Duplicate hooks were returned. Existing ideas have been preserved.");
+
+/**
+ * Validate one batch of 25 ideas. `offset` is the highest idea_number
+ * already stored on the report (0 for a fresh/replace run); batch k covers
+ * offset+i*5+1 … offset+(i+1)*5 per category. Hooks must be unique within
+ * the batch AND against `existingHooks` (case-insensitive, trimmed).
+ */
+export function validateIntelIdeas(raw: unknown, posts: any[], opts: { offset?: number; existingHooks?: string[] } = {}) {
+  const offset = opts.offset ?? 0;
+  if (offset + IDEAS_PER_BATCH > MAX_IDEAS_PER_REPORT) throw new Error(`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`);
+  const ideas = z.array(IdeaSchema).length(IDEAS_PER_BATCH).parse(raw);
+  if (new Set(ideas.map(i => i.idea_number)).size !== IDEAS_PER_BATCH) throw new Error(`Ideas must have unique numbers ${offset + 1}–${offset + IDEAS_PER_BATCH}.`);
+  const batchHooks = ideas.map(i => i.hook.toLowerCase().trim());
+  if (new Set(batchHooks).size !== IDEAS_PER_BATCH) throw new Error("Duplicate hooks were returned. Existing ideas have been preserved.");
+  const prior = new Set((opts.existingHooks ?? []).map(h => h.toLowerCase().trim()));
+  if (batchHooks.some(h => prior.has(h))) throw new Error("New ideas repeat hooks that already exist on this report. Existing ideas have been preserved.");
   for (const [index, category] of IDEA_CATEGORIES.entries()) {
-    if (ideas.filter(i => i.category === category).length !== 10) throw new Error(`Expected ten ${category} ideas.`);
-    if (ideas.some(i => i.category === category && (i.idea_number <= index*10 || i.idea_number > (index+1)*10))) throw new Error("Idea numbering does not match strategy categories.");
+    if (ideas.filter(i => i.category === category).length !== IDEAS_PER_CATEGORY) throw new Error(`Expected five ${category} ideas.`);
+    if (ideas.some(i => i.category === category && (i.idea_number <= offset + index*IDEAS_PER_CATEGORY || i.idea_number > offset + (index+1)*IDEAS_PER_CATEGORY))) throw new Error("Idea numbering does not match strategy categories.");
   }
   for (const i of ideas) {
     if (posts.length && (i.category === "Steal the Frame" || i.category === "Amplify What Works") && (i.source_post_index == null || !posts[i.source_post_index])) throw new Error("Proven-format ideas must reference a real source post.");
     if (!posts.length && i.source_post_index != null) throw new Error("Profile-only ideas cannot claim scraped post evidence.");
   }
   return ideas.sort((a,b) => a.idea_number-b.idea_number);
+}
+
+// ── Lean prompt serialization ──────────────────────────────────────
+// Stored raw_data keeps every field (the UI needs displayUrl and url), but
+// the model never looks at image URLs or shortCodes. Measured on 185 real
+// stored posts: ~1,098 chars/post full → ~844 lean (about 23% cheaper).
+// Grounding is unaffected: groundIntelReport and calculateIntelMetrics
+// attach URLs from the stored posts by index, never from the model.
+const PROMPT_OMIT_KEYS = new Set(["displayUrl", "url", "shortCode"]);
+export function toPromptPost(p: any, postIndex: number) {
+  const out: Record<string, unknown> = { postIndex };
+  for (const [key, value] of Object.entries(p ?? {})) {
+    if (PROMPT_OMIT_KEYS.has(key)) continue;
+    if (value == null || value === "") continue;
+    if (Array.isArray(value) && value.length === 0) continue;
+    out[key] = value;
+  }
+  return out;
 }

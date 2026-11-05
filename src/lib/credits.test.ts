@@ -21,7 +21,7 @@ describe("plan config", () => {
 describe("action costs", () => {
   it("matches the agreed cost table", () => {
     expect(ACTION_COSTS.report).toBe(10);
-    expect(ACTION_COSTS.ideas).toBe(10);
+    expect(ACTION_COSTS.ideas).toBe(5);
     expect(ACTION_COSTS.premium).toBe(20);
     expect(ACTION_COSTS.retry).toBe(5);
     expect(ACTION_COSTS.cacheHit).toBe(0);

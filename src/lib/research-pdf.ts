@@ -77,7 +77,7 @@ export function buildResearchPdf(report: any, ideas: any[] = []) {
   // 9: top ideas; ten complete excerpts on the promised page.
   page(9,"IDEAS","Top 10 Content Ideas");text(`${ideas.length} full ideas available as Studio drafts from this report`,M,124,8,D.muted);
   const top=[...ideas].sort((a,b)=>Number(b.virality_score)-Number(a.virality_score)).slice(0,10);
-  if(!top.length)sectionCard("Ideas not generated yet","Generate 50 content ideas in the report, then export again to include the top ten.",145,86,D.warning);
+  if(!top.length)sectionCard("Ideas not generated yet","Generate 25 content ideas in the report, then export again to include the top ten.",145,86,D.warning);
   top.forEach((idea,i)=>{const y=139+i*64;card(M,y,CW,59);text(`${i+1} / ${idea.format} / Predicted score ${idea.virality_score}`,M+9,y+12,7,D.gradient[i%4],true);lines(idea.hook,M+9,y+25,CW-18,8,D.primary,17,true);lines(idea.description,M+9,y+44,CW-18,7,D.secondary,12);});
   doc.setProperties({title:`IGCloner Intel - ${subject}`,subject:"Content Intelligence Report",author:"IGCloner"});
   return doc;

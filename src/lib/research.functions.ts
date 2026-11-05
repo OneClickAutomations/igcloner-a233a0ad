@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence } from "@/lib/intel-analytics";
+import { normalizeIntelPost, groundIntelReport, validateIntelIdeas, deriveHashtagQueries, dedupePostsByShortCode, sampleConfidence, isWithinReuseWindow, computeIdeaConfidence, toPromptPost, IDEAS_PER_BATCH, IDEAS_PER_CATEGORY, MAX_IDEAS_PER_REPORT } from "@/lib/intel-analytics";
+import { SAMPLING, COMPETITOR_WINDOW_DAYS, NICHE_WINDOW_DAYS, COMPETITOR_RELAX_MIN_POSTS, COMPETITOR_RELAX_LIMIT, NICHE_FILTER_MIN_POSTS, cutoffDate, filterPostsByCutoff, type CutoffMeta } from "@/lib/research-sampling";
 import { generateIntelJson } from "@/lib/intel-ai.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
@@ -45,7 +46,7 @@ async function apifyRun(actor: string, input: unknown, token: string): Promise<a
 }
 
 // Real sample provenance, stored on the report so the UI and the AI both see it.
-function buildSampleMeta(posts: any[], sources: string[]) {
+function buildSampleMeta(posts: any[], sources: string[], cutoff: CutoffMeta) {
   const times = posts
     .map((p) => new Date(p.timestamp).getTime())
     .filter(Number.isFinite)
@@ -57,6 +58,7 @@ function buildSampleMeta(posts: any[], sources: string[]) {
     dateRange: times.length
       ? { earliest: new Date(times[0]).toISOString(), latest: new Date(times[times.length - 1]).toISOString() }
       : null,
+    cutoff,
   };
 }
 
@@ -66,14 +68,41 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
     const handle = subject.replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").split(/[/?]/)[0].trim();
     const profiles = await apifyRun("apify~instagram-profile-scraper", { usernames: [handle] }, token);
     const profile = profiles?.[0] ?? null;
-    // Always run the posts scrape (60) and merge with whatever latestPosts
+    // Recency cutoff: a concrete UTC date passed to the actor AND enforced
+    // in code. The actor docs warn pinned posts may leak through the filter,
+    // and say nothing about how it interacts with resultsLimit — the code
+    // filter is the safety net for both.
+    const cutoff = cutoffDate(COMPETITOR_WINDOW_DAYS);
+    const cfg = SAMPLING.standard;
+    // Always run the posts scrape and merge with whatever latestPosts
     // returned — 12 posts cannot support the precision this report claims.
     let postsCall: any[] = [];
     if (profile && !profile.private) {
-      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: 60 }, token);
+      postsCall = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: cfg.competitorPosts, onlyPostsNewerThan: cutoff }, token);
     }
-    const merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
-    const posts = merged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    let merged = dedupePostsByShortCode([...(profile?.latestPosts ?? []), ...postsCall]);
+    const filter = filterPostsByCutoff(merged, cutoff);
+    let relaxed = false;
+    // Relax rule: a weekly poster must not be stuck with a tiny sample.
+    // ONE fallback scrape, no cutoff, smaller limit — then dedupe again.
+    // When it fires, the cutoff is ABANDONED and the older posts are kept:
+    // re-filtering the fallback would discard the very posts it was paid
+    // for (observed live: an infrequent poster ended with 0 posts).
+    if (profile && !profile.private && filter.kept.length < COMPETITOR_RELAX_MIN_POSTS) {
+      const fallback = await apifyRun("apify~instagram-scraper", { directUrls: [`https://www.instagram.com/${handle}/`], resultsType: "posts", resultsLimit: COMPETITOR_RELAX_LIMIT }, token);
+      merged = dedupePostsByShortCode([...merged, ...fallback]);
+      relaxed = true;
+    }
+    const finalMerged = relaxed ? merged : filter.kept;
+    const posts = finalMerged.filter((p: any) => !p.error && (p.caption != null || p.type != null)).map(normalizeIntelPost);
+    const cutoffMeta: CutoffMeta = {
+      date: cutoff,
+      windowDays: COMPETITOR_WINDOW_DAYS,
+      appliedAt: relaxed ? "none" : "both",
+      relaxed,
+      skipped: false,
+      droppedStale: relaxed ? 0 : filter.droppedStale,
+    };
     return {
       subject: handle,
       profile: profile
@@ -92,18 +121,35 @@ async function collectSignals(mode: "niche" | "competitor" | "topic", subject: s
           }
         : null,
       posts,
-      ...buildSampleMeta(posts, [`@${handle}`]),
+      ...buildSampleMeta(posts, [`@${handle}`], cutoffMeta),
     };
   }
 
-  // Niche / topic — up to 3 derived hashtags, 30 posts each, merged + deduped.
-  const tags = deriveHashtagQueries(subject);
+  // Niche / topic — up to 3 derived hashtags, merged + deduped. The hashtag
+  // actor has NO date filter, so recency is enforced in code only — and only
+  // when it leaves enough posts, so a sparse hashtag is never filtered to
+  // nothing.
+  const cfg = SAMPLING.standard;
+  const tags = deriveHashtagQueries(subject).slice(0, cfg.nicheTagCount);
   const items = tags.length
-    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: 30 }, token)
+    ? await apifyRun("apify~instagram-hashtag-scraper", { hashtags: tags, resultsLimit: cfg.nichePerTag }, token)
     : [];
   const merged = dedupePostsByShortCode(items.flatMap(item => Array.isArray(item.latestPosts) ? item.latestPosts : [item]));
-  const posts = merged.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
-  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`)) };
+  const cutoff = cutoffDate(NICHE_WINDOW_DAYS);
+  const filter = filterPostsByCutoff(merged, cutoff);
+  const applyFilter = filter.kept.length >= NICHE_FILTER_MIN_POSTS;
+  const finalPosts = applyFilter ? filter.kept : merged;
+  const cutoffMeta: CutoffMeta = {
+    date: applyFilter ? cutoff : null,
+    windowDays: NICHE_WINDOW_DAYS,
+    appliedAt: applyFilter ? "code" : "none",
+    relaxed: false,
+    skipped: !applyFilter,
+    droppedStale: applyFilter ? filter.droppedStale : 0,
+    ...(applyFilter ? {} : { skippedReason: `Filtering to the last ${NICHE_WINDOW_DAYS} days would leave only ${filter.kept.length} posts, so older posts were kept.` }),
+  };
+  const posts = finalPosts.filter(p => p.caption != null || p.type != null).map(normalizeIntelPost);
+  return { subject, profile: null, posts, ...buildSampleMeta(posts, tags.map((t) => `#${t}`), cutoffMeta) };
 }
 
 async function generateDnaReport(mode: string, subject: string, signals: any) {
@@ -137,7 +183,7 @@ POSTS ANALYZED: ${postsAnalyzed}
 SAMPLE CONFIDENCE: ${confidence}
 SAMPLE DATE RANGE: ${dateRange ? `${dateRange.earliest} to ${dateRange.latest}` : "Not available"}
 POSTS DATA:
-${JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p })))}
+${JSON.stringify(posts.map(toPromptPost))}
 
 Return a single JSON object with BOTH the detailed schema AND the compact legacy keys used by the UI.
 Schema:
@@ -436,11 +482,11 @@ export const deleteResearchReport = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ── Content Opportunity Engine — 50 ranked ideas per report ──────────
+// ── Content Opportunity Engine — batches of 25 ranked ideas per report ──
 
 export const generateContentIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), preferences: z.object({ goal: z.string().max(200).optional(), niche: z.string().max(200).optional(), toneOfVoice: z.string().max(200).optional(), keywords: z.array(z.string().max(100)).max(20).optional() }).optional() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), mode: z.enum(["replace", "append"]).default("replace"), preferences: z.object({ goal: z.string().max(200).optional(), niche: z.string().max(200).optional(), toneOfVoice: z.string().max(200).optional(), keywords: z.array(z.string().max(100)).max(20).optional() }).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
@@ -452,12 +498,29 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
     if (error || !report) throw new Error("Report not found");
     if (report.status !== "ready") throw new Error("Report is not ready yet");
 
+    // Append mode continues numbering from the current max and must not
+    // repeat concepts or hooks already on the report. Capped at 4 batches.
+    let existingIdeas: any[] = [];
+    if (data.mode === "append") {
+      const { data: existing } = await supabase
+        .from("content_ideas")
+        .select("idea_number, hook, title")
+        .eq("research_report_id", report.id);
+      existingIdeas = existing ?? [];
+      if (existingIdeas.length >= MAX_IDEAS_PER_REPORT) {
+        throw new Error(`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`);
+      }
+    }
+    const offset = data.mode === "append" ? Math.max(0, ...existingIdeas.map((i: any) => Number(i.idea_number) || 0)) : 0;
+    const existingHooks = existingIdeas.map((i: any) => String(i.hook ?? ""));
+    const range = (cat: number) => `${offset + cat * IDEAS_PER_CATEGORY + 1}-${offset + (cat + 1) * IDEAS_PER_CATEGORY}`;
+
     // Paid AI call — debit atomically before invoking the model; the whole
     // generation below is wrapped so a failure refunds the exact amount.
     await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
     try {
 
-    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 50 content ideas.
+    const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 25 content ideas.
 Every idea MUST be specific, immediately actionable, and grounded in the ACTUAL data from this account — not generic advice.
 
 REJECT an idea if it:
@@ -473,11 +536,11 @@ APPROVE an idea if it:
 - Has a hook line the user can literally copy and post tomorrow
 - Is informed by what ALREADY performed on this account or this niche
 
-Return ONLY a JSON array of exactly 50 objects. No prose, no markdown fences, no wrapper object.`;
+Return ONLY a JSON array of exactly 25 objects. No prose, no markdown fences, no wrapper object.`;
 
     const shape = `{
   "source_post_index": number | null, // exact source post index for Steal the Frame and Amplify What Works
-  "idea_number": 1..50,
+  "idea_number": ${offset + 1}..${offset + IDEAS_PER_BATCH},
   "category": "Steal the Frame" | "Exploit the Gaps" | "Amplify What Works" | "Original Authority" | "Viral Formats",
   "title": string,
   "format": "Reel" | "Carousel" | "Image",
@@ -505,33 +568,38 @@ Do not invent first-person earnings, results, testimonials, credentials, or expe
 Content DNA report (grounded in real scrape):
 ${JSON.stringify(report.dna_report)}
 INDEXED SOURCE POSTS (complete evidence):
-${JSON.stringify(((report.raw_data as any)?.posts ?? []).map((p: any, postIndex: number) => ({ postIndex, ...p })))}
+${JSON.stringify(((report.raw_data as any)?.posts ?? []).map(toPromptPost))}
 USER PREFERENCES (prioritize selected values over inferred niche or tone):
 ${JSON.stringify(data.preferences ?? {})}
 If no user niche is selected, use the account's audience. No posts means PROFILE-ONLY suggestions: never claim a scraped best performer. Explain the specific bio/audience inference instead and use null source_post_index.
 For Steal the Frame and Amplify What Works with posts, source_post_index MUST reference an actual post and why_it_works MUST quote or describe that specific post and its observed engagement. Scores are predictions, not measured probabilities.
+${data.mode === "append" ? `ALREADY GENERATED — do not repeat these concepts or hooks:
+${JSON.stringify(existingIdeas.map((i: any) => ({ title: i.title, hook: i.hook })))}
+` : ""}
+Generate EXACTLY 25 content ideas distributed across 5 strategy categories, 5 ideas each:
 
-Generate EXACTLY 50 content ideas distributed across 5 strategy categories, 10 ideas each:
-
-CATEGORY 1 — "Steal the Frame" (ideas 1-10): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
-CATEGORY 2 — "Exploit the Gaps" (ideas 11-20): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
-CATEGORY 3 — "Amplify What Works" (ideas 21-30): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
-CATEGORY 4 — "Original Authority" (ideas 31-40): Original angles NOT present on this account that position the user as a trusted authority.
-CATEGORY 5 — "Viral Formats" (ideas 41-50): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
+CATEGORY 1 — "Steal the Frame" (ideas ${range(0)}): Clone the exact format of the account's best-performing posts. Same structure, same hook type, same format — adapted for the user.
+CATEGORY 2 — "Exploit the Gaps" (ideas ${range(1)}): Target the specific content gaps this account is missing. Content their audience clearly wants but isn't getting.
+CATEGORY 3 — "Amplify What Works" (ideas ${range(2)}): Take the highest-performing hooks and angles from this account and make each 10x stronger, more specific, more viral.
+CATEGORY 4 — "Original Authority" (ideas ${range(3)}): Original angles NOT present on this account that position the user as a trusted authority.
+CATEGORY 5 — "Viral Formats" (ideas ${range(4)}): Proven viral formats (transformation, myth-busting, listicle, before/after, day-in-the-life, hot take) applied to this niche.
 
 Each object MUST match this shape:
 ${shape}
 
-Return a flat JSON array of 50 objects. Nothing else.`;
+Return a flat JSON array of 25 objects. Nothing else.`;
 
     const posts = (report.raw_data as any)?.posts ?? [];
-    // 50 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
-    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts);
+    // 25 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
+    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts, { offset, existingHooks });
     const sample = sampleConfidence(posts.length);
 
-    // Wipe prior ideas so re-runs don't duplicate.
-    const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
-    if (deleteError) throw new Error(deleteError.message);
+    // Replace mode wipes prior ideas so re-runs don't duplicate; append
+    // mode keeps them and continues numbering.
+    if (data.mode === "replace") {
+      const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
+      if (deleteError) throw new Error(deleteError.message);
+    }
 
     const rows = ideas.map((i: any, idx: number) => ({
       user_id: userId,
@@ -560,12 +628,17 @@ Return a flat JSON array of 50 objects. Nothing else.`;
       confidence_score: computeIdeaConfidence({ idea: i, posts, sample }),
       predicted_virality_basis: Number(i.confidence_score) || null,
     }));
-    const { data: inserted, error: insErr } = await supabase
+    const { error: insErr } = await supabase
       .from("content_ideas")
-      .insert(rows)
-      .select("*");
+      .insert(rows);
     if (insErr) throw new Error(insErr.message);
-    return { ideas: inserted ?? [] };
+    // Return the full idea list (append mode keeps prior batches).
+    const { data: all } = await supabase
+      .from("content_ideas")
+      .select("*")
+      .eq("research_report_id", data.id)
+      .order("idea_number", { ascending: true });
+    return { ideas: all ?? [] };
     } catch (e) {
       await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
       throw e;

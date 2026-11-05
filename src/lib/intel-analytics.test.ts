@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES, sampleConfidence, shareFor, deriveHashtagQueries, dedupePostsByShortCode, isWithinReuseWindow, computeIdeaConfidence, CONFIDENCE_WEIGHTS, UNEVIDENCED_CONFIDENCE_CAP } from "./intel-analytics";
+import { calculateIntelMetrics, groundIntelReport, validateIntelIdeas, IDEA_CATEGORIES, sampleConfidence, shareFor, deriveHashtagQueries, dedupePostsByShortCode, isWithinReuseWindow, computeIdeaConfidence, CONFIDENCE_WEIGHTS, UNEVIDENCED_CONFIDENCE_CAP, toPromptPost, IDEAS_PER_BATCH, IDEAS_PER_CATEGORY, MAX_IDEA_BATCHES, MAX_IDEAS_PER_REPORT } from "./intel-analytics";
 const posts = Array.from({ length: 12 }, (_,i) => ({ type: i < 6 ? "Image" : i < 9 ? "Video" : "Sidecar", caption: `Actual caption ${i}\nDetails`, likesCount: i+1, commentsCount: 1, timestamp: `2026-10-${String(i+1).padStart(2,"0")}T12:00:00Z`, url: `https://www.instagram.com/p/post${i}/` }));
 describe("Intel evidence rules", () => {
   it("calculates engagement using all 12 scraped posts and follower count", () => {
@@ -46,11 +46,33 @@ describe("Intel evidence rules", () => {
     expect(legacy.commonHooks).toEqual([{pattern:"Question",example:"Want more reach?"}]);
   });
 });
-const ideas = Array.from({length:50},(_,i)=>({idea_number:i+1,category:IDEA_CATEGORIES[Math.floor(i/10)], title:`Specific idea ${i}`,format:"Reel",hook:`A completely unique ready-to-post hook ${i}`,description:"A specific concept grounded in this audience.",why_it_works:"Uses the actual caption and observed source engagement.",caption_opener:"Specific caption opening the creator can use.",cta:"Save this example",viral_mechanism:"save-worthy",production_difficulty:"easy (30 min)",virality_score:87,source_post_index:i%12}));
-it("requires exactly 50 unique ideas, ten per category",()=>{
-  expect(validateIntelIdeas(ideas,posts)).toHaveLength(50);
-  expect(()=>validateIntelIdeas(ideas.slice(0,49),posts)).toThrow();
-  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===10?{...v,category:"Steal the Frame"}:v),posts)).toThrow();
+const makeIdeas = (offset = 0) => Array.from({length:IDEAS_PER_BATCH},(_,i)=>({idea_number:offset+i+1,category:IDEA_CATEGORIES[Math.floor(i/IDEAS_PER_CATEGORY)], title:`Specific idea ${offset+i}`,format:"Reel",hook:`A completely unique ready-to-post hook ${offset+i}`,description:"A specific concept grounded in this audience.",why_it_works:"Uses the actual caption and observed source engagement.",caption_opener:"Specific caption opening the creator can use.",cta:"Save this example",viral_mechanism:"save-worthy",production_difficulty:"easy (30 min)",virality_score:87,source_post_index:i%12}));
+const ideas = makeIdeas();
+it("requires exactly 25 unique ideas, five per category",()=>{
+  expect(validateIntelIdeas(ideas,posts)).toHaveLength(25);
+  expect(()=>validateIntelIdeas(ideas.slice(0,24),posts)).toThrow();
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===5?{...v,category:"Steal the Frame"}:v),posts)).toThrow();
+});
+it("enforces category numbering ranges 1-5 … 21-25",()=>{
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===0?{...v,idea_number:6}:v),posts)).toThrow();
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===24?{...v,idea_number:25}:v),posts)).not.toThrow();
+});
+it("rejects duplicate hooks within a batch, case-insensitive trimmed",()=>{
+  expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===1?{...v,hook:`  ${ideas[0].hook.toUpperCase()} `}:v),posts)).toThrow();
+});
+it("append mode numbers from the offset and applies category ranges relative to it",()=>{
+  const batch2 = makeIdeas(25);
+  expect(validateIntelIdeas(batch2,posts,{offset:25,existingHooks:ideas.map(i=>i.hook)})).toHaveLength(25);
+  expect(()=>validateIntelIdeas(makeIdeas(0),posts,{offset:25})).toThrow();
+});
+it("rejects a hook that duplicates one already on the report",()=>{
+  const batch2 = makeIdeas(25).map((v,i)=>i===0?{...v,hook:ideas[3].hook}:v);
+  expect(()=>validateIntelIdeas(batch2,posts,{offset:25,existingHooks:ideas.map(i=>i.hook)})).toThrow();
+});
+it("caps a report at 4 batches (100 ideas)",()=>{
+  expect(MAX_IDEAS_PER_REPORT).toBe(IDEAS_PER_BATCH*MAX_IDEA_BATCHES);
+  expect(()=>validateIntelIdeas(makeIdeas(100),posts,{offset:100})).toThrow(/maximum of 100/);
+  expect(()=>validateIntelIdeas(makeIdeas(75),posts,{offset:75})).not.toThrow();
 });
 it("requires real source evidence for cloned and amplified formulas",()=>{
   expect(()=>validateIntelIdeas(ideas.map((v,i)=>i===0?{...v,source_post_index:99}:v),posts)).toThrow();
@@ -161,5 +183,45 @@ describe("computeIdeaConfidence", () => {
     const score = computeIdeaConfidence({ idea: { source_post_index: 0, hook: "Stop doing this one thing" }, posts: samplePosts, sample: "high" });
     expect(score).toBeGreaterThanOrEqual(0);
     expect(score).toBeLessThanOrEqual(100);
+  });
+});
+describe("toPromptPost lean serialization", () => {
+  // Fixture shaped like a real stored normalized post.
+  const full = {
+    type: "Video", timestamp: "2026-09-01T10:00:00Z", caption: "Real caption line\nMore detail",
+    likesCount: 120, commentsCount: 14, videoViewCount: 9000, videoPlayCount: 9100,
+    hashtags: ["fitness"], mentions: [], isSponsored: null, locationName: null, musicInfo: null,
+    carouselSlides: null, url: "https://www.instagram.com/p/ABC/", shortCode: "ABC",
+    displayUrl: "https://cdn.example.com/img.jpg",
+  };
+  it("omits displayUrl, url, shortCode and null/empty fields, keeps postIndex", () => {
+    const lean = toPromptPost(full, 3) as any;
+    expect(lean.postIndex).toBe(3);
+    expect(lean.displayUrl).toBeUndefined();
+    expect(lean.url).toBeUndefined();
+    expect(lean.shortCode).toBeUndefined();
+    expect(lean.isSponsored).toBeUndefined();
+    expect(lean.locationName).toBeUndefined();
+    expect(lean.musicInfo).toBeUndefined();
+    expect(lean.mentions).toBeUndefined();
+    expect(lean.caption).toBe("Real caption line\nMore detail");
+    expect(lean.likesCount).toBe(120);
+  });
+  it("is at least 15% shorter than the full post on a real-shaped fixture", () => {
+    const posts = Array.from({ length: 20 }, (_, i) => ({
+      ...full,
+      caption: `Caption ${i} with a realistic amount of text, hashtags and a call to action that creators actually write.`,
+      likesCount: 100 + i, shortCode: `SC${i}`, url: `https://www.instagram.com/p/SC${i}/`,
+    }));
+    const fullLen = JSON.stringify(posts.map((p, postIndex) => ({ postIndex, ...p }))).length;
+    const leanLen = JSON.stringify(posts.map(toPromptPost)).length;
+    expect(leanLen).toBeLessThanOrEqual(fullLen * 0.85);
+  });
+  it("grounding still resolves sourceUrl and highest-post url from stored posts, not prompt posts", () => {
+    const stored = posts.map((p, i) => ({ ...p, url: `https://www.instagram.com/p/post${i}/` }));
+    const report = groundIntelReport({ hookAnalysis: { provenHooks: [{ postIndex: 11, actualOpeningLine: "Invented" }] } }, { posts: stored, profile: { followersCount: 1000 } });
+    expect(report.hookAnalysis.provenHooks[0].sourceUrl).toBe("https://www.instagram.com/p/post11/");
+    const metrics = calculateIntelMetrics(stored, 1000).performanceMetrics;
+    expect(metrics.highestLikedPost?.url).toBe("https://www.instagram.com/p/post11/");
   });
 });

@@ -35,6 +35,7 @@ import {
   Hash,
   Loader2,
   Sparkles,
+  Plus,
   Star,
   Trash2,
   ArrowLeft,
@@ -89,7 +90,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ACTION_COSTS, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IDEA_CATEGORIES, sampleConfidence } from "@/lib/intel-analytics";
+import { IDEA_CATEGORIES, sampleConfidence, MAX_IDEAS_PER_REPORT } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
 import { exportResearchPdf } from "@/lib/research-pdf";
 
@@ -199,14 +200,14 @@ export function ResearchPage() {
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setCreating(false);
   }
-  async function runIdeas() {
+  async function runIdeas(mode: "replace" | "append" = "replace") {
     if (!detail?.report?.id) return;
     setIdeasBusy(true);
     setInsufficient(null);
     try {
-      const { ideas } = await ideasFn({ data: { id: detail.report.id, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
+      const { ideas } = await ideasFn({ data: { id: detail.report.id, mode, preferences: { goal: preferences.goal, niche: preferences.niche, toneOfVoice: preferences.toneOfVoice, keywords: preferences.keywords.split(",").map(v => v.trim()).filter(Boolean) } } });
       setDetail({ ...detail, ideas });
-      toast.success(`Generated ${ideas.length} content ideas`);
+      toast.success(mode === "append" ? `Added 25 more ideas — ${ideas.length} total` : `Generated ${ideas.length} content ideas`);
     } catch (e) { if (!creditError(e)) toast.error((e as Error).message); }
     setIdeasBusy(false);
   }
@@ -257,7 +258,8 @@ export function ResearchPage() {
           refresh();
         }}
         ideasBusy={ideasBusy}
-        onGenerateIdeas={runIdeas}
+        onGenerateIdeas={() => runIdeas("replace")}
+        onAppendIdeas={() => runIdeas("append")}
         onRetryAnalysis={retryAnalysis}
         onForceRefresh={forceRefresh}
         refreshBusy={creating}
@@ -406,7 +408,7 @@ function InsufficientCreditsPanel({ info, onDismiss }: { info: InsufficientCredi
 }
 
 function ReportDetail({
-  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, onAppendIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -415,6 +417,7 @@ function ReportDetail({
   onSave: () => void;
   onDelete: () => void;
   onGenerateIdeas: () => void;
+  onAppendIdeas: () => void;
   ideasBusy: boolean;
   onGenerateCampaign: () => void;
   preferences: { goal: string; niche: string; toneOfVoice: string; keywords: string };
@@ -457,8 +460,18 @@ function ReportDetail({
   const rangeText = dateRange
     ? `, ${fmtDay(dateRange.earliest)} – ${fmtDay(dateRange.latest)}`
     : "";
+  const cutoffMeta = raw?.cutoff ?? null;
+  const cutoffClause = !cutoffMeta
+    ? ""
+    : cutoffMeta.relaxed
+      ? " Includes older posts because this account posts infrequently."
+      : cutoffMeta.skipped
+        ? " Includes older posts because this topic has sparse recent activity."
+        : cutoffMeta.appliedAt === "none"
+          ? ""
+          : ` Posts from the last ${Math.round((cutoffMeta.windowDays ?? 180) / 30)} months only.`;
   const sampleLine = sampleSize > 0
-    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}. Sample confidence: ${confidence}.`
+    ? `Based on ${sampleSize} posts from ${sources.join(", ") || report.subject}${rangeText}.${cutoffClause} Sample confidence: ${confidence}.`
     : null;
 
   async function handleRetry() {
@@ -568,8 +581,19 @@ function ReportDetail({
               </Button>
               <Button variant="outline" onClick={onGenerateIdeas} disabled={ideasBusy} className="gap-2">
                 {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {ideas.length > 0 ? `Regenerate 50 Ideas — ${ACTION_COSTS.ideas} credits` : `Generate 50 Ideas — ${ACTION_COSTS.ideas} credits`}
+                {ideas.length > 0 ? `Regenerate 25 ideas — ${ACTION_COSTS.ideas} credits` : `Generate 25 ideas — ${ACTION_COSTS.ideas} credits`}
               </Button>
+              {ideas.length > 0 && ideas.length < MAX_IDEAS_PER_REPORT && (
+                <Button variant="outline" onClick={onAppendIdeas} disabled={ideasBusy} className="gap-2">
+                  {ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Add 25 more — {ACTION_COSTS.ideas} credits
+                </Button>
+              )}
+              {ideas.length >= MAX_IDEAS_PER_REPORT && (
+                <Button variant="outline" disabled className="gap-2" title={`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`}>
+                  <Plus className="h-4 w-4" /> Idea limit reached ({MAX_IDEAS_PER_REPORT})
+                </Button>
+              )}
             </div>
           </div>
 
@@ -906,6 +930,7 @@ function ReportDetail({
         ideas={ideas}
         ideasBusy={ideasBusy}
         onGenerate={onGenerateIdeas}
+        onAppend={onAppendIdeas}
         onSaveIdea={handleSaveIdea}
         savedIdeas={savedIdeas}
         savingIdea={savingIdea}
@@ -928,7 +953,7 @@ function ReportDetail({
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <ActionCard tone="purple" icon={Rocket}       title="Generate 30-Day Campaign" desc="AI-plan a full month grounded in this research." onClick={onGenerateCampaign} />
-          <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="50 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
+          <ActionCard tone="green"  icon={Sparkles}     title="Generate Ideas"           desc="25 ranked ideas ready for scripting."           onClick={onGenerateIdeas} />
           <ActionCard tone="blue"   icon={Send}         title="Publishing Schedule"      desc="Push to connected accounts."                    onClick={() => toast.info("Open Publishing Center from the sidebar")} />
           <ActionCard tone="amber"  icon={Download}     title="Export PDF Report"        desc="Agency-ready deliverable."                      onClick={handleExportPdf} />
         </div>
@@ -1261,8 +1286,8 @@ function IdeaCard({ idea, saved, saving, onSave, report }: { idea: any; saved: b
   </Card>;
 }
 
-function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdeas, savingIdea, formatFilter, setFormatFilter, sort, setSort, report, onExport }: {
-  ideas: any[]; ideasBusy: boolean; onGenerate: () => void; onSaveIdea: (idea: any) => void; savedIdeas: Set<string>; savingIdea: string | null;
+function OpportunityEngine({ ideas, ideasBusy, onGenerate, onAppend, onSaveIdea, savedIdeas, savingIdea, formatFilter, setFormatFilter, sort, setSort, report, onExport }: {
+  ideas: any[]; ideasBusy: boolean; onGenerate: () => void; onAppend: () => void; onSaveIdea: (idea: any) => void; savedIdeas: Set<string>; savingIdea: string | null;
   formatFilter: string; setFormatFilter: (v: string) => void; sort: "confidence" | "virality" | "easy"; setSort: (v: "confidence" | "virality" | "easy") => void; report: any; onExport: () => void;
 }) {
   const [difficulty, setDifficulty] = useState("all"); const [category, setCategory] = useState("all"); const [minimumScore, setMinimumScore] = useState("0"); const [sending, setSending] = useState(false);
@@ -1276,7 +1301,7 @@ function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdea
   }
   const control = (label: string, value: string, onChange: (v:string)=>void, options: [string,string][]) => <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([v,l])=><SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>;
   return <section className="mt-10">
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Content Ideas <span className="text-muted-foreground">({ideas.length} total)</span></h2><Button className="min-h-11" onClick={onGenerate} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{ideas.length ? "Regenerate 50 Ideas" : "Generate 50 Ideas"}</Button></div>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Content Ideas <span className="text-muted-foreground">({ideas.length} total)</span></h2><div className="flex flex-wrap gap-2">{!!ideas.length && ideas.length < MAX_IDEAS_PER_REPORT && <Button variant="outline" className="min-h-11" onClick={onAppend} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Add 25 more — {ACTION_COSTS.ideas} credits</Button>}{ideas.length >= MAX_IDEAS_PER_REPORT && <Button variant="outline" className="min-h-11" disabled title={`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`}><Plus className="h-4 w-4" />Idea limit reached ({MAX_IDEAS_PER_REPORT})</Button>}<Button className="min-h-11" onClick={onGenerate} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{ideas.length ? `Regenerate 25 ideas — ${ACTION_COSTS.ideas} credits` : `Generate 25 ideas — ${ACTION_COSTS.ideas} credits`}</Button></div></div>
     {!!ideas.length && <>
       <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         {control("Strategy category", category, setCategory, [["all","All strategies"], ...IDEA_CATEGORIES.map(c => [c,c] as [string,string])])}
@@ -1291,7 +1316,7 @@ function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdea
         const counts = list.reduce((m:Record<string,number>,i:any)=>({ ...m,[i.format]:(m[i.format]??0)+1 }),{}); const best = Object.entries(counts).sort((a,b)=>Number(b[1])-Number(a[1]))[0]?.[0];
         return <AccordionItem key={cat} value={cat} className="rounded-lg border border-border"><AccordionTrigger className="min-h-14 px-4 text-left"><span className="min-w-0"><span className="block font-semibold">{cat} ({list.length} ideas)</span><span className="text-xs text-muted-foreground">Best format: {best}</span></span></AccordionTrigger><AccordionContent className="px-4 pb-4"><div className="grid gap-4 lg:grid-cols-2">{list.map(idea=><IdeaCard key={idea.id} idea={idea} report={report} saved={savedIdeas.has(idea.id)} saving={savingIdea===idea.id} onSave={()=>onSaveIdea(idea)} />)}</div></AccordionContent></AccordionItem>;
       })}</Accordion>
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row"><Button className="min-h-11 whitespace-normal" onClick={sendAll} disabled={sending || ideas.length!==50}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send All 50 to Clone Studio</Button><Button className="min-h-11" variant="outline" onClick={onExport}><Download className="h-4 w-4" />Export as PDF</Button></div>
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row"><Button className="min-h-11 whitespace-normal" onClick={sendAll} disabled={sending || !ideas.length}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send All {ideas.length} to Clone Studio</Button><Button className="min-h-11" variant="outline" onClick={onExport}><Download className="h-4 w-4" />Export as PDF</Button></div>
     </>}
   </section>;
 }
