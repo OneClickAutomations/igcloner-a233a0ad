@@ -278,52 +278,64 @@
   --color-tone-slate: var(--tone-slate);
 }
 
-/* Card surface: white + 3px gradient top border in light; glass in dark. Set --t1/--t2 per card. */
+/* Liquid-glass surfaces ported from landing.html .feat-card / .step-card.
+   Dark values are the landing's verbatim; light keeps the landing light-theme
+   glass (--glass-bg .72 white, rgba(0,0,0,.08) edge, white inset highlight).
+   Per-metric tone lives only in .tone-icon and the delta pill, never the edge. */
+@utility glass-surface {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.6) 40%, rgba(255,255,255,0.5) 100%);
+  backdrop-filter: blur(28px) saturate(1.8) brightness(1.1);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-top-color: rgba(255,255,255,0.9);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.9) inset,
+    0 -1px 0 rgba(0,0,0,0.06) inset,
+    0 2px 8px rgba(0,0,0,0.06),
+    0 12px 36px rgba(60,30,90,0.08),
+    0 24px 48px rgba(0,0,0,0.04);
+  & > * { position: relative; z-index: 1; }
+  &::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 52%;
+    background: linear-gradient(178deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 35%, rgba(255,255,255,0.01) 70%, transparent 100%);
+    border-radius: 20px 20px 40% 40%;
+    pointer-events: none; z-index: 0;
+  }
+  &::after {
+    content: ""; position: absolute; bottom: 0; left: 12px; right: 12px; height: 1.5px;
+    background: linear-gradient(90deg, transparent 0%, rgba(247,119,55,0.6) 15%, rgba(225,48,108,0.75) 38%, rgba(193,53,132,0.65) 60%, rgba(131,58,180,0.5) 82%, transparent 100%);
+    opacity: 0.7;
+    pointer-events: none; z-index: 0;
+  }
+  &:where(.dark *) {
+    background: linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 40%, rgba(255,255,255,0.015) 100%);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-bottom-color: rgba(255,255,255,0.04);
+    border-right-color: rgba(255,255,255,0.06);
+    box-shadow:
+      0 1.5px 0 rgba(255,255,255,0.18) inset,
+      0 -1px 0 rgba(0,0,0,0.4) inset,
+      1px 0 0 rgba(255,255,255,0.08) inset,
+      -1px 0 0 rgba(0,0,0,0.15) inset,
+      0 4px 12px rgba(0,0,0,0.35),
+      0 12px 36px rgba(0,0,0,0.28),
+      0 32px 72px rgba(0,0,0,0.2);
+  }
+  &:where(.dark *)::after { opacity: 1; }
+}
+
 @utility dash-card {
   --t1: var(--tone-purple);
   --t2: var(--tone-pink);
-  position: relative;
-  overflow: hidden;
-  border-radius: 1rem;
-  background: var(--card);
-  border: 1px solid color-mix(in oklab, var(--t1) 14%, var(--border));
-  box-shadow: 0 1px 2px rgb(15 10 30 / 0.04), 0 8px 24px -12px color-mix(in oklab, var(--t1) 28%, transparent);
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--t1), var(--t2));
-    pointer-events: none;
-    z-index: 1;
-  }
-  &:where(.dark *) {
-    background: color-mix(in oklab, var(--card) 62%, transparent);
-    backdrop-filter: blur(16px) saturate(140%);
-    border-color: color-mix(in oklab, var(--t1) 26%, transparent);
-  }
+  @apply glass-surface;
 }
 
-/* Stat card: gradient border + tinted fill + accent glow */
 @utility stat-card {
-  position: relative;
-  border-radius: 1rem;
-  border: 1.5px solid transparent;
-  background:
-    linear-gradient(135deg, color-mix(in oklab, var(--t1) 9%, var(--card)), color-mix(in oklab, var(--t2) 4%, var(--card))) padding-box,
-    linear-gradient(135deg, var(--t1), var(--t2)) border-box;
-  box-shadow: 0 0 20px color-mix(in oklab, var(--t1) var(--glow-strength), transparent);
-  transition: transform 200ms ease, box-shadow 200ms ease;
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 0 28px color-mix(in oklab, var(--t1) calc(var(--glow-strength) + 10%), transparent);
-  }
-  &:where(.dark *) {
-    background:
-      linear-gradient(135deg, color-mix(in oklab, var(--t1) 22%, var(--card)), color-mix(in oklab, var(--t2) 10%, var(--card))) padding-box,
-      linear-gradient(135deg, var(--t1), var(--t2)) border-box;
-    backdrop-filter: blur(16px);
-  }
+  @apply glass-surface;
+  transition: transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.4s cubic-bezier(.22,1,.36,1);
+  &:hover { transform: translateY(-3px); }
 }
 
 @utility tone-icon {

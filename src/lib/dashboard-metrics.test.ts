@@ -18,10 +18,10 @@ describe("monthDelta", () => {
     expect(d.label).not.toMatch(/Infinity|NaN/);
   });
 
-  it("previous month zero and no activity → flat 'No change'", () => {
+  it("previous month zero and no activity → none, no pill", () => {
     const d = monthDelta(0, 0);
-    expect(d.kind).toBe("flat");
-    expect(d.label).toBe("No change");
+    expect(d.kind).toBe("none");
+    expect(d.label).toBe("");
   });
 
   it("negative delta → down kind with signed percent", () => {
