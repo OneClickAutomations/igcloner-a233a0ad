@@ -149,9 +149,6 @@ export function ProjectsPage() {
       search: { q: "", sort: "recent", type: "all", range: "all", page: 1, perPage },
     });
 
-  const hasActiveFilters =
-    filters.q !== "" || filters.type !== "all" || filters.range !== "all" || filters.sort !== "recent";
-
   const handleDelete = async (id: string) => {
     try {
       await delFn({ data: { id } });
