@@ -928,6 +928,7 @@ function ReportDetail({
         ideas={ideas}
         ideasBusy={ideasBusy}
         onGenerate={onGenerateIdeas}
+        onAppend={onAppendIdeas}
         onSaveIdea={handleSaveIdea}
         savedIdeas={savedIdeas}
         savingIdea={savingIdea}
@@ -1283,8 +1284,8 @@ function IdeaCard({ idea, saved, saving, onSave, report }: { idea: any; saved: b
   </Card>;
 }
 
-function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdeas, savingIdea, formatFilter, setFormatFilter, sort, setSort, report, onExport }: {
-  ideas: any[]; ideasBusy: boolean; onGenerate: () => void; onSaveIdea: (idea: any) => void; savedIdeas: Set<string>; savingIdea: string | null;
+function OpportunityEngine({ ideas, ideasBusy, onGenerate, onAppend, onSaveIdea, savedIdeas, savingIdea, formatFilter, setFormatFilter, sort, setSort, report, onExport }: {
+  ideas: any[]; ideasBusy: boolean; onGenerate: () => void; onAppend: () => void; onSaveIdea: (idea: any) => void; savedIdeas: Set<string>; savingIdea: string | null;
   formatFilter: string; setFormatFilter: (v: string) => void; sort: "confidence" | "virality" | "easy"; setSort: (v: "confidence" | "virality" | "easy") => void; report: any; onExport: () => void;
 }) {
   const [difficulty, setDifficulty] = useState("all"); const [category, setCategory] = useState("all"); const [minimumScore, setMinimumScore] = useState("0"); const [sending, setSending] = useState(false);
@@ -1298,7 +1299,7 @@ function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdea
   }
   const control = (label: string, value: string, onChange: (v:string)=>void, options: [string,string][]) => <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="min-h-11 w-full"><SelectValue /></SelectTrigger><SelectContent>{options.map(([v,l])=><SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent></Select>;
   return <section className="mt-10">
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Content Ideas <span className="text-muted-foreground">({ideas.length} total)</span></h2><Button className="min-h-11" onClick={onGenerate} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{ideas.length ? "Regenerate 50 Ideas" : "Generate 50 Ideas"}</Button></div>
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Content Ideas <span className="text-muted-foreground">({ideas.length} total)</span></h2><div className="flex flex-wrap gap-2">{!!ideas.length && ideas.length < MAX_IDEAS_PER_REPORT && <Button variant="outline" className="min-h-11" onClick={onAppend} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}Add 25 more — {ACTION_COSTS.ideas} credits</Button>}{ideas.length >= MAX_IDEAS_PER_REPORT && <Button variant="outline" className="min-h-11" disabled title={`This report already has the maximum of ${MAX_IDEAS_PER_REPORT} ideas.`}><Plus className="h-4 w-4" />Idea limit reached ({MAX_IDEAS_PER_REPORT})</Button>}<Button className="min-h-11" onClick={onGenerate} disabled={ideasBusy}>{ideasBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{ideas.length ? `Regenerate 25 ideas — ${ACTION_COSTS.ideas} credits` : `Generate 25 ideas — ${ACTION_COSTS.ideas} credits`}</Button></div></div>
     {!!ideas.length && <>
       <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
         {control("Strategy category", category, setCategory, [["all","All strategies"], ...IDEA_CATEGORIES.map(c => [c,c] as [string,string])])}
@@ -1313,7 +1314,7 @@ function OpportunityEngine({ ideas, ideasBusy, onGenerate, onSaveIdea, savedIdea
         const counts = list.reduce((m:Record<string,number>,i:any)=>({ ...m,[i.format]:(m[i.format]??0)+1 }),{}); const best = Object.entries(counts).sort((a,b)=>Number(b[1])-Number(a[1]))[0]?.[0];
         return <AccordionItem key={cat} value={cat} className="rounded-lg border border-border"><AccordionTrigger className="min-h-14 px-4 text-left"><span className="min-w-0"><span className="block font-semibold">{cat} ({list.length} ideas)</span><span className="text-xs text-muted-foreground">Best format: {best}</span></span></AccordionTrigger><AccordionContent className="px-4 pb-4"><div className="grid gap-4 lg:grid-cols-2">{list.map(idea=><IdeaCard key={idea.id} idea={idea} report={report} saved={savedIdeas.has(idea.id)} saving={savingIdea===idea.id} onSave={()=>onSaveIdea(idea)} />)}</div></AccordionContent></AccordionItem>;
       })}</Accordion>
-      <div className="mt-5 flex flex-col gap-2 sm:flex-row"><Button className="min-h-11 whitespace-normal" onClick={sendAll} disabled={sending || ideas.length!==50}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send All 50 to Clone Studio</Button><Button className="min-h-11" variant="outline" onClick={onExport}><Download className="h-4 w-4" />Export as PDF</Button></div>
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row"><Button className="min-h-11 whitespace-normal" onClick={sendAll} disabled={sending || !ideas.length}>{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Send All {ideas.length} to Clone Studio</Button><Button className="min-h-11" variant="outline" onClick={onExport}><Download className="h-4 w-4" />Export as PDF</Button></div>
     </>}
   </section>;
 }
