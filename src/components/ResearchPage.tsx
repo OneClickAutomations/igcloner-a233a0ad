@@ -359,7 +359,7 @@ export function ResearchPage() {
 // ═══════════════════════════════════════════════════════════════════
 
 function ReportDetail({
-  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -372,6 +372,9 @@ function ReportDetail({
   onGenerateCampaign: () => void;
   preferences: { goal: string; niche: string; toneOfVoice: string; keywords: string };
   setPreferences: (v: { goal: string; niche: string; toneOfVoice: string; keywords: string }) => void;
+  onRetryAnalysis: () => Promise<void>;
+  onForceRefresh: () => Promise<void>;
+  refreshBusy: boolean;
 }) {
   // ── Content Opportunity Engine local state ──────────────────────────
   const saveIdeaFn = useServerFn(saveIdeaToPlanner);
@@ -379,6 +382,7 @@ function ReportDetail({
   const [savingIdea, setSavingIdea] = useState<string | null>(null);
   const [ideaFormatFilter, setIdeaFormatFilter] = useState<string>("all");
   const [ideaSort, setIdeaSort] = useState<"confidence" | "virality" | "easy">("virality");
+  const [retrying, setRetrying] = useState(false);
 
   if (loading || !detail) {
     return (
