@@ -87,6 +87,7 @@ import {
   retryResearchAnalysis,
 } from "@/lib/research.functions";
 import { cn } from "@/lib/utils";
+import { ACTION_COSTS, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IDEA_CATEGORIES, sampleConfidence } from "@/lib/intel-analytics";
 import { createProject, updateProject } from "@/lib/projects.functions";
@@ -157,6 +158,15 @@ export function ResearchPage() {
   const [competitor, setCompetitor] = useState("");
   const [topic, setTopic] = useState("");
   const [preferences, setPreferences] = useState({ goal: "", niche: "", toneOfVoice: "", keywords: "" });
+  const [insufficient, setInsufficient] = useState<InsufficientCreditsInfo | null>(null);
+
+  // Returns true when the error was an insufficient-credits rejection, which
+  // gets a dedicated panel instead of a generic "failed" toast.
+  function creditError(e: unknown): boolean {
+    const info = parseInsufficientCredits(e);
+    if (info) setInsufficient(info);
+    return !!info;
+  }
 
   useEffect(() => { refresh(); }, []);
   useEffect(() => {
