@@ -407,7 +407,7 @@ function InsufficientCreditsPanel({ info, onDismiss }: { info: InsufficientCredi
 }
 
 function ReportDetail({
-  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
+  detail, loading, onBack, onNewResearch, onSave, onDelete, onGenerateIdeas, onAppendIdeas, ideasBusy, onGenerateCampaign, preferences, setPreferences, onRetryAnalysis, onForceRefresh, refreshBusy,
 }: {
   detail: { report: any; ideas: any[] } | null;
   loading: boolean;
@@ -416,6 +416,7 @@ function ReportDetail({
   onSave: () => void;
   onDelete: () => void;
   onGenerateIdeas: () => void;
+  onAppendIdeas: () => void;
   ideasBusy: boolean;
   onGenerateCampaign: () => void;
   preferences: { goal: string; niche: string; toneOfVoice: string; keywords: string };
