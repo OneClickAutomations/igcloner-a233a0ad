@@ -318,6 +318,39 @@ export const createResearchReport = createServerFn({ method: "POST" })
     }
   });
 
+// Re-run only the AI analysis on data already scraped — no new Apify call,
+// so a failed analysis never re-charges for the same sample.
+export const retryResearchAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: report, error } = await supabase
+      .from("research_reports")
+      .select("id, mode, subject, raw_data")
+      .eq("id", data.id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !report) throw new Error("Report not found");
+    const signals = report.raw_data as any;
+    if (!signals || !Array.isArray(signals.posts)) {
+      throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
+    }
+    await supabase.from("research_reports").update({ status: "analyzing", error_message: null }).eq("id", report.id);
+    try {
+      const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
+      await supabase
+        .from("research_reports")
+        .update({ status: "ready", dna_report: dna, opportunity_score: score })
+        .eq("id", report.id);
+      return { id: report.id };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
+      throw new Error(msg);
+    }
+  });
+
 export const listResearchReports = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -458,7 +491,10 @@ ${shape}
 
 Return a flat JSON array of 50 objects. Nothing else.`;
 
-    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt), (report.raw_data as any)?.posts ?? []);
+    const posts = (report.raw_data as any)?.posts ?? [];
+    // 50 ideas x 17 fields sits near the old 24k token ceiling; allow 32k.
+    const ideas = validateIntelIdeas(await generateIntelJson(system, prompt, { maxTokens: 32000 }), posts);
+    const sample = sampleConfidence(posts.length);
 
     // Wipe prior ideas so re-runs don't duplicate.
     const { error: deleteError } = await supabase.from("content_ideas").delete().eq("research_report_id", data.id);
@@ -486,7 +522,10 @@ Return a flat JSON array of 50 objects. Nothing else.`;
       business_value_score: Number(i.business_value_score) || 0,
       audience_interest_score: Number(i.audience_interest_score) || 0,
       production_time_score: Number(i.production_time_score) || 0,
-      confidence_score: Number(i.confidence_score) || 0,
+      // Confidence is computed from evidence, not the model's guess; the
+      // model's number is kept only as a debugging basis.
+      confidence_score: computeIdeaConfidence({ idea: i, posts, sample }),
+      predicted_virality_basis: Number(i.confidence_score) || null,
     }));
     const { data: inserted, error: insErr } = await supabase
       .from("content_ideas")
