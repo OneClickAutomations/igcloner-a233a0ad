@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins } from "lucide-react";
