@@ -16,8 +16,8 @@ export type PlanId = keyof typeof PLANS;
 export const ACTION_COSTS = {
   /** Research report (scrape + DNA analysis) */
   report: 10,
-  /** 50 content ideas */
-  ideas: 10,
+  /** 25 content ideas (one batch; replace or append) */
+  ideas: 5,
   /** Premium depth add-on (comments + peer benchmark) */
   premium: 20,
   /** Retry analysis (reuses existing raw_data, no scrape) */
@@ -43,7 +43,7 @@ export const REASON_LABELS: Record<LedgerReason, string> = {
   plan_grant: "Monthly plan credits",
   topup: "Credit top-up",
   debit_report: "Research report",
-  debit_ideas: "50 content ideas",
+  debit_ideas: "25 content ideas",
   debit_premium: "Premium depth add-on",
   debit_retry: "Retry analysis",
   refund_failed: "Refund — action failed",
