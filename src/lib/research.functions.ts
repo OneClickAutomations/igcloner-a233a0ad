@@ -221,6 +221,7 @@ IMPORTANT:
 const CreateInput = z.object({
   mode: z.enum(["niche", "competitor", "topic"]),
   subject: z.string().min(1).max(200),
+  forceRefresh: z.boolean().optional(),
 });
 
 export const createResearchReport = createServerFn({ method: "POST" })
@@ -236,14 +237,46 @@ export const createResearchReport = createServerFn({ method: "POST" })
     if (error || !row) throw new Error(error?.message ?? "Failed to create report");
 
     try {
-      const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
-      let apifyToken = process.env.APIFY_TOKEN;
-      if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
-        const { decryptApiKey } = await import("@/lib/encryption.server");
-        apifyToken = decryptApiKey(keyRow.encrypted_key);
+      // Reuse a scrape this user already paid for: same mode + subject
+      // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
+      // Scoped to user_id so samples never leak across accounts.
+      let signals: any = null;
+      if (!data.forceRefresh) {
+        const { data: candidates } = await supabase
+          .from("research_reports")
+          .select("id, raw_data, created_at")
+          .eq("user_id", userId)
+          .eq("mode", data.mode)
+          .ilike("subject", data.subject.trim())
+          .not("raw_data", "is", null)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const reusable = (candidates ?? []).find(
+          (c: any) => c.id !== row.id
+            && Array.isArray(c.raw_data?.posts)
+            && isWithinReuseWindow(c.created_at),
+        );
+        if (reusable) {
+          signals = {
+            ...reusable.raw_data,
+            sampleReuse: {
+              reusedFromReportId: reusable.id,
+              originalCollectedAt: reusable.raw_data.collectedAt ?? reusable.created_at,
+            },
+          };
+        }
       }
-      if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
-      const signals = await collectSignals(data.mode, data.subject, apifyToken);
+
+      if (!signals) {
+        const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
+        let apifyToken = process.env.APIFY_TOKEN;
+        if (keyRow?.encrypted_key && keyRow.status !== "invalid") {
+          const { decryptApiKey } = await import("@/lib/encryption.server");
+          apifyToken = decryptApiKey(keyRow.encrypted_key);
+        }
+        if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
+        signals = await collectSignals(data.mode, data.subject, apifyToken);
+      }
       const postsCount = Array.isArray(signals?.posts) ? signals.posts.length : 0;
       const limited = postsCount === 0;
       await supabase
