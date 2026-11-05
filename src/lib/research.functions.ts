@@ -566,6 +566,10 @@ Return a flat JSON array of 50 objects. Nothing else.`;
       .select("*");
     if (insErr) throw new Error(insErr.message);
     return { ideas: inserted ?? [] };
+    } catch (e) {
+      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
+      throw e;
+    }
   });
 
 // ── Dashboard widgets ────────────────────────────────────────────────
