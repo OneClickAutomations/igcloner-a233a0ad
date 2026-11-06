@@ -9,5 +9,12 @@
 
 ## Open
 - [ ] Facebook multi-photo posts: capture path unverified (pass 1 open item)
-- [ ] Analysis AI cost (~$0.22 avg) is above the ~$0.08 target — awaiting owner decision on price or trimming clones from analysis
-- [ ] Long videos (>90s) are sent whole with a "first 60s + last 15s" instruction; no server-side trimming in the edge runtime
+- [ ] Analysis jobs only advance while a tab is open; truly unattended runs need a scheduled background worker (owner decision)
+
+## Pass 2 fix pass (done)
+- [x] Versions on demand (1 credit, cached); analysis ≈ $0.10 / ≈ 50s of AI time on the 5 saved posts
+- [x] Accuracy re-checks + slide/timestamp post-check + limitation dedupe
+- [x] Unfinished analyses hidden or labelled in lists/counts; project creation refuses them
+- [x] Resume after closing the tab (stage-per-request)
+- [x] Large videos: SD copy for Facebook, else transcript + cover with a labelled limitation
+- [x] Instagram reel with speech verified once
