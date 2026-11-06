@@ -37,11 +37,11 @@ export type ClaudeBlock =
   | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 
 /** Streaming Claude Messages call, consumed server-side. Returns final text + usage. */
-export async function claudeCall(system: string, content: ClaudeBlock[], maxTokens: number): Promise<{ text: string; usage: Usage }> {
+export async function claudeCall(system: string, content: ClaudeBlock[], maxTokens: number, effort: "low" | "medium" | "high" = "high"): Promise<{ text: string; usage: Usage }> {
   const res = await fetch(`${GATEWAY}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey()}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-    body: JSON.stringify({ model: CLAUDE_ANALYSIS_MODEL, max_tokens: maxTokens, stream: true, system, messages: [{ role: "user", content }] }),
+    body: JSON.stringify({ model: CLAUDE_ANALYSIS_MODEL, max_tokens: maxTokens, stream: true, system, output_config: { effort }, messages: [{ role: "user", content }] }),
   });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as any;
