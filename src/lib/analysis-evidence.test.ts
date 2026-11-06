@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
+  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, normalizeMediumId, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
   parseWithRepair, textInWindow, wordsPerMinute, wrapData,
 } from "./analysis-evidence";
 import { buildSourceContextBlock, extractSourceText } from "./source-context";
@@ -153,6 +153,18 @@ describe("pass-2 fix rules", () => {
       { field: "text", value: "b", provenance: "observed", evidence: "2:00" },
     ], { slideCount: 0, videoDurationSec: 40 });
     expect(out.map((f) => f.provenance)).toEqual(["observed", "inferred"]);
+    const ranges = normalizeForensics([
+      { field: "text", value: "a", provenance: "observed", evidence: "36.87-40.54" },
+      { field: "text", value: "b", provenance: "observed", evidence: "204.37-210.38" },
+      { field: "caption text", value: "c", provenance: "observed", evidence: "caption" },
+    ], { slideCount: 0, videoDurationSec: 171 });
+    expect(ranges.map((f) => f.provenance)).toEqual(["observed", "inferred", "observed"]);
+  });
+  it("coerces free-form medium labels into the taxonomy", () => {
+    expect(normalizeMediumId("static-image", false, true)).toBe("digital-graphic");
+    expect(normalizeMediumId("photo-carousel", false, false)).toBe("lifestyle-photo");
+    expect(normalizeMediumId("broll-video", false, false)).toBe("lifestyle-photo");
+    expect(normalizeMediumId("talking_head_explainer", true, false)).toBe("talking-head-video");
   });
   it("dedupes repeated limitation strings", () => {
     expect(dedupeLimitations(["No transcript available.", "no transcript available", "No transcript available", "Video couldn't be watched."]))

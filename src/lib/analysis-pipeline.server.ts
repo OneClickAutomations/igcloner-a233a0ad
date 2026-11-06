@@ -359,7 +359,7 @@ ${wrapData("caption", input.caption ?? "")}
 ${wrapData("on_screen_text", onScreen || "none")}
 ${wrapData("transcript", input.transcript ? input.transcript.slice(0, 4000) : "none")}
 
-Write 5 versions in this order: direct, contrarian, story, authority, curiosity. Each must reference the real source hook/caption/transcript, keep the source's hook mechanism and rhythm (line breaks, emoji density, CTA style), and include a complete ready-to-post caption.
+Write 5 versions in this order: direct, contrarian, story, authority, curiosity. Each must reference the real source hook/caption/transcript and keep the source's hook mechanism and rhythm, but every hook must be worded differently from the source and from the other versions (no repeating the source's first line verbatim). Keep the source's rhythm (line breaks, emoji density, CTA style), and include a complete ready-to-post caption.
 {"clones":[{"versionNumber":1-5,"angleType":"direct"|"contrarian"|"story"|"authority"|"curiosity","angleLabel":"Direct Improvement"|"Contrarian Angle"|"Storytelling Angle"|"Authority Angle"|"Curiosity Gap","hook":string,"angle":string,"storyStructure":string,"caption":string,"visualDirection":string,"cta":string}]}`;
   const call = async (p: string) => (await claudeCall(CLONE_SYSTEM, [{ type: "text", text: p }], 8000, "medium")).text;
   const first = await call(prompt);

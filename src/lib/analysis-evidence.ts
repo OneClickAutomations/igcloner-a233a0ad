@@ -345,12 +345,14 @@ export function normalizeForensics(
     const ev = (f.evidence ?? "").toLowerCase();
     const slideRefs = [...ev.matchAll(/slides?\s*(\d+)/g)].map((m) => Number(m[1]));
     const validSlide = slideRefs.length > 0 && slideRefs.every((n) => n >= 1 && n <= ctx.slideCount);
-    const ts = [...ev.matchAll(/(\d+):(\d{2})(?:\.\d+)?|(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => (m[3] != null ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2])));
+    const ts = [
+      ...[...ev.matchAll(/(\d+):(\d{2})(?:\.\d+)?/g)].map((m) => Number(m[1]) * 60 + Number(m[2])),
+      ...[...ev.replace(/\d+:\d{2}(?:\.\d+)?/g, "").matchAll(/(\d+(?:\.\d+)?)\s*(?:s\b|[-–]\s*(\d+(?:\.\d+)?))/g)].flatMap((m) => [Number(m[1]), ...(m[2] ? [Number(m[2])] : [])]),
+    ];
     const validTs = ts.length > 0 && ctx.videoDurationSec != null && ts.every((t) => t <= ctx.videoDurationSec! + 1);
     if (validSlide || validTs) return f;
-    const isText = /text|ocr|headline|overlay|wording|reads|caption on/i.test(`${f.field} ${f.value}`);
-    // Caption/transcript quotes are evidence too, but not "read from pixels".
-    if (!isText && /caption|transcript|metric|hashtag/.test(ev)) return f;
+    // Quotes from the caption, transcript or post metadata are observed data, not pixels.
+    if (/caption|transcript|metric|hashtag|metadata|audio meta|account/.test(ev) && !/slide|frame|shot|overlay|on-?screen/.test(ev)) return f;
     return { ...f, provenance: "inferred" as const, flagged: f.evidence ? `Evidence "${f.evidence}" doesn't point to a real slide or timestamp.` : "No slide or timestamp reference." };
   });
 }
