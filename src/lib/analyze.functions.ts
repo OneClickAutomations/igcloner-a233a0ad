@@ -13,6 +13,7 @@ import {
   normalizeFacebookPost,
   verifyPostMatch,
   scrapeFailure,
+  srtToText,
   ScrapeError,
   type ClassifiedUrl,
   type ScrapedPost,
