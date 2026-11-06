@@ -523,6 +523,19 @@ export function normalizeFacebookPost(raw: any, requestedUrl: string, provisiona
   return post;
 }
 
+/** Strip SRT cue numbers/timestamps down to plain spoken text. */
+export function srtToText(srt: string): string {
+  return srt
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !/^\d+$/.test(l) && !/^\d{2}:\d{2}:\d{2}[,.]\d+\s*-->/.test(l))
+    .map((l) => l.replace(/<[^>]+>/g, ""))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 10000);
+}
+
 // ── Wrong-post rejection ─────────────────────────────────────────────
 
 /** Extract the platform-specific post id / shortcode from a URL. */

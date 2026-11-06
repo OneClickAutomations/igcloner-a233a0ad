@@ -34,19 +34,6 @@ const InputSchema = z.object({
 });
 
 
-/** Strip SRT cue numbers/timestamps down to plain spoken text. */
-function srtToText(srt: string): string {
-  return srt
-    .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l && !/^\d+$/.test(l) && !/^\d{2}:\d{2}:\d{2}[,.]\d+\s*-->/.test(l))
-    .map((l) => l.replace(/<[^>]+>/g, ""))
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 10000);
-}
-
 async function scrapeInstagramSource(url: string, token: string, provisional: ClassifiedUrl): Promise<ScrapedPost> {
   let items: any[];
   try {
