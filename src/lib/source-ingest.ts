@@ -547,7 +547,8 @@ export function extractPostId(rawUrl: string): string | null {
     if (m) return m[1];
     m = path.match(/\/videos\/(?:[^/]+\/)?(\d+)/i);
     if (m) return m[1];
-    m = path.match(/\/posts\/(?:[^/]+\/)?(\d+)/i);
+    // /posts/ ids are either their own segment or glued to the slug end.
+    m = path.match(/\/posts\/[^/]*?(\d{6,})\/?$/i) ?? path.match(/\/posts\/(\d+)/i);
     if (m) return m[1];
     if (path.includes("permalink.php") || path.includes("story.php")) {
       return u.searchParams.get("story_fbid") ?? u.searchParams.get("id");
