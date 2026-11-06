@@ -641,37 +641,63 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     console.log("[analyze] start", { url: data.url });
+    const { supabase, userId } = context;
+
+    // Resolve share/short links to the canonical URL before classifying.
+    const resolved = await resolveCanonicalUrl(data.url);
+    const canonicalUrl = resolved.canonicalUrl;
+    const classified = classifySourceUrl(canonicalUrl);
+    if (!classified) {
+      return { ok: false as const, limitReached: false as const, error: "This link type isn't supported. Paste a link to a specific post, reel, or video.", data: null };
+    }
+
+    // Cache: same canonical URL by this user within 12h reuses the stored
+    // analysis and costs nothing.
+    if (!data.forceRefresh) {
+      const { data: recent } = await supabase
+        .from("analyses")
+        .select("id, created_at")
+        .eq("user_id", userId)
+        .eq("instagram_url", canonicalUrl)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      const hit = (recent ?? []).find((a: any) => isWithinReuseWindow(a.created_at));
+      if (hit) {
+        console.log("[analyze] cache hit", { analysisId: hit.id });
+        const cached = await loadAnalysisPayload(supabase, userId, hit.id);
+        return {
+          ok: true as const,
+          limitReached: false as const,
+          error: null,
+          data: { ...cached, cacheHit: true as const },
+        };
+      }
+    }
+
+    // Debit BEFORE the scrape starts; refunded (idempotently per attempt)
+    // if the scrape fails or the analysis throws.
+    const attemptId = crypto.randomUUID();
+    let debited = 0;
     try {
-      const { supabase, userId } = context;
-      const postType = detectPostType(data.url);
+      await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attemptId, attemptId);
+      debited = ACTION_COSTS.analysis;
 
-      // Usage gate
-      const { data: prof, error: profErr } = await supabase
-        .from("profiles")
-        .select("analyses_used, analyses_limit")
-        .eq("id", userId)
-        .single();
-      if (profErr) console.error("[analyze] profile fetch error:", profErr);
-      if (prof && (prof.analyses_limit ?? 0) - (prof.analyses_used ?? 0) <= 0) {
-        console.log("[analyze] limit reached", prof);
-        return { ok: false as const, limitReached: true as const, error: null, data: null };
-      }
+      const token = await resolveApifyToken(supabase, userId);
+      if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
 
-      // Scrape (graceful fallback if APIFY missing/private)
-      let scraped: ScrapedPost | null = null;
-      let fallback = false;
-      try {
-        console.log("[analyze] scraping…");
-        scraped = await scrapePost(data.url);
-        console.log("[analyze] scrape ok", { owner: scraped?.ownerUsername });
-      } catch (e) {
-        console.warn("[analyze] scrape fallback:", (e as Error).message);
-        fallback = true;
-      }
+      console.log("[analyze] scraping…", { kind: classified.kind, platform: classified.platform });
+      const scraped = await scrapeSource(canonicalUrl, token, classified);
+      const postType = scraped.type;
+      console.log("[analyze] scrape ok", {
+        owner: scraped.ownerUsername,
+        type: postType,
+        slides: `${scraped.scrapeCoverage.slidesCaptured}/${scraped.scrapeCoverage.slidesExpected}`,
+        video: scraped.scrapeCoverage.videoCaptured,
+      });
 
       console.log("[analyze] combined AI call…");
       const aiStarted = Date.now();
-      const combined = await analyzePostCombined(scraped, data.url, postType);
+      const combined = await analyzePostCombined(scraped, canonicalUrl, postType);
       const dna = combined.dna as any;
       const clones = combined.clones as any[];
       const forensics = (combined as any).forensics ?? null;
@@ -692,12 +718,12 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         .from("analyses")
         .insert({
           user_id: userId,
-          instagram_url: data.url,
+          instagram_url: canonicalUrl,
           post_type: postType,
           source_account: scraped?.ownerUsername ?? null,
           source_caption: scraped?.caption ?? null,
           performance_score: dna?.performanceScore ?? null,
-          scraped_data: (scraped ?? null) as any,
+          scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl } as any,
           dna_analysis: dna as any,
           viral_score: viral.score,
           viral_band: viral.band,
@@ -708,7 +734,22 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
 
       if (aErr) {
         console.error("[analyze] DB insert error:", aErr);
-        return { ok: false as const, limitReached: false as const, error: "Failed to save analysis", data: null };
+        throw new Error("Failed to save analysis");
+      }
+
+      // Persist the media — CDN links expire within hours. Failures are
+      // recorded in the coverage notes, never fatal.
+      if (scraped.mediaItems.length > 0) {
+        const { storedMedia, notes } = await persistSourceMedia(userId, analysis.id, scraped.mediaItems);
+        const coverage = { ...scraped.scrapeCoverage, notes: [...scraped.scrapeCoverage.notes, ...notes] };
+        if (storedMedia.length > 0 || notes.length > 0) {
+          await supabase
+            .from("analyses")
+            .update({ scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl, storedMedia, scrapeCoverage: coverage } as any })
+            .eq("id", analysis.id);
+        }
+        scraped.storedMedia = storedMedia;
+        scraped.scrapeCoverage = coverage;
       }
 
       if (clones.length > 0) {
@@ -728,14 +769,6 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         if (cErr) console.error("[analyze] clones insert error:", cErr);
       }
 
-      // Increment usage
-      if (prof) {
-        await supabase
-          .from("profiles")
-          .update({ analyses_used: (prof.analyses_used ?? 0) + 1 })
-          .eq("id", userId);
-      }
-
       console.log("[analyze] done", { analysisId: analysis.id });
       return {
         ok: true as const,
@@ -746,13 +779,17 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
           dna: { ...dna, sourceAccount: scraped?.ownerUsername ?? null, postType },
           clones,
           scraped: scraped ?? null,
-          instagramUrl: data.url,
-          fallback,
+          instagramUrl: canonicalUrl,
+          fallback: false,
+          cacheHit: false as const,
           viral,
         },
       };
     } catch (err: any) {
-      console.error("[analyze] unhandled error:", err);
+      console.error("[analyze] error:", err);
+      if (debited > 0) {
+        await refundCredits(userId, debited, "analysis", attemptId, attemptId);
+      }
       const message =
         err?.name === "AbortError"
           ? "Analysis timed out. Please try again."
@@ -764,6 +801,81 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         data: null,
       };
     }
+  });
+
+/** Load a full analysis payload (used by getAnalysisById and the cache hit path). */
+async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
+  const { data: analysis, error } = await supabase
+    .from("analyses")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+  if (error || !analysis) throw new Error("Analysis not found");
+
+  const { data: clones } = await supabase
+    .from("clones")
+    .select("*")
+    .eq("analysis_id", analysis.id)
+    .order("version_number", { ascending: true });
+
+  const dna = analysis.dna_analysis as any;
+  // Recompute viral score on read so older rows without persisted score still display one.
+  const viral = computeViralScore((analysis as any).scraped_data ?? null);
+  return {
+    analysisId: analysis.id,
+    createdAt: analysis.created_at,
+    dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
+    scraped: (analysis as any).scraped_data ?? null,
+    instagramUrl: analysis.instagram_url,
+    viral,
+    clones: (clones ?? []).map((c: any) => ({
+      versionNumber: c.version_number,
+      angleType: c.angle_type,
+      angleLabel: angleLabelFor(c.angle_type),
+      hook: c.hook,
+      angle: c.angle,
+      storyStructure: c.story_structure,
+      caption: c.caption,
+      visualDirection: c.visual_direction,
+      cta: c.cta,
+    })),
+  };
+}
+
+/**
+ * Signed read URLs for an analysis's persisted source media. Later passes
+ * (studios, regeneration) use these instead of the expired CDN links.
+ */
+export const getSourceMediaSignedUrls = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: analysis, error } = await supabase
+      .from("analyses")
+      .select("scraped_data")
+      .eq("id", data.analysisId)
+      .eq("user_id", userId)
+      .single();
+    if (error || !analysis) throw new Error("Analysis not found");
+
+    const stored = ((analysis.scraped_data as any)?.storedMedia ?? []) as Array<{
+      index: number; kind: "image" | "video"; path: string; bytes: number; mime: string;
+    }>;
+    if (stored.length === 0) return { media: [] };
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const media = await Promise.all(
+      stored.map(async (m) => {
+        const { data: signed, error: sErr } = await supabaseAdmin.storage
+          .from("source-media")
+          .createSignedUrl(m.path, 3600);
+        if (sErr || !signed?.signedUrl) return null;
+        return { ...m, signedUrl: signed.signedUrl };
+      }),
+    );
+    return { media: media.filter(Boolean) };
   });
 
 export const getAnalysisById = createServerFn({ method: "POST" })
