@@ -35,185 +35,59 @@ const InputSchema = z.object({
 });
 
 
-type ScrapedPost = {
-  caption: string;
-  ownerUsername: string;
-  likesCount: number;
-  commentsCount: number;
-  videoViewCount?: number;
-  videoPlayCount?: number;
-  hashtags?: string[];
-  type: string;
-  url: string;
-  displayUrl?: string;
-  thumbnailUrl?: string;
-  videoUrl?: string;
-  productType?: string;
-  timestamp?: string;
-  locationName?: string;
-  isSponsored?: boolean;
-  firstComment?: string;
-  musicInfo?: any;
-  owner?: {
-    username?: string;
-    fullName?: string;
-    followersCount?: number;
-    followingCount?: number;
-    mediaCount?: number;
-    verified?: boolean;
-    isBusinessAccount?: boolean;
-    biography?: string;
-    externalUrl?: string;
-    profilePicUrl?: string;
-    businessCategoryName?: string;
-    isPrivate?: boolean;
-  };
-};
-
-function detectPostType(url: string): string {
-  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
-  if (url.includes("/carousel/")) return "Carousel";
-  if (isFacebookUrl(url) && (url.includes("/videos/") || url.includes("fb.watch"))) return "Video";
-  return "Post";
+/** Strip SRT cue numbers/timestamps down to plain spoken text. */
+function srtToText(srt: string): string {
+  return srt
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l && !/^\d+$/.test(l) && !/^\d{2}:\d{2}:\d{2}[,.]\d+\s*-->/.test(l))
+    .map((l) => l.replace(/<[^>]+>/g, ""))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 10000);
 }
 
-/** Normalizes an Apify Facebook post item into our ScrapedPost shape. */
-function normalizeFacebookPost(raw: any, url: string): ScrapedPost {
-  const text: string = raw?.text ?? raw?.message ?? raw?.postText ?? "";
-  const hashtags = Array.from(
-    new Set((text.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((h: string) => h.slice(1))),
-  );
-  const media = Array.isArray(raw?.media) ? raw.media : [];
-  const firstMedia = media[0] ?? {};
-  const image =
-    raw?.thumbnailUrl ??
-    raw?.previewImage?.uri ??
-    firstMedia?.thumbnail ??
-    firstMedia?.photo_image?.uri ??
-    firstMedia?.image?.uri ??
-    firstMedia?.url ??
-    undefined;
-  const author = raw?.user ?? raw?.author ?? raw?.pageInfo ?? {};
-
-  return {
-    caption: text,
-    ownerUsername:
-      author?.name ?? author?.username ?? raw?.pageName ?? raw?.facebookUrl ?? "facebook",
-    likesCount: Number(raw?.likes ?? raw?.likesCount ?? raw?.reactionsCount ?? 0) || 0,
-    commentsCount: Number(raw?.comments ?? raw?.commentsCount ?? 0) || 0,
-    videoViewCount: Number(raw?.viewsCount ?? raw?.videoViewCount ?? 0) || undefined,
-    videoPlayCount: Number(raw?.videoPlayCount ?? 0) || undefined,
-    hashtags,
-    type: detectPostType(url),
-    url: raw?.url ?? raw?.topLevelUrl ?? url,
-    displayUrl: image,
-    thumbnailUrl: image,
-    videoUrl: raw?.videoUrl ?? firstMedia?.video_url ?? undefined,
-    timestamp: raw?.time ?? raw?.timestamp ?? undefined,
-    isSponsored: Boolean(raw?.isSponsored),
-    owner: {
-      username: author?.name ?? author?.username ?? undefined,
-      fullName: author?.name ?? undefined,
-      followersCount: Number(raw?.pageFollowers ?? author?.followers ?? 0) || undefined,
-      profilePicUrl: author?.profilePic ?? author?.profilePicture ?? undefined,
-      biography: raw?.pageAbout ?? undefined,
-      externalUrl: author?.profileUrl ?? raw?.facebookUrl ?? undefined,
-    },
-  };
-}
-
-async function scrapeFacebook(url: string): Promise<ScrapedPost> {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN not configured");
-
-  const endpoint = `https://api.apify.com/v2/acts/apify~facebook-posts-scraper/run-sync-get-dataset-items?token=${token}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      startUrls: [{ url }],
-      resultsLimit: 1,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[Apify][fb] error:", res.status, text);
-    throw new Error(`Failed to scrape Facebook post (${res.status})`);
+async function scrapeInstagramSource(url: string, token: string, provisional: ClassifiedUrl): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    items = await apifyRun("apify~instagram-scraper", { directUrls: [url], resultsLimit: 1, resultsType: "posts" }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "instagram" });
   }
-
-  const items = (await res.json()) as any[];
-  if (!items || items.length === 0) {
-    throw new Error("No data returned for this Facebook URL. It may be private or invalid.");
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "instagram" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "instagram" });
   }
-  return normalizeFacebookPost(items[0], url);
-}
-
-async function scrapePost(url: string): Promise<ScrapedPost> {
-  return isFacebookUrl(url) ? scrapeFacebook(url) : scrapeInstagram(url);
-}
-
-
-async function scrapeInstagram(url: string): Promise<ScrapedPost> {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN not configured");
-
-  const endpoint = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      directUrls: [url],
-      resultsLimit: 1,
-      resultsType: "posts",
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[Apify] error:", res.status, text);
-    throw new Error(`Failed to scrape Instagram post (${res.status})`);
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different post than the one you linked. Try the URL again.", "wrong_post");
   }
-
-  const items = (await res.json()) as ScrapedPost[];
-  if (!items || items.length === 0) {
-    throw new Error("No data returned for this Instagram URL. It may be private or invalid.");
-  }
-  const post = items[0];
+  const post = normalizeInstagramPost(raw, url, provisional);
 
   // Two-step: if owner.followersCount is missing, scrape the profile separately
   // so the Post Intelligence card can show real follower / media counts.
   const username = post.ownerUsername || post.owner?.username;
-  if (username && !(post.owner?.followersCount && post.owner.followersCount > 0)) {
+  if (username && username !== "unknown" && !(post.owner?.followersCount && post.owner.followersCount > 0)) {
     try {
-      const profEndpoint = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${token}`;
-      const profRes = await fetch(profEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernames: [username] }),
-      });
-      if (profRes.ok) {
-        const profItems = (await profRes.json()) as any[];
-        const p = profItems?.[0] ?? null;
-        if (p) {
-          post.owner = {
-            ...(post.owner ?? {}),
-            username: p.username ?? username,
-            fullName: p.fullName ?? post.owner?.fullName,
-            biography: p.biography ?? post.owner?.biography,
-            followersCount: p.followersCount ?? post.owner?.followersCount,
-            followingCount: p.followsCount ?? p.followingCount ?? post.owner?.followingCount,
-            mediaCount: p.postsCount ?? p.mediaCount ?? post.owner?.mediaCount,
-            verified: p.verified ?? post.owner?.verified,
-            isBusinessAccount: p.isBusinessAccount ?? post.owner?.isBusinessAccount,
-            externalUrl: p.externalUrl ?? post.owner?.externalUrl,
-            profilePicUrl: p.profilePicUrl ?? p.profilePicUrlHD ?? post.owner?.profilePicUrl,
-            businessCategoryName: p.businessCategoryName ?? post.owner?.businessCategoryName,
-            isPrivate: p.private ?? p.isPrivate ?? post.owner?.isPrivate,
-          } as any;
-        }
-      } else {
-        console.warn("[Apify] profile scrape failed:", profRes.status);
+      const profItems = await apifyRun("apify~instagram-profile-scraper", { usernames: [username] }, token);
+      const p = profItems?.[0] ?? null;
+      if (p) {
+        post.owner = {
+          ...(post.owner ?? {}),
+          username: p.username ?? username,
+          fullName: p.fullName ?? post.owner?.fullName,
+          biography: p.biography ?? post.owner?.biography,
+          followersCount: p.followersCount ?? post.owner?.followersCount,
+          followingCount: p.followsCount ?? p.followingCount ?? post.owner?.followingCount,
+          mediaCount: p.postsCount ?? p.mediaCount ?? post.owner?.mediaCount,
+          verified: p.verified ?? post.owner?.verified,
+          isBusinessAccount: p.isBusinessAccount ?? post.owner?.isBusinessAccount,
+          externalUrl: p.externalUrl ?? post.owner?.externalUrl,
+          profilePicUrl: p.profilePicUrl ?? p.profilePicUrlHD ?? post.owner?.profilePicUrl,
+          businessCategoryName: p.businessCategoryName ?? post.owner?.businessCategoryName,
+          isPrivate: p.private ?? p.isPrivate ?? post.owner?.isPrivate,
+        } as any;
       }
     } catch (e) {
       console.warn("[Apify] profile scrape error:", (e as Error).message);
@@ -221,6 +95,76 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   }
 
   return post;
+}
+
+async function scrapeFacebookReelSource(url: string, token: string): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    items = await apifyRun("apify~facebook-reels-scraper", { startUrls: [{ url }], resultsLimit: 1 }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "facebook" });
+  }
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "facebook" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "facebook" });
+  }
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different reel than the one you linked. Try the URL again.", "wrong_post");
+  }
+  const post = normalizeFacebookReel(raw, url);
+
+  // The reels scraper returns an SRT caption file URL — fetch and inline it
+  // as the transcript so downstream passes have the spoken words.
+  const captionsUrl = (post as any).captionsUrl as string | undefined;
+  if (captionsUrl) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(captionsUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const text = srtToText(await res.text());
+        if (text) {
+          post.transcript = text;
+          post.scrapeCoverage.transcriptCaptured = true;
+        }
+      }
+    } catch (e) {
+      post.scrapeCoverage.notes.push("Transcript file couldn't be downloaded.");
+      post.scrapeCoverage.transcriptCaptured = false;
+      console.warn("[ingest] captions fetch failed:", (e as Error).message);
+    }
+    delete (post as any).captionsUrl;
+  }
+  return post;
+}
+
+async function scrapeFacebookPostSource(url: string, token: string, provisional: ClassifiedUrl): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    // Per the actor docs, resultsLimit is ignored for direct post URLs;
+    // captionText asks for video transcripts when available.
+    items = await apifyRun("apify~facebook-posts-scraper", { startUrls: [{ url }], resultsLimit: 1, captionText: true }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "facebook" });
+  }
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "facebook" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "facebook" });
+  }
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different post than the one you linked. Try the URL again.", "wrong_post");
+  }
+  return normalizeFacebookPost(raw, url, provisional);
+}
+
+/** Route to the right scraper for the classified URL. */
+async function scrapeSource(url: string, token: string, classified: ClassifiedUrl): Promise<ScrapedPost> {
+  if (classified.platform === "instagram") return scrapeInstagramSource(url, token, classified);
+  if (classified.kind === "Reel" || classified.kind === "Video") return scrapeFacebookReelSource(url, token);
+  return scrapeFacebookPostSource(url, token, classified);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
