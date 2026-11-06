@@ -4,25 +4,25 @@ import { z } from "zod";
 import { generateText, type ModelMessage } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { computeViralScore } from "@/lib/scoring";
-
-const SUPPORTED_HOST = /(^|\.)(instagram\.com|facebook\.com|fb\.watch|fb\.com|m\.facebook\.com)$/i;
-
-function isSupportedSocialUrl(u: string): boolean {
-  try {
-    return SUPPORTED_HOST.test(new URL(u).hostname);
-  } catch {
-    return false;
-  }
-}
-
-export function isFacebookUrl(u: string): boolean {
-  try {
-    const h = new URL(u).hostname;
-    return /facebook\.com$|fb\.watch$|fb\.com$/i.test(h);
-  } catch {
-    return false;
-  }
-}
+import {
+  classifySourceUrl,
+  isSupportedSocialUrl,
+  resolveCanonicalUrl,
+  normalizeInstagramPost,
+  normalizeFacebookReel,
+  normalizeFacebookPost,
+  verifyPostMatch,
+  scrapeFailure,
+  srtToText,
+  ScrapeError,
+  type ClassifiedUrl,
+  type ScrapedPost,
+} from "@/lib/source-ingest";
+import { resolveApifyToken, apifyRun } from "@/lib/apify.server";
+import { persistSourceMedia } from "@/lib/source-media.server";
+import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
+import { debitCredits, refundCredits } from "@/lib/credits.server";
+import { isWithinReuseWindow } from "@/lib/intel-analytics";
 
 const InputSchema = z.object({
   url: z
@@ -31,188 +31,50 @@ const InputSchema = z.object({
     .refine(isSupportedSocialUrl, {
       message: "Must be an Instagram or Facebook URL",
     }),
+  forceRefresh: z.boolean().optional(),
 });
 
 
-type ScrapedPost = {
-  caption: string;
-  ownerUsername: string;
-  likesCount: number;
-  commentsCount: number;
-  videoViewCount?: number;
-  videoPlayCount?: number;
-  hashtags?: string[];
-  type: string;
-  url: string;
-  displayUrl?: string;
-  thumbnailUrl?: string;
-  videoUrl?: string;
-  productType?: string;
-  timestamp?: string;
-  locationName?: string;
-  isSponsored?: boolean;
-  firstComment?: string;
-  musicInfo?: any;
-  owner?: {
-    username?: string;
-    fullName?: string;
-    followersCount?: number;
-    followingCount?: number;
-    mediaCount?: number;
-    verified?: boolean;
-    isBusinessAccount?: boolean;
-    biography?: string;
-    externalUrl?: string;
-    profilePicUrl?: string;
-    businessCategoryName?: string;
-    isPrivate?: boolean;
-  };
-};
-
-function detectPostType(url: string): string {
-  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
-  if (url.includes("/carousel/")) return "Carousel";
-  if (isFacebookUrl(url) && (url.includes("/videos/") || url.includes("fb.watch"))) return "Video";
-  return "Post";
-}
-
-/** Normalizes an Apify Facebook post item into our ScrapedPost shape. */
-function normalizeFacebookPost(raw: any, url: string): ScrapedPost {
-  const text: string = raw?.text ?? raw?.message ?? raw?.postText ?? "";
-  const hashtags = Array.from(
-    new Set((text.match(/#[\p{L}\p{N}_]+/gu) ?? []).map((h: string) => h.slice(1))),
-  );
-  const media = Array.isArray(raw?.media) ? raw.media : [];
-  const firstMedia = media[0] ?? {};
-  const image =
-    raw?.thumbnailUrl ??
-    raw?.previewImage?.uri ??
-    firstMedia?.thumbnail ??
-    firstMedia?.photo_image?.uri ??
-    firstMedia?.image?.uri ??
-    firstMedia?.url ??
-    undefined;
-  const author = raw?.user ?? raw?.author ?? raw?.pageInfo ?? {};
-
-  return {
-    caption: text,
-    ownerUsername:
-      author?.name ?? author?.username ?? raw?.pageName ?? raw?.facebookUrl ?? "facebook",
-    likesCount: Number(raw?.likes ?? raw?.likesCount ?? raw?.reactionsCount ?? 0) || 0,
-    commentsCount: Number(raw?.comments ?? raw?.commentsCount ?? 0) || 0,
-    videoViewCount: Number(raw?.viewsCount ?? raw?.videoViewCount ?? 0) || undefined,
-    videoPlayCount: Number(raw?.videoPlayCount ?? 0) || undefined,
-    hashtags,
-    type: detectPostType(url),
-    url: raw?.url ?? raw?.topLevelUrl ?? url,
-    displayUrl: image,
-    thumbnailUrl: image,
-    videoUrl: raw?.videoUrl ?? firstMedia?.video_url ?? undefined,
-    timestamp: raw?.time ?? raw?.timestamp ?? undefined,
-    isSponsored: Boolean(raw?.isSponsored),
-    owner: {
-      username: author?.name ?? author?.username ?? undefined,
-      fullName: author?.name ?? undefined,
-      followersCount: Number(raw?.pageFollowers ?? author?.followers ?? 0) || undefined,
-      profilePicUrl: author?.profilePic ?? author?.profilePicture ?? undefined,
-      biography: raw?.pageAbout ?? undefined,
-      externalUrl: author?.profileUrl ?? raw?.facebookUrl ?? undefined,
-    },
-  };
-}
-
-async function scrapeFacebook(url: string): Promise<ScrapedPost> {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN not configured");
-
-  const endpoint = `https://api.apify.com/v2/acts/apify~facebook-posts-scraper/run-sync-get-dataset-items?token=${token}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      startUrls: [{ url }],
-      resultsLimit: 1,
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[Apify][fb] error:", res.status, text);
-    throw new Error(`Failed to scrape Facebook post (${res.status})`);
+async function scrapeInstagramSource(url: string, token: string, provisional: ClassifiedUrl): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    items = await apifyRun("apify~instagram-scraper", { directUrls: [url], resultsLimit: 1, resultsType: "posts" }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "instagram" });
   }
-
-  const items = (await res.json()) as any[];
-  if (!items || items.length === 0) {
-    throw new Error("No data returned for this Facebook URL. It may be private or invalid.");
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "instagram" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "instagram" });
   }
-  return normalizeFacebookPost(items[0], url);
-}
-
-async function scrapePost(url: string): Promise<ScrapedPost> {
-  return isFacebookUrl(url) ? scrapeFacebook(url) : scrapeInstagram(url);
-}
-
-
-async function scrapeInstagram(url: string): Promise<ScrapedPost> {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN not configured");
-
-  const endpoint = `https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=${token}`;
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      directUrls: [url],
-      resultsLimit: 1,
-      resultsType: "posts",
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[Apify] error:", res.status, text);
-    throw new Error(`Failed to scrape Instagram post (${res.status})`);
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different post than the one you linked. Try the URL again.", "wrong_post");
   }
-
-  const items = (await res.json()) as ScrapedPost[];
-  if (!items || items.length === 0) {
-    throw new Error("No data returned for this Instagram URL. It may be private or invalid.");
-  }
-  const post = items[0];
+  const post = normalizeInstagramPost(raw, url, provisional);
 
   // Two-step: if owner.followersCount is missing, scrape the profile separately
   // so the Post Intelligence card can show real follower / media counts.
   const username = post.ownerUsername || post.owner?.username;
-  if (username && !(post.owner?.followersCount && post.owner.followersCount > 0)) {
+  if (username && username !== "unknown" && !(post.owner?.followersCount && post.owner.followersCount > 0)) {
     try {
-      const profEndpoint = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${token}`;
-      const profRes = await fetch(profEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernames: [username] }),
-      });
-      if (profRes.ok) {
-        const profItems = (await profRes.json()) as any[];
-        const p = profItems?.[0] ?? null;
-        if (p) {
-          post.owner = {
-            ...(post.owner ?? {}),
-            username: p.username ?? username,
-            fullName: p.fullName ?? post.owner?.fullName,
-            biography: p.biography ?? post.owner?.biography,
-            followersCount: p.followersCount ?? post.owner?.followersCount,
-            followingCount: p.followsCount ?? p.followingCount ?? post.owner?.followingCount,
-            mediaCount: p.postsCount ?? p.mediaCount ?? post.owner?.mediaCount,
-            verified: p.verified ?? post.owner?.verified,
-            isBusinessAccount: p.isBusinessAccount ?? post.owner?.isBusinessAccount,
-            externalUrl: p.externalUrl ?? post.owner?.externalUrl,
-            profilePicUrl: p.profilePicUrl ?? p.profilePicUrlHD ?? post.owner?.profilePicUrl,
-            businessCategoryName: p.businessCategoryName ?? post.owner?.businessCategoryName,
-            isPrivate: p.private ?? p.isPrivate ?? post.owner?.isPrivate,
-          } as any;
-        }
-      } else {
-        console.warn("[Apify] profile scrape failed:", profRes.status);
+      const profItems = await apifyRun("apify~instagram-profile-scraper", { usernames: [username] }, token);
+      const p = profItems?.[0] ?? null;
+      if (p) {
+        post.owner = {
+          ...(post.owner ?? {}),
+          username: p.username ?? username,
+          fullName: p.fullName ?? post.owner?.fullName,
+          biography: p.biography ?? post.owner?.biography,
+          followersCount: p.followersCount ?? post.owner?.followersCount,
+          followingCount: p.followsCount ?? p.followingCount ?? post.owner?.followingCount,
+          mediaCount: p.postsCount ?? p.mediaCount ?? post.owner?.mediaCount,
+          verified: p.verified ?? post.owner?.verified,
+          isBusinessAccount: p.isBusinessAccount ?? post.owner?.isBusinessAccount,
+          externalUrl: p.externalUrl ?? post.owner?.externalUrl,
+          profilePicUrl: p.profilePicUrl ?? p.profilePicUrlHD ?? post.owner?.profilePicUrl,
+          businessCategoryName: p.businessCategoryName ?? post.owner?.businessCategoryName,
+          isPrivate: p.private ?? p.isPrivate ?? post.owner?.isPrivate,
+        } as any;
       }
     } catch (e) {
       console.warn("[Apify] profile scrape error:", (e as Error).message);
@@ -220,6 +82,76 @@ async function scrapeInstagram(url: string): Promise<ScrapedPost> {
   }
 
   return post;
+}
+
+async function scrapeFacebookReelSource(url: string, token: string): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    items = await apifyRun("apify~facebook-reels-scraper", { startUrls: [{ url }], resultsLimit: 1 }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "facebook" });
+  }
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "facebook" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "facebook" });
+  }
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different reel than the one you linked. Try the URL again.", "wrong_post");
+  }
+  const post = normalizeFacebookReel(raw, url);
+
+  // The reels scraper returns an SRT caption file URL — fetch and inline it
+  // as the transcript so downstream passes have the spoken words.
+  const captionsUrl = (post as any).captionsUrl as string | undefined;
+  if (captionsUrl) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(captionsUrl, { signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) {
+        const text = srtToText(await res.text());
+        if (text) {
+          post.transcript = text;
+          post.scrapeCoverage.transcriptCaptured = true;
+        }
+      }
+    } catch (e) {
+      post.scrapeCoverage.notes.push("Transcript file couldn't be downloaded.");
+      post.scrapeCoverage.transcriptCaptured = false;
+      console.warn("[ingest] captions fetch failed:", (e as Error).message);
+    }
+    delete (post as any).captionsUrl;
+  }
+  return post;
+}
+
+async function scrapeFacebookPostSource(url: string, token: string, provisional: ClassifiedUrl): Promise<ScrapedPost> {
+  let items: any[];
+  try {
+    // Per the actor docs, resultsLimit is ignored for direct post URLs;
+    // captionText asks for video transcripts when available.
+    items = await apifyRun("apify~facebook-posts-scraper", { startUrls: [{ url }], resultsLimit: 1, captionText: true }, token);
+  } catch (e) {
+    throw scrapeFailure({ status: (e as any).status, platform: "facebook" });
+  }
+  const raw = items?.[0];
+  if (!raw) throw scrapeFailure({ platform: "facebook" });
+  if (raw.error || raw.errorDescription) {
+    throw scrapeFailure({ itemError: raw.error, itemErrorDescription: raw.errorDescription, platform: "facebook" });
+  }
+  if (!verifyPostMatch(raw, url)) {
+    throw new ScrapeError("The scraper returned a different post than the one you linked. Try the URL again.", "wrong_post");
+  }
+  return normalizeFacebookPost(raw, url, provisional);
+}
+
+/** Route to the right scraper for the classified URL. */
+async function scrapeSource(url: string, token: string, classified: ClassifiedUrl): Promise<ScrapedPost> {
+  if (classified.platform === "instagram") return scrapeInstagramSource(url, token, classified);
+  if (classified.kind === "Reel" || classified.kind === "Video") return scrapeFacebookReelSource(url, token);
+  return scrapeFacebookPostSource(url, token, classified);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -546,7 +478,7 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
   const system = `You are IG-Cloner's forensic Instagram analyst. First extract the literal evidence from the post image/video thumbnail: visible text/OCR, subject, symbols, setting, objects, emotions, and visual hierarchy. Then infer why it works and create variations. Never invent a topic from the URL alone. If the user later chooses a different niche, downstream ideas must preserve the source post's core message, emotional mechanism, and visual metaphor while translating it into that niche. Return ONLY a single JSON object with no prose, no markdown fences.`;
 
   const forensicsBlock =
-    postType === "Reel"
+    postType === "Reel" || postType === "Video"
       ? `"videoForensics": {
       "hook": { "type": string, "element": string, "exactVisibleText": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
       "pacing": { "overall": "very-fast"|"fast"|"medium"|"slow", "averageCutDuration": number, "transitionTypes": string, "rhythmSynced": boolean, "bRollUsage": "heavy"|"moderate"|"minimal"|"none" },
@@ -696,37 +628,63 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
     console.log("[analyze] start", { url: data.url });
+    const { supabase, userId } = context;
+
+    // Resolve share/short links to the canonical URL before classifying.
+    const resolved = await resolveCanonicalUrl(data.url);
+    const canonicalUrl = resolved.canonicalUrl;
+    const classified = classifySourceUrl(canonicalUrl);
+    if (!classified) {
+      return { ok: false as const, limitReached: false as const, error: "This link type isn't supported. Paste a link to a specific post, reel, or video.", data: null };
+    }
+
+    // Cache: same canonical URL by this user within 12h reuses the stored
+    // analysis and costs nothing.
+    if (!data.forceRefresh) {
+      const { data: recent } = await supabase
+        .from("analyses")
+        .select("id, created_at")
+        .eq("user_id", userId)
+        .eq("instagram_url", canonicalUrl)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      const hit = (recent ?? []).find((a: any) => isWithinReuseWindow(a.created_at));
+      if (hit) {
+        console.log("[analyze] cache hit", { analysisId: hit.id });
+        const cached = await loadAnalysisPayload(supabase, userId, hit.id);
+        return {
+          ok: true as const,
+          limitReached: false as const,
+          error: null,
+          data: { ...cached, cacheHit: true as const },
+        };
+      }
+    }
+
+    // Debit BEFORE the scrape starts; refunded (idempotently per attempt)
+    // if the scrape fails or the analysis throws.
+    const attemptId = crypto.randomUUID();
+    let debited = 0;
     try {
-      const { supabase, userId } = context;
-      const postType = detectPostType(data.url);
+      await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attemptId, attemptId);
+      debited = ACTION_COSTS.analysis;
 
-      // Usage gate
-      const { data: prof, error: profErr } = await supabase
-        .from("profiles")
-        .select("analyses_used, analyses_limit")
-        .eq("id", userId)
-        .single();
-      if (profErr) console.error("[analyze] profile fetch error:", profErr);
-      if (prof && (prof.analyses_limit ?? 0) - (prof.analyses_used ?? 0) <= 0) {
-        console.log("[analyze] limit reached", prof);
-        return { ok: false as const, limitReached: true as const, error: null, data: null };
-      }
+      const token = await resolveApifyToken(supabase, userId);
+      if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
 
-      // Scrape (graceful fallback if APIFY missing/private)
-      let scraped: ScrapedPost | null = null;
-      let fallback = false;
-      try {
-        console.log("[analyze] scraping…");
-        scraped = await scrapePost(data.url);
-        console.log("[analyze] scrape ok", { owner: scraped?.ownerUsername });
-      } catch (e) {
-        console.warn("[analyze] scrape fallback:", (e as Error).message);
-        fallback = true;
-      }
+      console.log("[analyze] scraping…", { kind: classified.kind, platform: classified.platform });
+      const scraped = await scrapeSource(canonicalUrl, token, classified);
+      const postType = scraped.type;
+      console.log("[analyze] scrape ok", {
+        owner: scraped.ownerUsername,
+        type: postType,
+        slides: `${scraped.scrapeCoverage.slidesCaptured}/${scraped.scrapeCoverage.slidesExpected}`,
+        video: scraped.scrapeCoverage.videoCaptured,
+      });
 
       console.log("[analyze] combined AI call…");
       const aiStarted = Date.now();
-      const combined = await analyzePostCombined(scraped, data.url, postType);
+      const combined = await analyzePostCombined(scraped, canonicalUrl, postType);
       const dna = combined.dna as any;
       const clones = combined.clones as any[];
       const forensics = (combined as any).forensics ?? null;
@@ -747,12 +705,12 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         .from("analyses")
         .insert({
           user_id: userId,
-          instagram_url: data.url,
+          instagram_url: canonicalUrl,
           post_type: postType,
           source_account: scraped?.ownerUsername ?? null,
           source_caption: scraped?.caption ?? null,
           performance_score: dna?.performanceScore ?? null,
-          scraped_data: (scraped ?? null) as any,
+          scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl } as any,
           dna_analysis: dna as any,
           viral_score: viral.score,
           viral_band: viral.band,
@@ -763,7 +721,22 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
 
       if (aErr) {
         console.error("[analyze] DB insert error:", aErr);
-        return { ok: false as const, limitReached: false as const, error: "Failed to save analysis", data: null };
+        throw new Error("Failed to save analysis");
+      }
+
+      // Persist the media — CDN links expire within hours. Failures are
+      // recorded in the coverage notes, never fatal.
+      if (scraped.mediaItems.length > 0) {
+        const { storedMedia, notes } = await persistSourceMedia(userId, analysis.id, scraped.mediaItems);
+        const coverage = { ...scraped.scrapeCoverage, notes: [...scraped.scrapeCoverage.notes, ...notes] };
+        if (storedMedia.length > 0 || notes.length > 0) {
+          await supabase
+            .from("analyses")
+            .update({ scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl, storedMedia, scrapeCoverage: coverage } as any })
+            .eq("id", analysis.id);
+        }
+        scraped.storedMedia = storedMedia;
+        scraped.scrapeCoverage = coverage;
       }
 
       if (clones.length > 0) {
@@ -783,14 +756,6 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         if (cErr) console.error("[analyze] clones insert error:", cErr);
       }
 
-      // Increment usage
-      if (prof) {
-        await supabase
-          .from("profiles")
-          .update({ analyses_used: (prof.analyses_used ?? 0) + 1 })
-          .eq("id", userId);
-      }
-
       console.log("[analyze] done", { analysisId: analysis.id });
       return {
         ok: true as const,
@@ -801,13 +766,17 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
           dna: { ...dna, sourceAccount: scraped?.ownerUsername ?? null, postType },
           clones,
           scraped: scraped ?? null,
-          instagramUrl: data.url,
-          fallback,
+          instagramUrl: canonicalUrl,
+          fallback: false,
+          cacheHit: false as const,
           viral,
         },
       };
     } catch (err: any) {
-      console.error("[analyze] unhandled error:", err);
+      console.error("[analyze] error:", err);
+      if (debited > 0) {
+        await refundCredits(userId, debited, "analysis", attemptId, attemptId);
+      }
       const message =
         err?.name === "AbortError"
           ? "Analysis timed out. Please try again."
@@ -821,47 +790,86 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
     }
   });
 
-export const getAnalysisById = createServerFn({ method: "POST" })
+/** Load a full analysis payload (used by getAnalysisById and the cache hit path). */
+async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
+  const { data: analysis, error } = await supabase
+    .from("analyses")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+  if (error || !analysis) throw new Error("Analysis not found");
+
+  const { data: clones } = await supabase
+    .from("clones")
+    .select("*")
+    .eq("analysis_id", analysis.id)
+    .order("version_number", { ascending: true });
+
+  const dna = analysis.dna_analysis as any;
+  // Recompute viral score on read so older rows without persisted score still display one.
+  const viral = computeViralScore((analysis as any).scraped_data ?? null);
+  return {
+    analysisId: analysis.id,
+    createdAt: analysis.created_at,
+    dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
+    scraped: (analysis as any).scraped_data ?? null,
+    instagramUrl: analysis.instagram_url,
+    viral,
+    clones: (clones ?? []).map((c: any) => ({
+      versionNumber: c.version_number,
+      angleType: c.angle_type,
+      angleLabel: angleLabelFor(c.angle_type),
+      hook: c.hook,
+      angle: c.angle,
+      storyStructure: c.story_structure,
+      caption: c.caption,
+      visualDirection: c.visual_direction,
+      cta: c.cta,
+    })),
+  };
+}
+
+/**
+ * Signed read URLs for an analysis's persisted source media. Later passes
+ * (studios, regeneration) use these instead of the expired CDN links.
+ */
+export const getSourceMediaSignedUrls = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: analysis, error } = await supabase
       .from("analyses")
-      .select("*")
-      .eq("id", data.id)
+      .select("scraped_data")
+      .eq("id", data.analysisId)
       .eq("user_id", userId)
       .single();
     if (error || !analysis) throw new Error("Analysis not found");
 
-    const { data: clones } = await supabase
-      .from("clones")
-      .select("*")
-      .eq("analysis_id", analysis.id)
-      .order("version_number", { ascending: true });
+    const stored = ((analysis.scraped_data as any)?.storedMedia ?? []) as Array<{
+      index: number; kind: "image" | "video"; path: string; bytes: number; mime: string;
+    }>;
+    if (stored.length === 0) return { media: [] };
 
-    const dna = analysis.dna_analysis as any;
-    // Recompute viral score on read so older rows without persisted score still display one.
-    const viral = computeViralScore((analysis as any).scraped_data ?? null);
-    return {
-      analysisId: analysis.id,
-      createdAt: analysis.created_at,
-      dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
-      scraped: (analysis as any).scraped_data ?? null,
-      instagramUrl: analysis.instagram_url,
-      viral,
-      clones: (clones ?? []).map((c: any) => ({
-        versionNumber: c.version_number,
-        angleType: c.angle_type,
-        angleLabel: angleLabelFor(c.angle_type),
-        hook: c.hook,
-        angle: c.angle,
-        storyStructure: c.story_structure,
-        caption: c.caption,
-        visualDirection: c.visual_direction,
-        cta: c.cta,
-      })),
-    };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const media = await Promise.all(
+      stored.map(async (m) => {
+        const { data: signed, error: sErr } = await supabaseAdmin.storage
+          .from("source-media")
+          .createSignedUrl(m.path, 3600);
+        if (sErr || !signed?.signedUrl) return null;
+        return { ...m, signedUrl: signed.signedUrl };
+      }),
+    );
+    return { media: media.filter(Boolean) };
+  });
+
+export const getAnalysisById = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    return loadAnalysisPayload(context.supabase, context.userId, data.id);
   });
 
 function angleLabelFor(t: string | null): string {

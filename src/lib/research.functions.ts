@@ -293,6 +293,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
     // Set when credits were debited for a fresh scrape, so the catch block
     // can refund them if the paid work fails. Cache hits stay at 0.
     let debitedCredits = 0;
+    // Every charge gets a fresh attempt id so each failed attempt can be
+    // refunded exactly once, independently of other attempts on this report.
+    let attemptId: string | null = null;
     try {
       // Reuse a scrape this user already paid for: same mode + subject
       // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
@@ -331,7 +334,14 @@ export const createResearchReport = createServerFn({ method: "POST" })
       if (!signals) {
         // Cache miss — this run pays for a fresh scrape. Debit atomically
         // before any paid external call; refunded below if the work fails.
-        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id);
+        // The pending attempt is recorded on the row so the stale-run sweep
+        // refunds exactly this attempt's charge.
+        attemptId = crypto.randomUUID();
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.report })
+          .eq("id", row.id);
+        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id, attemptId);
         debitedCredits = ACTION_COSTS.report;
         const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
         let apifyToken = process.env.APIFY_TOKEN;
@@ -383,6 +393,15 @@ export const createResearchReport = createServerFn({ method: "POST" })
         return { id: row.id };
       }
 
+      // Clear the pending charge markers — the run finished, so the sweep
+      // must not refund it later.
+      if (attemptId) {
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: null, pending_charge_amount: null })
+          .eq("id", row.id);
+      }
+
       // Auto-register competitor into watchlist for the Dashboard widget.
       if (data.mode === "competitor") {
         await supabase
@@ -395,9 +414,15 @@ export const createResearchReport = createServerFn({ method: "POST" })
       return { id: row.id };
     } catch (e) {
       // A user must never pay for a failed scrape or AI call. The refund is
-      // idempotent per report id, so a retry storm cannot mint credits.
-      if (debitedCredits > 0) {
-        await refundCredits(userId, debitedCredits, "research_report", row.id);
+      // idempotent per attempt id, so a retry storm cannot mint credits.
+      if (debitedCredits > 0 && attemptId) {
+        await refundCredits(userId, debitedCredits, "research_report", row.id, attemptId);
+      }
+      if (attemptId) {
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: null, pending_charge_amount: null })
+          .eq("id", row.id);
       }
       if (e instanceof InsufficientCreditsError) {
         await supabase
@@ -436,7 +461,12 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
     await supabase.from("research_reports").update({ status: "analyzing", error_message: null, last_progress_at: new Date().toISOString() }).eq("id", report.id);
     // Retry reuses the existing scrape — cheaper than a fresh report, but
     // still a paid AI call. Debit atomically first; refunded on failure.
-    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id);
+    const attemptId = crypto.randomUUID();
+    await supabase
+      .from("research_reports")
+      .update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.retry })
+      .eq("id", report.id);
+    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id, attemptId);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
       const { data: finished } = await supabase
@@ -449,11 +479,15 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
         await supabase.from("research_reports").update({ dna_report: dna, opportunity_score: score }).eq("id", report.id);
         console.warn("[research] retry was swept during analysis; kept DNA, status stays failed", report.id);
       }
+      await supabase
+        .from("research_reports")
+        .update({ pending_attempt_id: null, pending_charge_amount: null })
+        .eq("id", report.id);
       return { id: report.id };
     } catch (e) {
-      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id);
+      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id, attemptId);
       const msg = e instanceof Error ? e.message : String(e);
-      await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
+      await supabase.from("research_reports").update({ status: "failed", error_message: msg, pending_attempt_id: null, pending_charge_amount: null }).eq("id", report.id);
       throw new Error(msg);
     }
   });
@@ -558,7 +592,10 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
 
     // Paid AI call — debit atomically before invoking the model; the whole
     // generation below is wrapped so a failure refunds the exact amount.
-    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
+    // Each batch gets its own attempt id so a failed "add 25 more" can be
+    // refunded even when an earlier batch on the same report was refunded.
+    const ideasAttemptId = crypto.randomUUID();
+    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id, ideasAttemptId);
     try {
 
     const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 25 content ideas.
@@ -681,7 +718,7 @@ Return a flat JSON array of 25 objects. Nothing else.`;
       .order("idea_number", { ascending: true });
     return { ideas: all ?? [] };
     } catch (e) {
-      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
+      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id, ideasAttemptId);
       throw e;
     }
   });

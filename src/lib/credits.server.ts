@@ -23,6 +23,7 @@ export async function debitCredits(
   reason: LedgerReason,
   entityType?: string,
   entityId?: string,
+  attemptId?: string,
 ): Promise<DebitResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin.rpc("debit_credits", {
@@ -31,6 +32,7 @@ export async function debitCredits(
     p_reason: reason,
       p_entity_type: entityType ?? undefined,
       p_entity_id: entityId ?? undefined,
+      p_attempt_id: attemptId ?? undefined,
   });
   if (error) throw new Error(`Credit debit failed: ${error.message}`);
   const result = data as unknown as DebitResult;
@@ -41,14 +43,17 @@ export async function debitCredits(
 }
 
 /**
- * Refund a failed action. Idempotent: a second refund for the same entity is
- * rejected by the database function, so retry storms cannot mint credits.
+ * Refund a failed action. Idempotent per attempt: a second refund for the
+ * same (entity, attempt) pair is rejected by the database function, so retry
+ * storms cannot mint credits — but a NEW attempt on the same entity can be
+ * refunded independently.
  */
 export async function refundCredits(
   userId: string,
   amount: number,
   entityType: string,
   entityId: string,
+  attemptId?: string,
 ): Promise<void> {
   if (amount <= 0) return;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -57,8 +62,9 @@ export async function refundCredits(
     p_amount: amount,
     p_entity_type: entityType,
     p_entity_id: entityId,
+    p_attempt_id: attemptId ?? undefined,
   });
-  if (error) console.error("[credits] refund failed", { userId, entityType, entityId, error: error.message });
+  if (error) console.error("[credits] refund failed", { userId, entityType, entityId, attemptId, error: error.message });
 }
 
 export { ACTION_COSTS };

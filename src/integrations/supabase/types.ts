@@ -494,6 +494,7 @@ export type Database = {
       }
       credit_ledger: {
         Row: {
+          attempt_id: string | null
           created_at: string
           credit_kind: string
           delta: number
@@ -505,6 +506,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attempt_id?: string | null
           created_at?: string
           credit_kind: string
           delta: number
@@ -516,6 +518,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attempt_id?: string | null
           created_at?: string
           credit_kind?: string
           delta?: number
@@ -1036,6 +1039,8 @@ export type Database = {
           limited_data_reason: string | null
           mode: string
           opportunity_score: number | null
+          pending_attempt_id: string | null
+          pending_charge_amount: number | null
           posts_analyzed: number | null
           raw_data: Json | null
           status: string
@@ -1054,6 +1059,8 @@ export type Database = {
           limited_data_reason?: string | null
           mode: string
           opportunity_score?: number | null
+          pending_attempt_id?: string | null
+          pending_charge_amount?: number | null
           posts_analyzed?: number | null
           raw_data?: Json | null
           status?: string
@@ -1072,6 +1079,8 @@ export type Database = {
           limited_data_reason?: string | null
           mode?: string
           opportunity_score?: number | null
+          pending_attempt_id?: string | null
+          pending_charge_amount?: number | null
           posts_analyzed?: number | null
           raw_data?: Json | null
           status?: string
@@ -1372,6 +1381,7 @@ export type Database = {
       debit_credits: {
         Args: {
           p_amount: number
+          p_attempt_id?: string
           p_entity_id?: string
           p_entity_type?: string
           p_reason: string
@@ -1392,6 +1402,7 @@ export type Database = {
       refund_credits: {
         Args: {
           p_amount: number
+          p_attempt_id?: string
           p_entity_id: string
           p_entity_type: string
           p_user_id: string

@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { analyzeInstagramPost, getAnalysisById, getUsage } from "@/lib/analyze.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { analyzeInstagramPost, getAnalysisById } from "@/lib/analyze.functions";
+import { getCreditBalance } from "@/lib/credits.functions";
+import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
+import { classifySourceUrl } from "@/lib/source-ingest";
 import { listProjects } from "@/lib/projects.functions";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { IntentFlow } from "@/components/IntentFlow";
@@ -23,13 +27,15 @@ function isSupportedUrl(url: string): boolean {
   return /(instagram\.com|facebook\.com|fb\.watch|fb\.com)/i.test(url);
 }
 
+/** Honest type chip: /p/ is "Image or Carousel" until the scrape decides. */
 function detectPostType(url: string): string | null {
   if (!isSupportedUrl(url)) return null;
-  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
-  if (url.includes("/videos/") || url.includes("fb.watch")) return "Video";
-  if (url.includes("/p/")) return "Post";
-  if (url.includes("/carousel/")) return "Carousel";
-  return "Post";
+  const c = classifySourceUrl(url.startsWith("http") ? url : `https://${url}`);
+  if (!c) return null;
+  if (c.shareLink) return "Share link — will resolve";
+  if (c.provisional && c.platform === "instagram" && c.kind === "Image") return "Image or Carousel";
+  if (c.provisional) return `${c.kind} (will confirm)`;
+  return c.kind;
 }
 
 export function AppPage() {
@@ -37,8 +43,14 @@ export function AppPage() {
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
-  const usageFn = useServerFn(getUsage);
+  const balanceFn = useServerFn(getCreditBalance);
   const listProjectsFn = useServerFn(listProjects);
+  const queryClient = useQueryClient();
+  const { data: creditData } = useQuery({
+    queryKey: CREDIT_BALANCE_KEY,
+    queryFn: () => balanceFn(),
+  });
+  const creditBalance = creditData?.balance ?? null;
 
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
@@ -53,19 +65,14 @@ export function AppPage() {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [savedBadge, setSavedBadge] = useState<string | null>(null);
 
-  const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number; plan: string } | null>(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [dismissedWarning, setDismissedWarning] = useState(false);
+  const [insufficient, setInsufficient] = useState<InsufficientCreditsInfo | null>(null);
 
   const [dnaOpen, setDnaOpen] = useState(false);
   const [analysisProjects, setAnalysisProjects] = useState<any[]>([]);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const refreshUsage = useCallback(async () => {
-    try { setUsage(await usageFn()); } catch {}
-  }, [usageFn]);
-  useEffect(() => { refreshUsage(); }, [refreshUsage]);
+  const refreshCredits = () => queryClient.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
 
   useEffect(() => {
     if (!analysisId) { setAnalysisProjects([]); return; }
@@ -117,10 +124,7 @@ export function AppPage() {
       toast.error("Please enter a valid Instagram or Facebook URL");
       return;
     }
-    if (usage && usage.remaining <= 0) {
-      setShowUpgrade(true);
-      return;
-    }
+    setInsufficient(null);
     setPhase("analyzing");
     setProgress(0);
     setStepLabel("Reading post URL…");
@@ -146,10 +150,15 @@ export function AppPage() {
       const result: any = await analyzeFn({ data: { url } });
       clearInterval(timer);
       if (!result) { toast.error("Analysis failed."); setPhase("input"); return; }
-      if (result.limitReached) { setShowUpgrade(true); setPhase("input"); return; }
       if (result.ok === false || !result.data) {
-        toast.error(result.error || "Analysis failed.");
+        const insuff = parseInsufficientCredits(result.error);
+        if (insuff) {
+          setInsufficient(insuff);
+        } else {
+          toast.error(result.error || "Analysis failed.");
+        }
         setPhase("input");
+        refreshCredits();
         return;
       }
       const p = result.data;
@@ -162,14 +171,16 @@ export function AppPage() {
       setViral(p.viral ?? null);
       setFallbackMode(Boolean(p.fallback));
       setPhase("results");
-      toast.success("Saved to your dashboard");
-      refreshUsage();
+      toast.success(p.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
+      refreshCredits();
     } catch (err: any) {
       clearInterval(timer);
       const msg: string = err?.message || "Analysis failed.";
-      if (/LIMIT_REACHED/.test(msg)) setShowUpgrade(true);
+      const insuff = parseInsufficientCredits(msg);
+      if (insuff) setInsufficient(insuff);
       else toast.error(msg);
       setPhase("input");
+      refreshCredits();
     }
   };
 
@@ -186,18 +197,12 @@ export function AppPage() {
 
   return (
     <div className="min-h-full">
-      {usage && (
+      {creditBalance !== null && (
         <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:px-8">
-          <div className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-            {usage.remaining} / {usage.limit} left this month
+          <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            <Coins className="h-3.5 w-3.5" />
+            {creditBalance} credits
           </div>
-        </div>
-      )}
-
-      {usage && usage.remaining > 0 && usage.remaining <= 5 && !dismissedWarning && (
-        <div className="flex items-center justify-between gap-3 border-b border-status-warning/30 bg-status-warning/10 px-4 py-2 text-sm text-status-warning lg:px-8">
-          <span>⚡ {usage.remaining} analyses left · <button onClick={() => navigate({ to: "/settings", search: { section: "subscription" } })} className="underline">Upgrade →</button></span>
-          <button onClick={() => setDismissedWarning(true)} aria-label="Dismiss" className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -222,9 +227,24 @@ export function AppPage() {
                   className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 <Button onClick={handleAnalyze} className="shrink-0 gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Analyze
+                  <Sparkles className="h-4 w-4" /> Analyze — {ACTION_COSTS.analysis} credits
                 </Button>
               </div>
+              {insufficient && (
+                <div className="mt-3 rounded-xl border border-status-warning/30 bg-status-warning/10 p-4 text-sm animate-in fade-in">
+                  <p className="font-semibold text-status-warning">
+                    This analysis costs {insufficient.required} credits and you have {insufficient.available} — you're {insufficient.required - insufficient.available} short.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" disabled title="Payments aren't wired up yet">
+                      Top up (coming soon)
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/settings", search: { section: "subscription" } })}>
+                      View plans
+                    </Button>
+                  </div>
+                </div>
+              )}
               {postType && (
                 <div className="mt-2 flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-semibold animate-in fade-in slide-in-from-top-1 duration-300">
                   <span className="inline-block text-xl animate-bounce" style={{ animationDuration: '1.5s' }}>👍</span>
@@ -278,6 +298,12 @@ export function AppPage() {
 
             {/* Post Intelligence Card */}
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
+
+            {/* What we captured — the honesty layer: the user must always
+                know whether we hold the real media or just a thumbnail. */}
+            {scraped?.scrapeCoverage && (
+              <CoverageStrip coverage={scraped.scrapeCoverage} audio={scraped.audio} storedMedia={scraped.storedMedia} />
+            )}
 
             {fallbackMode && (
               <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
@@ -403,9 +429,47 @@ export function AppPage() {
         )}
       </div>
 
-      {showUpgrade && (
-        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings", search: { section: "subscription" } }); }} />
-      )}
+    </div>
+  );
+}
+
+/** "What we captured" strip — slides, video, transcript, audio, storage. */
+function CoverageStrip({ coverage, audio, storedMedia }: { coverage: any; audio?: any; storedMedia?: any[] }) {
+  const storedCount = Array.isArray(storedMedia) ? storedMedia.length : 0;
+  const slides =
+    coverage.slidesExpected > 1
+      ? `${coverage.slidesCaptured} of ${coverage.slidesExpected} slides`
+      : null;
+  const parts: string[] = [];
+  if (slides) parts.push(slides);
+  parts.push(coverage.videoCaptured ? "video: yes" : "video: no");
+  parts.push(coverage.transcriptCaptured ? "transcript: yes" : "transcript: no");
+  if (audio?.title) parts.push(`audio: ${audio.original ? "original" : audio.title}`);
+  if (storedCount > 0) parts.push(`${storedCount} file${storedCount === 1 ? "" : "s"} saved`);
+
+  const warn = coverage.thumbnailOnly || coverage.slidesCaptured < coverage.slidesExpected;
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${
+        warn
+          ? "border-status-warning/30 bg-status-warning/10 text-status-warning"
+          : "border-border bg-muted/30 text-muted-foreground"
+      }`}
+    >
+      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <div>
+        <p className="font-medium">
+          {coverage.thumbnailOnly ? "Thumbnail only — the video couldn't be downloaded. " : "What we captured: "}
+          {parts.join(" • ")}
+        </p>
+        {(coverage.notes ?? []).length > 0 && (
+          <ul className="mt-1 space-y-0.5">
+            {coverage.notes.map((n: string, i: number) => (
+              <li key={i}>· {n}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -415,41 +479,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div>
       <h4 className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h4>
       {children}
-    </div>
-  );
-}
-
-function UpgradeModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">You've used all your analyses.</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Upgrade to keep deconstructing what works.</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            { name: "Creator", price: "$19", note: "50 analyses / month", features: ["Full DNA analysis", "5 viral angles per post", "Hook Lab", "Save & history"] },
-            { name: "Pro", price: "$49", note: "Unlimited analyses", features: ["Everything in Creator", "Content Multiplier", "30-day Calendar", "Priority generation"] },
-          ].map((p) => (
-            <div key={p.name} className="rounded-xl border border-border bg-muted/20 p-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{p.name}</p>
-              <p className="mt-1 text-2xl font-bold">{p.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-              <p className="text-xs text-muted-foreground">{p.note}</p>
-              <ul className="my-3 space-y-1 text-xs text-secondary-foreground">
-                {p.features.map((f) => <li key={f}>• {f}</li>)}
-              </ul>
-              <Button size="sm" className="w-full" onClick={onUpgrade}>Upgrade Now</Button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 text-center">
-          <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">Maybe Later</button>
-        </div>
-      </div>
     </div>
   );
 }

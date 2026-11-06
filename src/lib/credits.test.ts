@@ -27,6 +27,16 @@ describe("action costs", () => {
     expect(ACTION_COSTS.cacheHit).toBe(0);
     expect(ACTION_COSTS.watchlistRefresh).toBe(10);
   });
+
+  it("defines the content-creation costs for this and later passes", () => {
+    expect(ACTION_COSTS.analysis).toBe(3);
+    expect(ACTION_COSTS.textEdit).toBe(2);
+    expect(ACTION_COSTS.videoGenerationVeo3Fast).toBe(15);
+    expect(ACTION_COSTS.videoGenerationVeo3OrKling).toBe(25);
+    expect(ACTION_COSTS.imageGeneration).toBe(1);
+    expect(ACTION_COSTS.hookLab).toBe(2);
+    expect(ACTION_COSTS.captionPack).toBe(1);
+  });
 });
 
 describe("reason labels", () => {
@@ -38,6 +48,7 @@ describe("reason labels", () => {
       "debit_ideas",
       "debit_premium",
       "debit_retry",
+      "debit_analysis",
       "refund_failed",
       "trial_grant",
     ] as const) {

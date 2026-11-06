@@ -26,6 +26,20 @@ export const ACTION_COSTS = {
   cacheHit: 0,
   /** Weekly auto-refresh of a watched competitor */
   watchlistRefresh: 10,
+  /** Content analysis of one Instagram/Facebook post (scrape + DNA) */
+  analysis: 3,
+  /** AI text edit of a generated asset */
+  textEdit: 2,
+  /** Video generation with Veo 3 Fast */
+  videoGenerationVeo3Fast: 15,
+  /** Video generation with Veo 3 or Kling */
+  videoGenerationVeo3OrKling: 25,
+  /** Image generation */
+  imageGeneration: 1,
+  /** Hook Lab batch */
+  hookLab: 2,
+  /** Caption pack */
+  captionPack: 1,
 } as const;
 
 export type LedgerReason =
@@ -35,6 +49,7 @@ export type LedgerReason =
   | "debit_ideas"
   | "debit_premium"
   | "debit_retry"
+  | "debit_analysis"
   | "refund_failed"
   | "trial_grant";
 
@@ -46,6 +61,7 @@ export const REASON_LABELS: Record<LedgerReason, string> = {
   debit_ideas: "25 content ideas",
   debit_premium: "Premium depth add-on",
   debit_retry: "Retry analysis",
+  debit_analysis: "Post analysis",
   refund_failed: "Refund — action failed",
   trial_grant: "Trial credits",
 };
