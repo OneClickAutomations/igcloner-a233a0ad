@@ -43,8 +43,14 @@ export function AppPage() {
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
-  const usageFn = useServerFn(getUsage);
+  const balanceFn = useServerFn(getCreditBalance);
   const listProjectsFn = useServerFn(listProjects);
+  const queryClient = useQueryClient();
+  const { data: creditData } = useQuery({
+    queryKey: CREDIT_BALANCE_KEY,
+    queryFn: () => balanceFn(),
+  });
+  const creditBalance = creditData?.balance ?? null;
 
   const [url, setUrl] = useState("");
   const [postType, setPostType] = useState<string | null>(null);
@@ -59,19 +65,14 @@ export function AppPage() {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [savedBadge, setSavedBadge] = useState<string | null>(null);
 
-  const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number; plan: string } | null>(null);
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [dismissedWarning, setDismissedWarning] = useState(false);
+  const [insufficient, setInsufficient] = useState<InsufficientCreditsInfo | null>(null);
 
   const [dnaOpen, setDnaOpen] = useState(false);
   const [analysisProjects, setAnalysisProjects] = useState<any[]>([]);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const refreshUsage = useCallback(async () => {
-    try { setUsage(await usageFn()); } catch {}
-  }, [usageFn]);
-  useEffect(() => { refreshUsage(); }, [refreshUsage]);
+  const refreshCredits = () => queryClient.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
 
   useEffect(() => {
     if (!analysisId) { setAnalysisProjects([]); return; }
