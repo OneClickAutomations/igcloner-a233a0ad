@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { analyzeInstagramPost, advanceAnalysis, getAnalysisById } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
 import { getCreditBalance } from "@/lib/credits.functions";
@@ -46,6 +46,7 @@ export function AppPage() {
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
   const advanceFn = useServerFn(advanceAnalysis);
+  const statusFn = useServerFn(getAnalysisStatus);
   const jobRef = useRef<string | null>(null);
   const balanceFn = useServerFn(getCreditBalance);
   const listProjectsFn = useServerFn(listProjects);
@@ -116,6 +117,18 @@ export function AppPage() {
   const runJob = async (id: string) => {
     jobRef.current = id;
     setPhase("analyzing");
+    let netErrors = 0;
+    // A stage request can take a while (the scrape especially) — show the live stage meanwhile.
+    const poll = setInterval(async () => {
+      try {
+        const st: any = await statusFn({ data: { analysisId: id } });
+        if (jobRef.current === id && st?.status === "processing" && st.label) { setStepLabel(`${st.label}…`); setProgress(stagePct[st.stage] ?? 10); }
+      } catch {}
+    }, 2500);
+    try { await driveJob(id); } finally { clearInterval(poll); }
+  };
+
+  const driveJob = async (id: string) => {
     let netErrors = 0;
     while (jobRef.current === id) {
       let res: any;
@@ -209,6 +222,8 @@ export function AppPage() {
         return;
       }
       refreshCredits();
+      if (result.label) setStepLabel(`${result.label}…`);
+      setProgress(5);
       jobRef.current = result.analysisId;
       // Put the job in the URL so a reload or reopened tab resumes it.
       navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
