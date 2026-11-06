@@ -162,8 +162,23 @@ export async function runVideoStage(postType: string, scraped: any, st: Pipeline
   const dur = Number(scraped?.durationSec ?? scraped?.mediaItems?.find((m: any) => m.kind === "video")?.durationSec) || null;
 
   if (!pick) {
-    if (tooBig) videoError = `Video is ${((tooBig.bytes ?? 0) / 1048576).toFixed(0)}MB${dur ? `, ${Math.round(dur)}s` : ""} and no smaller copy was available — shot list not observed; analyzed the transcript and cover frame instead.`;
-    return { ...st, videoError, videoDone: true, usages, stageMs: { ...st.stageMs, watching_video: Date.now() - t0 } };
+    if (tooBig) {
+      videoError = `Video is ${((tooBig.bytes ?? 0) / 1048576).toFixed(0)}MB${dur ? `, ${Math.round(dur)}s` : ""} and no smaller copy was available — shot list not observed; analyzed the transcript and cover frame instead.`;
+      // The transcript service accepts large files, so still capture the speech.
+      if (!transcript) {
+        await setStage?.("transcribing");
+        const tt = Date.now();
+        try {
+          const big = await loadStoredBytes(tooBig.path, false);
+          if (big) {
+            const t = await transcribeAudio(big.bytes, big.mime);
+            transcript = t.text; segments = t.segments; hasSpeech = t.hasSpeech; transcriptSource = t.hasSpeech ? "elevenlabs" : null;
+          }
+        } catch (e) { console.warn("[analysis] transcription failed:", (e as Error).message); }
+        transcriptionMs = Date.now() - tt;
+      }
+    }
+    return { ...st, videoError, videoDone: true, transcript, segments, hasSpeech, transcriptSource, transcriptionMs, usages, stageMs: { ...st.stageMs, watching_video: Date.now() - t0 } };
   }
   const vid = await loadStoredBytes(pick.path, false);
   if (!vid) return { ...st, videoError: "Saved video couldn't be loaded — shot details are inferred.", videoDone: true };
