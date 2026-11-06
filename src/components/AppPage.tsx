@@ -117,7 +117,6 @@ export function AppPage() {
   const runJob = async (id: string) => {
     jobRef.current = id;
     setPhase("analyzing");
-    let netErrors = 0;
     // A stage request can take a while (the scrape especially) — show the live stage meanwhile.
     const poll = setInterval(async () => {
       try {
