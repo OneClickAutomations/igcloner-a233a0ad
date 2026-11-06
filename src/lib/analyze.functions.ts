@@ -491,7 +491,7 @@ async function analyzePostCombined(scraped: ScrapedPost | null, url: string, pos
   const system = `You are IG-Cloner's forensic Instagram analyst. First extract the literal evidence from the post image/video thumbnail: visible text/OCR, subject, symbols, setting, objects, emotions, and visual hierarchy. Then infer why it works and create variations. Never invent a topic from the URL alone. If the user later chooses a different niche, downstream ideas must preserve the source post's core message, emotional mechanism, and visual metaphor while translating it into that niche. Return ONLY a single JSON object with no prose, no markdown fences.`;
 
   const forensicsBlock =
-    postType === "Reel"
+    postType === "Reel" || postType === "Video"
       ? `"videoForensics": {
       "hook": { "type": string, "element": string, "exactVisibleText": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
       "pacing": { "overall": "very-fast"|"fast"|"medium"|"slow", "averageCutDuration": number, "transitionTypes": string, "rhythmSynced": boolean, "bRollUsage": "heavy"|"moderate"|"minimal"|"none" },
