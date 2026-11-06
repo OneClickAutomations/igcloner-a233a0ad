@@ -230,6 +230,9 @@ Each clone must reference the real source hook/caption/transcript and keep its m
     postType, slides, storedMedia: stored, video, transcript, segments,
     caption: scraped?.caption ?? null, hashtags: scraped?.hashtags ?? [], synthesis: syn,
   });
+  // Studios read dna_analysis; embedding the blueprint lets buildSourceContextBlock
+  // pick up verbatim OCR/transcript without touching each studio.
+  dna.blueprint = blueprint;
   const totalCredits = usages.reduce((n, u) => n + u.credits, 0);
   const evidence = {
     slides, video, usedCdnFallback, transcriptSource, hasSpeech, repaired,
