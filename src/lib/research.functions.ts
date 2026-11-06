@@ -293,6 +293,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
     // Set when credits were debited for a fresh scrape, so the catch block
     // can refund them if the paid work fails. Cache hits stay at 0.
     let debitedCredits = 0;
+    // Every charge gets a fresh attempt id so each failed attempt can be
+    // refunded exactly once, independently of other attempts on this report.
+    let attemptId: string | null = null;
     try {
       // Reuse a scrape this user already paid for: same mode + subject
       // (trimmed, case-insensitive), non-empty raw_data, within 12 hours.
@@ -331,7 +334,14 @@ export const createResearchReport = createServerFn({ method: "POST" })
       if (!signals) {
         // Cache miss — this run pays for a fresh scrape. Debit atomically
         // before any paid external call; refunded below if the work fails.
-        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id);
+        // The pending attempt is recorded on the row so the stale-run sweep
+        // refunds exactly this attempt's charge.
+        attemptId = crypto.randomUUID();
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.report })
+          .eq("id", row.id);
+        await debitCredits(userId, ACTION_COSTS.report, "debit_report", "research_report", row.id, attemptId);
         debitedCredits = ACTION_COSTS.report;
         const { data: keyRow } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
         let apifyToken = process.env.APIFY_TOKEN;
