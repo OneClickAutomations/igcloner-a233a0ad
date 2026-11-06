@@ -321,7 +321,7 @@ export function ReelStudio() {
             (project.data as any)?.user_preferences?.referenceImageUrl ||
             undefined)
         : undefined;
-      const { requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
+      const { attemptId, requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
         data: {
           prompt: full, model: videoModel, aspect_ratio: format,
           duration: videoDuration, generate_audio: videoAudio,
@@ -332,7 +332,7 @@ export function ReelStudio() {
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
-        const s: any = await pollVideoFn({ data: { requestId, modelSlug, statusUrl, responseUrl } });
+        const s: any = await pollVideoFn({ data: { attemptId, requestId, modelSlug, statusUrl, responseUrl } });
         setVideoStatus(s.status);
         setQueuePos(s.queuePosition ?? null);
         if (s.status === "COMPLETED") {
