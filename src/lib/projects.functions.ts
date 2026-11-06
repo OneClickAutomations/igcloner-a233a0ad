@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { enforceRights } from "@/lib/clone-copy.functions";
 
 const FORMATS = ["reel", "carousel", "caption", "voiceover", "image"] as const;
 export type ProjectFormat = (typeof FORMATS)[number];
@@ -9,7 +10,8 @@ const CreateInput = z.object({
   analysisId: z.string().uuid().optional().nullable(),
   format: z.enum(FORMATS),
   title: z.string().min(1).max(200).optional(),
-  cloneMode: z.enum(["exact", "inspired"]).optional(),
+  // "formula" = same formula, different subject (legacy value "exact").
+  cloneMode: z.enum(["formula", "exact", "inspired"]).optional(),
   userPreferences: z.record(z.any()).optional(),
 });
 
@@ -34,6 +36,9 @@ export const createProject = createServerFn({ method: "POST" })
       analysis = row;
     }
 
+    const intent = String((data.userPreferences as any)?.intent ?? (data.userPreferences as any)?.cloneMethod ?? "");
+    await enforceRights(supabase, userId, data.analysisId ?? null, intent);
+
     const scraped = analysis?.scraped_data as any;
     const ownerHandle =
       scraped?.owner?.username ?? scraped?.ownerUsername ?? null;
@@ -47,7 +52,7 @@ export const createProject = createServerFn({ method: "POST" })
     const userPrefs = {
       ...(analysis?.user_preferences ?? {}),
       ...(data.userPreferences ?? {}),
-      cloneMode: data.cloneMode ?? "exact",
+      cloneMode: data.cloneMode === "inspired" ? "inspired" : "formula",
     };
 
     const insert = {

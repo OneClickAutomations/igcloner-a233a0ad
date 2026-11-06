@@ -18,7 +18,7 @@ export function ContentFormulaCard({
   dna: any;
   scraped: any;
   postType: string;
-  onPick: (mode: "exact" | "inspired") => void;
+  onPick: (mode: "formula" | "inspired") => void;
 }) {
   const forensics = dna?.forensics ?? {};
   const video = forensics.videoForensics;
@@ -86,7 +86,7 @@ export function ContentFormulaCard({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => onPick("exact")} className="gap-1.5">
+          <Button size="sm" onClick={() => onPick("formula")} className="gap-1.5">
             <Copy className="h-3.5 w-3.5" /> Exact Duplicate
           </Button>
           <Button size="sm" variant="outline" onClick={() => onPick("inspired")} className="gap-1.5">

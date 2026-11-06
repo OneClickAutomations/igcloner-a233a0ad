@@ -51,10 +51,10 @@ export function StudioPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/studio/" });
   const analysisId = (search as any)?.analysisId as string | undefined;
-  const initialMode = ((search as any)?.mode as "exact" | "inspired" | undefined) ?? "exact";
+  const initialMode: "formula" | "inspired" = (search as any)?.mode === "inspired" ? "inspired" : "formula";
   const createFn = useServerFn(createProject);
   const [loading, setLoading] = useState<ProjectFormat | null>(null);
-  const [cloneMode, setCloneMode] = useState<"exact" | "inspired">(initialMode);
+  const [cloneMode, setCloneMode] = useState<"formula" | "inspired">(initialMode);
 
   useMemo(() => setCloneMode(initialMode), [initialMode]);
 
@@ -114,12 +114,12 @@ export function StudioPage() {
             </p>
           </div>
           <span className="rounded-full bg-accent-primary/10 px-2 py-0.5 text-[10px] font-semibold text-accent-primary uppercase tracking-wide">
-            {cloneMode === "exact" ? "Exact" : "Inspired"}
+            {cloneMode === "formula" ? "Same formula" : "Inspired"}
           </span>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {[
-            { id: "exact", icon: Copy, label: "Exact Duplicate", blurb: "Same structure, same formula — different subject, brand, face." },
+            { id: "formula", icon: Copy, label: "Same formula", blurb: "Same structure and formula — different subject, brand, face. Not a duplicate." },
             { id: "inspired", icon: Wand2, label: "Inspired Version", blurb: "Same psychological mechanics — different angle, story, spin." },
           ].map((m) => {
             const Icon = m.icon;
@@ -128,7 +128,7 @@ export function StudioPage() {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => setCloneMode(m.id as "exact" | "inspired")}
+                onClick={() => setCloneMode(m.id as "formula" | "inspired")}
                 className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
                   active
                     ? "border-accent-primary bg-accent-primary/5"
