@@ -393,6 +393,15 @@ export const createResearchReport = createServerFn({ method: "POST" })
         return { id: row.id };
       }
 
+      // Clear the pending charge markers — the run finished, so the sweep
+      // must not refund it later.
+      if (attemptId) {
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: null, pending_charge_amount: null })
+          .eq("id", row.id);
+      }
+
       // Auto-register competitor into watchlist for the Dashboard widget.
       if (data.mode === "competitor") {
         await supabase
@@ -405,9 +414,15 @@ export const createResearchReport = createServerFn({ method: "POST" })
       return { id: row.id };
     } catch (e) {
       // A user must never pay for a failed scrape or AI call. The refund is
-      // idempotent per report id, so a retry storm cannot mint credits.
-      if (debitedCredits > 0) {
-        await refundCredits(userId, debitedCredits, "research_report", row.id);
+      // idempotent per attempt id, so a retry storm cannot mint credits.
+      if (debitedCredits > 0 && attemptId) {
+        await refundCredits(userId, debitedCredits, "research_report", row.id, attemptId);
+      }
+      if (attemptId) {
+        await supabase
+          .from("research_reports")
+          .update({ pending_attempt_id: null, pending_charge_amount: null })
+          .eq("id", row.id);
       }
       if (e instanceof InsufficientCreditsError) {
         await supabase
@@ -446,7 +461,12 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
     await supabase.from("research_reports").update({ status: "analyzing", error_message: null, last_progress_at: new Date().toISOString() }).eq("id", report.id);
     // Retry reuses the existing scrape — cheaper than a fresh report, but
     // still a paid AI call. Debit atomically first; refunded on failure.
-    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id);
+    const attemptId = crypto.randomUUID();
+    await supabase
+      .from("research_reports")
+      .update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.retry })
+      .eq("id", report.id);
+    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id, attemptId);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
       const { data: finished } = await supabase
