@@ -482,38 +482,3 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
-
-function UpgradeModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-5 flex items-start justify-between">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">You've used all your analyses.</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Upgrade to keep deconstructing what works.</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            { name: "Creator", price: "$19", note: "50 analyses / month", features: ["Full DNA analysis", "5 viral angles per post", "Hook Lab", "Save & history"] },
-            { name: "Pro", price: "$49", note: "Unlimited analyses", features: ["Everything in Creator", "Content Multiplier", "30-day Calendar", "Priority generation"] },
-          ].map((p) => (
-            <div key={p.name} className="rounded-xl border border-border bg-muted/20 p-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{p.name}</p>
-              <p className="mt-1 text-2xl font-bold">{p.price}<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-              <p className="text-xs text-muted-foreground">{p.note}</p>
-              <ul className="my-3 space-y-1 text-xs text-secondary-foreground">
-                {p.features.map((f) => <li key={f}>• {f}</li>)}
-              </ul>
-              <Button size="sm" className="w-full" onClick={onUpgrade}>Upgrade Now</Button>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 text-center">
-          <button onClick={onClose} className="text-sm text-muted-foreground hover:text-foreground">Maybe Later</button>
-        </div>
-      </div>
-    </div>
-  );
-}
