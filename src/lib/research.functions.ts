@@ -718,7 +718,7 @@ Return a flat JSON array of 25 objects. Nothing else.`;
       .order("idea_number", { ascending: true });
     return { ideas: all ?? [] };
     } catch (e) {
-      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id);
+      await refundCredits(userId, ACTION_COSTS.ideas, "research_report", report.id, ideasAttemptId);
       throw e;
     }
   });
