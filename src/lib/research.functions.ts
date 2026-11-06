@@ -479,11 +479,15 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
         await supabase.from("research_reports").update({ dna_report: dna, opportunity_score: score }).eq("id", report.id);
         console.warn("[research] retry was swept during analysis; kept DNA, status stays failed", report.id);
       }
+      await supabase
+        .from("research_reports")
+        .update({ pending_attempt_id: null, pending_charge_amount: null })
+        .eq("id", report.id);
       return { id: report.id };
     } catch (e) {
-      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id);
+      await refundCredits(userId, ACTION_COSTS.retry, "research_report", report.id, attemptId);
       const msg = e instanceof Error ? e.message : String(e);
-      await supabase.from("research_reports").update({ status: "failed", error_message: msg }).eq("id", report.id);
+      await supabase.from("research_reports").update({ status: "failed", error_message: msg, pending_attempt_id: null, pending_charge_amount: null }).eq("id", report.id);
       throw new Error(msg);
     }
   });
@@ -588,7 +592,10 @@ export const generateContentIdeas = createServerFn({ method: "POST" })
 
     // Paid AI call — debit atomically before invoking the model; the whole
     // generation below is wrapped so a failure refunds the exact amount.
-    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id);
+    // Each batch gets its own attempt id so a failed "add 25 more" can be
+    // refunded even when an earlier batch on the same report was refunded.
+    const ideasAttemptId = crypto.randomUUID();
+    await debitCredits(userId, ACTION_COSTS.ideas, "debit_ideas", "research_report", report.id, ideasAttemptId);
     try {
 
     const system = `You are IGCloner's senior viral content strategist. Your reputation rests on the quality of these 25 content ideas.
