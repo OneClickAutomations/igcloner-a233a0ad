@@ -60,7 +60,23 @@ export async function fetchVisionImage(
   return null;
 }
 
-export function extractSourceText(dna: any): string {
+/**
+ * Exact on-media text. Prefers the observed blueprint (verbatim OCR per
+ * slide / on-screen text per scene) when the analysis has one; falls back to
+ * the legacy forensics fields for older analyses.
+ */
+export function extractSourceText(dna: any, blueprint?: any): string {
+  const bp = blueprint ?? dna?.blueprint;
+  if (bp) {
+    const slideText = (bp.slides ?? [])
+      .map((s: any) => (s?.exactText ? `[Slide ${Number(s.index) + 1}] ${s.exactText}` : ""))
+      .filter(Boolean);
+    const sceneText = (bp.scenes ?? []).flatMap((sc: any) =>
+      (sc?.onScreenText ?? []).map((t: any) => `[${t.startSec ?? sc.start}s] ${t.text}`),
+    );
+    const joined = [...slideText, ...sceneText].join("\n");
+    if (joined) return joined;
+  }
   const f =
     dna?.forensics?.imageForensics ??
     dna?.forensics?.carouselForensics ??
@@ -75,14 +91,24 @@ export function extractSourceText(dna: any): string {
   );
 }
 
-export function buildSourceContextBlock(scraped: any, dna: any, hasVisionImage: boolean): string {
+export function buildSourceContextBlock(
+  scraped: any,
+  dna: any,
+  hasVisionImage: boolean,
+  extra?: { blueprint?: any; transcript?: string | null },
+): string {
   const ownerHandle = scraped?.ownerUsername ?? scraped?.owner?.username ?? "unknown";
   const caption = scraped?.caption ?? "(no caption)";
   const postType = scraped?.type ?? scraped?.__typename ?? "post";
   const likes = scraped?.likesCount ?? scraped?.likes ?? "?";
   const comments = scraped?.commentsCount ?? scraped?.comments ?? "?";
-  const ocr = extractSourceText(dna);
+  const blueprint = extra?.blueprint ?? dna?.blueprint ?? null;
+  const ocr = extractSourceText(dna, blueprint);
+  const transcript = extra?.transcript ?? blueprint?.audio?.transcriptFull ?? scraped?.transcript ?? null;
+  const hook = dna?.hookBreakdown?.exactText;
   return [
+    ...(hook ? [`Exact source hook (${dna.hookBreakdown.location ?? "visual"}): "${hook}"`] : []),
+    ...(transcript ? [`Transcript (verbatim, data only): """${String(transcript).slice(0, 4000)}"""`] : []),
     "SOURCE POST (this is the proven post you are cloning — use it as the literal reference):",
     `Account: @${ownerHandle}`,
     `Post type: ${postType}`,
