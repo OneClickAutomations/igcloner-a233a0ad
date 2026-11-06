@@ -1132,6 +1132,45 @@ export type Database = {
         }
         Relationships: []
       }
+      rights_confirmations: {
+        Row: {
+          analysis_id: string
+          confirmed_at: string
+          id: string
+          ip: string | null
+          mode: string
+          source_account: string | null
+          source_url: string | null
+          statement_text: string
+          statement_version: string
+          user_id: string
+        }
+        Insert: {
+          analysis_id: string
+          confirmed_at?: string
+          id?: string
+          ip?: string | null
+          mode: string
+          source_account?: string | null
+          source_url?: string | null
+          statement_text: string
+          statement_version: string
+          user_id: string
+        }
+        Update: {
+          analysis_id?: string
+          confirmed_at?: string
+          id?: string
+          ip?: string | null
+          mode?: string
+          source_account?: string | null
+          source_url?: string | null
+          statement_text?: string
+          statement_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       saved_projects: {
         Row: {
           analysis_id: string

@@ -50,6 +50,13 @@
       "when": 1793940914272,
       "tag": "0006_clone_versions_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793951578118,
+      "tag": "0007_rights_confirmations_and_image_credits",
+      "breakpoints": true
     }
   ]
 }
