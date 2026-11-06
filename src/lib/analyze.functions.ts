@@ -4,25 +4,25 @@ import { z } from "zod";
 import { generateText, type ModelMessage } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { computeViralScore } from "@/lib/scoring";
-
-const SUPPORTED_HOST = /(^|\.)(instagram\.com|facebook\.com|fb\.watch|fb\.com|m\.facebook\.com)$/i;
-
-function isSupportedSocialUrl(u: string): boolean {
-  try {
-    return SUPPORTED_HOST.test(new URL(u).hostname);
-  } catch {
-    return false;
-  }
-}
-
-export function isFacebookUrl(u: string): boolean {
-  try {
-    const h = new URL(u).hostname;
-    return /facebook\.com$|fb\.watch$|fb\.com$/i.test(h);
-  } catch {
-    return false;
-  }
-}
+import {
+  classifySourceUrl,
+  isSupportedSocialUrl,
+  isFacebookUrl,
+  resolveCanonicalUrl,
+  normalizeInstagramPost,
+  normalizeFacebookReel,
+  normalizeFacebookPost,
+  verifyPostMatch,
+  scrapeFailure,
+  ScrapeError,
+  type ClassifiedUrl,
+  type ScrapedPost,
+} from "@/lib/source-ingest";
+import { resolveApifyToken, apifyRun } from "@/lib/apify.server";
+import { persistSourceMedia } from "@/lib/source-media.server";
+import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
+import { debitCredits, refundCredits } from "@/lib/credits.server";
+import { isWithinReuseWindow } from "@/lib/intel-analytics";
 
 const InputSchema = z.object({
   url: z
@@ -31,6 +31,7 @@ const InputSchema = z.object({
     .refine(isSupportedSocialUrl, {
       message: "Must be an Instagram or Facebook URL",
     }),
+  forceRefresh: z.boolean().optional(),
 });
 
 
