@@ -93,9 +93,9 @@ export const SynthesisSchema = z.object({
   dna: z
     .object({
       contentSummary: z.string(),
-      contentCategory: z.string(),
-      whyItWorks: z.array(z.string()),
-      targetAudience: z.object({ who: z.string(), desire: z.string(), trigger: z.string() }),
+      contentCategory: z.string().catch("Educational"),
+      whyItWorks: z.array(z.string()).catch([]),
+      targetAudience: z.object({ who: z.string().catch(""), desire: z.string().catch(""), trigger: z.string().catch("") }).catch({ who: "", desire: "", trigger: "" }),
       contentMedium: z.object({
         primary: z.string(),
         secondary: z.string().nullable().optional(),
@@ -107,22 +107,22 @@ export const SynthesisSchema = z.object({
       hookBreakdown: z.object({
         exactText: z.string(),
         location: z.enum(["visual", "spoken", "caption"]).catch("visual"),
-        type: z.string(),
-        mechanism: z.string(),
-        whyItWorks: z.string(),
+        type: z.string().catch(""),
+        mechanism: z.string().catch(""),
+        whyItWorks: z.string().catch(""),
         score: num,
         scoreReasoning: z.string().catch(""),
         whatWorks: z.string().catch(""),
         improvement: z.string().catch(""),
       }),
-      emotionalArchitecture: z.object({ curiosity: num, fomo: num, trust: num, relatability: num, urgency: num, inspiration: num }),
-      storyStructure: z.array(z.object({ section: z.string(), timing: z.string(), purpose: z.string() })),
+      emotionalArchitecture: z.object({ curiosity: num, fomo: num, trust: num, relatability: num, urgency: num, inspiration: num }).catch({ curiosity: 0, fomo: 0, trust: 0, relatability: 0, urgency: 0, inspiration: 0 }),
+      storyStructure: z.array(z.object({ section: z.string().catch(""), timing: z.string().catch(""), purpose: z.string().catch("") })).catch([]),
       captionDNA: z
         .object({
-          structure: z.string(),
-          tone: z.string(),
-          persuasionStyle: z.string(),
-          ctaType: z.string(),
+          structure: z.string().catch(""),
+          tone: z.string().catch(""),
+          persuasionStyle: z.string().catch(""),
+          ctaType: z.string().catch("None"),
           score: num,
           hookLine: z.string().catch(""),
           bodyPattern: z.string().catch(""),
@@ -133,9 +133,9 @@ export const SynthesisSchema = z.object({
           keywordTrigger: z.string().nullable().catch(null),
         })
         .passthrough(),
-      visualStyle: z.object({ colorMood: z.string(), composition: z.string(), textOverlay: z.string(), editStyle: z.string(), score: num }),
-      engagementDrivers: z.array(z.string()),
-      monetizationPotential: z.string(),
+      visualStyle: z.object({ colorMood: z.string().catch(""), composition: z.string().catch(""), textOverlay: z.string().catch("None"), editStyle: z.string().catch(""), score: num }).catch({ colorMood: "", composition: "", textOverlay: "None", editStyle: "", score: 0 }),
+      engagementDrivers: z.array(z.string()).catch([]),
+      monetizationPotential: z.string().catch(""),
       channelIntelligence: z.any().optional(),
       videoVisualDNA: z.any().optional(),
     })
@@ -187,7 +187,31 @@ export function tryParseJson(text: string): unknown | null {
   const clean = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
   const start = clean.search(/[{[]/);
   if (start === -1) return null;
-  try { return JSON.parse(clean.slice(start)); } catch { return null; }
+  try { return JSON.parse(clean.slice(start)); } catch { /* try trimming trailing prose */ }
+  const end = Math.max(clean.lastIndexOf("}"), clean.lastIndexOf("]"));
+  const body = end > start ? clean.slice(start, end + 1) : clean.slice(start);
+  try { return JSON.parse(body); } catch { /* try light repair */ }
+  try { return JSON.parse(lightRepair(body)); } catch { return null; }
+}
+
+/** Escape raw control characters inside strings and drop trailing commas — the common model JSON slips. */
+export function lightRepair(src: string): string {
+  let out = "", inStr = false, esc = false;
+  for (const ch of src) {
+    if (inStr) {
+      if (esc) { esc = false; out += ch; continue; }
+      if (ch === "\\") { esc = true; out += ch; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === "\n") { out += "\\n"; continue; }
+      if (ch === "\r") { out += "\\r"; continue; }
+      if (ch === "\t") { out += "\\t"; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  return out.replace(/,\s*([}\]])/g, "$1");
 }
 
 /**
@@ -342,12 +366,14 @@ export function normalizeForensics(
     const ev = (f.evidence ?? "").toLowerCase();
     const slideRefs = [...ev.matchAll(/slides?\s*(\d+)/g)].map((m) => Number(m[1]));
     const validSlide = slideRefs.length > 0 && slideRefs.every((n) => n >= 1 && n <= ctx.slideCount);
-    const ts = [...ev.matchAll(/(\d+):(\d{2})(?:\.\d+)?|(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => (m[3] != null ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2])));
+    const ts = [
+      ...[...ev.matchAll(/(\d+):(\d{2})(?:\.\d+)?/g)].map((m) => Number(m[1]) * 60 + Number(m[2])),
+      ...[...ev.replace(/\d+:\d{2}(?:\.\d+)?/g, "").matchAll(/(\d+(?:\.\d+)?)\s*(?:s\b|[-–]\s*(\d+(?:\.\d+)?))/g)].flatMap((m) => [Number(m[1]), ...(m[2] ? [Number(m[2])] : [])]),
+    ];
     const validTs = ts.length > 0 && ctx.videoDurationSec != null && ts.every((t) => t <= ctx.videoDurationSec! + 1);
     if (validSlide || validTs) return f;
-    const isText = /text|ocr|headline|overlay|wording|reads|caption on/i.test(`${f.field} ${f.value}`);
-    // Caption/transcript quotes are evidence too, but not "read from pixels".
-    if (!isText && /caption|transcript|metric|hashtag/.test(ev)) return f;
+    // Quotes from the caption, transcript or post metadata are observed data, not pixels.
+    if (/caption|transcript|metric|hashtag|metadata|audio meta|account/.test(ev) && !/slide|frame|shot|overlay|on-?screen/.test(ev)) return f;
     return { ...f, provenance: "inferred" as const, flagged: f.evidence ? `Evidence "${f.evidence}" doesn't point to a real slide or timestamp.` : "No slide or timestamp reference." };
   });
 }
@@ -383,6 +409,27 @@ export function sanitizeSlides(slides: SlideEvidence[], sentIndexes: number[]): 
 }
 export function stillMedium(primary: string, hasText: boolean): string {
   return VIDEO_MEDIA.has(primary) ? (hasText ? "digital-graphic" : "lifestyle-photo") : primary;
+}
+
+const MEDIUM_IDS = new Set(["handwriting-on-paper", "handwriting-on-surface", "printed-text-photo", "talking-head-video", "broll-video", "lifestyle-photo", "studio-photo", "product-photo", "screenshot", "digital-graphic", "illustrated", "meme-format", "text-on-video", "animation", "ugc-authentic", "mixed"]);
+/** Coerce a free-form medium label into the shared taxonomy (studios key off these ids). */
+export function normalizeMediumId(raw: string, isVideo: boolean, hasText: boolean): string {
+  const m = (raw || "").toLowerCase().replace(/[_\s]+/g, "-");
+  let id = MEDIUM_IDS.has(m) ? m
+    : /talking|head|speaker|explainer/.test(m) ? "talking-head-video"
+    : /screenshot|screen-rec/.test(m) ? "screenshot"
+    : /hand-?writ/.test(m) ? "handwriting-on-paper"
+    : /illustr|drawing|cartoon/.test(m) ? "illustrated"
+    : /meme/.test(m) ? "meme-format"
+    : /anim|motion/.test(m) ? "animation"
+    : /product/.test(m) ? "product-photo"
+    : /studio/.test(m) ? "studio-photo"
+    : /ugc|selfie/.test(m) ? "ugc-authentic"
+    : /graphic|text|render|design/.test(m) ? (isVideo ? "text-on-video" : "digital-graphic")
+    : isVideo ? (hasText ? "text-on-video" : "broll-video")
+    : hasText ? "digital-graphic" : "lifestyle-photo";
+  if (!isVideo) id = stillMedium(id, hasText);
+  return id;
 }
 
 /**

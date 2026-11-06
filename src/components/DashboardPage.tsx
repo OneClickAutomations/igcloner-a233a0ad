@@ -370,8 +370,10 @@ function DashboardPageInner() {
 
     const { data, error } = await supabase
       .from("analyses")
-      .select("id, instagram_url, post_type, source_account, performance_score, created_at, scraped_data")
+      .select("id, instagram_url, post_type, source_account, performance_score, created_at, scraped_data, analysis_status")
       .eq("user_id", uid)
+      // Failed runs are hidden; in-progress runs show with an "Analyzing" chip.
+      .neq("analysis_status", "failed")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -397,13 +399,14 @@ function DashboardPageInner() {
       supabase.from("saved_projects").select("created_at").eq("user_id", uid),
     ]);
 
-    const analysisDates = (data ?? []).map((a) => a.created_at).filter(Boolean) as string[];
+    const readyRows = (data ?? []).filter((a: any) => a.analysis_status === "ready");
+    const analysisDates = readyRows.map((a) => a.created_at).filter(Boolean) as string[];
     const cloneDates = (clonesRes.data ?? []).map((c: any) => c.created_at).filter(Boolean) as string[];
     const savedDates = (savedRes.data ?? []).map((s: any) => s.created_at).filter(Boolean) as string[];
     setDates({ analyses: analysisDates, clones: cloneDates, saved: savedDates });
 
     setStats({
-      posts: data?.length || 0,
+      posts: readyRows.length,
       clones: cloneDates.length,
       saved: savedDates.length,
     });
@@ -666,9 +669,13 @@ function DashboardPageInner() {
                             {a.post_type || "Post"}
                           </span>
                           <div className="absolute right-2 top-2">
-                            <div className="rounded-full bg-background/60 p-0.5 shadow-ig backdrop-blur">
-                              <ScoreRing score={a.performance_score ?? 0} />
-                            </div>
+                            {(a as any).analysis_status === "processing" ? (
+                              <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-primary shadow-ig backdrop-blur">Analyzing…</span>
+                            ) : (
+                              <div className="rounded-full bg-background/60 p-0.5 shadow-ig backdrop-blur">
+                                <ScoreRing score={a.performance_score ?? 0} />
+                              </div>
+                            )}
                           </div>
                           <div className="absolute inset-x-2 bottom-2 rounded-xl border border-border/40 bg-background/40 px-3 py-2 backdrop-blur-md">
                             <p className="truncate text-sm font-semibold text-foreground">

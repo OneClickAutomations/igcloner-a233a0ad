@@ -238,6 +238,7 @@ export const getUsage = createServerFn({ method: "GET" })
         .from("analyses")
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId)
+        .eq("analysis_status", "ready")
         .gte("created_at", iso),
       supabase
         .from("publishing_jobs")

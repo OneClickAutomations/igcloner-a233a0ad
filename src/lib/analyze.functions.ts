@@ -23,7 +23,10 @@ import { persistSourceMedia } from "@/lib/source-media.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
 import { isWithinReuseWindow } from "@/lib/intel-analytics";
-import { runAnalysisPipeline, type AnalysisStage } from "@/lib/analysis-pipeline.server";
+import {
+  generateClonesFromEvidence, initialState, nextEvidenceStage, runSlidesStage, runSynthesisStage, runVideoStage,
+  type AnalysisStage, type PipelineState,
+} from "@/lib/analysis-pipeline.server";
 
 const InputSchema = z.object({
   url: z
@@ -273,81 +276,154 @@ const STAGE_LABELS: Record<AnalysisStage, string> = {
   building_blueprint: "Building the blueprint",
 };
 
+type JobResult =
+  | { ok: true; limitReached: false; error: null; status: "ready"; data: any }
+  | { ok: true; limitReached: false; error: null; status: "processing"; analysisId: string; stage: string | null; label: string | null; data: null }
+  | { ok: false; limitReached: false; error: string; status: "failed"; data: null };
+
+/**
+ * Start an analysis: cache check, insert the job row, debit. Returns
+ * immediately with status "processing"; the client then calls
+ * advanceAnalysis repeatedly. Each advance runs ONE stage and persists its
+ * output, so a closed tab never loses finished work and reopening resumes.
+ */
 export const analyzeInstagramPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<JobResult> => {
     const { supabase, userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Lazy self-heal: refund and fail this user's stalled analysis jobs.
     await supabaseAdmin.rpc("sweep_stale_analyses" as any, { p_user_id: userId } as any).then(() => {}, () => {});
 
     const resolved = await resolveCanonicalUrl(data.url);
     const canonicalUrl = resolved.canonicalUrl;
     const classified = classifySourceUrl(canonicalUrl);
     if (!classified) {
-      return { ok: false as const, limitReached: false as const, error: "This link type isn't supported. Paste a link to a specific post, reel, or video.", data: null };
+      return { ok: false, limitReached: false, status: "failed", error: "This link type isn't supported. Paste a link to a specific post, reel, or video.", data: null };
     }
 
-    // Cache: same canonical URL by this user within 12h, completed → free.
     if (!data.forceRefresh) {
       const { data: recent } = await supabase
-        .from("analyses")
-        .select("id, created_at")
-        .eq("user_id", userId)
-        .eq("instagram_url", canonicalUrl)
-        .eq("analysis_status", "ready")
-        .order("created_at", { ascending: false })
-        .limit(5);
+        .from("analyses").select("id, created_at")
+        .eq("user_id", userId).eq("instagram_url", canonicalUrl).eq("analysis_status", "ready")
+        .order("created_at", { ascending: false }).limit(5);
       const hit = (recent ?? []).find((a: any) => isWithinReuseWindow(a.created_at));
       if (hit) {
         const cached = await loadAnalysisPayload(supabase, userId, hit.id);
-        return { ok: true as const, limitReached: false as const, error: null, data: { ...cached, cacheHit: true as const } };
+        return { ok: true, limitReached: false, error: null, status: "ready", data: { ...cached, cacheHit: true } };
       }
     }
 
-    // Insert the job row up front so the UI can poll its stage.
     const analysisId = data.analysisId ?? crypto.randomUUID();
     const { error: insErr } = await supabase.from("analyses").insert({
       id: analysisId, user_id: userId, instagram_url: canonicalUrl, post_type: classified.kind,
       analysis_status: "processing", analysis_stage: "fetching_post", last_progress_at: new Date().toISOString(),
+      evidence: { partial: null, originalUrl: resolved.originalUrl },
     } as any);
-    if (insErr) return { ok: false as const, limitReached: false as const, error: "Couldn't start the analysis. Please try again.", data: null };
+    if (insErr) return { ok: false, limitReached: false, status: "failed", error: "Couldn't start the analysis. Please try again.", data: null };
+
+    const attemptId = crypto.randomUUID();
+    try {
+      await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attemptId, attemptId);
+    } catch (err: any) {
+      // Nothing was charged and no work happened — don't leave a row behind.
+      await supabase.from("analyses").delete().eq("id", analysisId);
+      return { ok: false, limitReached: false, status: "failed", error: err?.message || "Couldn't charge credits", data: null };
+    }
+    await supabase.from("analyses").update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.analysis } as any).eq("id", analysisId);
+    return { ok: true, limitReached: false, error: null, status: "processing", analysisId, stage: "fetching_post", label: STAGE_LABELS.fetching_post, data: null };
+  });
+
+const CLAIM_MS = 4 * 60 * 1000;
+
+/**
+ * Run the next stage of a processing analysis. Single-flight per row via a
+ * lease (stage_claimed_until): a second tab/request returns the current
+ * status without doing work. Safe to call after reopening the page.
+ */
+export const advanceAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<JobResult> => {
+    const { supabase, userId } = context;
+    const analysisId = data.analysisId;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.rpc("sweep_stale_analyses" as any, { p_user_id: userId } as any).then(() => {}, () => {});
+
+    const { data: row } = await supabase.from("analyses").select("*").eq("id", analysisId).eq("user_id", userId).maybeSingle();
+    if (!row) return { ok: false, limitReached: false, status: "failed", error: "Analysis not found", data: null };
+    const r: any = row;
+    if (r.analysis_status === "ready") {
+      const payload = await loadAnalysisPayload(supabase, userId, analysisId);
+      return { ok: true, limitReached: false, error: null, status: "ready", data: { ...payload, cacheHit: false } };
+    }
+    if (r.analysis_status === "failed") return { ok: false, limitReached: false, status: "failed", error: r.error_message || "Analysis failed", data: null };
+
+    const processing = (stage: string | null): JobResult => ({ ok: true, limitReached: false, error: null, status: "processing", analysisId, stage, label: stage ? STAGE_LABELS[stage as AnalysisStage] ?? null : null, data: null });
+
+    // Claim the lease.
+    const now = new Date();
+    const { data: claimed } = await supabase.from("analyses")
+      .update({ stage_claimed_until: new Date(now.getTime() + CLAIM_MS).toISOString(), last_progress_at: now.toISOString() } as any)
+      .eq("id", analysisId).eq("analysis_status", "processing")
+      .or(`stage_claimed_until.is.null,stage_claimed_until.lt.${now.toISOString()}`)
+      .select("id");
+    if (!claimed || claimed.length === 0) return processing(r.analysis_stage);
 
     const setStage = async (stage: AnalysisStage) => {
       await supabase.from("analyses").update({ analysis_stage: stage, last_progress_at: new Date().toISOString() } as any)
         .eq("id", analysisId).eq("analysis_status", "processing");
     };
-
-    // Debit first, then record the pending attempt (a marker without a
-    // matching debit could let the sweep mint credits).
-    const attemptId = crypto.randomUUID();
-    let debited = 0;
+    const ev: any = r.evidence ?? {};
+    const attemptId: string | null = r.pending_attempt_id;
     try {
-      await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attemptId, attemptId);
-      debited = ACTION_COSTS.analysis;
-      await supabase.from("analyses").update({ pending_attempt_id: attemptId, pending_charge_amount: debited } as any).eq("id", analysisId);
+      let scraped: any = r.scraped_data;
+      let state: PipelineState | null = ev.partial ?? null;
 
-      const token = await resolveApifyToken(supabase, userId);
-      if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
-      const scraped = await scrapeSource(canonicalUrl, token, classified);
-      const postType = scraped.type;
-
-      await setStage("saving_media");
-      let scrapedData: any = { ...scraped, attemptId, originalUrl: resolved.originalUrl };
-      if (scraped.mediaItems.length > 0) {
-        const { storedMedia, notes } = await persistSourceMedia(userId, analysisId, scraped.mediaItems);
-        scrapedData = { ...scrapedData, storedMedia, scrapeCoverage: { ...scraped.scrapeCoverage, notes: [...scraped.scrapeCoverage.notes, ...notes] } };
+      if (!scraped?.attemptId) {
+        // Stage 0: scrape + persist media.
+        await setStage("fetching_post");
+        const classified = classifySourceUrl(r.instagram_url);
+        if (!classified) throw new Error("This link type isn't supported.");
+        const token = await resolveApifyToken(supabase, userId);
+        if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
+        const post = await scrapeSource(r.instagram_url, token, classified);
+        await setStage("saving_media");
+        scraped = { ...post, attemptId, originalUrl: ev.originalUrl ?? r.instagram_url };
+        if (post.mediaItems.length > 0) {
+          const { storedMedia, notes } = await persistSourceMedia(userId, analysisId, post.mediaItems);
+          scraped = { ...scraped, storedMedia, scrapeCoverage: { ...post.scrapeCoverage, notes: [...post.scrapeCoverage.notes, ...notes] } };
+        }
+        const viral = computeViralScore(post);
+        state = initialState(scraped);
+        const next = nextEvidenceStage(post.type, scraped, state);
+        await supabase.from("analyses").update({
+          post_type: post.type, source_account: post.ownerUsername ?? null, source_caption: post.caption ?? null,
+          scraped_data: scraped, viral_score: viral.score, viral_band: viral.band, viral_factors: viral.factors as any,
+          evidence: { ...ev, partial: state }, analysis_stage: next, stage_claimed_until: null, last_progress_at: new Date().toISOString(),
+        } as any).eq("id", analysisId).eq("analysis_status", "processing");
+        return processing(next);
       }
-      const viral = computeViralScore(scraped);
-      await supabase.from("analyses").update({
-        post_type: postType, source_account: scraped.ownerUsername ?? null, source_caption: scraped.caption ?? null,
-        scraped_data: scrapedData, viral_score: viral.score, viral_band: viral.band, viral_factors: viral.factors as any,
-        last_progress_at: new Date().toISOString(),
-      } as any).eq("id", analysisId);
 
-      const result = await runAnalysisPipeline({ url: canonicalUrl, postType, scraped: scrapedData, setStage });
+      const postType: string = r.post_type ?? scraped.type;
+      state = state ?? initialState(scraped);
+      const stage = nextEvidenceStage(postType, scraped, state);
+      if (stage !== "building_blueprint") {
+        await setStage(stage);
+        state = stage === "reading_slides"
+          ? await runSlidesStage(postType, scraped, state)
+          : await runVideoStage(postType, scraped, state, setStage);
+        const next = nextEvidenceStage(postType, scraped, state);
+        const patch: any = { evidence: { ...ev, partial: state }, analysis_stage: next, stage_claimed_until: null, last_progress_at: new Date().toISOString() };
+        // Surface video limits in the "What we captured" strip too.
+        const note = stage === "watching_video" ? (state.videoError ?? state.videoNote) : null;
+        if (note) patch.scraped_data = { ...scraped, scrapeCoverage: { ...(scraped.scrapeCoverage ?? {}), notes: [...(scraped.scrapeCoverage?.notes ?? []), note] } };
+        await supabase.from("analyses").update(patch).eq("id", analysisId).eq("analysis_status", "processing");
+        return processing(next);
+      }
 
+      await setStage("building_blueprint");
+      const result = await runSynthesisStage({ url: r.instagram_url, postType, scraped }, state);
       const finalFields = {
         dna_analysis: result.dna, performance_score: result.dna.performanceScore, blueprint: result.blueprint as any,
         evidence: result.evidence as any, transcript: result.transcript, transcript_segments: result.segments as any,
@@ -355,27 +431,22 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       };
       // Conditional finish: only flip to ready if the sweep hasn't failed+refunded this run.
       const { data: finished } = await supabase.from("analyses")
-        .update({ ...finalFields, analysis_status: "ready", analysis_stage: null, pending_attempt_id: null, pending_charge_amount: null, last_progress_at: new Date().toISOString() } as any)
+        .update({ ...finalFields, analysis_status: "ready", analysis_stage: null, stage_claimed_until: null, pending_attempt_id: null, pending_charge_amount: null, last_progress_at: new Date().toISOString() } as any)
         .eq("id", analysisId).eq("analysis_status", "processing").select("id");
       if (!finished || finished.length === 0) {
-        console.warn("[analyze] run finished after being swept; keeping data, status stays failed", { analysisId });
-        await supabase.from("analyses").update(finalFields as any).eq("id", analysisId);
+        return { ok: false, limitReached: false, status: "failed", error: "This analysis was cancelled after stalling; your credits were refunded.", data: null };
       }
-
       const payload = await loadAnalysisPayload(supabase, userId, analysisId);
-      return { ok: true as const, limitReached: false as const, error: null, data: { ...payload, cacheHit: false as const } };
+      return { ok: true, limitReached: false, error: null, status: "ready", data: { ...payload, cacheHit: false } };
     } catch (err: any) {
-      console.error("[analyze] error:", err);
-      if (debited > 0) await refundCredits(userId, debited, "analysis", attemptId, attemptId);
-      const message = err instanceof InsufficientCreditsError ? err.message : err?.message || "Analysis failed";
-      await supabase.from("analyses").update({
-        analysis_status: "failed", analysis_stage: null, error_message: message, pending_attempt_id: null, pending_charge_amount: null,
-      } as any).eq("id", analysisId).eq("analysis_status", "processing");
-      if (err instanceof InsufficientCreditsError) {
-        // Nothing was charged and no work happened — don't leave a failed row behind.
-        await supabase.from("analyses").delete().eq("id", analysisId);
-      }
-      return { ok: false as const, limitReached: false as const, error: message, data: null };
+      console.error("[analyze] stage error:", err);
+      const message = err?.message || "Analysis failed";
+      const { data: failed } = await supabase.from("analyses").update({
+        analysis_status: "failed", analysis_stage: null, stage_claimed_until: null, error_message: message, pending_attempt_id: null, pending_charge_amount: null,
+      } as any).eq("id", analysisId).eq("analysis_status", "processing").select("id");
+      // Refund only if we were the ones to fail it (the sweep refunds its own).
+      if (failed && failed.length && attemptId && r.pending_charge_amount > 0) await refundCredits(userId, r.pending_charge_amount, "analysis", attemptId, attemptId);
+      return { ok: false, limitReached: false, status: "failed", error: message, data: null };
     }
   });
 
@@ -390,6 +461,64 @@ export const getAnalysisStatus = createServerFn({ method: "POST" })
     const r = row as any;
     return { status: r.analysis_status as string, stage: r.analysis_stage as string | null, label: r.analysis_stage ? STAGE_LABELS[r.analysis_stage as AnalysisStage] ?? null : null, error: r.error_message as string | null };
   });
+
+/**
+ * The 5 angle versions, on demand. 1 credit (captionPack) per attempt,
+ * refunded on failure; free if this analysis already has versions.
+ */
+export const generateCloneVersions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: analysis } = await supabase.from("analyses")
+      .select("id, analysis_status, dna_analysis, blueprint, transcript, transcript_segments, source_caption, post_type, source_account")
+      .eq("id", data.analysisId).eq("user_id", userId).maybeSingle();
+    if (!analysis) return { ok: false as const, error: "Analysis not found", clones: [], charged: 0 };
+    const a: any = analysis;
+    if (a.analysis_status !== "ready") return { ok: false as const, error: "The analysis isn't finished yet.", clones: [], charged: 0 };
+
+    const existing = await loadClones(supabase, data.analysisId);
+    if (existing.length > 0) return { ok: true as const, error: null, clones: existing, charged: 0 };
+
+    const attemptId = crypto.randomUUID();
+    const cost = ACTION_COSTS.captionPack;
+    try {
+      await debitCredits(userId, cost, "debit_versions", "clone_versions", attemptId, attemptId);
+    } catch (e: any) {
+      return { ok: false as const, error: e?.message || "Not enough credits", clones: [], charged: 0 };
+    }
+    try {
+      const clones = await generateClonesFromEvidence({
+        postType: a.post_type, account: a.source_account, dna: a.dna_analysis, blueprint: a.blueprint,
+        caption: a.source_caption, transcript: a.transcript, segments: a.transcript_segments ?? [],
+      });
+      // Another click may have finished first; keep whichever landed first.
+      const again = await loadClones(supabase, data.analysisId);
+      if (again.length > 0) {
+        await refundCredits(userId, cost, "clone_versions", attemptId, attemptId);
+        return { ok: true as const, error: null, clones: again, charged: 0 };
+      }
+      const { error: cErr } = await supabase.from("clones").insert(clones.map((c) => ({
+        analysis_id: data.analysisId, user_id: userId, version_number: c.versionNumber, angle_type: c.angleType, angle: c.angle,
+        hook: c.hook, story_structure: c.storyStructure, caption: c.caption, visual_direction: c.visualDirection, cta: c.cta, attempt_id: attemptId,
+      })) as any);
+      if (cErr) throw new Error("Couldn't save the versions");
+      return { ok: true as const, error: null, clones: await loadClones(supabase, data.analysisId), charged: cost };
+    } catch (e: any) {
+      console.error("[clones] failed:", e);
+      await refundCredits(userId, cost, "clone_versions", attemptId, attemptId);
+      return { ok: false as const, error: `${e?.message || "Couldn't generate versions"} Your credit was refunded.`, clones: [], charged: 0 };
+    }
+  });
+
+async function loadClones(supabase: any, analysisId: string) {
+  const { data: clones } = await supabase.from("clones").select("*").eq("analysis_id", analysisId).order("version_number", { ascending: true });
+  return (clones ?? []).map((c: any) => ({
+    versionNumber: c.version_number, angleType: c.angle_type, angleLabel: angleLabelFor(c.angle_type), hook: c.hook, angle: c.angle,
+    storyStructure: c.story_structure, caption: c.caption, visualDirection: c.visual_direction, cta: c.cta,
+  }));
+}
 
 /** Load a full analysis payload (used by getAnalysisById and the cache hit path). */
 async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
@@ -417,6 +546,7 @@ async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
     scraped: (analysis as any).scraped_data ?? null,
     instagramUrl: analysis.instagram_url,
     status: (analysis as any).analysis_status ?? "ready",
+    errorMessage: (analysis as any).error_message ?? null,
     blueprint: (analysis as any).blueprint ?? null,
     evidence: (analysis as any).evidence ?? null,
     transcript: (analysis as any).transcript ?? null,

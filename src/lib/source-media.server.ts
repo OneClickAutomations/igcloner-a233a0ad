@@ -11,6 +11,8 @@ const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 25_000;
 const CONCURRENCY = 4;
+/** Videos above this can't be sent inline for watching; save the SD copy too. */
+const WATCHABLE_VIDEO_BYTES = 40 * 1024 * 1024;
 
 interface DownloadResult {
   item: MediaItem;
@@ -71,6 +73,19 @@ export async function persistSourceMedia(
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+  const saveSd = async (item: MediaItem) => {
+    try {
+      const { buffer, mime } = await downloadOne({ ...item, url: item.sdUrl!, sdUrl: undefined });
+      const path = `${userId}/${analysisId}/${item.index}-video-sd.${extFor(mime, "video")}`;
+      const { error } = await supabaseAdmin.storage.from(SOURCE_MEDIA_BUCKET).upload(path, buffer, { contentType: mime, upsert: true });
+      if (error) throw new Error(error.message);
+      storedMedia.push({ index: item.index, kind: "video", path, bytes: buffer.byteLength, mime, variant: "sd" });
+      notes.push(`HD video is over 40MB — also saved the smaller SD copy (${Math.round(buffer.byteLength / 1048576)}MB) for watching.`);
+    } catch (e) {
+      notes.push(`Couldn't save the SD video copy: ${(e as Error).message}`);
+    }
+  };
+
   // Small concurrency-limited pool.
   const queue = [...items];
   const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
@@ -84,9 +99,11 @@ export async function persistSourceMedia(
           .from(SOURCE_MEDIA_BUCKET)
           .upload(path, buffer, { contentType: mime, upsert: true });
         if (error) throw new Error(error.message);
-        storedMedia.push({ index: item.index, kind: item.kind, path, bytes: buffer.byteLength, mime });
+        storedMedia.push({ index: item.index, kind: item.kind, path, bytes: buffer.byteLength, mime, ...(item.sdUrl ? { variant: "hd" as const } : {}) });
+        if (item.kind === "video" && item.sdUrl && buffer.byteLength > WATCHABLE_VIDEO_BYTES) await saveSd(item);
       } catch (e) {
         const msg = (e as Error).message;
+        if (item.kind === "video" && item.sdUrl && /too large/.test(msg)) { await saveSd(item); continue; }
         console.warn("[source-media] download failed", { url: item.url.slice(0, 80), msg });
         notes.push(`Couldn't save ${label}: ${msg}`);
       }

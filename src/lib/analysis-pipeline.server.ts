@@ -8,9 +8,9 @@
 // Clone versions are NOT generated here — see generateCloneVersions.
 import { MEDIUM_CATEGORIES_PROMPT } from "@/lib/medium";
 import {
-  DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
+  CloneSetSchema, DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
   dedupeLimitations, deriveLegacyForensics, deriveLimitations, normalizeForensics, parseWithRepair, sanitizeSlides,
-  stillMedium, tryParseJson, wrapData,
+  normalizeMediumId, tryParseJson, wrapData,
   type SlideEvidence, type StoredMediaRef, type TranscriptSegment, type VideoEvidence,
 } from "@/lib/analysis-evidence";
 import {
@@ -162,8 +162,23 @@ export async function runVideoStage(postType: string, scraped: any, st: Pipeline
   const dur = Number(scraped?.durationSec ?? scraped?.mediaItems?.find((m: any) => m.kind === "video")?.durationSec) || null;
 
   if (!pick) {
-    if (tooBig) videoError = `Video is ${((tooBig.bytes ?? 0) / 1048576).toFixed(0)}MB${dur ? `, ${Math.round(dur)}s` : ""} and no smaller copy was available — shot list not observed; analyzed the transcript and cover frame instead.`;
-    return { ...st, videoError, videoDone: true, usages, stageMs: { ...st.stageMs, watching_video: Date.now() - t0 } };
+    if (tooBig) {
+      videoError = `Video is ${((tooBig.bytes ?? 0) / 1048576).toFixed(0)}MB${dur ? `, ${Math.round(dur)}s` : ""} and no smaller copy was available — shot list not observed; analyzed the transcript and cover frame instead.`;
+      // The transcript service accepts large files, so still capture the speech.
+      if (!transcript) {
+        await setStage?.("transcribing");
+        const tt = Date.now();
+        try {
+          const big = await loadStoredBytes(tooBig.path, false);
+          if (big) {
+            const t = await transcribeAudio(big.bytes, big.mime);
+            transcript = t.text; segments = t.segments; hasSpeech = t.hasSpeech; transcriptSource = t.hasSpeech ? "elevenlabs" : null;
+          }
+        } catch (e) { console.warn("[analysis] transcription failed:", (e as Error).message); }
+        transcriptionMs = Date.now() - tt;
+      }
+    }
+    return { ...st, videoError, videoDone: true, transcript, segments, hasSpeech, transcriptSource, transcriptionMs, usages, stageMs: { ...st.stageMs, watching_video: Date.now() - t0 } };
   }
   const vid = await loadStoredBytes(pick.path, false);
   if (!vid) return { ...st, videoError: "Saved video couldn't be loaded — shot details are inferred.", videoDone: true };
@@ -171,13 +186,17 @@ export async function runVideoStage(postType: string, scraped: any, st: Pipeline
   if (dur && dur > LONG_VIDEO_SEC) videoNote = [videoNote, `Long video (${Math.round(dur)}s) — watched in full; the shot list may be coarser.`].filter(Boolean).join(" ");
 
   const watch = (async () => {
-    try {
-      const { text, usage } = await geminiVideoCall(VIDEO_PROMPT(dur && dur > LONG_VIDEO_SEC ? "The video is long: keep the shot list to the main beats." : null), toBase64(vid.bytes), vid.mime);
-      usages.push(usage);
-      const p = VideoEvidenceSchema.safeParse(tryParseJson(text));
-      if (p.success) video = { ...p.data, analyzedWindow: pick.variant === "sd" ? "full video (SD copy)" : "full video" };
-      else videoError = "Video watch returned malformed data; shot details are inferred.";
-    } catch (e) { videoError = `Video couldn't be watched: ${(e as Error).message}`; }
+    const b64 = toBase64(vid.bytes);
+    // One bounded retry when the response is malformed (not on errors/denials).
+    for (let attempt = 0; attempt < 2 && !video; attempt++) {
+      try {
+        const { text, usage } = await geminiVideoCall(VIDEO_PROMPT(dur && dur > LONG_VIDEO_SEC ? "The video is long: keep the shot list to the main beats." : null), b64, vid.mime);
+        usages.push(usage);
+        const p = VideoEvidenceSchema.safeParse(tryParseJson(text));
+        if (p.success) { video = { ...p.data, analyzedWindow: pick.variant === "sd" ? "full video (SD copy)" : "full video" }; videoError = null; }
+        else { console.warn("[analysis] malformed video JSON tail:", text.slice(-200)); videoError = "Video watch returned malformed data; shot details are inferred."; }
+      } catch (e) { videoError = `Video couldn't be watched: ${(e as Error).message}`; return; }
+    }
   })();
   const listen = (async () => {
     if (transcript) return;
@@ -262,16 +281,19 @@ Return JSON with exactly these keys:
 
   const call = async (p: string) => { const r = await claudeCall(system, [{ type: "text", text: p }], 12000, "medium"); usages.push(r.usage); return r.text; };
   const firstText = await call(prompt);
-  const { value: syn, repaired } = await parseWithRepair(SynthesisSchema, firstText, (issues, bad) =>
+  const { value: syn, repaired } = await parseWithRepair(SynthesisSchema, firstText, (issues, bad) => (console.warn("[analysis] synthesis repair:", issues), true) &&
     call(`Your previous JSON failed validation:\n${issues}\n\nReturn the corrected complete JSON object only.\n\nPREVIOUS OUTPUT:\n${bad}`));
 
   const forensics = normalizeForensics(syn.forensics, { slideCount: slides.length, videoDurationSec: video?.durationSec ?? (video ? Infinity : null) });
   const flagged = forensics.filter((f: any) => f.flagged).length;
-  const limitations = dedupeLimitations([...codeLimitations, ...syn.limitations]);
+  // Still posts naturally have no video/transcript — that's not a limitation.
+  const modelLims = isVideo ? syn.limitations : syn.limitations.filter((l) => !/video|transcript|shot list|motion|audio/i.test(l));
+  const limitations = dedupeLimitations([...codeLimitations, ...modelLims]);
   // Confidence cannot exceed what the evidence supports.
   const cap = 100 - codeLimitations.length * 15 - (usedCdnFallback ? 20 : 0);
   const analysisConfidence = Math.max(0, Math.min(100, Math.round(syn.analysisConfidence), cap));
-  if (!isVideo) syn.dna.contentMedium.primary = stillMedium(syn.dna.contentMedium.primary, slides.some((s) => s.exactText));
+  const hasText = slides.some((s) => s.exactText) || (video?.shots ?? []).some((sh) => sh.onScreenText.length > 0);
+  syn.dna.contentMedium.primary = normalizeMediumId(syn.dna.contentMedium.primary, isVideo, hasText);
 
   const legacy = deriveLegacyForensics({ postType, slides, video, dna: syn.dna, style: syn.style, transcript });
   const dna: any = {
@@ -315,4 +337,32 @@ export async function runAnalysisPipeline(input: { url: string; postType: string
   }
   await input.setStage?.("building_blueprint");
   return runSynthesisStage(input, st);
+}
+
+const CLONE_SYSTEM = `You write 5 ready-to-post versions of a proven social post, grounded in what the source actually says and shows. ${DATA_RULE} Return ONLY JSON.`;
+
+/** The 5 angle versions from saved evidence/blueprint (on demand, not part of the analysis). */
+export async function generateClonesFromEvidence(input: {
+  postType: string; account: string | null; dna: any; blueprint: any; caption: string | null; transcript: string | null; segments: TranscriptSegment[];
+}) {
+  const d = input.dna ?? {};
+  const bp = input.blueprint ?? {};
+  const onScreen = [
+    ...(bp.slides ?? []).map((s: any) => s.exactText && `slide ${s.index + 1}: ${s.exactText}`),
+    ...(bp.scenes ?? []).flatMap((sc: any) => (sc.onScreenText ?? []).map((t: any) => `${Math.round(sc.start)}s: ${t.text}`)),
+  ].filter(Boolean).join("\n");
+  const prompt = `SOURCE: ${input.postType} by @${input.account ?? "unknown"}
+EXACT HOOK (${d.hookBreakdown?.location ?? "?"}): ${d.hookBreakdown?.exactText ?? ""} — mechanism: ${d.hookBreakdown?.mechanism ?? ""}
+CAPTION STRUCTURE: ${JSON.stringify(d.captionDNA ?? {})}
+STORY STRUCTURE: ${JSON.stringify(d.storyStructure ?? [])}
+${wrapData("caption", input.caption ?? "")}
+${wrapData("on_screen_text", onScreen || "none")}
+${wrapData("transcript", input.transcript ? input.transcript.slice(0, 4000) : "none")}
+
+Write 5 versions in this order: direct, contrarian, story, authority, curiosity. Each must reference the real source hook/caption/transcript and keep the source's hook mechanism and rhythm, but every hook must be worded differently from the source and from the other versions (no repeating the source's first line verbatim). Keep the source's rhythm (line breaks, emoji density, CTA style), and include a complete ready-to-post caption.
+{"clones":[{"versionNumber":1-5,"angleType":"direct"|"contrarian"|"story"|"authority"|"curiosity","angleLabel":"Direct Improvement"|"Contrarian Angle"|"Storytelling Angle"|"Authority Angle"|"Curiosity Gap","hook":string,"angle":string,"storyStructure":string,"caption":string,"visualDirection":string,"cta":string}]}`;
+  const call = async (p: string) => (await claudeCall(CLONE_SYSTEM, [{ type: "text", text: p }], 8000, "medium")).text;
+  const first = await call(prompt);
+  const { value } = await parseWithRepair(CloneSetSchema, first, (issues, bad) => call(`Fix this JSON:\n${issues}\n\n${bad}\n\nReturn the corrected JSON only.`));
+  return value.clones;
 }

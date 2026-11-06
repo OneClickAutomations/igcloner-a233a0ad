@@ -50,6 +50,7 @@ export type LedgerReason =
   | "debit_premium"
   | "debit_retry"
   | "debit_analysis"
+  | "debit_versions"
   | "refund_failed"
   | "trial_grant";
 
@@ -62,6 +63,7 @@ export const REASON_LABELS: Record<LedgerReason, string> = {
   debit_premium: "Premium depth add-on",
   debit_retry: "Retry analysis",
   debit_analysis: "Post analysis",
+  debit_versions: "5 post versions",
   refund_failed: "Refund — action failed",
   trial_grant: "Trial credits",
 };

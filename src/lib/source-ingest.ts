@@ -169,6 +169,8 @@ export interface MediaItem {
   width?: number;
   height?: number;
   durationSec?: number;
+  /** Smaller rendition (e.g. Facebook SD) used when the main file is too big to watch. */
+  sdUrl?: string;
 }
 
 export interface ScrapeCoverage {
@@ -231,6 +233,7 @@ export interface StoredMediaItem {
   path: string;
   bytes: number;
   mime: string;
+  variant?: "hd" | "sd";
 }
 
 const MAX_CAROUSEL_SLIDES = 20;
@@ -382,6 +385,7 @@ export function normalizeFacebookReel(raw: any, requestedUrl: string): ScrapedPo
       width: Number(playback?.width) || undefined,
       height: Number(playback?.height) || undefined,
       durationSec,
+      sdUrl: legacy?.browser_native_sd_url && legacy.browser_native_sd_url !== videoUrl ? legacy.browser_native_sd_url : undefined,
     });
   }
   if (mediaItems.length === 0 && typeof thumb === "string" && thumb.startsWith("http")) {

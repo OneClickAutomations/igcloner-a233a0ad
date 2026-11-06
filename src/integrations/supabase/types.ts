@@ -67,6 +67,7 @@ export type Database = {
           scraped_data: Json | null
           source_account: string | null
           source_caption: string | null
+          stage_claimed_until: string | null
           transcript: string | null
           transcript_segments: Json | null
           user_id: string
@@ -94,6 +95,7 @@ export type Database = {
           scraped_data?: Json | null
           source_account?: string | null
           source_caption?: string | null
+          stage_claimed_until?: string | null
           transcript?: string | null
           transcript_segments?: Json | null
           user_id: string
@@ -121,6 +123,7 @@ export type Database = {
           scraped_data?: Json | null
           source_account?: string | null
           source_caption?: string | null
+          stage_claimed_until?: string | null
           transcript?: string | null
           transcript_segments?: Json | null
           user_id?: string
@@ -334,6 +337,7 @@ export type Database = {
           analysis_id: string
           angle: string | null
           angle_type: string | null
+          attempt_id: string | null
           caption: string | null
           created_at: string | null
           cta: string | null
@@ -348,6 +352,7 @@ export type Database = {
           analysis_id: string
           angle?: string | null
           angle_type?: string | null
+          attempt_id?: string | null
           caption?: string | null
           created_at?: string | null
           cta?: string | null
@@ -362,6 +367,7 @@ export type Database = {
           analysis_id?: string
           angle?: string | null
           angle_type?: string | null
+          attempt_id?: string | null
           caption?: string | null
           created_at?: string | null
           cta?: string | null

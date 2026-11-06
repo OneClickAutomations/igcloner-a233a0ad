@@ -27,8 +27,10 @@ export const createProject = createServerFn({ method: "POST" })
         .select("*")
         .eq("id", data.analysisId)
         .eq("user_id", userId)
+        .eq("analysis_status", "ready")
         .maybeSingle();
       if (error) throw new Error(error.message);
+      if (!row) throw new Error("That analysis isn't finished yet — open it to let it complete first.");
       analysis = row;
     }
 

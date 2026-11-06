@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { analyzeInstagramPost, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
 import { getCreditBalance } from "@/lib/credits.functions";
 import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
@@ -44,7 +45,9 @@ export function AppPage() {
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
+  const advanceFn = useServerFn(advanceAnalysis);
   const statusFn = useServerFn(getAnalysisStatus);
+  const jobRef = useRef<string | null>(null);
   const balanceFn = useServerFn(getCreditBalance);
   const listProjectsFn = useServerFn(listProjects);
   const queryClient = useQueryClient();
@@ -65,6 +68,7 @@ export function AppPage() {
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [viral, setViral] = useState<ViralScoreResult | null>(null);
   const [observed, setObserved] = useState<{ blueprint: any; transcript: string | null; analysisConfidence: number | null }>({ blueprint: null, transcript: null, analysisConfidence: null });
+  const [clones, setClones] = useState<any[]>([]);
   const [fallbackMode, setFallbackMode] = useState(false);
   const [savedBadge, setSavedBadge] = useState<string | null>(null);
 
@@ -95,27 +99,94 @@ export function AppPage() {
 
   useEffect(() => { setPostType(detectPostType(url)); }, [url]);
 
+  const showPayload = (p: any) => {
+    setDna(p.dna ?? null);
+    setScraped(p.scraped ?? null);
+    setInstagramUrl(p.instagramUrl ?? "");
+    setAnalysisId(p.analysisId ?? null);
+    setViral(p.viral ?? null);
+    setObserved({ blueprint: p.blueprint ?? null, transcript: p.transcript ?? null, analysisConfidence: p.analysisConfidence ?? null });
+    setClones(p.clones ?? []);
+    setFallbackMode(Boolean(p.fallback));
+    setPhase("results");
+  };
+
+  const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 65, building_blueprint: 80 };
+
+  /** Drive the job one stage per request. Work already done is saved server-side, so this can resume after a reload. */
+  const runJob = async (id: string) => {
+    jobRef.current = id;
+    setPhase("analyzing");
+    // A stage request can take a while (the scrape especially) — show the live stage meanwhile.
+    const poll = setInterval(async () => {
+      try {
+        const st: any = await statusFn({ data: { analysisId: id } });
+        if (jobRef.current === id && st?.status === "processing" && st.label) { setStepLabel(`${st.label}…`); setProgress(stagePct[st.stage] ?? 10); }
+      } catch {}
+    }, 2500);
+    try { await driveJob(id); } finally { clearInterval(poll); }
+  };
+
+  const driveJob = async (id: string) => {
+    let netErrors = 0;
+    while (jobRef.current === id) {
+      let res: any;
+      try {
+        res = await advanceFn({ data: { analysisId: id } });
+        netErrors = 0;
+      } catch (e: any) {
+        if (++netErrors > 5) { toast.error("Lost connection — reopen this page to resume the analysis."); return; }
+        await new Promise((r) => setTimeout(r, 3000));
+        continue;
+      }
+      if (res.status === "ready") {
+        setProgress(100);
+        showPayload(res.data);
+        toast.success(res.data?.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
+        refreshCredits();
+        return;
+      }
+      if (res.status === "failed") {
+        toast.error(res.error || "Analysis failed.");
+        setPhase("input");
+        refreshCredits();
+        navigate({ to: "/app", search: {} });
+        return;
+      }
+      if (res.label) setStepLabel(`${res.label}…`);
+      setProgress(stagePct[res.stage] ?? 10);
+      // Another tab may hold the stage lease — wait before asking again.
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  };
+
+  useEffect(() => () => { jobRef.current = null; }, []);
+
   useEffect(() => {
     const id = (search as any)?.analysisId as string | undefined;
-    if (!id || id === analysisId) return;
+    if (!id || id === analysisId || id === jobRef.current) return;
     (async () => {
       try {
         setPhase("analyzing");
         setProgress(60);
         setStepLabel("Loading saved analysis…");
-        const res = await loadFn({ data: { id } });
-        setDna(res.dna);
-        setScraped((res as any).scraped ?? null);
-        setInstagramUrl((res as any).instagramUrl ?? "");
-        setAnalysisId(res.analysisId);
-        setViral((res as any).viral ?? null);
-        setObserved({ blueprint: (res as any).blueprint ?? null, transcript: (res as any).transcript ?? null, analysisConfidence: (res as any).analysisConfidence ?? null });
+        const res: any = await loadFn({ data: { id } });
+        if (res.status === "processing") {
+          setStepLabel("Resuming the analysis…");
+          void runJob(id);
+          return;
+        }
+        if (res.status === "failed" || !res.dna) {
+          toast.error(res.errorMessage || "That analysis didn't finish.");
+          setPhase("input");
+          return;
+        }
+        showPayload(res);
         setSavedBadge(
           res.createdAt
             ? new Date(res.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
             : "Saved"
         );
-        setPhase("results");
       } catch (e: any) {
         toast.error(e?.message || "Couldn't load that analysis");
         setPhase("input");
@@ -134,47 +205,29 @@ export function AppPage() {
     setStepLabel("Reading post URL…");
     setFallbackMode(false);
     setSavedBadge(null);
-
-    // Poll the job's real stage while the server works.
-    const jobId = crypto.randomUUID();
-    const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 70, building_blueprint: 85 };
-    const timer = setInterval(async () => {
-      try {
-        const st: any = await statusFn({ data: { analysisId: jobId } });
-        if (st?.label) { setStepLabel(`${st.label}…`); setProgress(stagePct[st.stage] ?? 10); }
-      } catch {}
-    }, 2000);
-
     try {
-      const result: any = await analyzeFn({ data: { url, analysisId: jobId } });
-      clearInterval(timer);
-      if (!result) { toast.error("Analysis failed."); setPhase("input"); return; }
-      if (result.ok === false || !result.data) {
+      const result: any = await analyzeFn({ data: { url } });
+      if (result.ok === false) {
         const insuff = parseInsufficientCredits(result.error);
-        if (insuff) {
-          setInsufficient(insuff);
-        } else {
-          toast.error(result.error || "Analysis failed.");
-        }
+        if (insuff) setInsufficient(insuff);
+        else toast.error(result.error || "Analysis failed.");
         setPhase("input");
         refreshCredits();
         return;
       }
-      const p = result.data;
-      setProgress(100);
-      setStepLabel("Complete");
-      setDna(p.dna ?? null);
-      setScraped(p.scraped ?? null);
-      setInstagramUrl(p.instagramUrl ?? url);
-      setAnalysisId(p.analysisId ?? null);
-      setViral(p.viral ?? null);
-      setObserved({ blueprint: p.blueprint ?? null, transcript: p.transcript ?? null, analysisConfidence: p.analysisConfidence ?? null });
-      setFallbackMode(Boolean(p.fallback));
-      setPhase("results");
-      toast.success(p.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
+      if (result.status === "ready") {
+        showPayload(result.data);
+        toast.success("Loaded your recent analysis of this post — no credits used");
+        return;
+      }
       refreshCredits();
+      if (result.label) setStepLabel(`${result.label}…`);
+      setProgress(5);
+      jobRef.current = result.analysisId;
+      // Put the job in the URL so a reload or reopened tab resumes it.
+      navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
+      await runJob(result.analysisId);
     } catch (err: any) {
-      clearInterval(timer);
       const msg: string = err?.message || "Analysis failed.";
       const insuff = parseInsufficientCredits(msg);
       if (insuff) setInsufficient(insuff);
@@ -190,6 +243,8 @@ export function AppPage() {
     setScraped(null);
     setAnalysisId(null);
     setViral(null);
+    setClones([]);
+    jobRef.current = null;
     setPhase("input");
     navigate({ to: "/app", search: {} });
     setTimeout(() => inputRef.current?.focus(), 50);
@@ -277,7 +332,7 @@ export function AppPage() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually 1–2 minutes</p>
+              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually about a minute. If you close this tab it pauses, and picks up where it left off when you reopen it from your dashboard (within 15 minutes, or it's cancelled and refunded).</p>
             </div>
           </div>
         )}
@@ -420,6 +475,8 @@ export function AppPage() {
               </div>
             )}
 
+            {analysisId && <CloneVersionsPanel analysisId={analysisId} clones={clones} onClones={setClones} onCredits={refreshCredits} />}
+
             {analysisId && <IntentFlow analysisId={analysisId} />}
 
             {viral && (
@@ -429,7 +486,7 @@ export function AppPage() {
                 bandLabel={viral.bandLabel}
                 recommendation={viral.recommendation}
                 topFactor={viral.factors?.topFactor}
-                hasClones={true}
+                hasClones={clones.length > 0}
                 onSkip={reset}
               />
             )}
