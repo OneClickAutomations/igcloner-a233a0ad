@@ -614,11 +614,13 @@ export function scrapeFailure(reason: {
   if (reason.status === 408 || reason.status === 504) {
     return new ScrapeError(`The ${name} scraper timed out. Try again in a moment.`, "timeout");
   }
+  // The actors conflate "private" and "not found" ("no_items: Empty or
+  // private data"), so check that first with a message covering both.
+  if (/no_items|not found|deleted|removed|empty/.test(err)) {
+    return new ScrapeError(`This ${name} post couldn't be captured — it may be private, deleted, or the link is wrong.`, "deleted");
+  }
   if (/private|not authorized|login|permission/.test(err)) {
     return new ScrapeError(`This ${name} content is private or requires login, so it can't be captured.`, "private");
-  }
-  if (/not found|deleted|removed|no_items|empty/.test(err)) {
-    return new ScrapeError(`This ${name} post couldn't be found — it may have been deleted or the link is wrong.`, "deleted");
   }
   if (/region|geo|blocked|country/.test(err)) {
     return new ScrapeError(`This ${name} content is region-blocked and can't be reached.`, "region_blocked");
