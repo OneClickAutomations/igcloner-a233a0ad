@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, normalizeMediumId, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
+  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, tryParseJson, normalizeMediumId, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
   parseWithRepair, textInWindow, wordsPerMinute, wrapData,
 } from "./analysis-evidence";
 import { buildSourceContextBlock, extractSourceText } from "./source-context";
@@ -189,5 +189,11 @@ describe("pass-2 fix rules", () => {
     const car: any = deriveLegacyForensics({ postType: "Carousel", slides: [slide, slide, slide], video: null, dna: syn.dna, style: syn.style, transcript: null });
     expect(car.carouselForensics.overall.totalSlides).toBe(3);
     expect(car.carouselForensics.middleSlides).toHaveLength(1);
+  });
+});
+
+describe("model JSON slips", () => {
+  it("parses raw newlines in strings, trailing commas and trailing prose", () => {
+    expect(tryParseJson('{"a":"line1\nline2","b":[1,2,],}\nHope this helps!')).toEqual({ a: "line1\nline2", b: [1, 2] });
   });
 });

@@ -189,8 +189,29 @@ export function tryParseJson(text: string): unknown | null {
   if (start === -1) return null;
   try { return JSON.parse(clean.slice(start)); } catch { /* try trimming trailing prose */ }
   const end = Math.max(clean.lastIndexOf("}"), clean.lastIndexOf("]"));
-  if (end > start) { try { return JSON.parse(clean.slice(start, end + 1)); } catch { /* fallthrough */ } }
-  return null;
+  const body = end > start ? clean.slice(start, end + 1) : clean.slice(start);
+  try { return JSON.parse(body); } catch { /* try light repair */ }
+  try { return JSON.parse(lightRepair(body)); } catch { return null; }
+}
+
+/** Escape raw control characters inside strings and drop trailing commas — the common model JSON slips. */
+export function lightRepair(src: string): string {
+  let out = "", inStr = false, esc = false;
+  for (const ch of src) {
+    if (inStr) {
+      if (esc) { esc = false; out += ch; continue; }
+      if (ch === "\\") { esc = true; out += ch; continue; }
+      if (ch === '"') { inStr = false; out += ch; continue; }
+      if (ch === "\n") { out += "\\n"; continue; }
+      if (ch === "\r") { out += "\\r"; continue; }
+      if (ch === "\t") { out += "\\t"; continue; }
+      out += ch;
+    } else {
+      if (ch === '"') inStr = true;
+      out += ch;
+    }
+  }
+  return out.replace(/,\s*([}\]])/g, "$1");
 }
 
 /**
