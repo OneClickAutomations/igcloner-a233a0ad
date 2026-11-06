@@ -93,6 +93,7 @@ export const generateAngles = createServerFn({ method: "POST" })
       .select("*")
       .eq("id", data.analysisId)
       .eq("user_id", userId)
+        .eq("analysis_status", "ready")
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!analysis) throw new Error("Analysis not found");
