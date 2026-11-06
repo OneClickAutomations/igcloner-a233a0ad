@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { analyzeInstagramPost, getAnalysisById } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
 import { getCreditBalance } from "@/lib/credits.functions";
 import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { classifySourceUrl } from "@/lib/source-ingest";
@@ -43,6 +44,7 @@ export function AppPage() {
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
   const loadFn = useServerFn(getAnalysisById);
+  const statusFn = useServerFn(getAnalysisStatus);
   const balanceFn = useServerFn(getCreditBalance);
   const listProjectsFn = useServerFn(listProjects);
   const queryClient = useQueryClient();
@@ -62,6 +64,7 @@ export function AppPage() {
   const [instagramUrl, setInstagramUrl] = useState("");
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [viral, setViral] = useState<ViralScoreResult | null>(null);
+  const [observed, setObserved] = useState<{ blueprint: any; transcript: string | null; analysisConfidence: number | null }>({ blueprint: null, transcript: null, analysisConfidence: null });
   const [fallbackMode, setFallbackMode] = useState(false);
   const [savedBadge, setSavedBadge] = useState<string | null>(null);
 
@@ -106,6 +109,7 @@ export function AppPage() {
         setInstagramUrl((res as any).instagramUrl ?? "");
         setAnalysisId(res.analysisId);
         setViral((res as any).viral ?? null);
+        setObserved({ blueprint: (res as any).blueprint ?? null, transcript: (res as any).transcript ?? null, analysisConfidence: (res as any).analysisConfidence ?? null });
         setSavedBadge(
           res.createdAt
             ? new Date(res.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
@@ -131,23 +135,18 @@ export function AppPage() {
     setFallbackMode(false);
     setSavedBadge(null);
 
-    const steps = [
-      { pct: 15, label: "Reading post URL…" },
-      { pct: 35, label: "Fetching post data…" },
-      { pct: 60, label: "Analyzing hook structure…" },
-      { pct: 85, label: "Generating DNA report…" },
-    ];
-    let i = 0;
-    const timer = setInterval(() => {
-      if (i < steps.length) {
-        setProgress(steps[i].pct);
-        setStepLabel(steps[i].label);
-        i++;
-      }
-    }, 1500);
+    // Poll the job's real stage while the server works.
+    const jobId = crypto.randomUUID();
+    const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 70, building_blueprint: 85 };
+    const timer = setInterval(async () => {
+      try {
+        const st: any = await statusFn({ data: { analysisId: jobId } });
+        if (st?.label) { setStepLabel(`${st.label}…`); setProgress(stagePct[st.stage] ?? 10); }
+      } catch {}
+    }, 2000);
 
     try {
-      const result: any = await analyzeFn({ data: { url } });
+      const result: any = await analyzeFn({ data: { url, analysisId: jobId } });
       clearInterval(timer);
       if (!result) { toast.error("Analysis failed."); setPhase("input"); return; }
       if (result.ok === false || !result.data) {
@@ -169,6 +168,7 @@ export function AppPage() {
       setInstagramUrl(p.instagramUrl ?? url);
       setAnalysisId(p.analysisId ?? null);
       setViral(p.viral ?? null);
+      setObserved({ blueprint: p.blueprint ?? null, transcript: p.transcript ?? null, analysisConfidence: p.analysisConfidence ?? null });
       setFallbackMode(Boolean(p.fallback));
       setPhase("results");
       toast.success(p.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
@@ -277,7 +277,7 @@ export function AppPage() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">Usually done in 8–12 seconds</p>
+              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually 1–2 minutes</p>
             </div>
           </div>
         )}
@@ -304,6 +304,14 @@ export function AppPage() {
             {scraped?.scrapeCoverage && (
               <CoverageStrip coverage={scraped.scrapeCoverage} audio={scraped.audio} storedMedia={scraped.storedMedia} />
             )}
+
+            <AnalysisEvidencePanel
+              analysisId={analysisId}
+              dna={dna}
+              blueprint={observed.blueprint}
+              transcript={observed.transcript}
+              analysisConfidence={observed.analysisConfidence}
+            />
 
             {fallbackMode && (
               <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
