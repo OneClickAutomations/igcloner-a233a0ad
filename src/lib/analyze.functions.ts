@@ -23,6 +23,7 @@ import { persistSourceMedia } from "@/lib/source-media.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
 import { isWithinReuseWindow } from "@/lib/intel-analytics";
+import { runAnalysisPipeline, type AnalysisStage } from "@/lib/analysis-pipeline.server";
 
 const InputSchema = z.object({
   url: z
@@ -32,6 +33,7 @@ const InputSchema = z.object({
       message: "Must be an Instagram or Facebook URL",
     }),
   forceRefresh: z.boolean().optional(),
+  analysisId: z.string().uuid().optional(),
 });
 
 
@@ -158,82 +160,6 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
-function collectImageUrls(scraped: unknown): string[] {
-  const urls = new Set<string>();
-  const add = (value: unknown) => {
-    if (typeof value === "string" && /^https?:\/\//i.test(value)) urls.add(value);
-  };
-  const post = asRecord(scraped);
-  add(post.displayUrl);
-  add(post.thumbnailUrl);
-  add(post.imageUrl);
-  for (const r of Array.isArray(post.displayResources) ? post.displayResources : []) {
-    add(asRecord(r).src);
-  }
-  const children = Array.isArray(post.childPosts)
-    ? post.childPosts
-    : Array.isArray(post.children)
-      ? post.children
-      : [];
-  for (const childValue of children) {
-    const child = asRecord(childValue);
-    add(child.displayUrl);
-    add(child.thumbnailUrl);
-    add(child.imageUrl);
-    for (const r of Array.isArray(child.displayResources) ? child.displayResources : []) {
-      add(asRecord(r).src);
-    }
-  }
-  return Array.from(urls).slice(0, 4);
-}
-
-async function fetchVisionImage(
-  scraped: ScrapedPost | null,
-): Promise<{ image: Uint8Array; mediaType: string; sourceUrl: string } | null> {
-  for (const sourceUrl of collectImageUrls(scraped)) {
-    try {
-      const res = await fetch(sourceUrl, {
-        headers: {
-          Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          Referer: /fbcdn|facebook/i.test(sourceUrl)
-            ? "https://www.facebook.com/"
-            : "https://www.instagram.com/",
-
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36",
-        },
-      });
-      const mediaType = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
-      if (!res.ok || !mediaType.startsWith("image/")) continue;
-      const buffer = await res.arrayBuffer();
-      if (buffer.byteLength === 0 || buffer.byteLength > 8 * 1024 * 1024) continue;
-      return { image: new Uint8Array(buffer), mediaType, sourceUrl };
-    } catch (e) {
-      console.warn("[analyze] source image fetch failed:", (e as Error).message);
-    }
-  }
-  return null;
-}
-
-function sourceEvidence(scraped: unknown, visionImageUrl?: string | null): string {
-  const post = asRecord(scraped);
-  const owner = asRecord(post.owner);
-  return JSON.stringify(
-    {
-      imageAttachedForVision: Boolean(visionImageUrl),
-      visionImageUrl: visionImageUrl ?? null,
-      caption: post.caption ?? null,
-      altText: post.alt ?? post.accessibilityCaption ?? null,
-      firstComment: post.firstComment ?? null,
-      hashtags: post.hashtags ?? [],
-      location: post.locationName ?? null,
-      accountBio: owner.biography ?? null,
-    },
-    null,
-    2,
-  );
-}
-
 const CLAUDE_MODEL = "claude-sonnet-4-5";
 
 async function callClaude(opts: {
@@ -338,299 +264,24 @@ function parseJsonish<T = any>(text: string): T {
   throw new Error("AI returned malformed JSON");
 }
 
-// ============= Combined analyze schema (single Lovable AI call) =============
-const CloneSchema = z.object({
-  versionNumber: z.number(),
-  angleType: z.enum(["direct", "contrarian", "story", "authority", "curiosity"]),
-  angleLabel: z.string(),
-  hook: z.string(),
-  angle: z.string(),
-  storyStructure: z.string(),
-  caption: z.string(),
-  visualDirection: z.string(),
-  cta: z.string(),
-});
-
-const AnalyzeSchema = z.object({
-  dna: z.object({
-    contentSummary: z.string(),
-    contentCategory: z.string(),
-    performanceScore: z.number(),
-    whyItWorks: z.array(z.string()),
-    targetAudience: z.object({ who: z.string(), desire: z.string(), trigger: z.string() }),
-    contentMedium: z
-      .object({
-        primary: z.string(),
-        secondary: z.string().nullable().optional(),
-        description: z.string().optional(),
-        mediumIsTheMessage: z.boolean().optional(),
-        replicationInstructions: z.string().optional(),
-        mediumSignals: z.array(z.string()).optional(),
-      })
-      .optional(),
-    hookBreakdown: z.object({
-      type: z.string(),
-      score: z.number(),
-      whatWorks: z.string(),
-      improvement: z.string(),
-    }),
-    emotionalArchitecture: z.object({
-      curiosity: z.number(),
-      fomo: z.number(),
-      trust: z.number(),
-      relatability: z.number(),
-      urgency: z.number(),
-      inspiration: z.number(),
-    }),
-    storyStructure: z.array(
-      z.object({ section: z.string(), timing: z.string(), purpose: z.string() }),
-    ),
-    captionDNA: z.object({
-      structure: z.string(),
-      tone: z.string(),
-      persuasionStyle: z.string(),
-      ctaType: z.string(),
-      score: z.number(),
-    }),
-    visualStyle: z.object({
-      colorMood: z.string(),
-      composition: z.string(),
-      textOverlay: z.string(),
-      editStyle: z.string(),
-      score: z.number(),
-    }),
-    engagementDrivers: z.array(z.string()),
-    monetizationPotential: z.string(),
-    channelIntelligence: z
-      .object({
-        primaryNiche: z.string().optional(),
-        audienceLanguage: z.string().optional(),
-        isLikelyMonetized: z.boolean().optional(),
-        estimatedMonthlyViews: z.string().optional(),
-        estimatedMonthlyRevenue: z.string().optional(),
-        postingFrequency: z.string().optional(),
-        engagementRate: z.number().optional(),
-        contentStrengths: z.array(z.string()).optional(),
-      })
-      .optional(),
-    videoVisualDNA: z
-      .object({
-        subjectType: z.string().optional(),
-        subjectDescription: z.string().optional(),
-        backgroundType: z.string().optional(),
-        backgroundDescription: z.string().optional(),
-        colorPalette: z
-          .object({
-            dominant: z.string().optional(),
-            secondary: z.string().optional(),
-            accent: z.string().optional(),
-            mood: z.string().optional(),
-            approximateHex: z.array(z.string()).optional(),
-          })
-          .optional(),
-        textStyle: z
-          .object({
-            present: z.boolean().optional(),
-            placement: z.string().optional(),
-            fontStyle: z.string().optional(),
-            fontSize: z.string().optional(),
-            color: z.string().optional(),
-            animation: z.string().optional(),
-          })
-          .optional(),
-        lightingStyle: z.string().optional(),
-        editingStyle: z.string().optional(),
-        paceAndEnergy: z.string().optional(),
-        contentFormat: z.string().optional(),
-        audioStyle: z.string().optional(),
-        productionLevel: z.string().optional(),
-        platformAesthetic: z.string().optional(),
-        recreationInstructions: z
-          .union([z.string(), z.array(z.string())])
-          .transform((v) =>
-            Array.isArray(v)
-              ? v
-                  .map((s, i) => {
-                    const t = String(s).trim();
-                    return /^\d+[.)]/.test(t) ? t : `${i + 1}. ${t}`;
-                  })
-                  .join("\n")
-              : v,
-          )
-          .optional(),
-      })
-      .nullable()
-      .optional(),
-  }),
-  forensics: z.any().optional(),
-  clones: z.array(CloneSchema).length(5),
-});
-
-async function analyzePostCombined(scraped: ScrapedPost | null, url: string, postType: string) {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-  const gateway = createLovableAiGatewayProvider(apiKey);
-  // Flash is multimodal + fast enough to fit the worker's HTTP window. Pro
-  // routinely exceeds 45s on this combined (DNA + forensics + 5 clones) prompt.
-  const model = gateway("google/gemini-2.5-flash");
-  const visionImage = await fetchVisionImage(scraped);
-
-  const system = `You are IG-Cloner's forensic Instagram analyst. First extract the literal evidence from the post image/video thumbnail: visible text/OCR, subject, symbols, setting, objects, emotions, and visual hierarchy. Then infer why it works and create variations. Never invent a topic from the URL alone. If the user later chooses a different niche, downstream ideas must preserve the source post's core message, emotional mechanism, and visual metaphor while translating it into that niche. Return ONLY a single JSON object with no prose, no markdown fences.`;
-
-  const forensicsBlock =
-    postType === "Reel" || postType === "Video"
-      ? `"videoForensics": {
-      "hook": { "type": string, "element": string, "exactVisibleText": string, "openingAction": string, "curiosityGap": string, "audioHook": string, "strength": number },
-      "pacing": { "overall": "very-fast"|"fast"|"medium"|"slow", "averageCutDuration": number, "transitionTypes": string, "rhythmSynced": boolean, "bRollUsage": "heavy"|"moderate"|"minimal"|"none" },
-      "visual": { "shootingStyle": string, "cameraMovements": string, "shotTypes": string, "colorGrade": string, "productionQuality": string },
-      "audio": { "musicType": string, "musicEnergy": string, "voiceover": string, "audioVisualSync": string },
-      "structure": { "type": string, "act1": string, "act2": string, "act3": string, "cta": string },
-      "performance": { "replayValue": number, "saveValue": number, "shareTrigger": string, "commentTrigger": string, "loopQuality": number }
-    }`
-      : postType === "Carousel"
-      ? `"carouselForensics": {
-      "overall": { "totalSlides": number, "carouselType": string, "narrativeArc": string, "contentDensity": string, "visualConsistency": string },
-      "slide1": { "hookMechanism": string, "exactVisibleText": string, "layout": string, "colorScheme": string, "typography": string, "firstImpressionScore": number },
-      "middleSlides": [{ "purpose": string, "informationDensity": string, "visualType": string, "layoutTemplate": string, "microHook": string }],
-      "finalSlide": { "ctaType": string, "urgencyElement": string, "brandElement": string },
-      "designSystem": { "colorPalette": string, "fontSystem": string, "gridSystem": string, "iconStyle": string, "whiteSpaceUsage": string },
-      "contentStrategy": { "saveWorthiness": number, "valueDelivery": string, "educationalDepth": string }
-    }`
-      : `"imageForensics": {
-      "subject": { "primary": string, "position": string, "actionPose": string, "expression": string },
-      "composition": { "technique": string, "foreground": string, "background": string, "depthOfField": string, "visualWeight": string },
-      "color": { "dominant": string, "paletteType": string, "temperature": string, "saturation": string, "contrast": string, "mood": string, "hex": string[] },
-      "lighting": { "source": string, "direction": string, "shadowQuality": string, "overallExposure": string },
-      "text": { "present": boolean, "exactVisibleText": string, "position": string, "style": string, "hierarchy": string },
-      "editing": { "filterStyle": string, "sharpness": string, "grain": string },
-      "categorySignals": { "aspirationalLevel": string, "authenticityLevel": string },
-      "psychology": { "primaryVisualHook": string, "emotionalResponse": string, "saveWorthinessElements": string, "shareWorthiness": string }
-    }`;
-
-  const prompt = `Analyze this Instagram ${postType} and produce a DNA report, a forensic extraction, and 5 clone versions. Return ONLY valid JSON matching this exact shape (no markdown, no commentary):
-
-{
-  "dna": {
-    "contentSummary": string,
-    "contentCategory": "Educational"|"Storytelling"|"Motivational"|"Entertainment"|"Business"|"Lifestyle",
-    "performanceScore": number (0-100),
-    "whyItWorks": string[],
-    "targetAudience": { "who": string, "desire": string, "trigger": string },
-    "contentMedium": {
-      "primary": "handwriting-on-paper"|"handwriting-on-surface"|"printed-text-photo"|"talking-head-video"|"broll-video"|"lifestyle-photo"|"studio-photo"|"product-photo"|"screenshot"|"digital-graphic"|"illustrated"|"meme-format"|"text-on-video"|"animation"|"ugc-authentic"|"mixed",
-      "secondary": (one of the same options, or null),
-      "description": string (1-2 sentences describing the literal physical/digital format — e.g. "Handwritten black ink on white paper, photographed flat-lay. The handwriting itself IS the content."),
-      "mediumIsTheMessage": boolean (true if the medium itself is what makes the post work — handwriting, screenshot, meme, UGC, etc.),
-      "replicationInstructions": string (concrete how-to recreate this exact medium — e.g. "Photograph real handwriting on paper, do not use digital fonts that simulate handwriting"),
-      "mediumSignals": string[] (2-4 reasons this medium works in feed)
-    },
-    "hookBreakdown": { "type": "Question"|"Shocking Stat"|"Bold Claim"|"Pattern Interrupt"|"Story Open"|"Curiosity Gap"|"FOMO", "score": number, "whatWorks": string, "improvement": string },
-    "emotionalArchitecture": { "curiosity": number, "fomo": number, "trust": number, "relatability": number, "urgency": number, "inspiration": number },
-    "storyStructure": [{ "section": string, "timing": string, "purpose": string }],
-    "captionDNA": { "structure": "Micro"|"Standard"|"Long-form", "tone": string, "persuasionStyle": "Problem-Agitate-Solve"|"Story"|"List"|"Direct"|"Curiosity", "ctaType": "Soft"|"Hard"|"Engagement"|"None", "score": number },
-    "visualStyle": { "colorMood": string, "composition": string, "textOverlay": "None"|"Subtle"|"Heavy", "editStyle": string, "score": number },
-    "engagementDrivers": string[],
-    "monetizationPotential": string,
-    "channelIntelligence": {
-      "primaryNiche": string,
-      "audienceLanguage": string (e.g. "English", "English / Japanese"),
-      "isLikelyMonetized": boolean,
-      "estimatedMonthlyViews": string (range like "2M-4M"),
-      "estimatedMonthlyRevenue": string (range like "$1,200-$3,800" if monetized, else ""),
-      "postingFrequency": string (e.g. "4-5x/week"),
-      "engagementRate": number,
-      "contentStrengths": string[]
-    },
-    "videoVisualDNA": {
-      "subjectType": "person-lifestyle"|"person-athlete"|"person-celebrity"|"person-business"|"text-graphic"|"product"|"animal"|"landscape"|"abstract"|"mixed",
-      "subjectDescription": string,
-      "backgroundType": "solid-color"|"gradient"|"blurred-bokeh"|"urban-city"|"nature-outdoor"|"gym-fitness"|"office-professional"|"home-lifestyle"|"studio-clean"|"abstract-dark"|"text-overlay-only"|"mixed",
-      "backgroundDescription": string,
-      "colorPalette": { "dominant": string, "secondary": string, "accent": string, "mood": "warm"|"cool"|"neutral"|"high-contrast"|"monochromatic"|"vibrant"|"muted", "approximateHex": string[] },
-      "textStyle": { "present": boolean, "placement": "center"|"top"|"bottom"|"overlay"|"none", "fontStyle": "bold-sans-serif"|"thin-minimal"|"script"|"handwritten"|"display"|"mixed", "fontSize": "large-dominant"|"medium-balanced"|"small-subtle", "color": "white"|"black"|"colored"|"gradient", "animation": "static"|"fade-in"|"typewriter"|"none"|"unknown" },
-      "lightingStyle": "bright-high-key"|"dark-moody"|"golden-hour"|"blue-hour"|"neon"|"natural-daylight"|"studio-clean"|"low-key-dramatic"|"backlit-silhouette"|"no-lighting-text-only",
-      "editingStyle": "raw-unedited"|"minimal-clean"|"cinematic-graded"|"high-contrast"|"vintage-film"|"bright-airy"|"dark-moody"|"text-motion-graphics"|"none",
-      "paceAndEnergy": "slow-emotional"|"medium-storytelling"|"fast-energetic"|"very-fast-hype"|"static-no-movement"|"text-scroll-only",
-      "contentFormat": "talking-head"|"b-roll-voiceover"|"text-on-screen-only"|"text-with-background"|"person-with-text-overlay"|"product-showcase"|"cinematic-no-person"|"mixed",
-      "audioStyle": "energetic-music"|"emotional-music"|"lo-fi-ambient"|"voice-only"|"voice-plus-music"|"silence"|"trending-sound",
-      "productionLevel": "iphone-casual-ugc"|"produced-ugc"|"semi-professional"|"professional-studio"|"motion-graphics-only"|"ai-generated",
-      "platformAesthetic": string (one-sentence director brief),
-      "recreationInstructions": string (3-5 numbered concrete instructions)
-    }
-  },
-  "clones": [
-    { "versionNumber": 1, "angleType": "direct", "angleLabel": "Direct Improvement", "hook": string, "angle": string, "storyStructure": string, "caption": string, "visualDirection": string, "cta": string },
-    { "versionNumber": 2, "angleType": "contrarian", "angleLabel": "Contrarian Angle", ... },
-    { "versionNumber": 3, "angleType": "story", "angleLabel": "Storytelling Angle", ... },
-    { "versionNumber": 4, "angleType": "authority", "angleLabel": "Authority Angle", ... },
-    { "versionNumber": 5, "angleType": "curiosity", "angleLabel": "Curiosity Gap", ... }
-  ],
-  "forensics": { ${forensicsBlock} }
-}
-
-SOURCE EVIDENCE — ground every field in this before strategy:
-${sourceEvidence(scraped, visionImage?.sourceUrl)}
-
-URL: ${url}
-Account: @${scraped?.ownerUsername ?? "unknown"}
-Followers: ${scraped?.owner?.followersCount ?? "unknown"}
-Total posts: ${scraped?.owner?.mediaCount ?? "unknown"}
-Category: ${scraped?.owner?.businessCategoryName ?? "unknown"}
-Verified: ${scraped?.owner?.verified ?? false}
-Caption: "${scraped?.caption ?? "Not available"}"
-Likes: ${scraped?.likesCount ?? "Unknown"}
-Comments: ${scraped?.commentsCount ?? "Unknown"}
-${scraped?.videoViewCount || scraped?.videoPlayCount ? `Views: ${scraped.videoViewCount ?? scraped.videoPlayCount}` : ""}
-Hashtags: ${(scraped?.hashtags ?? []).join(", ") || "none"}
-
-Critical grounding rules:
-- If an image is attached, read it directly and include the actual visible words in contentSummary / hookBreakdown / forensics. Do not summarize around them.
-- If the image contains religious, spiritual, financial, health, or other domain-specific text, preserve that source message as the anchor even when cloning into another niche later.
-- contentSummary must name the exact visible text/message and the main visual subject/context, not a generic category.
-- whyItWorks must cite concrete source evidence: visible words, visual subject, contrast, emotion, layout, caption, or account context.
-- Clones must transform the source's MECHANISM and MESSAGE; they must not become generic content for a niche.
-- contentMedium MUST describe the LITERAL physical/digital format the post exists in (handwriting on paper, screenshot, talking-head video, digital graphic, etc.) — not the topic, not the niche, not the colors. If you see real human handwriting on real paper, the primary MUST be "handwriting-on-paper" and mediumIsTheMessage MUST be true. If you see a designed digital quote card, it is "digital-graphic". Be honest and literal — this field decides whether downstream studios preserve the format or abandon it.
-
-Each clone needs a compelling hook, unique angle, beat-by-beat story structure, ready-to-post caption with line breaks/emojis and CTA, visual direction, and CTA. Never copy source content — use as inspiration only. Output the full JSON for all 5 clones; do not abbreviate with "...".
-
-The "forensics" object is REQUIRED. Be specific and surgical — these data points will be used to recreate the exact formula or generate inspired versions in downstream studios.`;
-
-  // Hard timeout so we never silently exceed the dev/edge HTTP window.
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45000);
-  try {
-    const messages: ModelMessage[] | undefined = visionImage
-      ? [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image", image: visionImage.image, mediaType: visionImage.mediaType },
-            ],
-          },
-        ]
-      : undefined;
-    const { text } = await generateText({
-      model,
-      system,
-      ...(messages ? { messages } : { prompt }),
-      abortSignal: controller.signal,
-    });
-    const parsed = parseJsonish<z.infer<typeof AnalyzeSchema>>(text);
-    return AnalyzeSchema.parse(parsed);
-  } finally {
-    clearTimeout(timer);
-  }
-}
+const STAGE_LABELS: Record<AnalysisStage, string> = {
+  fetching_post: "Fetching the post",
+  saving_media: "Saving the media",
+  reading_slides: "Reading slides",
+  watching_video: "Watching the video",
+  transcribing: "Transcribing",
+  building_blueprint: "Building the blueprint",
+};
 
 export const analyzeInstagramPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    console.log("[analyze] start", { url: data.url });
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Lazy self-heal: refund and fail this user's stalled analysis jobs.
+    await supabaseAdmin.rpc("sweep_stale_analyses" as any, { p_user_id: userId } as any).then(() => {}, () => {});
 
-    // Resolve share/short links to the canonical URL before classifying.
     const resolved = await resolveCanonicalUrl(data.url);
     const canonicalUrl = resolved.canonicalUrl;
     const classified = classifySourceUrl(canonicalUrl);
@@ -638,156 +289,113 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       return { ok: false as const, limitReached: false as const, error: "This link type isn't supported. Paste a link to a specific post, reel, or video.", data: null };
     }
 
-    // Cache: same canonical URL by this user within 12h reuses the stored
-    // analysis and costs nothing.
+    // Cache: same canonical URL by this user within 12h, completed → free.
     if (!data.forceRefresh) {
       const { data: recent } = await supabase
         .from("analyses")
         .select("id, created_at")
         .eq("user_id", userId)
         .eq("instagram_url", canonicalUrl)
+        .eq("analysis_status", "ready")
         .order("created_at", { ascending: false })
         .limit(5);
       const hit = (recent ?? []).find((a: any) => isWithinReuseWindow(a.created_at));
       if (hit) {
-        console.log("[analyze] cache hit", { analysisId: hit.id });
         const cached = await loadAnalysisPayload(supabase, userId, hit.id);
-        return {
-          ok: true as const,
-          limitReached: false as const,
-          error: null,
-          data: { ...cached, cacheHit: true as const },
-        };
+        return { ok: true as const, limitReached: false as const, error: null, data: { ...cached, cacheHit: true as const } };
       }
     }
 
-    // Debit BEFORE the scrape starts; refunded (idempotently per attempt)
-    // if the scrape fails or the analysis throws.
+    // Insert the job row up front so the UI can poll its stage.
+    const analysisId = data.analysisId ?? crypto.randomUUID();
+    const { error: insErr } = await supabase.from("analyses").insert({
+      id: analysisId, user_id: userId, instagram_url: canonicalUrl, post_type: classified.kind,
+      analysis_status: "processing", analysis_stage: "fetching_post", last_progress_at: new Date().toISOString(),
+    } as any);
+    if (insErr) return { ok: false as const, limitReached: false as const, error: "Couldn't start the analysis. Please try again.", data: null };
+
+    const setStage = async (stage: AnalysisStage) => {
+      await supabase.from("analyses").update({ analysis_stage: stage, last_progress_at: new Date().toISOString() } as any)
+        .eq("id", analysisId).eq("analysis_status", "processing");
+    };
+
+    // Debit first, then record the pending attempt (a marker without a
+    // matching debit could let the sweep mint credits).
     const attemptId = crypto.randomUUID();
     let debited = 0;
     try {
       await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attemptId, attemptId);
       debited = ACTION_COSTS.analysis;
+      await supabase.from("analyses").update({ pending_attempt_id: attemptId, pending_charge_amount: debited } as any).eq("id", analysisId);
 
       const token = await resolveApifyToken(supabase, userId);
       if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
-
-      console.log("[analyze] scraping…", { kind: classified.kind, platform: classified.platform });
       const scraped = await scrapeSource(canonicalUrl, token, classified);
       const postType = scraped.type;
-      console.log("[analyze] scrape ok", {
-        owner: scraped.ownerUsername,
-        type: postType,
-        slides: `${scraped.scrapeCoverage.slidesCaptured}/${scraped.scrapeCoverage.slidesExpected}`,
-        video: scraped.scrapeCoverage.videoCaptured,
-      });
 
-      console.log("[analyze] combined AI call…");
-      const aiStarted = Date.now();
-      const combined = await analyzePostCombined(scraped, canonicalUrl, postType);
-      const dna = combined.dna as any;
-      const clones = combined.clones as any[];
-      const forensics = (combined as any).forensics ?? null;
-      if (forensics) {
-        // Co-locate forensics inside the dna_analysis JSON so studios get it for free.
-        dna.forensics = forensics;
-      }
-      console.log("[analyze] AI complete", {
-        clones: clones?.length ?? 0,
-        ms: Date.now() - aiStarted,
-      });
-
-      // Viral score (deterministic, derived from scraped metrics)
-      const viral = computeViralScore(scraped);
-
-      // Persist
-      const { data: analysis, error: aErr } = await supabase
-        .from("analyses")
-        .insert({
-          user_id: userId,
-          instagram_url: canonicalUrl,
-          post_type: postType,
-          source_account: scraped?.ownerUsername ?? null,
-          source_caption: scraped?.caption ?? null,
-          performance_score: dna?.performanceScore ?? null,
-          scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl } as any,
-          dna_analysis: dna as any,
-          viral_score: viral.score,
-          viral_band: viral.band,
-          viral_factors: viral.factors as any,
-        })
-        .select()
-        .single();
-
-      if (aErr) {
-        console.error("[analyze] DB insert error:", aErr);
-        throw new Error("Failed to save analysis");
-      }
-
-      // Persist the media — CDN links expire within hours. Failures are
-      // recorded in the coverage notes, never fatal.
+      await setStage("saving_media");
+      let scrapedData: any = { ...scraped, attemptId, originalUrl: resolved.originalUrl };
       if (scraped.mediaItems.length > 0) {
-        const { storedMedia, notes } = await persistSourceMedia(userId, analysis.id, scraped.mediaItems);
-        const coverage = { ...scraped.scrapeCoverage, notes: [...scraped.scrapeCoverage.notes, ...notes] };
-        if (storedMedia.length > 0 || notes.length > 0) {
-          await supabase
-            .from("analyses")
-            .update({ scraped_data: { ...scraped, attemptId, originalUrl: resolved.originalUrl, storedMedia, scrapeCoverage: coverage } as any })
-            .eq("id", analysis.id);
-        }
-        scraped.storedMedia = storedMedia;
-        scraped.scrapeCoverage = coverage;
+        const { storedMedia, notes } = await persistSourceMedia(userId, analysisId, scraped.mediaItems);
+        scrapedData = { ...scrapedData, storedMedia, scrapeCoverage: { ...scraped.scrapeCoverage, notes: [...scraped.scrapeCoverage.notes, ...notes] } };
+      }
+      const viral = computeViralScore(scraped);
+      await supabase.from("analyses").update({
+        post_type: postType, source_account: scraped.ownerUsername ?? null, source_caption: scraped.caption ?? null,
+        scraped_data: scrapedData, viral_score: viral.score, viral_band: viral.band, viral_factors: viral.factors as any,
+        last_progress_at: new Date().toISOString(),
+      } as any).eq("id", analysisId);
+
+      const result = await runAnalysisPipeline({ db: supabase, analysisId, url: canonicalUrl, postType, scraped: scrapedData, setStage });
+
+      const finalFields = {
+        dna_analysis: result.dna, performance_score: result.dna.performanceScore, blueprint: result.blueprint as any,
+        evidence: result.evidence as any, transcript: result.transcript, transcript_segments: result.segments as any,
+        analysis_confidence: result.analysisConfidence, model_used: result.modelUsed,
+      };
+      // Conditional finish: only flip to ready if the sweep hasn't failed+refunded this run.
+      const { data: finished } = await supabase.from("analyses")
+        .update({ ...finalFields, analysis_status: "ready", analysis_stage: null, pending_attempt_id: null, pending_charge_amount: null, last_progress_at: new Date().toISOString() } as any)
+        .eq("id", analysisId).eq("analysis_status", "processing").select("id");
+      if (!finished || finished.length === 0) {
+        console.warn("[analyze] run finished after being swept; keeping data, status stays failed", { analysisId });
+        await supabase.from("analyses").update(finalFields as any).eq("id", analysisId);
       }
 
-      if (clones.length > 0) {
-        const cloneRows = clones.map((c: any) => ({
-          analysis_id: analysis.id,
-          user_id: userId,
-          version_number: c.versionNumber,
-          angle_type: c.angleType,
-          angle: c.angle,
-          hook: c.hook,
-          story_structure: c.storyStructure,
-          caption: c.caption,
-          visual_direction: c.visualDirection,
-          cta: c.cta,
-        }));
-        const { error: cErr } = await supabase.from("clones").insert(cloneRows);
+      if (result.clones.length > 0) {
+        const { error: cErr } = await supabase.from("clones").insert(result.clones.map((c: any) => ({
+          analysis_id: analysisId, user_id: userId, version_number: c.versionNumber, angle_type: c.angleType, angle: c.angle,
+          hook: c.hook, story_structure: c.storyStructure, caption: c.caption, visual_direction: c.visualDirection, cta: c.cta,
+        })));
         if (cErr) console.error("[analyze] clones insert error:", cErr);
       }
-
-      console.log("[analyze] done", { analysisId: analysis.id });
-      return {
-        ok: true as const,
-        limitReached: false as const,
-        error: null,
-        data: {
-          analysisId: analysis.id,
-          dna: { ...dna, sourceAccount: scraped?.ownerUsername ?? null, postType },
-          clones,
-          scraped: scraped ?? null,
-          instagramUrl: canonicalUrl,
-          fallback: false,
-          cacheHit: false as const,
-          viral,
-        },
-      };
+      const payload = await loadAnalysisPayload(supabase, userId, analysisId);
+      return { ok: true as const, limitReached: false as const, error: null, data: { ...payload, cacheHit: false as const } };
     } catch (err: any) {
       console.error("[analyze] error:", err);
-      if (debited > 0) {
-        await refundCredits(userId, debited, "analysis", attemptId, attemptId);
+      if (debited > 0) await refundCredits(userId, debited, "analysis", attemptId, attemptId);
+      const message = err instanceof InsufficientCreditsError ? err.message : err?.message || "Analysis failed";
+      await supabase.from("analyses").update({
+        analysis_status: "failed", analysis_stage: null, error_message: message, pending_attempt_id: null, pending_charge_amount: null,
+      } as any).eq("id", analysisId).eq("analysis_status", "processing");
+      if (err instanceof InsufficientCreditsError) {
+        // Nothing was charged and no work happened — don't leave a failed row behind.
+        await supabase.from("analyses").delete().eq("id", analysisId);
       }
-      const message =
-        err?.name === "AbortError"
-          ? "Analysis timed out. Please try again."
-          : err?.message || "Analysis failed";
-      return {
-        ok: false as const,
-        limitReached: false as const,
-        error: message,
-        data: null,
-      };
+      return { ok: false as const, limitReached: false as const, error: message, data: null };
     }
+  });
+
+/** Poll target for the analysis job's stage. */
+export const getAnalysisStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row } = await context.supabase.from("analyses")
+      .select("analysis_status, analysis_stage, error_message").eq("id", data.analysisId).eq("user_id", context.userId).maybeSingle();
+    if (!row) return { status: null, stage: null, label: null, error: null };
+    const r = row as any;
+    return { status: r.analysis_status as string, stage: r.analysis_stage as string | null, label: r.analysis_stage ? STAGE_LABELS[r.analysis_stage as AnalysisStage] ?? null : null, error: r.error_message as string | null };
   });
 
 /** Load a full analysis payload (used by getAnalysisById and the cache hit path). */
@@ -815,6 +423,13 @@ async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
     dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
     scraped: (analysis as any).scraped_data ?? null,
     instagramUrl: analysis.instagram_url,
+    status: (analysis as any).analysis_status ?? "ready",
+    blueprint: (analysis as any).blueprint ?? null,
+    evidence: (analysis as any).evidence ?? null,
+    transcript: (analysis as any).transcript ?? null,
+    transcriptSegments: (analysis as any).transcript_segments ?? null,
+    analysisConfidence: (analysis as any).analysis_confidence ?? null,
+    modelUsed: (analysis as any).model_used ?? null,
     viral,
     clones: (clones ?? []).map((c: any) => ({
       versionNumber: c.version_number,
