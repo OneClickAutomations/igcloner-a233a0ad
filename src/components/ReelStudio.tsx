@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CREDIT_BALANCE_KEY } from "@/lib/credits";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -109,6 +110,7 @@ export function ReelStudio() {
   const saveDirFn = useServerFn(saveVisualDirection);
   const submitVideoFn = useServerFn(submitVideoJob);
   const pollVideoFn = useServerFn(pollVideoJob);
+  const creditsQc = useQueryClient();
 
   const [angle, setAngle] = useState("");
   const [duration, setDuration] = useState(20);
@@ -328,6 +330,7 @@ export function ReelStudio() {
           ...(imageUrl ? { image_url: imageUrl } : {}),
         },
       });
+      creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
       toast.success(imageUrl ? "Animating your source image — ~30-90s." : "Video job queued. ~30-90s.");
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
@@ -347,6 +350,7 @@ export function ReelStudio() {
       setVideoStatus("FAILED");
       setVideoError(e?.message || "Generation failed");
       toast.error(e?.message || "Generation failed");
+      creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
     }
   }
 
