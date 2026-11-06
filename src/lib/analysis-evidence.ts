@@ -177,11 +177,11 @@ export function tryParseJson(text: string): unknown | null {
  * with the zod issues and the bad text, and its output is validated once.
  * A second failure throws (the caller fails + refunds the job).
  */
-export async function parseWithRepair<T>(
-  schema: z.ZodType<T>,
+export async function parseWithRepair<S extends z.ZodTypeAny>(
+  schema: S,
   text: string,
   repair: (issues: string, badText: string) => Promise<string>,
-): Promise<{ value: T; repaired: boolean }> {
+): Promise<{ value: z.output<S>; repaired: boolean }> {
   const first = schema.safeParse(tryParseJson(text));
   if (first.success) return { value: first.data, repaired: false };
   const issues = first.error.issues.slice(0, 15).map((i) => `${i.path.join(".")}: ${i.message}`).join("\n");
