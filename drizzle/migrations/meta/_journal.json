@@ -36,6 +36,13 @@
       "when": 1793937214340,
       "tag": "0004_analysis_jobs_blueprint",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793940845132,
+      "tag": "0005_analysis_stage_claims",
+      "breakpoints": true
     }
   ]
 }
