@@ -197,18 +197,12 @@ export function AppPage() {
 
   return (
     <div className="min-h-full">
-      {usage && (
+      {creditBalance !== null && (
         <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:px-8">
-          <div className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-            {usage.remaining} / {usage.limit} left this month
+          <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+            <Coins className="h-3.5 w-3.5" />
+            {creditBalance} credits
           </div>
-        </div>
-      )}
-
-      {usage && usage.remaining > 0 && usage.remaining <= 5 && !dismissedWarning && (
-        <div className="flex items-center justify-between gap-3 border-b border-status-warning/30 bg-status-warning/10 px-4 py-2 text-sm text-status-warning lg:px-8">
-          <span>⚡ {usage.remaining} analyses left · <button onClick={() => navigate({ to: "/settings", search: { section: "subscription" } })} className="underline">Upgrade →</button></span>
-          <button onClick={() => setDismissedWarning(true)} aria-label="Dismiss" className="opacity-60 hover:opacity-100"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -233,9 +227,24 @@ export function AppPage() {
                   className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 <Button onClick={handleAnalyze} className="shrink-0 gap-1.5">
-                  <Sparkles className="h-4 w-4" /> Analyze
+                  <Sparkles className="h-4 w-4" /> Analyze — {ACTION_COSTS.analysis} credits
                 </Button>
               </div>
+              {insufficient && (
+                <div className="mt-3 rounded-xl border border-status-warning/30 bg-status-warning/10 p-4 text-sm animate-in fade-in">
+                  <p className="font-semibold text-status-warning">
+                    This analysis costs {insufficient.required} credits and you have {insufficient.available} — you're {insufficient.required - insufficient.available} short.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" disabled title="Payments aren't wired up yet">
+                      Top up (coming soon)
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => navigate({ to: "/settings", search: { section: "subscription" } })}>
+                      View plans
+                    </Button>
+                  </div>
+                </div>
+              )}
               {postType && (
                 <div className="mt-2 flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-semibold animate-in fade-in slide-in-from-top-1 duration-300">
                   <span className="inline-block text-xl animate-bounce" style={{ animationDuration: '1.5s' }}>👍</span>
