@@ -10,7 +10,7 @@ import { MEDIUM_CATEGORIES_PROMPT } from "@/lib/medium";
 import {
   CloneSetSchema, DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
   dedupeLimitations, deriveLegacyForensics, deriveLimitations, normalizeForensics, parseWithRepair, sanitizeSlides,
-  stillMedium, tryParseJson, wrapData,
+  normalizeMediumId, tryParseJson, wrapData,
   type SlideEvidence, type StoredMediaRef, type TranscriptSegment, type VideoEvidence,
 } from "@/lib/analysis-evidence";
 import {
@@ -186,13 +186,17 @@ export async function runVideoStage(postType: string, scraped: any, st: Pipeline
   if (dur && dur > LONG_VIDEO_SEC) videoNote = [videoNote, `Long video (${Math.round(dur)}s) — watched in full; the shot list may be coarser.`].filter(Boolean).join(" ");
 
   const watch = (async () => {
-    try {
-      const { text, usage } = await geminiVideoCall(VIDEO_PROMPT(dur && dur > LONG_VIDEO_SEC ? "The video is long: keep the shot list to the main beats." : null), toBase64(vid.bytes), vid.mime);
-      usages.push(usage);
-      const p = VideoEvidenceSchema.safeParse(tryParseJson(text));
-      if (p.success) video = { ...p.data, analyzedWindow: pick.variant === "sd" ? "full video (SD copy)" : "full video" };
-      else videoError = "Video watch returned malformed data; shot details are inferred.";
-    } catch (e) { videoError = `Video couldn't be watched: ${(e as Error).message}`; }
+    const b64 = toBase64(vid.bytes);
+    // One bounded retry when the response is malformed (not on errors/denials).
+    for (let attempt = 0; attempt < 2 && !video; attempt++) {
+      try {
+        const { text, usage } = await geminiVideoCall(VIDEO_PROMPT(dur && dur > LONG_VIDEO_SEC ? "The video is long: keep the shot list to the main beats." : null), b64, vid.mime);
+        usages.push(usage);
+        const p = VideoEvidenceSchema.safeParse(tryParseJson(text));
+        if (p.success) { video = { ...p.data, analyzedWindow: pick.variant === "sd" ? "full video (SD copy)" : "full video" }; videoError = null; }
+        else { console.warn("[analysis] malformed video JSON tail:", text.slice(-200)); videoError = "Video watch returned malformed data; shot details are inferred."; }
+      } catch (e) { videoError = `Video couldn't be watched: ${(e as Error).message}`; return; }
+    }
   })();
   const listen = (async () => {
     if (transcript) return;
@@ -277,16 +281,19 @@ Return JSON with exactly these keys:
 
   const call = async (p: string) => { const r = await claudeCall(system, [{ type: "text", text: p }], 12000, "medium"); usages.push(r.usage); return r.text; };
   const firstText = await call(prompt);
-  const { value: syn, repaired } = await parseWithRepair(SynthesisSchema, firstText, (issues, bad) =>
+  const { value: syn, repaired } = await parseWithRepair(SynthesisSchema, firstText, (issues, bad) => (console.warn("[analysis] synthesis repair:", issues), true) &&
     call(`Your previous JSON failed validation:\n${issues}\n\nReturn the corrected complete JSON object only.\n\nPREVIOUS OUTPUT:\n${bad}`));
 
   const forensics = normalizeForensics(syn.forensics, { slideCount: slides.length, videoDurationSec: video?.durationSec ?? (video ? Infinity : null) });
   const flagged = forensics.filter((f: any) => f.flagged).length;
-  const limitations = dedupeLimitations([...codeLimitations, ...syn.limitations]);
+  // Still posts naturally have no video/transcript — that's not a limitation.
+  const modelLims = isVideo ? syn.limitations : syn.limitations.filter((l) => !/video|transcript|shot list|motion|audio/i.test(l));
+  const limitations = dedupeLimitations([...codeLimitations, ...modelLims]);
   // Confidence cannot exceed what the evidence supports.
   const cap = 100 - codeLimitations.length * 15 - (usedCdnFallback ? 20 : 0);
   const analysisConfidence = Math.max(0, Math.min(100, Math.round(syn.analysisConfidence), cap));
-  if (!isVideo) syn.dna.contentMedium.primary = stillMedium(syn.dna.contentMedium.primary, slides.some((s) => s.exactText));
+  const hasText = slides.some((s) => s.exactText) || (video?.shots ?? []).some((sh) => sh.onScreenText.length > 0);
+  syn.dna.contentMedium.primary = normalizeMediumId(syn.dna.contentMedium.primary, isVideo, hasText);
 
   const legacy = deriveLegacyForensics({ postType, slides, video, dna: syn.dna, style: syn.style, transcript });
   const dna: any = {
