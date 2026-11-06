@@ -48,45 +48,81 @@ export type Database = {
       }
       analyses: {
         Row: {
+          analysis_confidence: number | null
+          analysis_stage: string | null
+          analysis_status: string
+          blueprint: Json | null
           created_at: string | null
           dna_analysis: Json | null
+          error_message: string | null
+          evidence: Json | null
           id: string
           instagram_url: string
+          last_progress_at: string | null
+          model_used: string | null
+          pending_attempt_id: string | null
+          pending_charge_amount: number | null
           performance_score: number | null
           post_type: string | null
           scraped_data: Json | null
           source_account: string | null
           source_caption: string | null
+          transcript: string | null
+          transcript_segments: Json | null
           user_id: string
           viral_band: string | null
           viral_factors: Json | null
           viral_score: number | null
         }
         Insert: {
+          analysis_confidence?: number | null
+          analysis_stage?: string | null
+          analysis_status?: string
+          blueprint?: Json | null
           created_at?: string | null
           dna_analysis?: Json | null
+          error_message?: string | null
+          evidence?: Json | null
           id?: string
           instagram_url: string
+          last_progress_at?: string | null
+          model_used?: string | null
+          pending_attempt_id?: string | null
+          pending_charge_amount?: number | null
           performance_score?: number | null
           post_type?: string | null
           scraped_data?: Json | null
           source_account?: string | null
           source_caption?: string | null
+          transcript?: string | null
+          transcript_segments?: Json | null
           user_id: string
           viral_band?: string | null
           viral_factors?: Json | null
           viral_score?: number | null
         }
         Update: {
+          analysis_confidence?: number | null
+          analysis_stage?: string | null
+          analysis_status?: string
+          blueprint?: Json | null
           created_at?: string | null
           dna_analysis?: Json | null
+          error_message?: string | null
+          evidence?: Json | null
           id?: string
           instagram_url?: string
+          last_progress_at?: string | null
+          model_used?: string | null
+          pending_attempt_id?: string | null
+          pending_charge_amount?: number | null
           performance_score?: number | null
           post_type?: string | null
           scraped_data?: Json | null
           source_account?: string | null
           source_caption?: string | null
+          transcript?: string | null
+          transcript_segments?: Json | null
           user_id?: string
           viral_band?: string | null
           viral_factors?: Json | null
@@ -1409,6 +1445,7 @@ export type Database = {
         }
         Returns: Json
       }
+      sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
       sweep_stale_research_reports: {
         Args: { p_user_id?: string }
         Returns: Json

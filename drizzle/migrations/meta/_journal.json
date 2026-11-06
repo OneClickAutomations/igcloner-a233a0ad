@@ -29,6 +29,13 @@
       "when": 1793931313283,
       "tag": "0003_attempt_scoped_refunds_and_source_media",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793937214340,
+      "tag": "0004_analysis_jobs_blueprint",
+      "breakpoints": true
     }
   ]
 }
