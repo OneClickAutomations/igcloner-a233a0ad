@@ -458,15 +458,21 @@ export const retryResearchAnalysis = createServerFn({ method: "POST" })
     if (!signals || !Array.isArray(signals.posts)) {
       throw new Error("This report has no scraped data to retry with — run a fresh report instead.");
     }
-    await supabase.from("research_reports").update({ status: "analyzing", error_message: null, last_progress_at: new Date().toISOString() }).eq("id", report.id);
     // Retry reuses the existing scrape — cheaper than a fresh report, but
-    // still a paid AI call. Debit atomically first; refunded on failure.
+    // still a paid AI call. Debit atomically BEFORE touching status, so an
+    // insufficient-balance error leaves the report "failed" and retryable.
     const attemptId = crypto.randomUUID();
+    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id, attemptId);
     await supabase
       .from("research_reports")
-      .update({ pending_attempt_id: attemptId, pending_charge_amount: ACTION_COSTS.retry })
+      .update({
+        status: "analyzing",
+        error_message: null,
+        last_progress_at: new Date().toISOString(),
+        pending_attempt_id: attemptId,
+        pending_charge_amount: ACTION_COSTS.retry,
+      })
       .eq("id", report.id);
-    await debitCredits(userId, ACTION_COSTS.retry, "debit_retry", "research_report", report.id, attemptId);
     try {
       const { dna, score } = await generateDnaReport(report.mode, report.subject, signals);
       const { data: finished } = await supabase
