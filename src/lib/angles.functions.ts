@@ -71,7 +71,7 @@ const INTENT_TEMPERATURE: Record<string, number> = {
   A1: 0.6, A2: 0.85, A3: 0.9, B1: 0.9, B2: 0.9, B3: 0.9,
 };
 // Isolated per-intent structural rule: must every angle's medium equal the
-// source medium? True only for Steal the Frame. Centralized here so the
+// source medium? True only for Same look, new words (A1). Centralized here so the
 // rule lives in ONE place instead of scattered `intent === "A1"` conditionals.
 const INTENT_MEDIUM_LOCK: Record<string, boolean> = {
   A1: true, A2: false, A3: false, B1: false, B2: false, B3: false,
@@ -301,7 +301,7 @@ Return ONLY this JSON object:
             medium: a.medium || String(sourceMediumPrimary),
           }));
 
-          // Steal the Frame structural rule: every angle's medium must equal
+          // A1 structural rule: every angle's medium must equal
           // the source medium. Retry on drift; on the final attempt, coerce to
           // source rather than ship an inconsistent set.
           if (mediumMustMatch && sourceMediumPrimary !== "unknown") {
@@ -310,7 +310,7 @@ Return ONLY this JSON object:
                 String(a.medium) !== String(sourceMediumPrimary),
             );
             if (drifted && attempt < maxRetries) {
-              lastError = new Error("Steal the Frame medium drift — every angle must match source medium");
+              lastError = new Error("Same-look medium drift — every angle must match source medium");
               continue;
             }
             if (drifted) {

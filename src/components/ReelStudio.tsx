@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CREDIT_BALANCE_KEY } from "@/lib/credits";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -109,6 +110,7 @@ export function ReelStudio() {
   const saveDirFn = useServerFn(saveVisualDirection);
   const submitVideoFn = useServerFn(submitVideoJob);
   const pollVideoFn = useServerFn(pollVideoJob);
+  const creditsQc = useQueryClient();
 
   const [angle, setAngle] = useState("");
   const [duration, setDuration] = useState(20);
@@ -321,18 +323,19 @@ export function ReelStudio() {
             (project.data as any)?.user_preferences?.referenceImageUrl ||
             undefined)
         : undefined;
-      const { requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
+      const { attemptId, requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
         data: {
           prompt: full, model: videoModel, aspect_ratio: format,
           duration: videoDuration, generate_audio: videoAudio,
           ...(imageUrl ? { image_url: imageUrl } : {}),
         },
       });
+      creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
       toast.success(imageUrl ? "Animating your source image — ~30-90s." : "Video job queued. ~30-90s.");
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
-        const s: any = await pollVideoFn({ data: { requestId, modelSlug, statusUrl, responseUrl } });
+        const s: any = await pollVideoFn({ data: { attemptId, requestId, modelSlug, statusUrl, responseUrl } });
         setVideoStatus(s.status);
         setQueuePos(s.queuePosition ?? null);
         if (s.status === "COMPLETED") {
@@ -347,6 +350,7 @@ export function ReelStudio() {
       setVideoStatus("FAILED");
       setVideoError(e?.message || "Generation failed");
       toast.error(e?.message || "Generation failed");
+      creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
     }
   }
 
@@ -956,9 +960,9 @@ function VideoStep({
     );
   }
   const models = [
-    { id: "veo3-fast", name: "VEO 3 Fast", price: "~$0.40/s", note: "Recommended", icon: Zap, time: "~30s" },
-    { id: "veo3", name: "VEO 3", price: "~$0.75/s", note: "Highest fidelity", icon: Crown, time: "~60–90s" },
-    { id: "kling-2.1", name: "Kling 2.1", price: "~$0.10/s", note: "Cheapest, no audio", icon: Sparkle, time: "~45s" },
+    { id: "veo3-fast", name: "VEO 3 Fast", price: "15 credits", note: "Recommended", icon: Zap, time: "~30s" },
+    { id: "veo3", name: "VEO 3", price: "25 credits", note: "Highest fidelity", icon: Crown, time: "~60–90s" },
+    { id: "kling-2.1", name: "Kling 2.1", price: "25 credits", note: "No audio", icon: Sparkle, time: "~45s" },
   ] as const;
   return (
     <div className="space-y-5">

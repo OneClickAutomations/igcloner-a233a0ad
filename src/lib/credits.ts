@@ -51,6 +51,7 @@ export type LedgerReason =
   | "debit_retry"
   | "debit_analysis"
   | "debit_versions"
+  | "debit_image"
   | "refund_failed"
   | "trial_grant";
 
@@ -64,6 +65,7 @@ export const REASON_LABELS: Record<LedgerReason, string> = {
   debit_retry: "Retry analysis",
   debit_analysis: "Post analysis",
   debit_versions: "5 post versions",
+  debit_image: "Image edit or generation",
   refund_failed: "Refund — action failed",
   trial_grant: "Trial credits",
 };

@@ -47,6 +47,7 @@ import {
   type BrandingSettings,
 } from "@/lib/branding";
 import { MultiPlatformPostModal } from "@/components/MultiPlatformPostModal";
+import { MixImagesPanel } from "@/components/MixImagesPanel";
 
 const STYLES: { id: string; label: string; emoji: string }[] = [
   { id: "photorealistic", label: "Photorealistic", emoji: "📸" },
@@ -372,6 +373,9 @@ export function ImageStudio() {
       <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
         {/* Left — controls */}
         <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-ig">
+          {projectId && (
+            <MixImagesPanel projectId={projectId} onCreated={(asset) => setImages((prev) => [asset, ...prev])} />
+          )}
           {/* GOAL SELECTOR — REQUIRED */}
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wide">

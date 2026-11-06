@@ -151,7 +151,7 @@ export function CarouselStudio() {
   }, [project?.id]);
 
   const active = useMemo(() => doc?.slides.find((s) => s.index === activeIdx) ?? null, [doc, activeIdx]);
-  const cloneMode = (project?.user_preferences as any)?.cloneMode === "inspired" ? "inspired" : "exact";
+  const cloneMode = (project?.user_preferences as any)?.cloneMode === "inspired" ? "inspired" : "formula";
 
   if (!projectId) {
     return (
@@ -304,7 +304,7 @@ export function CarouselStudio() {
             </h1>
           {project && (
             <Badge variant="secondary" className="ml-2 text-[10px] uppercase tracking-wide">
-              {cloneMode === "inspired" ? "Inspired" : "Exact Duplicate"}
+              {cloneMode === "inspired" ? "Inspired" : "Same formula"}
             </Badge>
           )}
           </div>

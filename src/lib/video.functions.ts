@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { ACTION_COSTS } from "@/lib/credits";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -23,6 +24,11 @@ const MODELS = {
 } as const;
 
 type ModelKey = keyof typeof MODELS;
+
+/** Credits per video job, from the shared credits config. Derived server-side, never client-supplied. */
+function costForSlug(slug: string): number {
+  return slug.includes("veo3/fast") ? ACTION_COSTS.videoGenerationVeo3Fast : ACTION_COSTS.videoGenerationVeo3OrKling;
+}
 
 const SubmitInput = z.object({
   prompt: z.string().min(10).max(8000),
@@ -62,17 +68,29 @@ function buildPayload(data: z.infer<typeof SubmitInput>) {
 export const submitVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const variants = MODELS[data.model as ModelKey];
     const slug = data.image_url ? variants.i2v : variants.t2v;
-    const res = await fetch(`${FAL_BASE}/${slug}`, {
-      method: "POST",
-      headers: authHeader(),
-      body: JSON.stringify(buildPayload(data)),
-    });
-    const text = await res.text();
+    const cost = costForSlug(slug);
+    const attemptId = crypto.randomUUID();
+    const { debitCredits, refundCredits } = await import("@/lib/credits.server");
+    await debitCredits(context.userId, cost, "debit_image", "video_job", attemptId, attemptId);
+    let res: Response, text: string;
+    try {
+      res = await fetch(`${FAL_BASE}/${slug}`, {
+        method: "POST",
+        headers: authHeader(),
+        body: JSON.stringify(buildPayload(data)),
+      });
+      text = await res.text();
+    } catch (e) {
+      await refundCredits(context.userId, cost, "video_job", attemptId, attemptId);
+      throw e;
+    }
     if (!res.ok) {
-      throw new Error(`fal.ai submit failed (${res.status}): ${text.slice(0, 400)}`);
+      await refundCredits(context.userId, cost, "video_job", attemptId, attemptId);
+      if (/exhausted balance|locked/i.test(text)) throw new Error("The video service is out of balance right now, so videos can't be made. Your credits were refunded.");
+      throw new Error(`Video service submit failed (${res.status}): ${text.slice(0, 300)}. Your credits were refunded.`);
     }
     const j = JSON.parse(text) as { request_id: string };
     const j2 = JSON.parse(text) as {
@@ -81,6 +99,7 @@ export const submitVideoJob = createServerFn({ method: "POST" })
       response_url?: string;
     };
     return {
+      attemptId,
       requestId: j.request_id,
       modelSlug: slug,
       statusUrl: j2.status_url ?? `${FAL_BASE}/${slug}/requests/${j.request_id}/status`,
@@ -93,12 +112,13 @@ const PollInput = z.object({
   modelSlug: z.string().min(1),
   statusUrl: z.string().url(),
   responseUrl: z.string().url(),
+  attemptId: z.string().uuid().optional(),
 });
 
 export const pollVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PollInput.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const statusRes = await fetch(data.statusUrl, { headers: authHeader() });
     if (!statusRes.ok) {
       const t = await statusRes.text().catch(() => "");
@@ -112,6 +132,10 @@ export const pollVideoJob = createServerFn({ method: "POST" })
 
     if (status.status === "FAILED" || status.status === "ERROR") {
       const lastLog = status.logs?.slice(-1)[0]?.message;
+      if (data.attemptId) {
+        const { refundCredits } = await import("@/lib/credits.server");
+        await refundCredits(context.userId, costForSlug(data.modelSlug), "video_job", data.attemptId, data.attemptId);
+      }
       throw new Error(`Video generation failed${lastLog ? `: ${lastLog}` : ""}`);
     }
 

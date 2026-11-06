@@ -15,7 +15,8 @@ import { generateProjectImage } from "@/lib/image.functions";
 import { DEFAULT_BRANDING, loadBranding, saveBranding, POSITION_STYLES, type BrandingSettings } from "@/lib/branding";
 import { POST_GOALS, type PostGoal } from "@/lib/post-goals";
 import { PLATFORM_LIST, type SocialPlatform } from "@/lib/platform-voice";
-import { CLONE_METHODS, CLONE_LABEL, CLONE_SUMMARY, cloneModeLabel, type CloneMethod } from "@/lib/clone-modes";
+import { CLONE_LABEL, CLONE_SUMMARY, cloneModeLabel, type CloneMethod } from "@/lib/clone-modes";
+import { CopyModePicker } from "@/components/CopyModePicker";
 
 type OutputFormat = "image" | "reel" | "carousel";
 
@@ -52,7 +53,7 @@ export function IntentFlow({ analysisId }: Props) {
   const uploadFn = useServerFn(uploadReferenceImage);
   const genImageFn = useServerFn(generateProjectImage);
 
-  const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A1");
+  const [cloneMethod, setCloneMethod] = useState<CloneMethod>("A2");
   const [outputFormat, setOutputFormat] = useState<OutputFormat | null>(null);
   const [niche, setNiche] = useState<string | null>(null);
   const [customNiche, setCustomNiche] = useState("");
@@ -378,37 +379,10 @@ export function IntentFlow({ analysisId }: Props) {
       {/* CONNECTED PREFERENCE PANEL */}
       {!angles && (
         <div ref={prefsRef} className="scroll-mt-4 rounded-2xl border border-border bg-card p-5 shadow-ig space-y-5">
-          {/* STEP 1 — clone method */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 1 of 2</p>
-            <h2 className="mt-1 text-lg font-bold tracking-tight">How do you want to clone this content?</h2>
-            <div className="mt-3 space-y-2">
-              {CLONE_METHODS.map((m) => {
-                const active = cloneMethod === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setCloneMethod(m.id)}
-                    className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all ${
-                      active ? "border-transparent ring-2 ring-accent-primary bg-accent-primary/5" : "border-border bg-card hover:border-strong"
-                    }`}
-                  >
-                    <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-accent-primary" : "border-muted-foreground/40"}`}>
-                      {active && <span className="h-2 w-2 rounded-full bg-accent-primary" />}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold">
-                        {m.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{m.blurb}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          {/* STEP 1 — copy mode */}
+          <CopyModePicker analysisId={analysisId} value={cloneMethod} onChange={setCloneMethod} preferences={{ niche: selectedNiche ?? undefined, toneOfVoice: tone ?? undefined, targetAudience: audience || undefined, keywords }} />
 
+          {(cloneMethod === "A2" || cloneMethod === "A3") && (<>
           {/* STEP 2 — output format */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 2 of 2</p>
@@ -727,6 +701,7 @@ export function IntentFlow({ analysisId }: Props) {
               {goal ? `Goal: ${goal} ✓` : <span className="text-status-error">Goal required</span>}
             </p>
           </div>
+          </>)}
         </div>
       )}
 

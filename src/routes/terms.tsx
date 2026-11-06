@@ -49,6 +49,7 @@ function TermsPage() {
       <ul>
         <li>Use the Service to violate any law, regulation, or third-party right, including intellectual property, privacy, publicity, or platform terms (including Instagram's, TikTok's, or any other platform's Terms of Service and Community Guidelines);</li>
         <li>Copy, redistribute, or republish another person's protected content without authorization;</li>
+        <li>Use the "Exact copy" or "Same look, new words" modes without first confirming: "I own this content or have permission from the owner to use it." — you are responsible for that confirmation being true;</li>
         <li>Generate content that is unlawful, defamatory, harassing, hateful, sexual involving minors, deceptive, or that impersonates any person or brand;</li>
         <li>Reverse engineer, scrape, or attempt to derive the source code, models, prompts, or training data of the Service;</li>
         <li>Interfere with, overload, or attempt to gain unauthorized access to the Service, other accounts, or connected systems;</li>
