@@ -8,7 +8,7 @@
 // Clone versions are NOT generated here — see generateCloneVersions.
 import { MEDIUM_CATEGORIES_PROMPT } from "@/lib/medium";
 import {
-  DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
+  CloneSetSchema, DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
   dedupeLimitations, deriveLegacyForensics, deriveLimitations, normalizeForensics, parseWithRepair, sanitizeSlides,
   stillMedium, tryParseJson, wrapData,
   type SlideEvidence, type StoredMediaRef, type TranscriptSegment, type VideoEvidence,
@@ -315,4 +315,32 @@ export async function runAnalysisPipeline(input: { url: string; postType: string
   }
   await input.setStage?.("building_blueprint");
   return runSynthesisStage(input, st);
+}
+
+const CLONE_SYSTEM = `You write 5 ready-to-post versions of a proven social post, grounded in what the source actually says and shows. ${DATA_RULE} Return ONLY JSON.`;
+
+/** The 5 angle versions from saved evidence/blueprint (on demand, not part of the analysis). */
+export async function generateClonesFromEvidence(input: {
+  postType: string; account: string | null; dna: any; blueprint: any; caption: string | null; transcript: string | null; segments: TranscriptSegment[];
+}) {
+  const d = input.dna ?? {};
+  const bp = input.blueprint ?? {};
+  const onScreen = [
+    ...(bp.slides ?? []).map((s: any) => s.exactText && `slide ${s.index + 1}: ${s.exactText}`),
+    ...(bp.scenes ?? []).flatMap((sc: any) => (sc.onScreenText ?? []).map((t: any) => `${Math.round(sc.start)}s: ${t.text}`)),
+  ].filter(Boolean).join("\n");
+  const prompt = `SOURCE: ${input.postType} by @${input.account ?? "unknown"}
+EXACT HOOK (${d.hookBreakdown?.location ?? "?"}): ${d.hookBreakdown?.exactText ?? ""} — mechanism: ${d.hookBreakdown?.mechanism ?? ""}
+CAPTION STRUCTURE: ${JSON.stringify(d.captionDNA ?? {})}
+STORY STRUCTURE: ${JSON.stringify(d.storyStructure ?? [])}
+${wrapData("caption", input.caption ?? "")}
+${wrapData("on_screen_text", onScreen || "none")}
+${wrapData("transcript", input.transcript ? input.transcript.slice(0, 4000) : "none")}
+
+Write 5 versions in this order: direct, contrarian, story, authority, curiosity. Each must reference the real source hook/caption/transcript, keep the source's hook mechanism and rhythm (line breaks, emoji density, CTA style), and include a complete ready-to-post caption.
+{"clones":[{"versionNumber":1-5,"angleType":"direct"|"contrarian"|"story"|"authority"|"curiosity","angleLabel":"Direct Improvement"|"Contrarian Angle"|"Storytelling Angle"|"Authority Angle"|"Curiosity Gap","hook":string,"angle":string,"storyStructure":string,"caption":string,"visualDirection":string,"cta":string}]}`;
+  const call = async (p: string) => (await claudeCall(CLONE_SYSTEM, [{ type: "text", text: p }], 8000, "medium")).text;
+  const first = await call(prompt);
+  const { value } = await parseWithRepair(CloneSetSchema, first, (issues, bad) => call(`Fix this JSON:\n${issues}\n\n${bad}\n\nReturn the corrected JSON only.`));
+  return value.clones;
 }
