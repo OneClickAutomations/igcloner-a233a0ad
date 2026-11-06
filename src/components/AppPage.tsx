@@ -299,6 +299,12 @@ export function AppPage() {
             {/* Post Intelligence Card */}
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
+            {/* What we captured — the honesty layer: the user must always
+                know whether we hold the real media or just a thumbnail. */}
+            {scraped?.scrapeCoverage && (
+              <CoverageStrip coverage={scraped.scrapeCoverage} audio={scraped.audio} storedMedia={scraped.storedMedia} />
+            )}
+
             {fallbackMode && (
               <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -423,9 +429,47 @@ export function AppPage() {
         )}
       </div>
 
-      {showUpgrade && (
-        <UpgradeModal onClose={() => setShowUpgrade(false)} onUpgrade={() => { setShowUpgrade(false); navigate({ to: "/settings", search: { section: "subscription" } }); }} />
-      )}
+    </div>
+  );
+}
+
+/** "What we captured" strip — slides, video, transcript, audio, storage. */
+function CoverageStrip({ coverage, audio, storedMedia }: { coverage: any; audio?: any; storedMedia?: any[] }) {
+  const storedCount = Array.isArray(storedMedia) ? storedMedia.length : 0;
+  const slides =
+    coverage.slidesExpected > 1
+      ? `${coverage.slidesCaptured} of ${coverage.slidesExpected} slides`
+      : null;
+  const parts: string[] = [];
+  if (slides) parts.push(slides);
+  parts.push(coverage.videoCaptured ? "video: yes" : "video: no");
+  parts.push(coverage.transcriptCaptured ? "transcript: yes" : "transcript: no");
+  if (audio?.title) parts.push(`audio: ${audio.original ? "original" : audio.title}`);
+  if (storedCount > 0) parts.push(`${storedCount} file${storedCount === 1 ? "" : "s"} saved`);
+
+  const warn = coverage.thumbnailOnly || coverage.slidesCaptured < coverage.slidesExpected;
+  return (
+    <div
+      className={`flex items-start gap-2 rounded-lg border p-3 text-xs ${
+        warn
+          ? "border-status-warning/30 bg-status-warning/10 text-status-warning"
+          : "border-border bg-muted/30 text-muted-foreground"
+      }`}
+    >
+      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <div>
+        <p className="font-medium">
+          {coverage.thumbnailOnly ? "Thumbnail only — the video couldn't be downloaded. " : "What we captured: "}
+          {parts.join(" • ")}
+        </p>
+        {(coverage.notes ?? []).length > 0 && (
+          <ul className="mt-1 space-y-0.5">
+            {coverage.notes.map((n: string, i: number) => (
+              <li key={i}>· {n}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
