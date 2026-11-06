@@ -45,6 +45,19 @@ export const getCreditHistory = createServerFn({ method: "GET" })
         .in("id", reportIds);
       for (const r of reports ?? []) subjects.set(r.id, r.subject);
     }
+    // Post analyses are charged per attempt; the saved analysis records that attempt id.
+    const attemptIds = [...new Set(
+      (rows ?? []).filter((r) => r.related_entity_type === "analysis" && r.related_entity_id).map((r) => r.related_entity_id as string),
+    )];
+    if (attemptIds.length) {
+      const { data: analyses } = await context.supabase
+        .from("analyses")
+        .select("instagram_url, attempt:scraped_data->>attemptId")
+        .in("scraped_data->>attemptId", attemptIds);
+      for (const a of (analyses ?? []) as Array<{ instagram_url: string; attempt: string | null }>) {
+        if (a.attempt) subjects.set(a.attempt, a.instagram_url);
+      }
+    }
 
     return {
       entries: (rows ?? []).map((r) => ({
@@ -54,7 +67,7 @@ export const getCreditHistory = createServerFn({ method: "GET" })
         creditKind: r.credit_kind,
         createdAt: r.created_at,
         subject:
-          r.related_entity_type === "research_report" && r.related_entity_id
+          (r.related_entity_type === "research_report" || r.related_entity_type === "analysis") && r.related_entity_id
             ? (subjects.get(r.related_entity_id) ?? null)
             : null,
       })),
