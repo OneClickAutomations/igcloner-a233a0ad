@@ -63,12 +63,12 @@ export const generateCarousel = createServerFn({ method: "POST" })
 
     const dna = (project.dna_analysis as any) ?? {};
     const prefs = (project.user_preferences as any) ?? {};
-    const cloneMode: "exact" | "inspired" = prefs.cloneMode === "inspired" ? "inspired" : "exact";
+    const cloneMode: "formula" | "inspired" = prefs.cloneMode === "inspired" ? "inspired" : "formula";
     const cloneMethod: string | undefined = prefs.cloneMethod ?? prefs.intent;
     const forensics = (dna.forensics?.carouselForensics ?? dna.forensics ?? null) as any;
     const sourceAccount = project.source_account ?? "unknown";
     const sourceMedium: ContentMedium | null = (dna as any).contentMedium ?? null;
-    const enforceMedium = cloneMethod === "A1" || (cloneMode === "exact" && !!sourceMedium);
+    const enforceMedium = cloneMethod === "A1" || (cloneMode === "formula" && !!sourceMedium);
     const mediumPrimary = String(sourceMedium?.primary ?? "");
     const mediumOpening = mediumPrimary ? MEDIUM_OPENINGS[mediumPrimary] || "" : "";
     const mediumBlock = enforceMedium && sourceMedium
@@ -99,9 +99,9 @@ EVERY slide of this carousel MUST be produced in this exact medium. ${mediumOpen
       : "";
 
     const modeBlock =
-      cloneMode === "exact"
-        ? `\nMODE: EXACT DUPLICATE.
-Apply the EXACT formula above to a new carousel in the user's niche. Keep identical: layout system, hook mechanism, slide-by-slide structure, design system, CTA type. Change topic, subject matter, all text content — adapted to the new niche. "Exact duplicate" = identical formula, different subject. Never identical words.`
+      cloneMode === "formula"
+        ? `\nMODE: SAME FORMULA, NEW SUBJECT (${cloneMethod === "A1" ? "A1 same look, new words" : "A2/A3 new media, new words"}).
+Apply the formula above to a new carousel in the user's niche. Keep: layout system, hook mechanism, slide-by-slide structure, design system, CTA type. Change topic, subject matter, and all text — new words written for the new niche.`
         : `\nMODE: INSPIRED VERSION.
 Preserve the source's psychological mechanics (hook power, save-worthiness driver, narrative arc, value-delivery timing). Take a completely different creative direction visually and topically. The result should NOT look like the source.`;
 
@@ -133,7 +133,7 @@ Return JSON of exact shape:
 Slide count: exactly ${data.slideCount}.
 Slide 1 = Hook. Final slide = CTA. Vary roles in between.
 
-Source DNA snapshot (use as inspiration; never copy):
+Source DNA snapshot (structure reference; write new words):
 - Account: @${sourceAccount}
 - Category: ${dna.contentCategory ?? "unknown"}
 - Why it works: ${(dna.whyItWorks ?? []).slice(0, 4).join(" | ")}
