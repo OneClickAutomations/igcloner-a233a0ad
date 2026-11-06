@@ -22,6 +22,13 @@
       "when": 1793861476905,
       "tag": "0002_research_heartbeat_and_sweep",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793931313283,
+      "tag": "0003_attempt_scoped_refunds_and_source_media",
+      "breakpoints": true
     }
   ]
 }
