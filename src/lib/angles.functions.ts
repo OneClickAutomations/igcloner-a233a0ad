@@ -96,7 +96,7 @@ export const generateAngles = createServerFn({ method: "POST" })
         .eq("analysis_status", "ready")
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!analysis) throw new Error("Analysis not found");
+    if (!analysis) throw new Error("That analysis isn't finished (or wasn't found).");
 
     const dna = (analysis.dna_analysis as any) ?? {};
     const scraped = (analysis.scraped_data as any) ?? {};
