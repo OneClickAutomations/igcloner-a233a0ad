@@ -7,7 +7,6 @@ import { computeViralScore } from "@/lib/scoring";
 import {
   classifySourceUrl,
   isSupportedSocialUrl,
-  isFacebookUrl,
   resolveCanonicalUrl,
   normalizeInstagramPost,
   normalizeFacebookReel,
@@ -882,43 +881,7 @@ export const getAnalysisById = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: analysis, error } = await supabase
-      .from("analyses")
-      .select("*")
-      .eq("id", data.id)
-      .eq("user_id", userId)
-      .single();
-    if (error || !analysis) throw new Error("Analysis not found");
-
-    const { data: clones } = await supabase
-      .from("clones")
-      .select("*")
-      .eq("analysis_id", analysis.id)
-      .order("version_number", { ascending: true });
-
-    const dna = analysis.dna_analysis as any;
-    // Recompute viral score on read so older rows without persisted score still display one.
-    const viral = computeViralScore((analysis as any).scraped_data ?? null);
-    return {
-      analysisId: analysis.id,
-      createdAt: analysis.created_at,
-      dna: { ...dna, sourceAccount: analysis.source_account, postType: analysis.post_type },
-      scraped: (analysis as any).scraped_data ?? null,
-      instagramUrl: analysis.instagram_url,
-      viral,
-      clones: (clones ?? []).map((c: any) => ({
-        versionNumber: c.version_number,
-        angleType: c.angle_type,
-        angleLabel: angleLabelFor(c.angle_type),
-        hook: c.hook,
-        angle: c.angle,
-        storyStructure: c.story_structure,
-        caption: c.caption,
-        visualDirection: c.visual_direction,
-        cta: c.cta,
-      })),
-    };
+    return loadAnalysisPayload(context.supabase, context.userId, data.id);
   });
 
 function angleLabelFor(t: string | null): string {
