@@ -49,7 +49,7 @@ function legacyCdnImageUrls(scraped: any): string[] {
   return urls.slice(0, MAX_SLIDES);
 }
 
-const SLIDE_SYSTEM = `You are an OCR-grade visual evidence extractor for social posts. Describe only what is literally visible. ${DATA_RULE}
+const SLIDE_SYSTEM = `You are an OCR-grade visual evidence extractor for social posts. Describe only what is literally visible. Transcribe only text you can actually read in the pixels — never add platform labels, metadata or text you expect to be there; if unsure, leave it out. Still images must never get a video medium (use photo/graphic media). ${DATA_RULE}
 Return ONLY JSON: {"slides":[{"index":number,"exactText":string (verbatim, keep line breaks as \\n and original capitalization; "" if none),"textBlocks":[{"text":string,"vertical":"top"|"center"|"bottom","horizontal":"left"|"center"|"right","sizeRel":"small"|"medium"|"large"|"dominant","weight":"light"|"regular"|"bold"|"black","case":"upper"|"lower"|"title"|"sentence"|"mixed","fontStyle":"serif"|"sans"|"script"|"display"|"mono","handwritten":boolean,"colorHex":"#RRGGBB","backgroundHex":"#RRGGBB"|null}],"palette":["#RRGGBB"],"backgroundHex":"#RRGGBB"|null,"subjects":string[],"composition":string,"cameraAngle":string,"lighting":string,"props":string[],"overlays":string[] (stickers, logos, watermarks, @handles),"medium":string}]}
 ${MEDIUM_CATEGORIES_PROMPT}`;
 
