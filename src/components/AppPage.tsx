@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { analyzeInstagramPost, getAnalysisById, getUsage } from "@/lib/analyze.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { analyzeInstagramPost, getAnalysisById } from "@/lib/analyze.functions";
+import { getCreditBalance } from "@/lib/credits.functions";
+import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
+import { classifySourceUrl } from "@/lib/source-ingest";
 import { listProjects } from "@/lib/projects.functions";
 import { ChannelIntelHeader } from "@/components/ChannelIntelHeader";
 import { IntentFlow } from "@/components/IntentFlow";
@@ -23,13 +27,15 @@ function isSupportedUrl(url: string): boolean {
   return /(instagram\.com|facebook\.com|fb\.watch|fb\.com)/i.test(url);
 }
 
+/** Honest type chip: /p/ is "Image or Carousel" until the scrape decides. */
 function detectPostType(url: string): string | null {
   if (!isSupportedUrl(url)) return null;
-  if (url.includes("/reel/") || url.includes("/reels/")) return "Reel";
-  if (url.includes("/videos/") || url.includes("fb.watch")) return "Video";
-  if (url.includes("/p/")) return "Post";
-  if (url.includes("/carousel/")) return "Carousel";
-  return "Post";
+  const c = classifySourceUrl(url.startsWith("http") ? url : `https://${url}`);
+  if (!c) return null;
+  if (c.shareLink) return "Share link — will resolve";
+  if (c.provisional && c.platform === "instagram" && c.kind === "Image") return "Image or Carousel";
+  if (c.provisional) return `${c.kind} (will confirm)`;
+  return c.kind;
 }
 
 export function AppPage() {
