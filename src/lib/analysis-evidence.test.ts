@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  SynthesisSchema, buildBlueprint, computePerformance, deriveLimitations, normalizeForensics,
+  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
   parseWithRepair, textInWindow, wordsPerMinute, wrapData,
 } from "./analysis-evidence";
 import { buildSourceContextBlock, extractSourceText } from "./source-context";
@@ -18,8 +18,8 @@ const validSynthesis = {
   },
   forensics: [{ field: "hook", value: "STOP", provenance: "observed", evidence: "slide 1" }],
   analysisConfidence: 80, limitations: [],
-  clones: ["direct", "contrarian", "story", "authority", "curiosity"].map((t, i) => clone(i + 1, t)),
 };
+const clones5 = { clones: ["direct", "contrarian", "story", "authority", "curiosity"].map((t, i) => clone(i + 1, t)) };
 
 describe("prompt-injection delimiting", () => {
   it("wraps data and neutralises embedded delimiters", () => {
@@ -38,12 +38,12 @@ describe("schema validation + repair", () => {
     expect(repair).not.toHaveBeenCalled();
   });
   it("repairs once when the first output is invalid", async () => {
-    const bad = { ...validSynthesis, clones: validSynthesis.clones.slice(0, 3) };
+    const bad = { ...validSynthesis, dna: { ...validSynthesis.dna, hookBreakdown: undefined } };
     const repair = vi.fn().mockResolvedValue("```json\n" + JSON.stringify(validSynthesis) + "\n```");
     const r = await parseWithRepair(SynthesisSchema, JSON.stringify(bad), repair);
     expect(r.repaired).toBe(true);
     expect(repair).toHaveBeenCalledTimes(1);
-    expect(repair.mock.calls[0][0]).toContain("clones");
+    expect(repair.mock.calls[0][0]).toContain("hookBreakdown");
   });
   it("throws (fail + refund) when the repair is also invalid", async () => {
     const repair = vi.fn().mockResolvedValue("not json");
@@ -124,5 +124,58 @@ describe("source-context fallback", () => {
     expect(block).toContain("spoken words");
     expect(block).toContain('"Hook!"');
     expect(block).not.toContain("OLD");
+  });
+});
+
+describe("pass-2 fix rules", () => {
+  it("the core analysis schema no longer contains clones", () => {
+    const r = SynthesisSchema.safeParse(validSynthesis);
+    expect(r.success).toBe(true);
+    expect((r as any).data.clones).toBeUndefined();
+  });
+  it("on-demand versions require exactly 5", () => {
+    expect(CloneSetSchema.safeParse(clones5).success).toBe(true);
+    expect(CloneSetSchema.safeParse({ clones: clones5.clones.slice(0, 4) }).success).toBe(false);
+  });
+  it("text claims stay observed only with a real slide number", () => {
+    const out = normalizeForensics([
+      { field: "on-screen text", value: "GENERATED CONTENT", provenance: "observed", evidence: "slide 1" },
+      { field: "watermark text", value: "GENERATED CONTENT", provenance: "observed", evidence: "slide 9" },
+      { field: "overlay text", value: "BUY", provenance: "observed", evidence: "bottom right corner" },
+      { field: "hook", value: "STOP", provenance: "observed", evidence: "0:02" },
+    ], { slideCount: 1, videoDurationSec: null });
+    expect(out.map((f) => f.provenance)).toEqual(["observed", "inferred", "inferred", "inferred"]);
+    expect(out[1].flagged).toBeTruthy();
+  });
+  it("timestamps must fall inside the observed video", () => {
+    const out = normalizeForensics([
+      { field: "text", value: "a", provenance: "observed", evidence: "0:05" },
+      { field: "text", value: "b", provenance: "observed", evidence: "2:00" },
+    ], { slideCount: 0, videoDurationSec: 40 });
+    expect(out.map((f) => f.provenance)).toEqual(["observed", "inferred"]);
+  });
+  it("dedupes repeated limitation strings", () => {
+    expect(dedupeLimitations(["No transcript available.", "no transcript available", "No transcript available", "Video couldn't be watched."]))
+      .toEqual(["No transcript available.", "Video couldn't be watched."]);
+  });
+  it("drops slides with unknown indexes and never labels still photos as video", () => {
+    const s = (index: number, medium: string, text = "") => SlideEvidenceSchema.parse({ index, medium, exactText: text, textBlocks: text ? [{ text }] : [] });
+    const out = sanitizeSlides([s(0, "broll-video"), s(1, "text-on-video", "HI"), s(7, "studio-photo")], [0, 1]);
+    expect(out.map((x) => x.index)).toEqual([0, 1]);
+    expect(out[0].medium).toBe("lifestyle-photo");
+    expect(out[1].medium).toBe("digital-graphic");
+  });
+  it("blank text blocks mean no text was read", () => {
+    const out = sanitizeSlides([SlideEvidenceSchema.parse({ index: 0, exactText: "GENERATED", textBlocks: [{ text: " " }] })], [0]);
+    expect(out[0].exactText).toBe("");
+  });
+  it("derives the legacy studio forensics from evidence in code", () => {
+    const syn = SynthesisSchema.parse(validSynthesis);
+    const slide = SlideEvidenceSchema.parse({ index: 0, exactText: "STOP", textBlocks: [{ text: "STOP", fontStyle: "sans", weight: "bold", case: "upper" }], palette: ["#000000"] });
+    const img: any = deriveLegacyForensics({ postType: "Image", slides: [slide], video: null, dna: syn.dna, style: syn.style, transcript: null });
+    expect(img.imageForensics.text.exactVisibleText).toBe("STOP");
+    const car: any = deriveLegacyForensics({ postType: "Carousel", slides: [slide, slide, slide], video: null, dna: syn.dna, style: syn.style, transcript: null });
+    expect(car.carouselForensics.overall.totalSlides).toBe(3);
+    expect(car.carouselForensics.middleSlides).toHaveLength(1);
   });
 });
