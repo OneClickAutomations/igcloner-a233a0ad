@@ -404,8 +404,8 @@ export const generateReel = createServerFn({ method: "POST" })
 
     const dna = (project.dna_analysis as any) ?? {};
     const prefs = (project.user_preferences as any) ?? {};
-    const cloneMode: "exact" | "inspired" =
-      prefs.cloneMode === "inspired" ? "inspired" : "exact";
+    const cloneMode: "formula" | "inspired" =
+      prefs.cloneMode === "inspired" ? "inspired" : "formula";
     const settings = SettingsSchema.parse(data.settings ?? {});
 
     // Visual direction: prefer explicit input, else stored, else derived.
@@ -465,7 +465,7 @@ ${visualDirection.customNote ? `User additional direction: ${visualDirection.cus
 
     const scriptPrompt = `Write a ${settings.duration}-second ${settings.format} short-form video script that EXECUTES the approved visual direction below.
 
-MODE: ${cloneMode === "exact" ? "EXACT DUPLICATE — apply source's video formula in user niche, change subject/messaging only." : "INSPIRED — preserve psychological mechanics, take a different creative angle."}
+MODE: ${cloneMode === "formula" ? "SAME FORMULA, NEW SUBJECT — apply the source's video formula (shot list, pacing, on-screen text timing, transcript structure) in the user's niche with new media and new words. Plan each shot from the source scenes, not one generic prompt." : "INSPIRED — preserve psychological mechanics, take a different creative angle."}
 
 ${directionBlock}
 

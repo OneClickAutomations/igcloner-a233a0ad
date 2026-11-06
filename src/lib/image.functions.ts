@@ -5,6 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage, buildSourceContextBlock, extractSourceText } from "@/lib/source-context";
 import { CLONE_LABEL } from "@/lib/clone-modes";
+import { enforceRights } from "@/lib/clone-copy.functions";
 
 const StyleEnum = z.enum([
   "photorealistic",
@@ -59,7 +60,7 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
   const isA1 = intent === "A1";
   const ocr = extractSourceText(dna);
 
-  // Steal the Frame. Strict rule: reproduce the source image 100% faithfully
+  // A1 Same look, new words. Strict rule: reproduce the source image 100% faithfully
   // (same subject, composition, colors, lighting, framing, aesthetic) and ONLY
   // change the text overlay — remove the original visible/OCR text and replace
   // it with the user's new text (the selected angle's hook). Nothing else.
@@ -93,7 +94,7 @@ function buildPrompt(input: z.infer<typeof GenInput>, project: any, scraped: any
   lines.push(`Generate a single Instagram post image (${ASPECT_DIMS[input.aspect]}).`);
   if (hasRefImage) {
     lines.push(
-      "A REFERENCE IMAGE is attached — it is the original viral post we are cloning. Match its composition, framing, lighting style, and visual mood. Do NOT copy faces, logos, or text verbatim — swap the subject for the user's niche.",
+      "A REFERENCE IMAGE is attached — it is the source post. This mode makes NEW media with new words: match its composition, framing, lighting style, palette and mood, but do not reproduce the source's faces, logos, or text verbatim — swap the subject for the user's niche.",
     );
   }
   lines.push(`Concept: ${input.concept}`);
@@ -163,6 +164,8 @@ export const generateProjectImage = createServerFn({ method: "POST" })
       .maybeSingle();
     if (pErr) throw new Error(pErr.message);
     if (!project) throw new Error("Project not found");
+    const projIntent = String((project.user_preferences as any)?.intent ?? (project.user_preferences as any)?.cloneMethod ?? "");
+    await enforceRights(supabase, userId, project.analysis_id, projIntent);
 
     // Pull the original source post (caption, OCR, image) so the model
     // generates something that visually echoes the viral reference.
