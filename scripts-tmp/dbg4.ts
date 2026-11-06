@@ -1,0 +1,17 @@
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+const id="9235a210-acb3-4401-980c-4f882ff3b819";
+const { data: r } = await supabaseAdmin.from("analyses").select("*").eq("id", id).single();
+const a:any=r; const ev=a.evidence;
+console.log(a.analysis_status, a.post_type, a.model_used, "conf", a.analysis_confidence, "created", a.created_at, "updated", a.last_progress_at);
+console.log("stageMs", ev.stageMs, "credits", ev.totalAiCredits, "transcriptionMs", ev.transcriptionMs, "src", ev.transcriptSource);
+console.log("usage", ev.usage.map((u:any)=>`${u.model} ${u.inputTokens}/${u.outputTokens}`));
+console.log("dur", a.scraped_data.durationSec ?? a.scraped_data.mediaItems?.map((m:any)=>m.durationSec), "stored", a.scraped_data.storedMedia.map((m:any)=>[m.kind,m.bytes]));
+console.log("TRANSCRIPT:", a.transcript?.slice(0,400));
+console.log("SEGS:", JSON.stringify(a.transcript_segments?.slice(0,4)));
+console.log("HOOK:", JSON.stringify(a.dna_analysis.hookBreakdown.exactText), a.dna_analysis.hookBreakdown.location);
+console.log("lims", a.dna_analysis.limitations, "medium", a.dna_analysis.contentMedium.primary);
+console.log("shots", a.blueprint.scenes.slice(0,3).map((s:any)=>[s.start,s.end,s.spokenText?.slice(0,60)]));
+const { data: led } = await supabaseAdmin.from("credit_ledger").select("delta,reason,created_at,related_entity_type").eq("user_id", a.user_id).order("created_at",{ascending:false}).limit(4);
+console.log(led);
+const { data: cl } = await supabaseAdmin.from("clones").select("version_number,hook").eq("analysis_id", id);
+console.log(cl);
