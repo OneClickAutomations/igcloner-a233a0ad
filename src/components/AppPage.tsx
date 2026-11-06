@@ -171,14 +171,16 @@ export function AppPage() {
       setViral(p.viral ?? null);
       setFallbackMode(Boolean(p.fallback));
       setPhase("results");
-      toast.success("Saved to your dashboard");
-      refreshUsage();
+      toast.success(p.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
+      refreshCredits();
     } catch (err: any) {
       clearInterval(timer);
       const msg: string = err?.message || "Analysis failed.";
-      if (/LIMIT_REACHED/.test(msg)) setShowUpgrade(true);
+      const insuff = parseInsufficientCredits(msg);
+      if (insuff) setInsufficient(insuff);
       else toast.error(msg);
       setPhase("input");
+      refreshCredits();
     }
   };
 
