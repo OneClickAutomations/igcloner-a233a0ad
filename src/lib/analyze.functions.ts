@@ -546,6 +546,7 @@ async function loadAnalysisPayload(supabase: any, userId: string, id: string) {
     scraped: (analysis as any).scraped_data ?? null,
     instagramUrl: analysis.instagram_url,
     status: (analysis as any).analysis_status ?? "ready",
+    errorMessage: (analysis as any).error_message ?? null,
     blueprint: (analysis as any).blueprint ?? null,
     evidence: (analysis as any).evidence ?? null,
     transcript: (analysis as any).transcript ?? null,

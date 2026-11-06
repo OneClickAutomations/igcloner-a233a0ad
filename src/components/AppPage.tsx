@@ -318,7 +318,7 @@ export function AppPage() {
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually about a minute. You can close this tab and reopen it from your dashboard to resume.</p>
+              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually about a minute. If you close this tab it pauses, and picks up where it left off when you reopen it from your dashboard (within 15 minutes, or it's cancelled and refunded).</p>
             </div>
           </div>
         )}
