@@ -124,10 +124,7 @@ export function AppPage() {
       toast.error("Please enter a valid Instagram or Facebook URL");
       return;
     }
-    if (usage && usage.remaining <= 0) {
-      setShowUpgrade(true);
-      return;
-    }
+    setInsufficient(null);
     setPhase("analyzing");
     setProgress(0);
     setStepLabel("Reading post URL…");
@@ -153,10 +150,15 @@ export function AppPage() {
       const result: any = await analyzeFn({ data: { url } });
       clearInterval(timer);
       if (!result) { toast.error("Analysis failed."); setPhase("input"); return; }
-      if (result.limitReached) { setShowUpgrade(true); setPhase("input"); return; }
       if (result.ok === false || !result.data) {
-        toast.error(result.error || "Analysis failed.");
+        const insuff = parseInsufficientCredits(result.error);
+        if (insuff) {
+          setInsufficient(insuff);
+        } else {
+          toast.error(result.error || "Analysis failed.");
+        }
         setPhase("input");
+        refreshCredits();
         return;
       }
       const p = result.data;
