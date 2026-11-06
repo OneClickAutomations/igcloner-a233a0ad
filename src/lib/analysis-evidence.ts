@@ -76,7 +76,7 @@ export type VideoEvidence = z.infer<typeof VideoEvidenceSchema> & { analyzedWind
 // ---------- Stage 3: synthesis ----------
 export const Provenance = z.enum(["observed", "inferred"]);
 
-const CloneSchema = z.object({
+export const CloneSchema = z.object({
   versionNumber: z.number(),
   angleType: z.enum(["direct", "contrarian", "story", "authority", "curiosity"]),
   angleLabel: z.string(),
@@ -158,10 +158,28 @@ export const SynthesisSchema = z.object({
       dependencies: z.array(z.string()).catch([]),
     })
     .catch({ slideRoles: [], voiceStyle: "", music: "unknown", dependencies: [] }),
+  /** Short judgment fields; the legacy *Forensics objects are derived from these + evidence in code. */
+  style: z
+    .object({
+      pacing: z.string().catch(""),
+      shootingStyle: z.string().catch(""),
+      colorGrade: z.string().catch(""),
+      productionQuality: z.string().catch(""),
+      structureType: z.string().catch(""),
+      acts: z.array(z.string()).catch([]),
+      formatType: z.string().catch(""),
+      compositionTechnique: z.string().catch(""),
+      mood: z.string().catch(""),
+      saveTrigger: z.string().catch(""),
+      shareTrigger: z.string().catch(""),
+      commentTrigger: z.string().catch(""),
+    })
+    .partial()
+    .catch({}),
   analysisConfidence: num,
   limitations: z.array(z.string()).catch([]),
-  clones: z.array(CloneSchema).length(5),
 });
+export const CloneSetSchema = z.object({ clones: z.array(CloneSchema).length(5) });
 export type Synthesis = z.infer<typeof SynthesisSchema>;
 
 /** Strip fences and parse; returns null on failure instead of throwing. */
@@ -308,7 +326,138 @@ export function buildBlueprint(input: {
 }
 export type Blueprint = ReturnType<typeof buildBlueprint>;
 
-/** Provenance tagging: claims with an evidence reference stay observed; others are downgraded. */
-export function normalizeForensics(items: Synthesis["forensics"]): Synthesis["forensics"] {
-  return items.map((f) => (f.provenance === "observed" && !f.evidence ? { ...f, provenance: "inferred" as const } : f));
+/**
+ * Provenance post-check: a claim stays "observed" only when its evidence
+ * points at something that exists — a real slide number (1-based, as shown
+ * to users) or a timestamp inside an observed video. Text-reading claims
+ * ("text", "OCR", "headline", "caption overlay"…) need a slide/timestamp
+ * reference; everything else is downgraded to "inferred" and flagged.
+ */
+export function normalizeForensics(
+  items: Synthesis["forensics"],
+  ctx: { slideCount: number; videoDurationSec: number | null } = { slideCount: Infinity, videoDurationSec: Infinity },
+): (Synthesis["forensics"][number] & { flagged?: string })[] {
+  return items.map((f) => {
+    if (f.provenance !== "observed") return f;
+    const ev = (f.evidence ?? "").toLowerCase();
+    const slideRefs = [...ev.matchAll(/slides?\s*(\d+)/g)].map((m) => Number(m[1]));
+    const validSlide = slideRefs.length > 0 && slideRefs.every((n) => n >= 1 && n <= ctx.slideCount);
+    const ts = [...ev.matchAll(/(\d+):(\d{2})(?:\.\d+)?|(\d+(?:\.\d+)?)\s*s\b/g)].map((m) => (m[3] != null ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2])));
+    const validTs = ts.length > 0 && ctx.videoDurationSec != null && ts.every((t) => t <= ctx.videoDurationSec! + 1);
+    if (validSlide || validTs) return f;
+    const isText = /text|ocr|headline|overlay|wording|reads|caption on/i.test(`${f.field} ${f.value}`);
+    // Caption/transcript quotes are evidence too, but not "read from pixels".
+    if (!isText && /caption|transcript|metric|hashtag/.test(ev)) return f;
+    return { ...f, provenance: "inferred" as const, flagged: f.evidence ? `Evidence "${f.evidence}" doesn't point to a real slide or timestamp.` : "No slide or timestamp reference." };
+  });
+}
+
+/** Drop repeated limitation strings (case/punctuation-insensitive, and near-duplicates contained in another). */
+export function dedupeLimitations(items: string[]): string[] {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  const out: { raw: string; n: string }[] = [];
+  for (const raw of items.map((s) => s.trim()).filter(Boolean)) {
+    const n = norm(raw);
+    if (!n) continue;
+    const dupIdx = out.findIndex((o) => o.n === n || o.n.includes(n) || n.includes(o.n));
+    if (dupIdx === -1) out.push({ raw, n });
+    else if (n.length > out[dupIdx].n.length) out[dupIdx] = { raw, n };
+  }
+  return out.map((o) => o.raw);
+}
+
+const VIDEO_MEDIA = new Set(["broll-video", "talking-head-video", "text-on-video", "animation"]);
+/** Still images can't be video media; and slide indexes must belong to the batch that was sent. */
+export function sanitizeSlides(slides: SlideEvidence[], sentIndexes: number[]): SlideEvidence[] {
+  const allowed = new Set(sentIndexes);
+  const seen = new Set<number>();
+  return slides
+    .filter((s) => allowed.has(s.index) && !seen.has(s.index) && (seen.add(s.index), true))
+    .map((s) => {
+      const textBlocks = s.textBlocks.filter((b) => b.text.trim().length > 0);
+      const exactText = textBlocks.length === 0 ? "" : s.exactText;
+      const medium = VIDEO_MEDIA.has(s.medium) ? (textBlocks.length ? "digital-graphic" : "lifestyle-photo") : s.medium;
+      return { ...s, textBlocks, exactText, medium };
+    })
+    .sort((a, b) => a.index - b.index);
+}
+export function stillMedium(primary: string, hasText: boolean): string {
+  return VIDEO_MEDIA.has(primary) ? (hasText ? "digital-graphic" : "lifestyle-photo") : primary;
+}
+
+/**
+ * Legacy forensics objects the studios read (videoForensics / carouselForensics /
+ * imageForensics), derived from observed evidence + short model judgments
+ * instead of having the model write them out a second time.
+ */
+export function deriveLegacyForensics(input: {
+  postType: string;
+  slides: SlideEvidence[];
+  video: VideoEvidence | null;
+  dna: Synthesis["dna"];
+  style: Synthesis["style"];
+  transcript: string | null;
+}): Record<string, unknown> {
+  const { slides, video, dna, style } = input;
+  const st = style ?? {};
+  const hook = dna.hookBreakdown;
+  const cap = dna.captionDNA;
+  const palette = [...new Set(slides.flatMap((s) => s.palette))].slice(0, 6);
+  const firstText = slides[0]?.exactText ?? "";
+  const fontOf = (s?: SlideEvidence) => (s?.textBlocks[0] ? `${s.textBlocks[0].fontStyle} ${s.textBlocks[0].weight} ${s.textBlocks[0].case}` : "no text");
+  const isVideo = input.postType === "Reel" || input.postType === "Video";
+  if (isVideo) {
+    const shots = video?.shots ?? [];
+    const acts = st.acts ?? [];
+    return {
+      videoForensics: {
+        hook: {
+          type: hook.type, element: hook.location, exactVisibleText: shots[0]?.onScreenText.map((t) => t.text).join(" / ") || (hook.location === "visual" ? hook.exactText : ""),
+          openingAction: shots[0]?.onScreen ?? video?.hookWindow ?? "", curiosityGap: hook.mechanism,
+          audioHook: hook.location === "spoken" ? hook.exactText : video?.audio.description ?? "", strength: hook.score,
+        },
+        pacing: {
+          overall: st.pacing ?? "", averageCutDuration: video?.averageShotLengthSec ?? null,
+          transitionTypes: [...new Set(shots.map((s) => s.transition))].join(", "), rhythmSynced: false,
+          bRollUsage: `${shots.filter((s) => s.shotType === "b-roll").length} of ${shots.length} shots b-roll`,
+        },
+        visual: {
+          shootingStyle: st.shootingStyle ?? "", cameraMovements: [...new Set(shots.map((s) => s.camera))].join(", "),
+          shotTypes: [...new Set(shots.map((s) => s.shotType))].join(", "), colorGrade: st.colorGrade ?? dna.visualStyle.colorMood,
+          productionQuality: st.productionQuality ?? "",
+        },
+        audio: {
+          musicType: video?.audio.kind ?? "unknown", musicEnergy: video?.audio.energy ?? "",
+          voiceover: input.transcript ? "yes" : "none detected", audioVisualSync: video?.audio.description ?? "",
+        },
+        structure: { type: st.structureType ?? "", act1: acts[0] ?? "", act2: acts[1] ?? "", act3: acts[2] ?? "", cta: video?.ctaFrame || cap.ctaLine || "" },
+        performance: { replayValue: null, saveValue: null, shareTrigger: st.shareTrigger ?? "", commentTrigger: st.commentTrigger ?? "", loopQuality: null },
+      },
+    };
+  }
+  if (input.postType === "Carousel") {
+    const last = slides[slides.length - 1];
+    return {
+      carouselForensics: {
+        overall: { totalSlides: slides.length, carouselType: st.formatType ?? "", narrativeArc: (st.acts ?? []).join(" → "), contentDensity: `${slides.filter((s) => s.exactText).length} of ${slides.length} slides have text`, visualConsistency: [...new Set(slides.map((s) => s.medium))].join(", ") },
+        slide1: { hookMechanism: hook.mechanism, exactVisibleText: firstText, layout: slides[0]?.composition ?? "", colorScheme: (slides[0]?.palette ?? []).join(" "), typography: fontOf(slides[0]), firstImpressionScore: hook.score },
+        middleSlides: slides.slice(1, -1).map((s) => ({ purpose: "", informationDensity: s.exactText ? `${s.exactText.split(/\s+/).length} words` : "image only", visualType: s.medium, layoutTemplate: s.composition, microHook: s.textBlocks[0]?.text ?? "" })),
+        finalSlide: { ctaType: cap.ctaType, urgencyElement: "", brandElement: (last?.overlays ?? []).join(", ") },
+        designSystem: { colorPalette: palette.join(" "), fontSystem: [...new Set(slides.map((s) => fontOf(s)))].join("; "), gridSystem: "", iconStyle: "", whiteSpaceUsage: "" },
+        contentStrategy: { saveWorthiness: null, valueDelivery: st.saveTrigger ?? "", educationalDepth: "" },
+      },
+    };
+  }
+  const s0 = slides[0];
+  return {
+    imageForensics: {
+      subject: { primary: s0?.subjects[0] ?? "", position: s0?.composition ?? "", actionPose: "", expression: "" },
+      composition: { technique: st.compositionTechnique ?? s0?.composition ?? "", foreground: "", background: s0?.backgroundHex ?? "", depthOfField: "", visualWeight: "" },
+      color: { dominant: s0?.palette[0] ?? "", paletteType: "", temperature: "", saturation: "", contrast: "", mood: st.mood ?? dna.visualStyle.colorMood, hex: s0?.palette ?? [] },
+      lighting: { source: s0?.lighting ?? "", direction: "", shadowQuality: "", overallExposure: "" },
+      text: { present: !!s0?.exactText, exactVisibleText: s0?.exactText ?? "", position: s0?.textBlocks.map((b) => `${b.vertical}-${b.horizontal}`).join("; ") ?? "", style: fontOf(s0), hierarchy: "" },
+      editing: { filterStyle: st.colorGrade ?? "", sharpness: "", grain: "" },
+      psychology: { primaryVisualHook: hook.exactText, emotionalResponse: st.mood ?? "", saveWorthinessElements: st.saveTrigger ?? "", shareWorthiness: st.shareTrigger ?? "" },
+    },
+  };
 }

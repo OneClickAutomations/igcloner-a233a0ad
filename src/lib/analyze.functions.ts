@@ -346,7 +346,7 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         last_progress_at: new Date().toISOString(),
       } as any).eq("id", analysisId);
 
-      const result = await runAnalysisPipeline({ db: supabase, analysisId, url: canonicalUrl, postType, scraped: scrapedData, setStage });
+      const result = await runAnalysisPipeline({ url: canonicalUrl, postType, scraped: scrapedData, setStage });
 
       const finalFields = {
         dna_analysis: result.dna, performance_score: result.dna.performanceScore, blueprint: result.blueprint as any,
@@ -362,13 +362,6 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
         await supabase.from("analyses").update(finalFields as any).eq("id", analysisId);
       }
 
-      if (result.clones.length > 0) {
-        const { error: cErr } = await supabase.from("clones").insert(result.clones.map((c: any) => ({
-          analysis_id: analysisId, user_id: userId, version_number: c.versionNumber, angle_type: c.angleType, angle: c.angle,
-          hook: c.hook, story_structure: c.storyStructure, caption: c.caption, visual_direction: c.visualDirection, cta: c.cta,
-        })));
-        if (cErr) console.error("[analyze] clones insert error:", cErr);
-      }
       const payload = await loadAnalysisPayload(supabase, userId, analysisId);
       return { ok: true as const, limitReached: false as const, error: null, data: { ...payload, cacheHit: false as const } };
     } catch (err: any) {
