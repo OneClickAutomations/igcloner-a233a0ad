@@ -86,7 +86,7 @@ export function CopyStudio() {
       await save();
     } catch (e: any) {
       const ic = parseInsufficientCredits(e);
-      toast.error(ic ? `You need ${ic.required} credit — you have ${ic.available}.` : e?.message ?? "Generation failed");
+      toast.error(ic ? `You need ${ic.required} credit — you have ${ic.available}.` : String(e?.message ?? "Generation failed").replace(/^RIGHTS_REQUIRED:\s*/, ""));
     } finally { setBusy(null); qc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY }); }
   };
 
