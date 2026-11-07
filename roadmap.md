@@ -1,5 +1,13 @@
 # Roadmap
 
+## Pass 4 — shared writing engine and quality
+- [ ] Shared grounded Claude copy engine, schemas, repair and quality rubric
+- [ ] Ranked Hook Lab, native caption packs, Sharpen and writing-model consolidation
+- [ ] Platform limits verified against official documentation
+- [ ] Carousel continuity and text verification; decide quick-generate shortcut
+- [ ] Tests, repeatable old/new evaluation and requested live checks
+- [ ] Model inventory, measured costs and final report with raw samples
+
 ## Content Creation Pass 2 — real analysis (done)
 - [x] Staged analysis job with stages, heartbeat, sweep + attempt refund
 - [x] Slide evidence (Claude vision), video shot list (Gemini video input), ElevenLabs transcript
