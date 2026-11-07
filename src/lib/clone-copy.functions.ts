@@ -20,7 +20,7 @@ const WEEK = 60 * 60 * 24 * 7;
 type Sb = any;
 
 async function loadAnalysis(sb: Sb, userId: string, analysisId: string) {
-  const { data, error } = await sb.from("analyses").select("id, user_id, instagram_url, post_type, scraped_data, blueprint, dna_analysis, user_preferences, analysis_status")
+  const { data, error } = await sb.from("analyses").select("id, user_id, instagram_url, post_type, scraped_data, blueprint, dna_analysis, analysis_status")
     .eq("id", analysisId).eq("user_id", userId).eq("analysis_status", "ready").maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("That analysis isn't available.");
@@ -120,7 +120,7 @@ export const createExactCopy = createServerFn({ method: "POST" })
     const { data: project, error: pErr } = await sb.from("projects").insert({
       user_id: userId, analysis_id: a.id, title: `Exact copy${f.account ? ` — @${f.account}` : ""}`, format, status: "draft",
       source_url: a.instagram_url, source_account: f.account, source_thumbnail: f.scraped.displayUrl ?? null, dna_analysis: a.dna_analysis,
-      user_preferences: { ...(a.user_preferences ?? {}), intent: "A0", cloneMethod: "A0", outputFormat: format },
+      user_preferences: { intent: "A0", cloneMethod: "A0", outputFormat: format },
       project_data: { copyMode: "A0", caption: f.caption, hashtags: f.hashtags, dependencies: f.dependencies },
     }).select("*").single();
     if (pErr) throw new Error(pErr.message);
@@ -190,7 +190,7 @@ export const startSameLook = createServerFn({ method: "POST" })
     const { data: project, error } = await sb.from("projects").insert({
       user_id: userId, analysis_id: a.id, title: `Same look, new words${f.account ? ` — @${f.account}` : ""}`, format, status: "draft",
       source_url: a.instagram_url, source_account: f.account, source_thumbnail: f.scraped.displayUrl ?? null, dna_analysis: a.dna_analysis,
-      user_preferences: { ...(a.user_preferences ?? {}), ...(data.preferences ?? {}), intent: "A1", cloneMethod: "A1", outputFormat: format },
+      user_preferences: { ...(data.preferences ?? {}), intent: "A1", cloneMethod: "A1", outputFormat: format },
       project_data: { copyMode: "A1", caption: "", hashtags: [], newText: {}, dependencies: f.dependencies },
     }).select("id").single();
     if (error) throw new Error(error.message);
