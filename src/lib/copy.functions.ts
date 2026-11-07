@@ -1,0 +1,38 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { ACTION_COSTS } from "./credits";
+import { PUBLISHING_PLATFORMS } from "./upload-post/shared";
+
+export const runHookLab=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid(),preferences:z.record(z.unknown()).optional()}).parse(d)).handler(async({data,context})=>{
+  const {buildCopyContext,hookLab}=await import("./copy-engine.server");
+  const {meteredCopy}=await import("./copy-meter.server");
+  const ctx=await buildCopyContext(data.analysisId,context.userId,undefined,data.preferences);
+  return meteredCopy({userId:context.userId,analysisId:data.analysisId,action:"hooks",key:{analysisId:data.analysisId,context:ctx},cost:ACTION_COSTS.hookLab,reason:"debit_hooks"},()=>hookLab(ctx));
+});
+export const generateCaptionPack=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),platforms:z.array(z.enum(PUBLISHING_PLATFORMS)).min(1),instruction:z.string().max(2000).optional()}).parse(d)).handler(async({data,context})=>{
+  const {data:p,error}=await context.supabase.from("projects").select("*").eq("id",data.projectId).eq("user_id",context.userId).maybeSingle();
+  if(error || !p) throw new Error("Project not found");
+  const {buildCopyContext,nativeCaptionPack}=await import("./copy-engine.server");
+  const {meteredCopy}=await import("./copy-meter.server");
+  const ctx=p.analysis_id ? await buildCopyContext(p.analysis_id,context.userId,undefined,p.user_preferences) : {source:{captionDNA:{},exactHook:"",caption:"",blueprint:null},voice:p.user_preferences,research:null};
+  const platforms=[...new Set(data.platforms)].sort();
+  const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction:data.instruction},cost:ACTION_COSTS.captionPack,reason:"debit_caption"},()=>nativeCaptionPack(ctx,platforms,data.instruction));
+  const pd=(p.project_data ?? {}) as any;
+  const {error:saveErr}=await context.supabase.from("projects").update({project_data:{...pd,captionPack:result.platforms} as any}).eq("id",p.id).eq("user_id",context.userId);
+  if(saveErr) throw new Error(saveErr.message);
+  return result;
+});
+export const listCopyHistory=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
+  const {data:rows,error}=await context.supabase.from("copy_runs").select("id,action,status,output,error_message,created_at,project_id").eq("user_id",context.userId).eq("analysis_id",data.analysisId).order("created_at",{ascending:false}).limit(30);
+  if(error) throw new Error(error.message);return {runs:rows??[]};
+});
+export const useProjectHook=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),hook:z.string().min(1).max(500)}).parse(d)).handler(async({data,context})=>{
+  const {data:p}=await context.supabase.from("projects").select("project_data,user_preferences").eq("id",data.projectId).eq("user_id",context.userId).maybeSingle();
+  if(!p) throw new Error("Project not found");
+  const pd=(p.project_data??{}) as any; const oldHook=pd.hook;
+  const next={...pd,hook:typeof oldHook==="object"?{...oldHook,text:data.hook,onScreenText:data.hook}:data.hook};
+  if(Array.isArray(next.slides)&&next.slides[0]) next.slides=next.slides.map((s:any,i:number)=>i===0?{...s,headline:data.hook,imageUrl:undefined}:s);
+  const {error}=await context.supabase.from("projects").update({project_data:next,user_preferences:{...(p.user_preferences as any??{}),angleHook:data.hook}}).eq("id",data.projectId).eq("user_id",context.userId);
+  if(error) throw new Error(error.message);return {ok:true};
+});

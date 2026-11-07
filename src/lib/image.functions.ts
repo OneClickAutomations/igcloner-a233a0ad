@@ -1,8 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage, buildSourceContextBlock, extractSourceText } from "@/lib/source-context";
 import { CLONE_LABEL } from "@/lib/clone-modes";
 import { enforceRights } from "@/lib/clone-copy.functions";
@@ -282,22 +280,12 @@ export const generateImageCaption = createServerFn({ method: "POST" })
     const prefs = (project?.user_preferences as any) ?? {};
     const dna = (project?.dna_analysis as any) ?? {};
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
-
-    const prompt = `Write an Instagram image post caption + hashtags.
-Niche: ${prefs.niche ?? "general"}
-Angle/hook: ${prefs.angle ?? "(none)"}
-Concept of the image: ${data.concept}
-Tone reference: ${dna.captionDNA?.tone ?? "conversational, confident"}
-
-Return ONLY a JSON object:
-{ "caption": string (3-6 short lines, line breaks + tasteful emojis, opens with hook, ends with one CTA), "hashtags": string[] (12 lowercase tags, no #, mix broad + niche) }`;
-
-    const { text } = await generateText({ model, prompt });
-    const cleaned = text.replace(/```json|```/g, "").trim();
-    const start = cleaned.indexOf("{");
-    const parsed = JSON.parse(start >= 0 ? cleaned.slice(start) : cleaned);
+    if (!project) throw new Error("Project not found");
+    const {buildCopyContext,nativeCaptionPack}=await import("./copy-engine.server");
+    const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,context.userId,"instagram",prefs) : {source:{captionDNA:dna.captionDNA??{},caption:"",blueprint:null},voice:prefs,research:null};
+    // Auto-caption accompanies image generation; included, not a second debit.
+    const result=await nativeCaptionPack(ctx,["instagram"],data.concept);
+    const parsed=result.platforms[0];
     return {
       caption: String(parsed.caption ?? ""),
       hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.map((h: string) => String(h).replace(/^#/, "")) : [],

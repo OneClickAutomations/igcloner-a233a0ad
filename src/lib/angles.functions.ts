@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText, type ModelMessage } from "ai";
+import { copyJson, buildCopyContext, contextPrompt } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
 import { buildAnglesMediumConstraint, mediumLabel, type ContentMedium } from "@/lib/medium";
 import { GOAL_COPY_INSTRUCTIONS, GOAL_LABEL, type PostGoal } from "@/lib/post-goals";
@@ -125,8 +124,6 @@ export const generateAngles = createServerFn({ method: "POST" })
         ? `\nPOST GOAL (PRIMARY OPTIMIZATION TARGET): ${GOAL_LABEL[goalKey]}\n${GOAL_COPY_INSTRUCTIONS[goalKey]}\nEvery angle MUST be measurably optimized for this goal. Include a "goalAlignment" sentence per angle.`
         : "";
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     const system = `You are IGCloner's senior viral content strategist.
 Reverse-engineer the SPECIFIC content of a proven Instagram post and generate
@@ -240,105 +237,10 @@ Return ONLY this JSON object:
   ]
 }`;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 45000);
-    try {
-      const userImageUrls = (prefs.uploadedImageUrls ?? []).slice(0, 3);
-      const hasAnyImage = !!visionImage || userImageUrls.length > 0;
-      const messages: ModelMessage[] | undefined = hasAnyImage
-        ? [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
-                ...(visionImage
-                  ? [
-                      {
-                        type: "image" as const,
-                        image: visionImage.image,
-                        mediaType: visionImage.mediaType,
-                      },
-                    ]
-                  : []),
-                ...userImageUrls.map((u) => ({
-                  type: "image" as const,
-                  image: new URL(u),
-                })),
-              ],
-            },
-          ]
-        : undefined;
-      const callModel = async (): Promise<string> => {
-        const { text } = await generateText({
-          model,
-          system,
-          temperature: INTENT_TEMPERATURE[intent] ?? 0.8,
-          ...(messages ? { messages } : { prompt }),
-          abortSignal: controller.signal,
-        });
-        return text;
-      };
-
-      // Bounded retry: regenerate on malformed JSON, wrong angle count, or (A1)
-      // medium drift, instead of throwing/showing bad output on the first miss.
-      // The single 45s AbortController caps total time across all attempts.
-      const maxRetries = 2;
-      let lastError: unknown = null;
-
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const text = await callModel();
-          const result = AnglesSchema.safeParse(parseJsonish(text));
-          if (!result.success) {
-            lastError = result.error;
-            continue;
-          }
-
-          // Backfill medium label client-side so the UI always has a friendly tag.
-          let angles = result.data.angles.map((a) => ({
-            ...a,
-            mediumLabel: a.mediumLabel || mediumLabel(a.medium || sourceMediumPrimary),
-            medium: a.medium || String(sourceMediumPrimary),
-          }));
-
-          // A1 structural rule: every angle's medium must equal
-          // the source medium. Retry on drift; on the final attempt, coerce to
-          // source rather than ship an inconsistent set.
-          if (mediumMustMatch && sourceMediumPrimary !== "unknown") {
-            const drifted = angles.some(
-              (a) => a.mediumIsSameAsSource === false ||
-                String(a.medium) !== String(sourceMediumPrimary),
-            );
-            if (drifted && attempt < maxRetries) {
-              lastError = new Error("Same-look medium drift — every angle must match source medium");
-              continue;
-            }
-            if (drifted) {
-              angles = angles.map((a) => ({
-                ...a,
-                medium: String(sourceMediumPrimary),
-                mediumLabel: mediumLabel(String(sourceMediumPrimary)),
-                mediumIsSameAsSource: true,
-              }));
-            }
-          }
-
-          return { angles, niche, intent, sourceMedium };
-        } catch (err) {
-          lastError = err;
-          // Never retry a genuine timeout/abort — surface it immediately.
-          if (controller.signal.aborted) throw err;
-        }
-      }
-
-      throw new Error(
-        `Angle generation failed validation after ${maxRetries + 1} attempts: ${String(
-          lastError instanceof Error ? lastError.message : lastError,
-        )}`,
-      );
-    } finally {
-      clearTimeout(timer);
-    }
+    const ctx=await buildCopyContext(data.analysisId,userId,undefined,{...prefs,niche:niche??undefined});
+    const {value:result}=await copyJson(AnglesSchema,`${prompt}\n${contextPrompt(ctx)}`,system,8000);
+    const angles=result.angles.map(a=>({...a,mediumLabel:a.mediumLabel||mediumLabel(a.medium||sourceMediumPrimary),medium:a.medium||String(sourceMediumPrimary)}));
+    return {angles,niche,intent,sourceMedium};
   });
 
 const SetNicheInput = z.object({ niche: z.string().min(1).max(120) });

@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText, type ModelMessage } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { copyJson, buildCopyContext, copyText, contextPrompt } from "./copy-engine.server";
+import { meteredCopy } from "./copy-meter.server";
+import { runHookLab } from "./copy.functions";
 import { computeViralScore } from "@/lib/scoring";
 import {
   classifySourceUrl,
@@ -161,44 +162,6 @@ async function scrapeSource(url: string, token: string, classified: ClassifiedUr
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-const CLAUDE_MODEL = "claude-sonnet-4-5";
-
-async function callClaude(opts: {
-  system?: string;
-  user: string;
-  maxTokens?: number;
-}): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: opts.maxTokens ?? 4000,
-      ...(opts.system ? { system: opts.system } : {}),
-      messages: [{ role: "user", content: opts.user }],
-    }),
-  });
-
-  if (res.status === 429) throw new Error("Rate limit exceeded. Please try again shortly.");
-  if (res.status === 401) throw new Error("Claude API key invalid.");
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[Claude] error:", res.status, text);
-    throw new Error("AI request failed");
-  }
-  const data = await res.json();
-  const text = data?.content?.[0]?.text;
-  if (!text) throw new Error("Empty AI response");
-  return text;
 }
 
 function parseJsonish<T = any>(text: string): T {
@@ -699,8 +662,16 @@ Return:
   "savePotentialScore": 0-100
 }`;
 
-    const text = await callClaude({ user: prompt, maxTokens: 2000 });
-    const improved = parseJsonish<any>(text);
+    const ctx = await buildCopyContext(data.analysisId,userId,"instagram");
+    const result = await meteredCopy({userId,analysisId:data.analysisId,action:"sharpen",key:{cloneId:clone.id,hook:clone.hook,caption:clone.caption,ctx},cost:ACTION_COSTS.sharpen,reason:"debit_sharpen"}, async()=>{
+      const {judgeCopy}=await import("./copy-engine.server");
+      const before={hook:clone.hook,caption:clone.caption,cta:clone.cta};
+      const beforeScores=await judgeCopy(ctx,before,"Sharpen before");
+      const r=await copyJson(z.object({improvedHook:z.string(),improvedCaption:z.string(),improvedCta:z.string(),improvements:z.array(z.string()),shareabilityScore:z.number(),savePotentialScore:z.number()}), `${prompt}\n${contextPrompt(ctx)}\nSharpen specific weak spots; explain exactly what changed in bullets.`,undefined,4000);
+      const afterScores=await judgeCopy(ctx,r.value,"Sharpen after");
+      return {improved:{...r.value,before,after:{hook:r.value.improvedHook,caption:r.value.improvedCaption,cta:r.value.improvedCta},scoresBefore:beforeScores,scoresAfter:afterScores},usage:r.usage};
+    });
+    const improved=result.improved;
 
     // Persist into the clone row
     await supabase
@@ -712,60 +683,14 @@ Return:
       })
       .eq("id", clone.id);
 
-    return { improved };
+    return { improved, charged:result.charged, usage:result.usage };
   });
 
 // ============================================================
 // Hook Lab — generate 10 hook variations for an analysis
 // ============================================================
 
-const HOOK_LAB_SYSTEM = `You are a viral hook writer. Generate 10 distinct opening hooks for short-form content. Each hook must use a different psychological pattern. Return ONLY a JSON array.`;
-
-export const generateHooks = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ analysisId: z.string().uuid() }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: analysis } = await supabase
-      .from("analyses")
-      .select("dna_analysis, source_caption")
-      .eq("id", data.analysisId)
-      .eq("user_id", userId)
-      .single();
-    if (!analysis) throw new Error("Analysis not found");
-    const dna: any = analysis.dna_analysis;
-
-    const user = `Generate 10 hook variations for this content topic.
-
-Topic / category: ${dna?.contentCategory}
-Original hook style: ${dna?.hookBreakdown?.type}
-Target audience: ${dna?.targetAudience?.who} — wants ${dna?.targetAudience?.desire}
-Source summary: ${dna?.contentSummary}
-
-Return a JSON array of 10 objects with this shape:
-[
-  { "type": "Question | Shocking Stat | Bold Claim | Pattern Interrupt | Story Open | Curiosity Gap | FOMO | Contrarian | Listicle | Confession", "text": "the hook (1–2 sentences)", "why": "one line — why it works" }
-]
-Each hook must use a different type. Be punchy and specific. No emojis at the start.`;
-
-    const text = await callClaude({ system: HOOK_LAB_SYSTEM, user, maxTokens: 2500 });
-    const hooks = parseJsonish<any[]>(text);
-
-    // Persist as multiplied_content rows for history
-    if (Array.isArray(hooks) && hooks.length > 0) {
-      const rows = hooks.map((h: any) => ({
-        analysis_id: data.analysisId,
-        user_id: userId,
-        format: "hook",
-        content: JSON.stringify(h),
-      }));
-      await supabase.from("multiplied_content").insert(rows);
-    }
-
-    return { hooks };
-  });
+export const generateHooks = runHookLab;
 
 // ============================================================
 // Regenerate clones using the user's brand preferences
@@ -803,8 +728,6 @@ export const regenerateClonesWithPreferences = createServerFn({ method: "POST" }
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
 
     const system = `You are an expert Instagram content creator. Generate content variations SPECIFICALLY tailored to the user's niche, goals, and audience — not just inspired by the source post. The user's preferences OVERRIDE the source post's niche. If the source post is about K-Pop and the user's niche is fitness, generate fitness content using the SAME psychological hooks and content structure. Return ONLY a JSON array — no prose, no markdown fences.`;
 
@@ -845,15 +768,9 @@ Return ONLY a JSON array with this shape (no wrapping object):
   }
 ]`;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 25000);
-    let parsed: any[];
-    try {
-      const { text } = await generateText({ model, system, prompt, abortSignal: controller.signal });
-      parsed = parseJsonish<any[]>(text);
-    } finally {
-      clearTimeout(timer);
-    }
+    const ctx=await buildCopyContext(data.analysisId,userId,undefined,prefs);
+    const cloneSchema=z.array(z.object({versionNumber:z.number(),angleType:z.string(),angleLabel:z.string(),hook:z.string(),angle:z.string(),storyStructure:z.string(),caption:z.string(),visualDirection:z.string(),cta:z.string()}));
+    const {value:parsed}=await copyJson(cloneSchema,`${prompt}\n${contextPrompt(ctx)}`,system,8000);
     if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("AI returned no clones");
 
     // Wipe + replace clones for this analysis
@@ -963,8 +880,8 @@ export const multiplyContent = createServerFn({ method: "POST" })
     }
 
     const prompt = multiplyPrompt(data.format, analysis.dna_analysis, clone);
-    const text = await callClaude({ system: MULTIPLY_SYSTEM, user: prompt, maxTokens: 2500 });
-    const parsed = parseJsonish<{ format: string; content: string }>(text);
+    const ctx=await buildCopyContext(data.analysisId,userId);
+    const {value:parsed}=await copyJson(z.object({format:z.string(),content:z.string()}),`${prompt}\n${contextPrompt(ctx)}`,MULTIPLY_SYSTEM,5000);
 
     const { data: row, error } = await supabase
       .from("multiplied_content")
@@ -1018,8 +935,7 @@ Rules:
 - Cluster similar themes loosely, but no two identical hooks.
 - No emojis at the start of hooks.`;
 
-    const text = await callClaude({ system: CALENDAR_SYSTEM, user: prompt, maxTokens: 8000 });
-    const items = parseJsonish<any[]>(text);
+    const {value:items}=await copyJson(z.array(z.object({dayOffset:z.number(),postType:z.string(),hook:z.string(),caption:z.string(),visualIdea:z.string()})),prompt,CALENDAR_SYSTEM,16000);
     if (!Array.isArray(items) || items.length === 0) throw new Error("Empty calendar response");
 
     const start = data.startDate ? new Date(data.startDate) : new Date();

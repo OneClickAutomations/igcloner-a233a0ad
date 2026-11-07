@@ -57,6 +57,20 @@
       "when": 1793951578118,
       "tag": "0007_rights_confirmations_and_image_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794089391038,
+      "tag": "0008_copy_runs_and_credit_reasons",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794089435897,
+      "tag": "0009_copy_sweep_debit_guard",
+      "breakpoints": true
     }
   ]
 }

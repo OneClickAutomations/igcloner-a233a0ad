@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CREDIT_BALANCE_KEY } from "@/lib/credits";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -92,6 +93,7 @@ function designBriefText(doc: CarouselDoc): string {
 }
 
 export function CarouselStudio() {
+  const creditQueryClient=useQueryClient();
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/studio/carousel" });
   const projectId = (search as any)?.projectId as string | undefined;
@@ -206,16 +208,19 @@ export function CarouselStudio() {
     if (!active) return;
     setImgBusy(active.index);
     try {
+      if(doc) await saveFn({data:{projectId,carousel:doc}});
       const res: any = await slideImageFn({
         data: { projectId, slideIndex: active.index, extraDirection: imgDirection || undefined },
       });
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
       if (updated) setDoc(updated);
-      toast.success(`Slide ${active.index} image generated`);
+      if(res.needsLook)toast.warning(`Slide ${active.index} needs a look — credit refunded`);
+      else toast.success(`Slide ${active.index} image generated`);
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {
       setImgBusy(null);
+      creditQueryClient.invalidateQueries({queryKey:CREDIT_BALANCE_KEY});
     }
   };
 
@@ -231,6 +236,7 @@ export function CarouselStudio() {
     if (!window.confirm(confirmMsg)) return;
 
     setBatchBusy(true);
+    await saveFn({data:{projectId,carousel:doc}});
     setBatchProgress({ done: 0, total: targets.length });
     let failures = 0;
     for (let i = 0; i < targets.length; i++) {
@@ -243,11 +249,13 @@ export function CarouselStudio() {
         });
         const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
         if (updated) setDoc(updated);
+        if(res.needsLook){failures++;toast.warning(`Slide ${slide.index} text needs a look — credit refunded`);}
       } catch (e: any) {
         failures++;
         toast.error(`Slide ${slide.index}: ${e?.message || "failed"}`);
       } finally {
         setBatchProgress({ done: i + 1, total: targets.length });
+        creditQueryClient.invalidateQueries({queryKey:CREDIT_BALANCE_KEY});
       }
     }
     setImgBusy(null);

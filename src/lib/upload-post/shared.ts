@@ -38,28 +38,36 @@ export interface PlatformCapability {
   requiresSelector: "facebook_page_id" | "pinterest_default_board_id" | null;
   /** Hard caption character ceiling for the platform, if any. */
   maxCaptionChars?: number;
+  visibleChars?: number;
+  captionAimChars?: number;
+  maxTitleChars?: number;
+  maxDescriptionChars?: number;
+  minHashtags?: number;
+  maxHashtags?: number;
   /** True if Upload-Post exposes no analytics for this platform. */
   noAnalytics?: boolean;
 }
 
 // Verified against the Upload-Post platform/endpoint support matrix.
 export const PLATFORM_CAPABILITY_MATRIX: Record<PublishingPlatform, PlatformCapability> = {
-  instagram: { video: true, photo: true, text: false, requiresSelector: null },
-  tiktok: { video: true, photo: true, text: false, requiresSelector: null },
-  youtube: { video: true, photo: false, text: false, requiresSelector: null },
-  facebook: { video: true, photo: true, text: true, requiresSelector: "facebook_page_id" },
+  instagram: { video: true, photo: true, text: false, requiresSelector: null, maxCaptionChars:2200, visibleChars:125, minHashtags:5, maxHashtags:12 },
+  // Conservative video-compatible copy; TikTok photo API separately permits 4000 descriptions / 90 titles.
+  tiktok: { video: true, photo: true, text: false, requiresSelector: null, maxCaptionChars:2200, visibleChars:150, minHashtags:3, maxHashtags:5 },
+  youtube: { video: true, photo: false, text: false, requiresSelector: null, maxCaptionChars:5000, maxTitleChars:100, maxDescriptionChars:5000, maxHashtags:3 },
+  facebook: { video: true, photo: true, text: true, requiresSelector: "facebook_page_id", captionAimChars:500, maxHashtags:0 },
   // Org URN is optional — personal profile is the default destination.
-  linkedin: { video: true, photo: true, text: true, requiresSelector: null },
-  x: { video: true, photo: true, text: true, requiresSelector: null },
-  threads: { video: true, photo: true, text: true, requiresSelector: null },
+  linkedin: { video: true, photo: true, text: true, requiresSelector: null, maxCaptionChars:3000, visibleChars:210, minHashtags:3, maxHashtags:5 },
+  x: { video: true, photo: true, text: true, requiresSelector: null, maxCaptionChars:280, maxHashtags:2 },
+  threads: { video: true, photo: true, text: true, requiresSelector: null, maxCaptionChars:500, maxHashtags:1 },
   pinterest: {
     video: true,
     photo: true,
     text: false,
     requiresSelector: "pinterest_default_board_id",
+    maxCaptionChars:500, maxDescriptionChars:500, maxTitleChars:100, maxHashtags:0,
   },
-  bluesky: { video: true, photo: true, text: true, requiresSelector: null },
-  reddit: { video: false, photo: false, text: true, requiresSelector: null },
+  bluesky: { video: true, photo: true, text: true, requiresSelector: null, maxCaptionChars:300, maxHashtags:2 },
+  reddit: { video: false, photo: false, text: true, requiresSelector: null, maxTitleChars:300, maxHashtags:0 },
   discord: {
     video: true,
     photo: true,

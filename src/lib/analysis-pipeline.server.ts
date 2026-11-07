@@ -7,6 +7,7 @@
 // bucket, never from expiring CDN links (old analyses fall back, labelled).
 // Clone versions are NOT generated here — see generateCloneVersions.
 import { MEDIUM_CATEGORIES_PROMPT } from "@/lib/medium";
+import { copyJson } from "./copy-engine.server";
 import {
   CloneSetSchema, DATA_RULE, SlideBatchSchema, SynthesisSchema, VideoEvidenceSchema, buildBlueprint, computePerformance,
   dedupeLimitations, deriveLegacyForensics, deriveLimitations, normalizeForensics, parseWithRepair, sanitizeSlides,
@@ -361,8 +362,6 @@ ${wrapData("transcript", input.transcript ? input.transcript.slice(0, 4000) : "n
 
 Write 5 versions in this order: direct, contrarian, story, authority, curiosity. Each must reference the real source hook/caption/transcript and keep the source's hook mechanism and rhythm, but every hook must be worded differently from the source and from the other versions (no repeating the source's first line verbatim). Keep the source's rhythm (line breaks, emoji density, CTA style), and include a complete ready-to-post caption.
 {"clones":[{"versionNumber":1-5,"angleType":"direct"|"contrarian"|"story"|"authority"|"curiosity","angleLabel":"Direct Improvement"|"Contrarian Angle"|"Storytelling Angle"|"Authority Angle"|"Curiosity Gap","hook":string,"angle":string,"storyStructure":string,"caption":string,"visualDirection":string,"cta":string}]}`;
-  const call = async (p: string) => (await claudeCall(CLONE_SYSTEM, [{ type: "text", text: p }], 8000, "medium")).text;
-  const first = await call(prompt);
-  const { value } = await parseWithRepair(CloneSetSchema, first, (issues, bad) => call(`Fix this JSON:\n${issues}\n\n${bad}\n\nReturn the corrected JSON only.`));
+  const { value } = await copyJson(CloneSetSchema,prompt,CLONE_SYSTEM,10000);
   return value.clones;
 }

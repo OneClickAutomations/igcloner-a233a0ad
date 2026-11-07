@@ -8,6 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
+import { CopyWorkbench } from "@/components/CopyWorkbench";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
 import { getCreditBalance } from "@/lib/credits.functions";
 import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
@@ -476,6 +477,7 @@ export function AppPage() {
             )}
 
             {analysisId && <CloneVersionsPanel analysisId={analysisId} clones={clones} onClones={setClones} onCredits={refreshCredits} />}
+            {analysisId && <CopyWorkbench analysisId={analysisId} projects={analysisProjects} />}
 
             {analysisId && <IntentFlow analysisId={analysisId} />}
 

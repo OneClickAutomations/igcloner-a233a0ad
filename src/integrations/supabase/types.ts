@@ -534,6 +534,69 @@ export type Database = {
           },
         ]
       }
+      copy_runs: {
+        Row: {
+          action: string
+          analysis_id: string | null
+          attempt_id: string
+          cache_key: string
+          created_at: string
+          error_message: string | null
+          id: string
+          output: Json | null
+          project_id: string | null
+          status: string
+          updated_at: string
+          usage: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          analysis_id?: string | null
+          attempt_id?: string
+          cache_key: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          output?: Json | null
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          analysis_id?: string | null
+          attempt_id?: string
+          cache_key?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          output?: Json | null
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "copy_runs_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "copy_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_ledger: {
         Row: {
           attempt_id: string | null
@@ -1455,6 +1518,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_copy_run: {
+        Args: {
+          p_action: string
+          p_analysis_id?: string
+          p_cache_key: string
+          p_project_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       credit_balance: {
         Args: { p_kind?: string; p_user_id: string }
         Returns: number
@@ -1491,6 +1564,7 @@ export type Database = {
         Returns: Json
       }
       sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
+      sweep_stale_copy_runs: { Args: never; Returns: number }
       sweep_stale_research_reports: {
         Args: { p_user_id?: string }
         Returns: Json
