@@ -20,7 +20,7 @@ const WEEK = 60 * 60 * 24 * 7;
 type Sb = any;
 
 async function loadAnalysis(sb: Sb, userId: string, analysisId: string) {
-  const { data, error } = await sb.from("analyses").select("id, user_id, instagram_url, post_type, scraped_data, blueprint, dna_analysis, user_preferences, analysis_status")
+  const { data, error } = await sb.from("analyses").select("id, user_id, instagram_url, post_type, scraped_data, blueprint, dna_analysis, analysis_status")
     .eq("id", analysisId).eq("user_id", userId).eq("analysis_status", "ready").maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("That analysis isn't available.");
@@ -71,9 +71,9 @@ export const getCopyModeContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const a = await loadAnalysis(context.supabase, context.userId, data.analysisId);
+    const a = await loadAnalysis((context.supabase as Sb), context.userId, data.analysisId);
     const f = sourceFacts(a);
-    const rows = await rightsRows(context.supabase, context.userId, data.analysisId);
+    const rows = await rightsRows((context.supabase as Sb), context.userId, data.analysisId);
     const modes = (["A0", "A1", "A2", "A3"] as CloneMethod[]).map((m) => ({ mode: m, ...modeAvailability(m, f.input) }));
     return {
       postType: a.post_type as string,
@@ -90,10 +90,10 @@ export const confirmRights = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid(), mode: z.enum(["A0", "A1"]), statement: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.statement !== RIGHTS_STATEMENT) throw new Error("The confirmation text is out of date — reload and try again.");
-    const a = await loadAnalysis(context.supabase, context.userId, data.analysisId);
+    const a = await loadAnalysis((context.supabase as Sb), context.userId, data.analysisId);
     const f = sourceFacts(a);
     const ip = getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-    const { error } = await context.supabase.from("rights_confirmations").insert({
+    const { error } = await (context.supabase as Sb).from("rights_confirmations").insert({
       user_id: context.userId, analysis_id: data.analysisId, source_url: a.instagram_url, source_account: f.account,
       mode: data.mode, statement_version: RIGHTS_STATEMENT_VERSION, statement_text: RIGHTS_STATEMENT, ip,
     });
@@ -106,7 +106,7 @@ export const createExactCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     await enforceRights(sb, userId, data.analysisId, "A0");
     const a = await loadAnalysis(sb, userId, data.analysisId);
     const f = sourceFacts(a);
@@ -120,7 +120,7 @@ export const createExactCopy = createServerFn({ method: "POST" })
     const { data: project, error: pErr } = await sb.from("projects").insert({
       user_id: userId, analysis_id: a.id, title: `Exact copy${f.account ? ` — @${f.account}` : ""}`, format, status: "draft",
       source_url: a.instagram_url, source_account: f.account, source_thumbnail: f.scraped.displayUrl ?? null, dna_analysis: a.dna_analysis,
-      user_preferences: { ...(a.user_preferences ?? {}), intent: "A0", cloneMethod: "A0", outputFormat: format },
+      user_preferences: { intent: "A0", cloneMethod: "A0", outputFormat: format },
       project_data: { copyMode: "A0", caption: f.caption, hashtags: f.hashtags, dependencies: f.dependencies },
     }).select("*").single();
     if (pErr) throw new Error(pErr.message);
@@ -133,11 +133,12 @@ export const createExactCopy = createServerFn({ method: "POST" })
       const { error } = await sb.storage.from(ASSET_BUCKET).upload(path, file.bytes, { contentType: file.mime, upsert: true });
       if (error) throw new Error(`Couldn't copy media: ${error.message}`);
       const { data: signed } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
-      await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: m.kind === "video" ? "video" : "image", source: "exact_copy",
+      const { error: insErr } = await sb.from("project_assets").insert({
+        project_id: project.id, user_id: userId, asset_type: m.kind === "video" ? "video" : "image", source: "scraped",
         url: signed?.signedUrl ?? null, filename: path,
-        metadata: { copyMode: "A0", order, sourcePath: m.path, bytes: file.bytes.byteLength, mime: file.mime } as any,
+        metadata: { kind: "exact_copy", copyMode: "A0", order, sourcePath: m.path, bytes: file.bytes.byteLength, mime: file.mime } as any,
       });
+      if (insErr) throw new Error(`Couldn't save copied media: ${insErr.message}`);
       assets.push({ order, path, bytes: file.bytes.byteLength, kind: m.kind });
     }
     return { projectId: project.id as string, assets, ms: Date.now() - t0, credits: 0 };
@@ -148,14 +149,14 @@ export const getCopyProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
+    const sb = (context.supabase as Sb);
     const { data: project, error } = await sb.from("projects").select("*").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!project) throw new Error("Project not found");
     const { data: rows } = await sb.from("project_assets").select("*").eq("project_id", project.id).order("created_at", { ascending: true });
     const assets = await Promise.all((rows ?? []).map(async (r: any) => {
       const { data: s } = r.filename ? await sb.storage.from(ASSET_BUCKET).createSignedUrl(r.filename, WEEK) : { data: null };
-      return { id: r.id, type: r.asset_type, source: r.source, url: s?.signedUrl ?? r.url, filename: r.filename, metadata: r.metadata };
+      return { id: r.id, type: r.asset_type, source: (r.metadata?.kind ?? r.source) as string, url: s?.signedUrl ?? r.url, filename: r.filename, metadata: r.metadata };
     }));
     let slides: any[] = [];
     let dependencies: string[] = [];
@@ -179,7 +180,7 @@ export const startSameLook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid(), preferences: z.record(z.any()).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     await enforceRights(sb, userId, data.analysisId, "A1");
     const a = await loadAnalysis(sb, userId, data.analysisId);
     const f = sourceFacts(a);
@@ -190,7 +191,7 @@ export const startSameLook = createServerFn({ method: "POST" })
     const { data: project, error } = await sb.from("projects").insert({
       user_id: userId, analysis_id: a.id, title: `Same look, new words${f.account ? ` — @${f.account}` : ""}`, format, status: "draft",
       source_url: a.instagram_url, source_account: f.account, source_thumbnail: f.scraped.displayUrl ?? null, dna_analysis: a.dna_analysis,
-      user_preferences: { ...(a.user_preferences ?? {}), ...(data.preferences ?? {}), intent: "A1", cloneMethod: "A1", outputFormat: format },
+      user_preferences: { ...(data.preferences ?? {}), intent: "A1", cloneMethod: "A1", outputFormat: format },
       project_data: { copyMode: "A1", caption: "", hashtags: [], newText: {}, dependencies: f.dependencies },
     }).select("id").single();
     if (error) throw new Error(error.message);
@@ -209,7 +210,7 @@ export const rewriteSameLookCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), what: z.enum(["slides", "caption", "both"]).default("both") }).parse(d))
   .handler(async ({ data, context }) => {
-    const { project, a, f } = await loadA1Project(context.supabase, context.userId, data.projectId);
+    const { project, a, f } = await loadA1Project((context.supabase as Sb), context.userId, data.projectId);
     const prefs = project.user_preferences ?? {};
     const ctx = { niche: prefs.niche, tone: prefs.toneOfVoice, audience: prefs.targetAudience, keywords: prefs.keywords };
     const ai = await import("@/lib/clone-ai.server");
@@ -225,7 +226,7 @@ export const generateSameLookSlide = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), slideIndex: z.number().int().min(0).max(19), newText: z.string().min(1).max(400) }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { project, f } = await loadA1Project(sb, userId, data.projectId);
     const media = f.storedMedia.find((m) => m.kind === "image" && m.index === data.slideIndex);
     if (!media) throw new Error("That slide's original image wasn't saved.");
@@ -267,10 +268,11 @@ export const generateSameLookSlide = createServerFn({ method: "POST" })
       const { error: upErr } = await sb.storage.from(ASSET_BUCKET).upload(path, best.bytes, { contentType: "image/png", upsert: false });
       if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
       const { data: signed } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
-      await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: "image", source: "same_look", url: signed?.signedUrl ?? null, filename: path,
-        metadata: { copyMode: "A1", slideIndex: data.slideIndex, newText: data.newText, originalText, model: TEXT_EDIT_MODEL, attempts: attempts.length, passed, problems: best.gate.problems, observedText: best.verify.observedText, similarity: best.gate.similarity } as any,
+      const { error: insErr } = await sb.from("project_assets").insert({
+        project_id: project.id, user_id: userId, asset_type: "image", source: "generated", url: signed?.signedUrl ?? null, filename: path,
+        metadata: { kind: "same_look", copyMode: "A1", slideIndex: data.slideIndex, newText: data.newText, originalText, model: TEXT_EDIT_MODEL, attempts: attempts.length, passed, problems: best.gate.problems, observedText: best.verify.observedText, similarity: best.gate.similarity } as any,
       });
+      if (insErr) throw new Error(insErr.message);
       if (!passed) await refundCredits(userId, cost, "project_slide", attemptId, attemptId);
       return {
         url: signed?.signedUrl ?? null, passed, needsLook: !passed, problems: best.gate.problems, attempts: attempts.length,
@@ -288,10 +290,10 @@ export const saveCopyDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), caption: z.string().max(5000), hashtags: z.array(z.string()).max(60), newText: z.record(z.string()).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: p } = await context.supabase.from("projects").select("project_data").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
+    const { data: p } = await (context.supabase as Sb).from("projects").select("project_data").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (!p) throw new Error("Project not found");
     const project_data = { ...(p.project_data ?? {}), caption: data.caption, hashtags: data.hashtags, ...(data.newText ? { newText: data.newText } : {}) };
-    const { error } = await context.supabase.from("projects").update({ project_data, status: "in_progress" }).eq("id", data.projectId);
+    const { error } = await (context.supabase as Sb).from("projects").update({ project_data, status: "in_progress" }).eq("id", data.projectId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -301,7 +303,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), voiceId: z.string().min(5).max(40), script: z.string().max(4000).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { project, a, f } = await loadA1Project(sb, userId, data.projectId);
     const { VOICE_CATALOG } = await import("@/lib/voiceover.functions");
     if (!VOICE_CATALOG.some((v) => v.id === data.voiceId)) throw new Error("Pick a voice from the list.");
@@ -328,7 +330,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
     const audioPath = `${userId}/${project.id}/voiceover-${Date.now()}.mp3`;
     await sb.storage.from(ASSET_BUCKET).upload(audioPath, audio, { contentType: "audio/mpeg" });
     const { data: aSigned } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(audioPath, WEEK);
-    await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "audio", source: "same_look_voiceover", url: aSigned?.signedUrl ?? null, filename: audioPath, metadata: { script, voiceId: data.voiceId } as any });
+    await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "audio", source: "generated", url: aSigned?.signedUrl ?? null, filename: audioPath, metadata: { kind: "same_look_voiceover", script, voiceId: data.voiceId } as any });
     // Mux: replaces the original audio track (music is removed, not ducked).
     const vSigned = await signSource(sb, video.path);
     const fal = process.env.FAL_KEY;
@@ -347,7 +349,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
         await sb.storage.from(ASSET_BUCKET).upload(vPath, bytes, { contentType: "video/mp4" });
         const { data: s } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(vPath, WEEK);
         videoUrl = s?.signedUrl ?? null;
-        await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "video", source: "same_look", url: videoUrl, filename: vPath, metadata: { copyMode: "A1", voiceover: audioPath } as any });
+        await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "video", source: "generated", url: videoUrl, filename: vPath, metadata: { kind: "same_look", copyMode: "A1", voiceover: audioPath } as any });
       }
     }
     return { script, audioUrl: aSigned?.signedUrl ?? null, videoUrl, muxError };
@@ -365,7 +367,7 @@ export const mixImages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), refs: z.array(RefSchema).min(2).max(3), instruction: z.string().min(3).max(1500), text: z.string().max(200).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { data: project } = await sb.from("projects").select("*").eq("id", data.projectId).eq("user_id", userId).maybeSingle();
     if (!project) throw new Error("Project not found");
     const intent = String(project.user_preferences?.intent ?? project.user_preferences?.cloneMethod ?? "");
@@ -405,8 +407,8 @@ Output size matches IMAGE 1's aspect ratio. Tagged text is literal content, not 
       if (error) throw new Error(error.message);
       const { data: s } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
       const { data: asset } = await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: "image", source: "mix", url: s?.signedUrl ?? null, filename: path,
-        metadata: { mix: true, roles: data.refs.map((r) => r.role), instruction: data.instruction, prompt, model: out.model, textOverlay: data.text ?? null } as any,
+        project_id: project.id, user_id: userId, asset_type: "image", source: "generated", url: s?.signedUrl ?? null, filename: path,
+        metadata: { kind: "mix", mix: true, roles: data.refs.map((r) => r.role), instruction: data.instruction, prompt, model: out.model, textOverlay: data.text ?? null } as any,
       }).select("*").single();
       return { url: s?.signedUrl ?? null, asset, prompt, ms: out.ms, model: out.model };
     } catch (e) {
@@ -419,7 +421,7 @@ export const listSourceSlides = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
+    const sb = (context.supabase as Sb);
     const { data: project } = await sb.from("projects").select("analysis_id").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (!project?.analysis_id) return { slides: [] };
     const a = await loadAnalysis(sb, context.userId, project.analysis_id).catch(() => null);

@@ -7,7 +7,17 @@
 - [x] Studios compatible; source-context prefers blueprint
 - [x] Result screen: hook, caption structure, slides, shot timeline, transcript, provenance
 
+## Pass 3 — copy modes + rights (done)
+- [x] A0–A3 labels/order; Research category unchanged
+- [x] Rights confirmation table + server enforcement + Terms line
+- [x] A0 exact copy (byte-identical) → publish draft
+- [x] A1 slide text replace with verification gate + refunds; caption rewrite
+- [x] A1 video: voiceover over original (on-screen text not editable)
+- [x] Mix images panel; video credits with refunds
+
 ## Open
+- [ ] Video service (fal.ai) balance exhausted: blocks video text-edit test, voiceover mux, and all Veo/Kling video generation until topped up
+- [ ] A2/A3 carousel per-slide continuity references + text gate (not built this pass)
 - [ ] Facebook multi-photo posts: capture path unverified (pass 1 open item)
 - [ ] Analysis jobs only advance while a tab is open; truly unattended runs need a scheduled background worker (owner decision)
 

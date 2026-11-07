@@ -1,5 +1,7 @@
 # Project architecture
-- Clone mode names and summaries share a browser-safe display mapping keyed by unchanged A1/A2/A3 IDs, preserving saved preferences and generation behavior when labels change.
+- Clone mode names and summaries share a browser-safe display mapping keyed by unchanged A0–A3 IDs, preserving saved preferences and generation behavior when labels change.
+- Modes that reuse source media (A0/A1) require a versioned rights_confirmations row, checked server-side in every entry point (enforceRights), never only in the UI.
+- Same-look slide edits use gateway image edits with source-matched size, then a Claude vision gate (exact normalized text, no residual text, same composition) with free retries and a per-attempt refund when flagged.
 - Intel analytics are calculated and evidence-checked in a browser-safe pure module before persistence; AI supplies interpretation, not numerical truth.
 - Intel AI requests use native streaming Claude Messages in a server-only helper; credentials and prompts never enter browser bundles.
 - Intel-to-Studio handoff creates ordinary saved projects using existing project fields and routes, so other studio modules need no changes.
