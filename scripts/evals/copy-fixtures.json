@@ -1,0 +1,2338 @@
+{
+  "niches": [
+    "creator productivity",
+    "space education"
+  ],
+  "analyses": [
+    {
+      "label": "nasajohnson",
+      "postType": "Reel",
+      "source": {
+        "dna_analysis": {
+          "analysisConfidence": 80,
+          "blueprint": {
+            "audio": {
+              "music": "unknown",
+              "pacingWordsPerMin": null,
+              "transcriptFull": null,
+              "voiceStyle": "None (no narration, text-driven)"
+            },
+            "caption": {
+              "cta": null,
+              "exact": "More power loading. \ud83d\udd0b\n\nToday, NASA astronaut Anil Menon and CSA (Canadian Space Agency) astronaut Joshua Kutryk conducted a spacewalk to install the 7th of 8 new roll out solar arrays. The final new array is slated to be installed during the Nov. 5 spacewalk, increasing the station\u2019s available power by up to 30%.",
+              "hashtags": []
+            },
+            "dependencies": [
+              "Access to real mission/event b-roll footage",
+              "Graphic design template for bold text overlays",
+              "Official branding assets for closing card"
+            ],
+            "kind": "reel",
+            "scenes": [
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Silhouette of the ISS against Earth's thin glowing atmospheric limb in space.",
+                "end": 3.9,
+                "onScreenText": [
+                  {
+                    "endSec": 3.9,
+                    "position": "center",
+                    "startSec": 0,
+                    "style": "",
+                    "text": "POWER UP\nUS SPACEWALK 100"
+                  }
+                ],
+                "spokenText": "",
+                "start": 0,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "tracking",
+                "description": "Spacewalker working attached to the robotic arm outside the ISS overlooking Earth.",
+                "end": 8.83,
+                "onScreenText": [
+                  {
+                    "endSec": 8.83,
+                    "position": "center",
+                    "startSec": 4.5,
+                    "style": "",
+                    "text": "SPACEWALKERS:\nNASA ASTRONAUT\nANIL MENON\nCSA ASTRONAUT\nJOSH KUTRYK"
+                  }
+                ],
+                "spokenText": "",
+                "start": 3.9,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Astronaut in spacesuit operating near ISS truss structures and solar panels.",
+                "end": 13.83,
+                "onScreenText": [
+                  {
+                    "endSec": 13.83,
+                    "position": "top-left",
+                    "startSec": 9,
+                    "style": "",
+                    "text": "SPOT THE SPACEWALKER!"
+                  },
+                  {
+                    "endSec": 13.83,
+                    "position": "center",
+                    "startSec": 9.5,
+                    "style": "",
+                    "text": "MISSION:\nINSTALL & DEPLOY\nA NEW ROLL OUT\nSOLAR ARRAY"
+                  }
+                ],
+                "spokenText": "",
+                "start": 8.83,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Wide-angle camera shot showing the cylindrical rolled-up new solar array assembly.",
+                "end": 17.67,
+                "onScreenText": [
+                  {
+                    "endSec": 17.67,
+                    "position": "top-right",
+                    "startSec": 14,
+                    "style": "",
+                    "text": "LEGACY ARRAYS"
+                  },
+                  {
+                    "endSec": 17.67,
+                    "position": "center-left",
+                    "startSec": 14.5,
+                    "style": "",
+                    "text": "NEW ARRAY\n(STILL ROLLED)"
+                  }
+                ],
+                "spokenText": "",
+                "start": 13.83,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Time-lapse footage of ISS exterior truss modules before array rollout.",
+                "end": 21.5,
+                "onScreenText": [
+                  {
+                    "endSec": 21.5,
+                    "position": "top-right",
+                    "startSec": 17.67,
+                    "style": "",
+                    "text": "5X SPEED"
+                  },
+                  {
+                    "endSec": 21.5,
+                    "position": "center",
+                    "startSec": 18,
+                    "style": "",
+                    "text": "MISSION\nACCOMPLISHED"
+                  }
+                ],
+                "spokenText": "",
+                "start": 17.67,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Time-lapse sequence showing the new solar array rolling open into space above Earth.",
+                "end": 26.9,
+                "onScreenText": [
+                  {
+                    "endSec": 26.9,
+                    "position": "top-right",
+                    "startSec": 21.5,
+                    "style": "",
+                    "text": "5X SPEED"
+                  },
+                  {
+                    "endSec": 26.9,
+                    "position": "bottom-center",
+                    "startSec": 24.5,
+                    "style": "",
+                    "text": "SPACEWALK TIME:\n7 HOURS, 11 MINUTES"
+                  }
+                ],
+                "spokenText": "",
+                "start": 21.5,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "Detailed perspective of the fully deployed solar array surface against space background.",
+                "end": 38.83,
+                "onScreenText": [
+                  {
+                    "endSec": 38.83,
+                    "position": "top-right",
+                    "startSec": 26.9,
+                    "style": "",
+                    "text": "5X SPEED"
+                  },
+                  {
+                    "endSec": 32.5,
+                    "position": "center",
+                    "startSec": 27.5,
+                    "style": "",
+                    "text": "EACH NEW ARRAY\nGENERATES AROUND 8\nKILOWATTS OF\nELECTRICITY."
+                  },
+                  {
+                    "endSec": 38.5,
+                    "position": "center",
+                    "startSec": 33,
+                    "style": "",
+                    "text": "ONE MORE ARRAY\nINSTALL UNTIL UPGRADES\nARE COMPLETE,\nTARGETED FOR NOV. 5."
+                  }
+                ],
+                "spokenText": "",
+                "start": 26.9,
+                "transition": "cut"
+              },
+              {
+                "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+                "camera": "static",
+                "description": "NASA classic meatball logo centered on a black screen.",
+                "end": 41,
+                "onScreenText": [],
+                "spokenText": "",
+                "start": 38.83,
+                "transition": "cut"
+              }
+            ],
+            "slides": []
+          },
+          "captionDNA": {
+            "bodyPattern": "Short hook line followed by factual paragraph naming astronauts, task, and upcoming milestone",
+            "ctaLine": "",
+            "ctaType": "None",
+            "emojiUsage": "Single battery emoji \ud83d\udd0b reinforcing 'power' theme",
+            "hashtagPlacement": "None",
+            "hookLine": "More power loading. \ud83d\udd0b",
+            "keywordTrigger": "power",
+            "lineBreakRhythm": "Hook line separated by blank line from detailed paragraph",
+            "persuasionStyle": "Credibility via factual detail and mission significance",
+            "score": 6,
+            "structure": "Standard",
+            "tone": "Informative, celebratory"
+          },
+          "channelIntelligence": {
+            "audienceLanguage": "Technical but accessible aerospace terminology (e.g., 'roll out solar arrays', 'spacewalk')",
+            "contentStrengths": [
+              "High-quality official space footage",
+              "Consistent educational text-overlay format",
+              "Strong institutional credibility"
+            ],
+            "primaryNiche": "Space exploration / NASA mission updates"
+          },
+          "contentCategory": "Educational",
+          "contentMedium": {
+            "description": "B-roll space footage and time-lapse sequences overlaid with bold informational text captions, scored to upbeat electronic music, no spoken narration.",
+            "mediumIsTheMessage": true,
+            "mediumSignals": [
+              "Uses onScreenText overlays throughout (observed, multiple timestamps)",
+              "5X speed labels indicate time-lapse editing (observed, 0:17, 0:21, 0:26)",
+              "No speaker on camera, no transcript (observed, hasSpeech:false)"
+            ],
+            "primary": "text-on-video",
+            "replicationInstructions": "Use real mission footage/b-roll, overlay short punchy white bold text callouts timed to each shot, keep cuts every 4-6 seconds, use 5X speed-up for long processes, end on a branded logo card.",
+            "secondary": "text-overlay graphics"
+          },
+          "contentSummary": "NASA reel documenting a 7-hour 11-minute ISS spacewalk by astronauts Anil Menon and Joshua Kutryk to install the 7th of 8 new roll-out solar arrays, with b-roll of the array rolling open and stats on power generation.",
+          "emotionalArchitecture": {
+            "curiosity": 7,
+            "fomo": 3,
+            "inspiration": 8,
+            "relatability": 4,
+            "trust": 8,
+            "urgency": 4
+          },
+          "engagementDrivers": [
+            "Awe-inspiring space visuals",
+            "Interactive 'spot the spacewalker' prompt",
+            "Concrete power stats",
+            "Milestone/countdown framing (7th of 8 arrays)"
+          ],
+          "forensics": {
+            "provenance": [
+              {
+                "evidence": "0:00",
+                "field": "Hook text",
+                "provenance": "observed",
+                "value": "POWER UP US SPACEWALK 100"
+              },
+              {
+                "evidence": "4:50",
+                "field": "Astronaut names overlay",
+                "flagged": "Evidence \"4:50\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "NASA ASTRONAUT ANIL MENON, CSA ASTRONAUT JOSH KUTRYK"
+              },
+              {
+                "evidence": "0:24-0:27",
+                "field": "Spacewalk duration",
+                "provenance": "observed",
+                "value": "7 HOURS, 11 MINUTES"
+              },
+              {
+                "evidence": "0:27-0:32",
+                "field": "Power output stat",
+                "provenance": "observed",
+                "value": "EACH NEW ARRAY GENERATES AROUND 8 KILOWATTS OF ELECTRICITY"
+              },
+              {
+                "evidence": "0:33-0:38",
+                "field": "Next mission date",
+                "provenance": "observed",
+                "value": "ONE MORE ARRAY INSTALL UNTIL UPGRADES ARE COMPLETE, TARGETED FOR NOV. 5"
+              },
+              {
+                "evidence": "caption",
+                "field": "Caption power increase stat",
+                "provenance": "observed",
+                "value": "increasing the station's available power by up to 30%"
+              },
+              {
+                "evidence": "0:38.83-0:41",
+                "field": "Outro branding",
+                "provenance": "observed",
+                "value": "NASA classic meatball logo on black screen"
+              },
+              {
+                "evidence": "audio description",
+                "field": "Audio type",
+                "flagged": "Evidence \"audio description\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "Upbeat electronic synth instrumental, no spoken dialogue"
+              },
+              {
+                "evidence": "hasSpeech:false",
+                "field": "Speech presence",
+                "flagged": "Evidence \"hasSpeech:false\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "No speech detected in video"
+              },
+              {
+                "evidence": "0:17.67, 0:21.5, 0:26.9",
+                "field": "Speed manipulation",
+                "provenance": "observed",
+                "value": "5X speed used for time-lapse segments"
+              },
+              {
+                "evidence": "0:09",
+                "field": "Interactive prompt",
+                "provenance": "observed",
+                "value": "SPOT THE SPACEWALKER!"
+              },
+              {
+                "evidence": "metrics computation",
+                "field": "Engagement rate",
+                "provenance": "observed",
+                "value": "0.985% ER, score 49"
+              }
+            ],
+            "videoForensics": {
+              "audio": {
+                "audioVisualSync": "An upbeat, rhythmic electronic synth instrumental track.",
+                "musicEnergy": "medium",
+                "musicType": "music",
+                "voiceover": "none detected"
+              },
+              "hook": {
+                "audioHook": "An upbeat, rhythmic electronic synth instrumental track.",
+                "curiosityGap": "Combines a punchy title with an awe-inspiring silhouette shot of the ISS against Earth's glow to spark curiosity about the mission",
+                "element": "visual",
+                "exactVisibleText": "POWER UP\nUS SPACEWALK 100",
+                "openingAction": "Silhouette of the ISS against Earth's thin glowing atmospheric limb in space.",
+                "strength": 7,
+                "type": "bold text overlay on striking b-roll"
+              },
+              "pacing": {
+                "averageCutDuration": 5.13,
+                "bRollUsage": "7 of 8 shots b-roll",
+                "overall": "Medium-fast with varied shot lengths averaging ~5.1s",
+                "rhythmSynced": false,
+                "transitionTypes": "cut"
+              },
+              "performance": {
+                "commentTrigger": "Interactive 'spot the spacewalker' challenge inviting viewer participation",
+                "loopQuality": null,
+                "replayValue": null,
+                "saveValue": null,
+                "shareTrigger": "Impressive visuals of spacewalk and solar array deployment"
+              },
+              "structure": {
+                "act1": "Title hook",
+                "act2": "Astronaut/task intro",
+                "act3": "Deployment time-lapse",
+                "cta": "Centered NASA meatball logo on a black background at 00:39.",
+                "type": "Chronological mission recap"
+              },
+              "visual": {
+                "cameraMovements": "static, tracking",
+                "colorGrade": "Natural space tones, high contrast black/blue",
+                "productionQuality": "High, professional NASA production",
+                "shootingStyle": "Official NASA b-roll, static and tracking shots from station cameras",
+                "shotTypes": "b-roll, graphic"
+              }
+            }
+          },
+          "hookBreakdown": {
+            "exactText": "POWER UP\nUS SPACEWALK 100",
+            "improvement": "Could pose a direct question or tease the 30% power stat earlier to heighten curiosity",
+            "location": "visual",
+            "mechanism": "Combines a punchy title with an awe-inspiring silhouette shot of the ISS against Earth's glow to spark curiosity about the mission",
+            "score": 7,
+            "scoreReasoning": "Strong visual pairing and milestone framing, but text is generic NASA branding rather than a tailored curiosity hook (observed, 0:00-3.9)",
+            "type": "bold text overlay on striking b-roll",
+            "whatWorks": "Visually arresting Earth-limb shot paired with large bold text",
+            "whyItWorks": "Numbers ('100') and all-caps urgency phrasing signal milestone significance, prompting viewers to keep watching to learn what happened"
+          },
+          "limitations": [
+            "No transcript or spoken audio available, so emotional tone is inferred solely from visuals, text overlays, and music description"
+          ],
+          "monetizationPotential": "Low direct monetization; valuable for brand authority, public engagement, and STEM outreach rather than commerce",
+          "performanceBasis": {
+            "engagementRate": 0.985,
+            "formula": "ER = (likes 15401 + comments 162) / followers 1580731 \u00d7 100 = 0.985%; score = clamp(50 + 25\u00b7log2(ER)) = 49",
+            "score": 49
+          },
+          "performanceScore": 49,
+          "storyStructure": [
+            {
+              "purpose": "Establish mission milestone and setting",
+              "section": "Hook/Title",
+              "timing": "0:00-0:04"
+            },
+            {
+              "purpose": "Identify astronauts performing the task",
+              "section": "Spacewalker intro",
+              "timing": "0:04-0:09"
+            },
+            {
+              "purpose": "Show the installation task and engage viewer via game prompt",
+              "section": "Mission task explainer",
+              "timing": "0:09-0:18"
+            },
+            {
+              "purpose": "Deliver visual satisfaction of array unfurling via time-lapse",
+              "section": "Deployment payoff",
+              "timing": "0:18-0:27"
+            },
+            {
+              "purpose": "Educate on power output and tease future spacewalk",
+              "section": "Stats & next steps",
+              "timing": "0:27-0:39"
+            },
+            {
+              "purpose": "Reinforce NASA brand identity",
+              "section": "Branding outro",
+              "timing": "0:39-0:41"
+            }
+          ],
+          "targetAudience": {
+            "desire": "To understand and feel connected to real-time space station operations and engineering milestones",
+            "trigger": "Curiosity about how astronauts physically upgrade the ISS and fascination with visual space imagery",
+            "who": "Space enthusiasts, STEM followers, and general public interested in NASA missions"
+          },
+          "videoVisualDNA": {
+            "audioStyle": "Upbeat electronic synth instrumental, no narration",
+            "backgroundDescription": "Earth's atmospheric limb glowing blue against black space, ISS structural elements in foreground",
+            "backgroundType": "Space/Earth orbit",
+            "colorPalette": {
+              "accent": "white",
+              "approximateHex": [
+                "#000000",
+                "#1a3b5c",
+                "#ffffff"
+              ],
+              "dominant": "black",
+              "mood": "cosmic, awe-inspiring",
+              "secondary": "deep blue"
+            },
+            "contentFormat": "NASA mission recap b-roll reel",
+            "editingStyle": "Cut-based with time-lapse speed ramps (5X) for long duration events",
+            "lightingStyle": "Natural space lighting, high contrast between sunlit hardware and black void",
+            "paceAndEnergy": "Medium-fast, rhythmic edits matched to upbeat electronic track",
+            "platformAesthetic": "Institutional/educational Instagram Reel",
+            "productionLevel": "High (official NASA footage, well-edited overlays)",
+            "recreationInstructions": "Source real mission footage, apply bold white caption overlays per shot, intercut static and time-lapse clips, close on branded logo card, pair with energetic royalty-free instrumental.",
+            "subjectDescription": "Spacesuited astronauts working on ISS truss structures and solar arrays, shown via wide tracking and static shots",
+            "subjectType": "Astronauts and spacecraft hardware",
+            "textStyle": {
+              "animation": "static appear/disappear per shot",
+              "color": "white",
+              "fontSize": "large",
+              "fontStyle": "bold sans-serif caps",
+              "placement": "center, top-left, top-right, bottom-center",
+              "present": true
+            }
+          },
+          "visualStyle": {
+            "colorMood": "Deep space black and blue Earth glow",
+            "composition": "Wide b-roll shots with centered bold text overlays",
+            "editStyle": "Fast cuts with time-lapse segments and synced music",
+            "score": 8,
+            "textOverlay": "Heavy"
+          },
+          "whyItWorks": [
+            "Opens with bold graphic text 'POWER UP US SPACEWALK 100' over a striking ISS silhouette shot (0:00-3.9s), creating immediate curiosity about the mission number and stakes (observed, 0:00).",
+            "Interactive on-screen prompt 'SPOT THE SPACEWALKER!' turns passive viewing into a game, boosting watch time (observed, 0:09).",
+            "Time-lapse 5X speed footage of the array unfurling delivers a satisfying visual payoff compressed into seconds (observed, 0:21-0:27).",
+            "Concrete stats like '8 KILOWATTS OF ELECTRICITY' and '30% power increase' (caption) build credibility and shareability for a space-enthusiast audience (observed, 0:27-0:32; caption).",
+            "Clear mission continuity tease ('ONE MORE ARRAY... TARGETED FOR NOV. 5') drives anticipation for a follow-up post (observed, 0:33-0:38)."
+          ]
+        },
+        "blueprint": {
+          "audio": {
+            "music": "unknown",
+            "pacingWordsPerMin": null,
+            "transcriptFull": null,
+            "voiceStyle": "None (no narration, text-driven)"
+          },
+          "caption": {
+            "cta": null,
+            "exact": "More power loading. \ud83d\udd0b\n\nToday, NASA astronaut Anil Menon and CSA (Canadian Space Agency) astronaut Joshua Kutryk conducted a spacewalk to install the 7th of 8 new roll out solar arrays. The final new array is slated to be installed during the Nov. 5 spacewalk, increasing the station\u2019s available power by up to 30%.",
+            "hashtags": []
+          },
+          "dependencies": [
+            "Access to real mission/event b-roll footage",
+            "Graphic design template for bold text overlays",
+            "Official branding assets for closing card"
+          ],
+          "kind": "reel",
+          "scenes": [
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Silhouette of the ISS against Earth's thin glowing atmospheric limb in space.",
+              "end": 3.9,
+              "onScreenText": [
+                {
+                  "endSec": 3.9,
+                  "position": "center",
+                  "startSec": 0,
+                  "style": "",
+                  "text": "POWER UP\nUS SPACEWALK 100"
+                }
+              ],
+              "spokenText": "",
+              "start": 0,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "tracking",
+              "description": "Spacewalker working attached to the robotic arm outside the ISS overlooking Earth.",
+              "end": 8.83,
+              "onScreenText": [
+                {
+                  "endSec": 8.83,
+                  "position": "center",
+                  "startSec": 4.5,
+                  "style": "",
+                  "text": "SPACEWALKERS:\nNASA ASTRONAUT\nANIL MENON\nCSA ASTRONAUT\nJOSH KUTRYK"
+                }
+              ],
+              "spokenText": "",
+              "start": 3.9,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Astronaut in spacesuit operating near ISS truss structures and solar panels.",
+              "end": 13.83,
+              "onScreenText": [
+                {
+                  "endSec": 13.83,
+                  "position": "top-left",
+                  "startSec": 9,
+                  "style": "",
+                  "text": "SPOT THE SPACEWALKER!"
+                },
+                {
+                  "endSec": 13.83,
+                  "position": "center",
+                  "startSec": 9.5,
+                  "style": "",
+                  "text": "MISSION:\nINSTALL & DEPLOY\nA NEW ROLL OUT\nSOLAR ARRAY"
+                }
+              ],
+              "spokenText": "",
+              "start": 8.83,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Wide-angle camera shot showing the cylindrical rolled-up new solar array assembly.",
+              "end": 17.67,
+              "onScreenText": [
+                {
+                  "endSec": 17.67,
+                  "position": "top-right",
+                  "startSec": 14,
+                  "style": "",
+                  "text": "LEGACY ARRAYS"
+                },
+                {
+                  "endSec": 17.67,
+                  "position": "center-left",
+                  "startSec": 14.5,
+                  "style": "",
+                  "text": "NEW ARRAY\n(STILL ROLLED)"
+                }
+              ],
+              "spokenText": "",
+              "start": 13.83,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Time-lapse footage of ISS exterior truss modules before array rollout.",
+              "end": 21.5,
+              "onScreenText": [
+                {
+                  "endSec": 21.5,
+                  "position": "top-right",
+                  "startSec": 17.67,
+                  "style": "",
+                  "text": "5X SPEED"
+                },
+                {
+                  "endSec": 21.5,
+                  "position": "center",
+                  "startSec": 18,
+                  "style": "",
+                  "text": "MISSION\nACCOMPLISHED"
+                }
+              ],
+              "spokenText": "",
+              "start": 17.67,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Time-lapse sequence showing the new solar array rolling open into space above Earth.",
+              "end": 26.9,
+              "onScreenText": [
+                {
+                  "endSec": 26.9,
+                  "position": "top-right",
+                  "startSec": 21.5,
+                  "style": "",
+                  "text": "5X SPEED"
+                },
+                {
+                  "endSec": 26.9,
+                  "position": "bottom-center",
+                  "startSec": 24.5,
+                  "style": "",
+                  "text": "SPACEWALK TIME:\n7 HOURS, 11 MINUTES"
+                }
+              ],
+              "spokenText": "",
+              "start": 21.5,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "Detailed perspective of the fully deployed solar array surface against space background.",
+              "end": 38.83,
+              "onScreenText": [
+                {
+                  "endSec": 38.83,
+                  "position": "top-right",
+                  "startSec": 26.9,
+                  "style": "",
+                  "text": "5X SPEED"
+                },
+                {
+                  "endSec": 32.5,
+                  "position": "center",
+                  "startSec": 27.5,
+                  "style": "",
+                  "text": "EACH NEW ARRAY\nGENERATES AROUND 8\nKILOWATTS OF\nELECTRICITY."
+                },
+                {
+                  "endSec": 38.5,
+                  "position": "center",
+                  "startSec": 33,
+                  "style": "",
+                  "text": "ONE MORE ARRAY\nINSTALL UNTIL UPGRADES\nARE COMPLETE,\nTARGETED FOR NOV. 5."
+                }
+              ],
+              "spokenText": "",
+              "start": 26.9,
+              "transition": "cut"
+            },
+            {
+              "audio": "An upbeat, rhythmic electronic synth instrumental track.",
+              "camera": "static",
+              "description": "NASA classic meatball logo centered on a black screen.",
+              "end": 41,
+              "onScreenText": [],
+              "spokenText": "",
+              "start": 38.83,
+              "transition": "cut"
+            }
+          ],
+          "slides": []
+        },
+        "transcript": null,
+        "source_caption": "More power loading. \ud83d\udd0b\n\nToday, NASA astronaut Anil Menon and CSA (Canadian Space Agency) astronaut Joshua Kutryk conducted a spacewalk to install the 7th of 8 new roll out solar arrays. The final new array is slated to be installed during the Nov. 5 spacewalk, increasing the station\u2019s available power by up to 30%."
+      }
+    },
+    {
+      "label": "nasa",
+      "postType": "Carousel",
+      "source": {
+        "dna_analysis": {
+          "analysisConfidence": 70,
+          "blueprint": {
+            "audio": {
+              "music": "unknown",
+              "pacingWordsPerMin": null,
+              "transcriptFull": null,
+              "voiceStyle": "Not applicable (no spoken/video content); caption uses warm, playful, third-person institutional voice"
+            },
+            "caption": {
+              "cta": "Swipe to see other cosmic curiosities captured over the years.",
+              "exact": "Our Sun knows how to get in the spirit! \ud83c\udf83\n\u00a0\nYears ago, our Solar Dynamics Observatory caught our Sun looking like a jack-o\u2019-lantern, with active regions shaped like a carved face.\n\u00a0\nSwipe to see other cosmic curiosities captured over the years.\n\u00a0\n#NASA #Halloween #Space\n\nThe wispy white gas of this star-forming cloud, Lupus 3, is 500 light-years away in the constellation Scorpius. It looks something like a wave of ectoplasm or stretch of cobwebs. Which do you see?\n\nAs we set our sights on the Hourglass Nebula, it appears to gaze back at us. This creepy cosmic object is a planetary nebula, the glowing relic of a dying, Sun-like star.\n\nThis ghoulish cloud of gas and dust, called the Ghost Nebula, is 550 light-years away in the constellation Cassiopeia. Its long ghostly veil is shaped by radiation from the bright stars embedded within it.\n\nThis witch is busy brewing baby stars! Named the Witch Head, this nebula is found 800 light-years away in the constellation Orion, just off the hunter\u2019s \u201cknee.\u201d\n\nThis smoky specter is the Cat\u2019s Head Nebula. The intricate, wispy structures of this cloud of dust are traced by @NASAWebb\u2019s keen vision.",
+              "hashtags": [
+                "NASA",
+                "Halloween",
+                "Space"
+              ]
+            },
+            "dependencies": [
+              "NASA telescope imagery archive access",
+              "Caption copywriting matching playful/educational tone"
+            ],
+            "kind": "carousel",
+            "scenes": [],
+            "slides": [
+              {
+                "backgroundHex": "#000000",
+                "exactText": "",
+                "index": 0,
+                "layoutNotes": "Full-frame centered sun image, no text",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/0-image.jpg",
+                "role": "hook",
+                "subject": "Sun, solar flares",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed, no overlay present"
+              },
+              {
+                "backgroundHex": "#0e1620",
+                "exactText": "",
+                "index": 1,
+                "layoutNotes": "Full-frame nebula cloud with scattered stars",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/1-image.jpg",
+                "role": "point",
+                "subject": "nebula, stars",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed"
+              },
+              {
+                "backgroundHex": "#000000",
+                "exactText": "",
+                "index": 2,
+                "layoutNotes": "Symmetrical hourglass nebula with bright central star",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/2-image.jpg",
+                "role": "point",
+                "subject": "planetary nebula, star",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed"
+              },
+              {
+                "backgroundHex": "#000000",
+                "exactText": "",
+                "index": 3,
+                "layoutNotes": "Vertical nebula cloud composition",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/3-image.jpg",
+                "role": "point",
+                "subject": "nebula, stars",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed"
+              },
+              {
+                "backgroundHex": "#000820",
+                "exactText": "",
+                "index": 4,
+                "layoutNotes": "Diagonal green nebula across starfield",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/4-image.jpg",
+                "role": "point",
+                "subject": "nebula, stars, galaxy",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed"
+              },
+              {
+                "backgroundHex": "#5a1e12",
+                "exactText": "",
+                "index": 5,
+                "layoutNotes": "Pillar structure closing image, pairs with caption CTA to engage via comments",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/5-image.jpg",
+                "role": "cta",
+                "subject": "nebula pillar, stars",
+                "textBlocks": [],
+                "textRemovalNotes": "None needed"
+              }
+            ]
+          },
+          "captionDNA": {
+            "bodyPattern": "Hook line, context paragraph, soft CTA to swipe, then per-slide descriptive captions",
+            "ctaLine": "Swipe to see other cosmic curiosities captured over the years.",
+            "ctaType": "Soft",
+            "emojiUsage": "Minimal, single jack-o'-lantern emoji for thematic emphasis",
+            "hashtagPlacement": "End of caption, grouped together",
+            "hookLine": "Our Sun knows how to get in the spirit! \ud83c\udf83",
+            "keywordTrigger": "Halloween",
+            "lineBreakRhythm": "Short paragraphs separated by blank lines for readability",
+            "persuasionStyle": "Curiosity + credibility (real NASA imagery) + seasonal relevance",
+            "score": 7,
+            "structure": "Long-form",
+            "tone": "Playful, educational, seasonal"
+          },
+          "channelIntelligence": {
+            "audienceLanguage": "Accessible, wonder-driven, slightly playful science communication",
+            "contentStrengths": [
+              "High-quality visual assets",
+              "Trusted scientific authority",
+              "Seasonal relevance tie-ins",
+              "Consistent carousel storytelling format"
+            ],
+            "primaryNiche": "Space/astronomy education"
+          },
+          "contentCategory": "Educational",
+          "contentMedium": {
+            "description": "Carousel of high-resolution space telescope photographs (Sun, nebulae) with no text overlays, paired with descriptive caption text per image",
+            "mediumIsTheMessage": true,
+            "mediumSignals": [
+              "no text overlays on any slide (observed: slides 1-6)",
+              "consistent dark/cosmic color palettes (observed: slides 1-6)",
+              "single subject per slide (observed: slides 1-6)"
+            ],
+            "primary": "lifestyle-photo",
+            "replicationInstructions": "Curate 5-6 striking astronomical images with a thematic throughline (e.g., seasonal visual resemblance), caption each with short, evocative scientific facts.",
+            "secondary": null
+          },
+          "contentSummary": "NASA carousel comparing the Sun's Halloween-like 'jack-o'-lantern' active regions to five spooky-looking nebulae (Lupus 3, Hourglass Nebula, Ghost Nebula, Witch Head Nebula, Cat's Head Nebula), framed as cosmic Halloween curiosities.",
+          "emotionalArchitecture": {
+            "curiosity": 9,
+            "fomo": 2,
+            "inspiration": 7,
+            "relatability": 6,
+            "trust": 8,
+            "urgency": 1
+          },
+          "engagementDrivers": [
+            "Seasonal Halloween tie-in",
+            "Swipeable carousel format encouraging full engagement",
+            "Personified, narrative captions per nebula",
+            "High-quality NASA imagery with credibility trust"
+          ],
+          "forensics": {
+            "carouselForensics": {
+              "contentStrategy": {
+                "educationalDepth": "",
+                "saveWorthiness": null,
+                "valueDelivery": "Educational value and stunning imagery worth revisiting"
+              },
+              "designSystem": {
+                "colorPalette": "#1a0a00 #ff8c00 #ffcc33 #000000 #0a1420 #7a93a8",
+                "fontSystem": "no text",
+                "gridSystem": "",
+                "iconStyle": "",
+                "whiteSpaceUsage": ""
+              },
+              "finalSlide": {
+                "brandElement": "",
+                "ctaType": "Soft",
+                "urgencyElement": ""
+              },
+              "middleSlides": [
+                {
+                  "informationDensity": "image only",
+                  "layoutTemplate": "cloudy nebula filling frame with scattered stars",
+                  "microHook": "",
+                  "purpose": "",
+                  "visualType": "lifestyle-photo"
+                },
+                {
+                  "informationDensity": "image only",
+                  "layoutTemplate": "symmetrical hourglass nebula with bright central star",
+                  "microHook": "",
+                  "purpose": "",
+                  "visualType": "lifestyle-photo"
+                },
+                {
+                  "informationDensity": "image only",
+                  "layoutTemplate": "vertical cloud-like nebula with scattered bright stars",
+                  "microHook": "",
+                  "purpose": "",
+                  "visualType": "lifestyle-photo"
+                },
+                {
+                  "informationDensity": "image only",
+                  "layoutTemplate": "diagonal green nebula cloud across starfield",
+                  "microHook": "",
+                  "purpose": "",
+                  "visualType": "lifestyle-photo"
+                }
+              ],
+              "overall": {
+                "carouselType": "Carousel",
+                "contentDensity": "0 of 6 slides have text",
+                "narrativeArc": "Hook image (Sun) \u2192 Series of spooky nebula reveals \u2192 Educational payoff per caption",
+                "totalSlides": 6,
+                "visualConsistency": "lifestyle-photo"
+              },
+              "slide1": {
+                "colorScheme": "#1a0a00 #ff8c00 #ffcc33 #000000",
+                "exactVisibleText": "",
+                "firstImpressionScore": 8,
+                "hookMechanism": "Personifies the Sun and ties it to a familiar holiday, creating immediate relatable intrigue",
+                "layout": "circular sun centered against black space",
+                "typography": "no text"
+              }
+            },
+            "provenance": [
+              {
+                "evidence": "slide 1-6 entries",
+                "field": "Slide count",
+                "provenance": "observed",
+                "value": "6"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Slide 1 subject",
+                "provenance": "observed",
+                "value": "Sun with active regions"
+              },
+              {
+                "evidence": "slide 2",
+                "field": "Slide 2 subject",
+                "provenance": "observed",
+                "value": "Nebula with stars"
+              },
+              {
+                "evidence": "slide 3",
+                "field": "Slide 3 subject",
+                "provenance": "observed",
+                "value": "Planetary nebula (Hourglass) with central star"
+              },
+              {
+                "evidence": "slide 4",
+                "field": "Slide 4 subject",
+                "provenance": "observed",
+                "value": "Vertical cloud nebula with stars"
+              },
+              {
+                "evidence": "slide 5",
+                "field": "Slide 5 subject",
+                "provenance": "observed",
+                "value": "Diagonal green nebula cloud"
+              },
+              {
+                "evidence": "slide 6",
+                "field": "Slide 6 subject",
+                "provenance": "observed",
+                "value": "Nebula pillar rising into starry backdrop"
+              },
+              {
+                "evidence": "slides 1-6 textBlocks empty",
+                "field": "Text overlays",
+                "provenance": "observed",
+                "value": "None present on any slide"
+              },
+              {
+                "evidence": "caption first line",
+                "field": "Caption hook",
+                "provenance": "observed",
+                "value": "Our Sun knows how to get in the spirit! \ud83c\udf83"
+              },
+              {
+                "evidence": "caption hashtags",
+                "field": "Hashtags",
+                "provenance": "observed",
+                "value": "#NASA #Halloween #Space"
+              },
+              {
+                "evidence": "computed metrics",
+                "field": "Engagement rate",
+                "provenance": "observed",
+                "value": "1.782%"
+              },
+              {
+                "evidence": null,
+                "field": "Video/audio data",
+                "provenance": "inferred",
+                "value": "Not applicable; static carousel"
+              },
+              {
+                "evidence": "caption body text",
+                "field": "Named nebulae",
+                "provenance": "observed",
+                "value": "Lupus 3, Hourglass Nebula, Ghost Nebula, Witch Head Nebula, Cat's Head Nebula"
+              },
+              {
+                "evidence": "caption last paragraph",
+                "field": "Credit mention",
+                "provenance": "observed",
+                "value": "@NASAWebb referenced for Cat's Head Nebula imagery"
+              }
+            ]
+          },
+          "hookBreakdown": {
+            "exactText": "Our Sun knows how to get in the spirit! \ud83c\udf83",
+            "improvement": "Could add a short on-slide text overlay restating the jack-o'-lantern comparison for users who skip captions",
+            "location": "caption",
+            "mechanism": "Personifies the Sun and ties it to a familiar holiday, creating immediate relatable intrigue",
+            "score": 8,
+            "scoreReasoning": "Strong emotional/seasonal hook reinforced by matching visual, though reliant on caption rather than on-slide text",
+            "type": "Seasonal curiosity hook",
+            "whatWorks": "Playful personification lowers barrier to engagement with scientific content",
+            "whyItWorks": "Combines playful tone with a visually confirming image (slide 1: glowing orange sun) to reward curiosity instantly"
+          },
+          "limitations": [],
+          "monetizationPotential": "Low direct monetization; strong brand-building/educational value for NASA's mission awareness and merchandise/content partnerships",
+          "performanceBasis": {
+            "engagementRate": 1.782,
+            "formula": "ER = (likes 1856527 + comments 4858) / followers 104446562 \u00d7 100 = 1.782%; score = clamp(50 + 25\u00b7log2(ER)) = 71",
+            "score": 71
+          },
+          "performanceScore": 71,
+          "storyStructure": [
+            {
+              "purpose": "Introduce Sun's Halloween-like appearance to grab attention",
+              "section": "Hook",
+              "timing": "slide 1"
+            },
+            {
+              "purpose": "Showcase additional 'spooky' cosmic objects to sustain curiosity and swipes",
+              "section": "Expansion",
+              "timing": "slides 2-6"
+            },
+            {
+              "purpose": "Deliver educational facts reinforcing wonder and credibility",
+              "section": "Payoff",
+              "timing": "caption text per slide"
+            }
+          ],
+          "targetAudience": {
+            "desire": "To see awe-inspiring, educational space imagery with a fun seasonal twist",
+            "trigger": "Novelty of 'spooky' space phenomena paired with real science credibility",
+            "who": "Space enthusiasts, science-curious general public, Halloween/seasonal content followers"
+          },
+          "videoVisualDNA": {
+            "audioStyle": "unavailable",
+            "backgroundDescription": "Black starfield backgrounds consistent across all slides (observed: slides 1-6)",
+            "backgroundType": "Deep space",
+            "colorPalette": {
+              "accent": "Teal/green and white highlights",
+              "approximateHex": [
+                "#1a0a00",
+                "#ff8c00",
+                "#0a1420",
+                "#33cccc",
+                "#8c2a1a"
+              ],
+              "dominant": "Black/dark navy",
+              "mood": "Mysterious, cosmic, awe-inspiring",
+              "secondary": "Orange/red tones"
+            },
+            "contentFormat": "Static image carousel",
+            "editingStyle": "Minimal, straightforward image presentation with no overlay graphics",
+            "lightingStyle": "Natural astrophotography glow and radiation-lit gas clouds",
+            "paceAndEnergy": "Slow, contemplative, swipe-driven",
+            "platformAesthetic": "Clean institutional/educational Instagram carousel",
+            "productionLevel": "High (professional space telescope imagery)",
+            "recreationInstructions": "Source 5-6 cosmic images with visual resemblance to a theme (e.g., spooky shapes), present without text overlay, pair with narrative captions explaining each.",
+            "subjectDescription": "Six distinct space images: a glowing orange sun with active regions, multiple nebulae with wispy gas clouds, stars, and a pillar structure (observed: slides 1-6 subjects)",
+            "subjectType": "Astronomical phenomena (Sun, nebulae)",
+            "textStyle": {
+              "animation": "none",
+              "color": "none",
+              "fontSize": "none",
+              "fontStyle": "none",
+              "placement": "none",
+              "present": false
+            }
+          },
+          "visualStyle": {
+            "colorMood": "Dark cosmic backgrounds with warm orange/red and cool blue-green accents (observed: slide palettes)",
+            "composition": "Single centered astronomical subject per slide against black space (observed: slides 1-6)",
+            "editStyle": "Clean astrophotography, no graphic overlays",
+            "score": 8,
+            "textOverlay": "None"
+          },
+          "whyItWorks": [
+            "Seasonal hook ties real astronomy to Halloween, increasing shareability (caption: 'Our Sun knows how to get in the spirit! \ud83c\udf83')",
+            "Visually striking, high-contrast nebula imagery across 6 slides (observed: slide 1-6 palettes/subjects)",
+            "Swipe-through structure invites engagement ('Swipe to see other cosmic curiosities captured over the years')",
+            "Anthropomorphized, playful captions for each nebula build curiosity and emotional connection ('This witch is busy brewing baby stars!')"
+          ]
+        },
+        "blueprint": {
+          "audio": {
+            "music": "unknown",
+            "pacingWordsPerMin": null,
+            "transcriptFull": null,
+            "voiceStyle": "Not applicable (no spoken/video content); caption uses warm, playful, third-person institutional voice"
+          },
+          "caption": {
+            "cta": "Swipe to see other cosmic curiosities captured over the years.",
+            "exact": "Our Sun knows how to get in the spirit! \ud83c\udf83\n\u00a0\nYears ago, our Solar Dynamics Observatory caught our Sun looking like a jack-o\u2019-lantern, with active regions shaped like a carved face.\n\u00a0\nSwipe to see other cosmic curiosities captured over the years.\n\u00a0\n#NASA #Halloween #Space\n\nThe wispy white gas of this star-forming cloud, Lupus 3, is 500 light-years away in the constellation Scorpius. It looks something like a wave of ectoplasm or stretch of cobwebs. Which do you see?\n\nAs we set our sights on the Hourglass Nebula, it appears to gaze back at us. This creepy cosmic object is a planetary nebula, the glowing relic of a dying, Sun-like star.\n\nThis ghoulish cloud of gas and dust, called the Ghost Nebula, is 550 light-years away in the constellation Cassiopeia. Its long ghostly veil is shaped by radiation from the bright stars embedded within it.\n\nThis witch is busy brewing baby stars! Named the Witch Head, this nebula is found 800 light-years away in the constellation Orion, just off the hunter\u2019s \u201cknee.\u201d\n\nThis smoky specter is the Cat\u2019s Head Nebula. The intricate, wispy structures of this cloud of dust are traced by @NASAWebb\u2019s keen vision.",
+            "hashtags": [
+              "NASA",
+              "Halloween",
+              "Space"
+            ]
+          },
+          "dependencies": [
+            "NASA telescope imagery archive access",
+            "Caption copywriting matching playful/educational tone"
+          ],
+          "kind": "carousel",
+          "scenes": [],
+          "slides": [
+            {
+              "backgroundHex": "#000000",
+              "exactText": "",
+              "index": 0,
+              "layoutNotes": "Full-frame centered sun image, no text",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/0-image.jpg",
+              "role": "hook",
+              "subject": "Sun, solar flares",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed, no overlay present"
+            },
+            {
+              "backgroundHex": "#0e1620",
+              "exactText": "",
+              "index": 1,
+              "layoutNotes": "Full-frame nebula cloud with scattered stars",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/1-image.jpg",
+              "role": "point",
+              "subject": "nebula, stars",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed"
+            },
+            {
+              "backgroundHex": "#000000",
+              "exactText": "",
+              "index": 2,
+              "layoutNotes": "Symmetrical hourglass nebula with bright central star",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/2-image.jpg",
+              "role": "point",
+              "subject": "planetary nebula, star",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed"
+            },
+            {
+              "backgroundHex": "#000000",
+              "exactText": "",
+              "index": 3,
+              "layoutNotes": "Vertical nebula cloud composition",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/3-image.jpg",
+              "role": "point",
+              "subject": "nebula, stars",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed"
+            },
+            {
+              "backgroundHex": "#000820",
+              "exactText": "",
+              "index": 4,
+              "layoutNotes": "Diagonal green nebula across starfield",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/4-image.jpg",
+              "role": "point",
+              "subject": "nebula, stars, galaxy",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed"
+            },
+            {
+              "backgroundHex": "#5a1e12",
+              "exactText": "",
+              "index": 5,
+              "layoutNotes": "Pillar structure closing image, pairs with caption CTA to engage via comments",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/dbeb52d7-58d9-4d90-8145-157fdc7c26bf/5-image.jpg",
+              "role": "cta",
+              "subject": "nebula pillar, stars",
+              "textBlocks": [],
+              "textRemovalNotes": "None needed"
+            }
+          ]
+        },
+        "transcript": null,
+        "source_caption": "Our Sun knows how to get in the spirit! \ud83c\udf83\n\u00a0\nYears ago, our Solar Dynamics Observatory caught our Sun looking like a jack-o\u2019-lantern, with active regions shaped like a carved face.\n\u00a0\nSwipe to see other cosmic curiosities captured over the years.\n\u00a0\n#NASA #Halloween #Space\n\nThe wispy white gas of this star-forming cloud, Lupus 3, is 500 light-years away in the constellation Scorpius. It looks something like a wave of ectoplasm or stretch of cobwebs. Which do you see?\n\nAs we set our sights on the Hourglass Nebula, it appears to gaze back at us. This creepy cosmic object is a planetary nebula, the glowing relic of a dying, Sun-like star.\n\nThis ghoulish cloud of gas and dust, called the Ghost Nebula, is 550 light-years away in the constellation Cassiopeia. Its long ghostly veil is shaped by radiation from the bright stars embedded within it.\n\nThis witch is busy brewing baby stars! Named the Witch Head, this nebula is found 800 light-years away in the constellation Orion, just off the hunter\u2019s \u201cknee.\u201d\n\nThis smoky specter is the Cat\u2019s Head Nebula. The intricate, wispy structures of this cloud of dust are traced by @NASAWebb\u2019s keen vision."
+      }
+    },
+    {
+      "label": "nasaaero",
+      "postType": "Image",
+      "source": {
+        "dna_analysis": {
+          "analysisConfidence": 70,
+          "blueprint": {
+            "audio": {
+              "music": "unknown",
+              "pacingWordsPerMin": null,
+              "transcriptFull": null,
+              "voiceStyle": "Formal institutional announcement voice, quoted authority figure"
+            },
+            "caption": {
+              "cta": "Details: nasa.gov/aero",
+              "exact": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa\u2019s newest experimental aircraft! \n\nThis crewed, modular aircraft will allow the agency to rapidly swap out internal & external payloads to help keep pushing the frontiers of aviation technology! X-70 Fractal is a high-performance platform to test advanced flight-control, maneuverability, and other cutting-edge technologies in real flight.\n\n\u201cWe expect her first flight under the NASA banner within the next two years, and X-70 is just one part of this new beginning for aeronautics. This is why people come to NASA: to build, to learn, and most importantly, to fly.\u201d - @nasaadmin \n\nThe X-70 Fractal has a takeoff weight of 10,000 pounds and is designed to cruise at Mach .75, reach altitudes of up to 45,000 feet, and provide an operational range exceeding about 1,726 miles (1,500 nautical miles). These capabilities will enable NASA to conduct demanding flight research across a broad range of operating conditions. \n\nDetails: nasa.gov/aero\n\nImage caption: Generated image of NASA\u2019s new X-70 Fractal experimental aircraft, a crewed, rapidly reconfigurable research platform for advanced aviation technologies.",
+              "hashtags": []
+            },
+            "dependencies": [
+              "NASA brand trust",
+              "Technical specification details in caption",
+              "Generated image disclosure"
+            ],
+            "kind": "image",
+            "scenes": [],
+            "slides": [
+              {
+                "backgroundHex": "#05070d",
+                "exactText": "GENERATED\nCONTENT",
+                "index": 0,
+                "layoutNotes": "Centered aircraft silhouette as main visual hook, dramatic sky background",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/0c66fd8f-cce8-46a4-9608-eefb7bcd694d/0-image.jpg",
+                "role": "hook",
+                "subject": "silhouetted stealth aircraft, clouds, starry night sky",
+                "textBlocks": [
+                  {
+                    "case": "upper",
+                    "colorHex": "#FFFFFF",
+                    "position": "bottom-right",
+                    "sizeRel": "small",
+                    "text": "GENERATED\nCONTENT",
+                    "weight": "bold"
+                  }
+                ],
+                "textRemovalNotes": "Remove small 'GENERATED CONTENT' watermark bottom-right if recreating without disclosure requirement"
+              }
+            ]
+          },
+          "captionDNA": {
+            "bodyPattern": "Announcement \u2192 description \u2192 quoted authority \u2192 technical specs \u2192 link CTA",
+            "ctaLine": "Details: nasa.gov/aero",
+            "ctaType": "Soft",
+            "emojiUsage": "Minimal, single emoji (\ud83d\udea8) for emphasis",
+            "hashtagPlacement": "None",
+            "hookLine": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa's newest experimental aircraft!",
+            "keywordTrigger": "BREAKING",
+            "lineBreakRhythm": "Paragraph breaks separating distinct ideas, each paragraph 2-4 sentences",
+            "persuasionStyle": "Authority + specificity",
+            "score": 8,
+            "structure": "Long-form",
+            "tone": "Authoritative, enthusiastic, informative"
+          },
+          "channelIntelligence": {
+            "audienceLanguage": "Technical, formal, enthusiastic",
+            "contentStrengths": [
+              "Authoritative voice",
+              "Technical specificity",
+              "High-profile brand trust"
+            ],
+            "primaryNiche": "Aerospace/aviation technology"
+          },
+          "contentCategory": "Educational",
+          "contentMedium": {
+            "description": "A single AI-generated digital graphic of a silhouetted stealth-style aircraft emerging from clouds in a starry night sky, labeled 'GENERATED CONTENT'.",
+            "mediumIsTheMessage": false,
+            "mediumSignals": [
+              "Generated Content watermark (slide 1)",
+              "digital-graphic medium (slide 1)",
+              "caption explicitly states 'Generated image' "
+            ],
+            "primary": "digital-graphic",
+            "replicationInstructions": "Produce a high-contrast, symmetrical digital illustration of a futuristic aircraft silhouette against a dramatic sky, with small bottom-right disclosure text indicating AI generation.",
+            "secondary": null
+          },
+          "contentSummary": "NASA announcement of the X-70 Fractal, a crewed, modular experimental aircraft, revealed via a single generated image with detailed specs and a quote from the NASA administrator in the caption.",
+          "emotionalArchitecture": {
+            "curiosity": 8,
+            "fomo": 5,
+            "inspiration": 7,
+            "relatability": 4,
+            "trust": 9,
+            "urgency": 6
+          },
+          "engagementDrivers": [
+            "Breaking news framing",
+            "NASA brand authority",
+            "Specific technical specs appeal to enthusiasts",
+            "Dramatic generated visual"
+          ],
+          "forensics": {
+            "imageForensics": {
+              "color": {
+                "contrast": "",
+                "dominant": "#0a0f1a",
+                "hex": [
+                  "#0a0f1a",
+                  "#8fa3b8",
+                  "#ffffff",
+                  "#1b2535"
+                ],
+                "mood": "Mysterious, aspirational, high-tech",
+                "paletteType": "",
+                "saturation": "",
+                "temperature": ""
+              },
+              "composition": {
+                "background": "#05070d",
+                "depthOfField": "",
+                "foreground": "",
+                "technique": "Centered symmetry with silhouette against sky",
+                "visualWeight": ""
+              },
+              "editing": {
+                "filterStyle": "Dark navy/blue with silver highlights",
+                "grain": "",
+                "sharpness": ""
+              },
+              "lighting": {
+                "direction": "",
+                "overallExposure": "",
+                "shadowQuality": "",
+                "source": "dark, moody with backlit clouds"
+              },
+              "psychology": {
+                "emotionalResponse": "Mysterious, aspirational, high-tech",
+                "primaryVisualHook": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa's newest experimental aircraft!",
+                "saveWorthinessElements": "Users save for future reference on new aircraft specs",
+                "shareWorthiness": "Breaking news framing encourages sharing with aviation communities"
+              },
+              "subject": {
+                "actionPose": "",
+                "expression": "",
+                "position": "symmetrical aircraft silhouette centered, emerging from clouds",
+                "primary": "silhouetted stealth aircraft"
+              },
+              "text": {
+                "exactVisibleText": "GENERATED\nCONTENT",
+                "hierarchy": "",
+                "position": "bottom-right",
+                "present": true,
+                "style": "sans bold upper"
+              }
+            },
+            "provenance": [
+              {
+                "evidence": "slide 1",
+                "field": "Image type",
+                "provenance": "observed",
+                "value": "AI-generated digital graphic"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Watermark text",
+                "provenance": "observed",
+                "value": "GENERATED CONTENT"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Composition",
+                "provenance": "observed",
+                "value": "Symmetrical aircraft silhouette centered, emerging from clouds"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Color palette",
+                "provenance": "observed",
+                "value": "#0a0f1a, #8fa3b8, #ffffff, #1b2535"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Subjects",
+                "provenance": "observed",
+                "value": "silhouetted stealth aircraft, clouds, starry night sky"
+              },
+              {
+                "evidence": "caption",
+                "field": "Caption disclosure",
+                "provenance": "observed",
+                "value": "Generated image of NASA's new X-70 Fractal experimental aircraft"
+              },
+              {
+                "evidence": "caption",
+                "field": "Quoted authority",
+                "provenance": "observed",
+                "value": "@nasaadmin quote on first flight timeline"
+              },
+              {
+                "evidence": "caption",
+                "field": "Aircraft specs",
+                "provenance": "observed",
+                "value": "10,000 lb takeoff weight, Mach .75, 45,000 ft altitude, 1,726 mile range"
+              },
+              {
+                "evidence": "caption",
+                "field": "CTA link",
+                "provenance": "observed",
+                "value": "nasa.gov/aero"
+              },
+              {
+                "evidence": null,
+                "field": "Video evidence",
+                "provenance": "inferred",
+                "value": "unavailable"
+              },
+              {
+                "evidence": null,
+                "field": "Transcript",
+                "provenance": "inferred",
+                "value": "unavailable"
+              },
+              {
+                "evidence": null,
+                "field": "Audio metadata",
+                "provenance": "inferred",
+                "value": "null, image post has no audio"
+              }
+            ]
+          },
+          "hookBreakdown": {
+            "exactText": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa's newest experimental aircraft!",
+            "improvement": "Could add a visual on-image headline to reinforce the breaking-news hook for viewers who skip caption",
+            "location": "caption",
+            "mechanism": "Uses urgency emoji and 'BREAKING' label to signal importance and novelty",
+            "score": 8,
+            "scoreReasoning": "Strong urgency cue and clear subject naming drive high engagement, though not a visual hook since image has no text headline",
+            "type": "Breaking news announcement",
+            "whatWorks": "Clear, bold announcement structure with emoji flag",
+            "whyItWorks": "Triggers curiosity and urgency by framing routine announcement as breaking news from a trusted brand"
+          },
+          "limitations": [],
+          "monetizationPotential": "Low direct monetization; supports brand awareness and public engagement for a government agency rather than commercial sales.",
+          "performanceBasis": {
+            "engagementRate": 46.629,
+            "formula": "ER = (likes 145285 + comments 558) / followers 312775 \u00d7 100 = 46.629%; score = clamp(50 + 25\u00b7log2(ER)) = 100",
+            "score": 100
+          },
+          "performanceScore": 100,
+          "storyStructure": [
+            {
+              "purpose": "Announce breaking news",
+              "section": "Hook",
+              "timing": "caption line 1"
+            },
+            {
+              "purpose": "Describe aircraft purpose and capability",
+              "section": "Explanation",
+              "timing": "caption paragraph 2"
+            },
+            {
+              "purpose": "Build trust via NASA admin statement",
+              "section": "Authority quote",
+              "timing": "caption paragraph 3"
+            },
+            {
+              "purpose": "Provide technical detail and direct to nasa.gov/aero",
+              "section": "Specs/CTA",
+              "timing": "caption paragraph 4-5"
+            }
+          ],
+          "targetAudience": {
+            "desire": "To learn about cutting-edge experimental aircraft and feel connected to space/aero innovation",
+            "trigger": "Breaking news announcement from a trusted authority",
+            "who": "Aviation/aerospace enthusiasts, STEM followers, NASA fans"
+          },
+          "videoVisualDNA": {
+            "audioStyle": "None (image post)",
+            "backgroundDescription": "Starry night sky with clouds beneath the aircraft",
+            "backgroundType": "Sky/clouds",
+            "colorPalette": {
+              "accent": "White",
+              "approximateHex": [
+                "#0a0f1a",
+                "#8fa3b8",
+                "#ffffff",
+                "#1b2535"
+              ],
+              "dominant": "Dark navy",
+              "mood": "Mysterious, high-tech",
+              "secondary": "Slate blue-grey"
+            },
+            "contentFormat": "Single image post",
+            "editingStyle": "Digital rendering, generated graphic",
+            "lightingStyle": "Dramatic, backlit silhouette",
+            "paceAndEnergy": "Static, single-image, calm but dramatic",
+            "platformAesthetic": "Professional institutional Instagram graphic",
+            "productionLevel": "High-quality AI-generated render",
+            "recreationInstructions": "Create a centered silhouette of a futuristic aircraft emerging from clouds against a starry sky using dark navy/blue palette, add small 'Generated Content' disclosure text bottom-right.",
+            "subjectDescription": "Symmetrical silhouette of a stealth-style crewed experimental aircraft",
+            "subjectType": "Aircraft silhouette (generated)",
+            "textStyle": {
+              "animation": "none (static image)",
+              "color": "light grey/white",
+              "fontSize": "small",
+              "fontStyle": "small sans-serif",
+              "placement": "bottom-right",
+              "present": true
+            }
+          },
+          "visualStyle": {
+            "colorMood": "Dark, moody navy and silver tones",
+            "composition": "Centered symmetrical aircraft silhouette emerging from clouds",
+            "editStyle": "Clean digital-render with small disclosure watermark",
+            "score": 7,
+            "textOverlay": "Subtle"
+          },
+          "whyItWorks": [
+            "Breaking-news framing ('\ud83d\udea8 BREAKING') creates urgency and curiosity (caption line 1)",
+            "Authoritative quote from @nasaadmin builds trust and credibility (caption)",
+            "Specific technical specs (Mach .75, 45,000 ft, 1,726 miles) satisfy aviation-enthusiast audience desire for detail (caption)",
+            "Dramatic symmetrical aircraft silhouette emerging from clouds creates visual intrigue (slide 1)",
+            "NASA's verified brand and 312k followers lend inherent trust, amplifying reach (observed metrics)"
+          ]
+        },
+        "blueprint": {
+          "audio": {
+            "music": "unknown",
+            "pacingWordsPerMin": null,
+            "transcriptFull": null,
+            "voiceStyle": "Formal institutional announcement voice, quoted authority figure"
+          },
+          "caption": {
+            "cta": "Details: nasa.gov/aero",
+            "exact": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa\u2019s newest experimental aircraft! \n\nThis crewed, modular aircraft will allow the agency to rapidly swap out internal & external payloads to help keep pushing the frontiers of aviation technology! X-70 Fractal is a high-performance platform to test advanced flight-control, maneuverability, and other cutting-edge technologies in real flight.\n\n\u201cWe expect her first flight under the NASA banner within the next two years, and X-70 is just one part of this new beginning for aeronautics. This is why people come to NASA: to build, to learn, and most importantly, to fly.\u201d - @nasaadmin \n\nThe X-70 Fractal has a takeoff weight of 10,000 pounds and is designed to cruise at Mach .75, reach altitudes of up to 45,000 feet, and provide an operational range exceeding about 1,726 miles (1,500 nautical miles). These capabilities will enable NASA to conduct demanding flight research across a broad range of operating conditions. \n\nDetails: nasa.gov/aero\n\nImage caption: Generated image of NASA\u2019s new X-70 Fractal experimental aircraft, a crewed, rapidly reconfigurable research platform for advanced aviation technologies.",
+            "hashtags": []
+          },
+          "dependencies": [
+            "NASA brand trust",
+            "Technical specification details in caption",
+            "Generated image disclosure"
+          ],
+          "kind": "image",
+          "scenes": [],
+          "slides": [
+            {
+              "backgroundHex": "#05070d",
+              "exactText": "GENERATED\nCONTENT",
+              "index": 0,
+              "layoutNotes": "Centered aircraft silhouette as main visual hook, dramatic sky background",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/0c66fd8f-cce8-46a4-9608-eefb7bcd694d/0-image.jpg",
+              "role": "hook",
+              "subject": "silhouetted stealth aircraft, clouds, starry night sky",
+              "textBlocks": [
+                {
+                  "case": "upper",
+                  "colorHex": "#FFFFFF",
+                  "position": "bottom-right",
+                  "sizeRel": "small",
+                  "text": "GENERATED\nCONTENT",
+                  "weight": "bold"
+                }
+              ],
+              "textRemovalNotes": "Remove small 'GENERATED CONTENT' watermark bottom-right if recreating without disclosure requirement"
+            }
+          ]
+        },
+        "transcript": null,
+        "source_caption": "\ud83d\udea8 BREAKING: Introducing X-70 Fractal, @nasa\u2019s newest experimental aircraft! \n\nThis crewed, modular aircraft will allow the agency to rapidly swap out internal & external payloads to help keep pushing the frontiers of aviation technology! X-70 Fractal is a high-performance platform to test advanced flight-control, maneuverability, and other cutting-edge technologies in real flight.\n\n\u201cWe expect her first flight under the NASA banner within the next two years, and X-70 is just one part of this new beginning for aeronautics. This is why people come to NASA: to build, to learn, and most importantly, to fly.\u201d - @nasaadmin \n\nThe X-70 Fractal has a takeoff weight of 10,000 pounds and is designed to cruise at Mach .75, reach altitudes of up to 45,000 feet, and provide an operational range exceeding about 1,726 miles (1,500 nautical miles). These capabilities will enable NASA to conduct demanding flight research across a broad range of operating conditions. \n\nDetails: nasa.gov/aero\n\nImage caption: Generated image of NASA\u2019s new X-70 Fractal experimental aircraft, a crewed, rapidly reconfigurable research platform for advanced aviation technologies."
+      }
+    },
+    {
+      "label": "Humans of New York",
+      "postType": "Post",
+      "source": {
+        "dna_analysis": {
+          "analysisConfidence": 55,
+          "blueprint": {
+            "audio": {
+              "music": "unknown",
+              "pacingWordsPerMin": null,
+              "transcriptFull": null,
+              "voiceStyle": "First-person conversational narrator (HONY subject's own words implied)"
+            },
+            "caption": {
+              "cta": null,
+              "exact": "\"We let our four-year-old name the dog.  So this is Broccoli.\"",
+              "hashtags": []
+            },
+            "dependencies": [
+              "Caption text for full narrative context",
+              "No video/audio data available to assess motion or sound"
+            ],
+            "kind": "post",
+            "scenes": [],
+            "slides": [
+              {
+                "backgroundHex": "#1a1a1a",
+                "exactText": "",
+                "index": 0,
+                "layoutNotes": "Single centered photo of man and dog on night street, no overlay text",
+                "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/8fb5a4ae-6734-4d89-8c16-af34f186fc2a/0-image.jpg",
+                "role": "hook",
+                "subject": "man crouching, brown and white dog, city street at night",
+                "textBlocks": [],
+                "textRemovalNotes": "No text present to remove"
+              }
+            ]
+          },
+          "captionDNA": {
+            "bodyPattern": "Setup sentence followed by punchline reveal",
+            "ctaLine": "",
+            "ctaType": "None",
+            "emojiUsage": "None",
+            "hashtagPlacement": "None (no hashtags present)",
+            "hookLine": "We let our four-year-old name the dog.",
+            "keywordTrigger": "Broccoli",
+            "lineBreakRhythm": "Two short sentences separated by a line break",
+            "persuasionStyle": "Narrative/humor-based relatability",
+            "score": 8,
+            "structure": "Micro",
+            "tone": "Warm, wry, conversational"
+          },
+          "channelIntelligence": {
+            "audienceLanguage": "Casual, warm, first-person conversational English",
+            "contentStrengths": [
+              "Authentic human stories",
+              "Strong caption-photo pairing",
+              "High engagement via relatable humor"
+            ],
+            "primaryNiche": "Human-interest street photography / storytelling"
+          },
+          "contentCategory": "Storytelling",
+          "contentMedium": {
+            "description": "Single still lifestyle photograph of a man and his dog on a city sidewalk at night, in classic HONY documentary style.",
+            "mediumIsTheMessage": true,
+            "mediumSignals": [
+              "single slide (slide 1)",
+              "no overlays (slide 1)",
+              "no video/audio data present"
+            ],
+            "primary": "lifestyle-photo",
+            "replicationInstructions": "Shoot a candid, low-light street portrait of a subject and their pet/object, crouched at eye level, with urban background slightly blurred; pair with a short, humanizing caption with a surprising punchline.",
+            "secondary": null
+          },
+          "contentSummary": "A single street-photography style portrait of a man crouching beside his brown and white dog at night, paired with a caption explaining that the family's four-year-old named the dog 'Broccoli.'",
+          "emotionalArchitecture": {
+            "curiosity": 7,
+            "fomo": 1,
+            "inspiration": 4,
+            "relatability": 8,
+            "trust": 7,
+            "urgency": 1
+          },
+          "engagementDrivers": [
+            "Funny, unexpected dog name revealed in caption",
+            "Relatable family/parenting anecdote",
+            "High comment count suggests strong shareability (comments 35550)",
+            "Classic HONY emotional/human-interest format"
+          ],
+          "forensics": {
+            "imageForensics": {
+              "color": {
+                "contrast": "",
+                "dominant": "#1a1a1a",
+                "hex": [
+                  "#1a1a1a",
+                  "#2e2a28",
+                  "#b08a5e",
+                  "#8a6a4a",
+                  "#3d2b1f"
+                ],
+                "mood": "Warm, intimate, lightly humorous",
+                "paletteType": "",
+                "saturation": "",
+                "temperature": ""
+              },
+              "composition": {
+                "background": "#1a1a1a",
+                "depthOfField": "",
+                "foreground": "",
+                "technique": "Centered subject framing with environmental context",
+                "visualWeight": ""
+              },
+              "editing": {
+                "filterStyle": "Warm, dark, muted urban tones",
+                "grain": "",
+                "sharpness": ""
+              },
+              "lighting": {
+                "direction": "",
+                "overallExposure": "",
+                "shadowQuality": "",
+                "source": "low-light nighttime with ambient street lights"
+              },
+              "psychology": {
+                "emotionalResponse": "Warm, intimate, lightly humorous",
+                "primaryVisualHook": "We let our four-year-old name the dog.",
+                "saveWorthinessElements": "Charming anecdote worth remembering",
+                "shareWorthiness": "Funny/relatable naming story prompts sharing with parents/pet owners"
+              },
+              "subject": {
+                "actionPose": "",
+                "expression": "",
+                "position": "centered man and dog, urban sidewalk background",
+                "primary": "man crouching"
+              },
+              "text": {
+                "exactVisibleText": "",
+                "hierarchy": "",
+                "position": "",
+                "present": false,
+                "style": "no text"
+              }
+            },
+            "provenance": [
+              {
+                "evidence": "slide 1",
+                "field": "Slide count",
+                "provenance": "observed",
+                "value": "1"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Subjects present",
+                "provenance": "observed",
+                "value": "man crouching, brown and white dog"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Background setting",
+                "provenance": "observed",
+                "value": "city street at night"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Text overlays on slide",
+                "provenance": "observed",
+                "value": "none"
+              },
+              {
+                "evidence": "slide 1",
+                "field": "Color palette",
+                "provenance": "observed",
+                "value": "#1a1a1a, #2e2a28, #b08a5e, #8a6a4a, #3d2b1f"
+              },
+              {
+                "evidence": "CAPTION",
+                "field": "Caption text",
+                "flagged": "Evidence \"CAPTION\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "We let our four-year-old name the dog.  So this is Broccoli."
+              },
+              {
+                "evidence": "HASHTAGS field",
+                "field": "Hashtags",
+                "provenance": "observed",
+                "value": "none present"
+              },
+              {
+                "evidence": null,
+                "field": "Video content",
+                "provenance": "inferred",
+                "value": "unavailable, likely a static photo post"
+              },
+              {
+                "evidence": null,
+                "field": "Audio",
+                "provenance": "inferred",
+                "value": "unavailable"
+              },
+              {
+                "evidence": null,
+                "field": "Transcript",
+                "provenance": "inferred",
+                "value": "unavailable"
+              },
+              {
+                "evidence": "ACCOUNT metadata",
+                "field": "Follower count",
+                "flagged": "Evidence \"ACCOUNT metadata\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "unknown"
+              },
+              {
+                "evidence": "METRICS",
+                "field": "Comment count",
+                "provenance": "observed",
+                "value": "35550"
+              },
+              {
+                "evidence": "METRICS",
+                "field": "Likes",
+                "provenance": "observed",
+                "value": "0 (likely unrecorded/unavailable rather than zero)"
+              }
+            ]
+          },
+          "hookBreakdown": {
+            "exactText": "We let our four-year-old name the dog.",
+            "improvement": "Could add more sensory or scene-setting detail to deepen immersion before punchline",
+            "location": "caption",
+            "mechanism": "Sets up anticipation for a reveal about the dog's name",
+            "score": 8,
+            "scoreReasoning": "Simple, relatable setup line that drives curiosity and primes the punchline in the next sentence; caption length matches HONY's proven short-caption pattern (caption text)",
+            "type": "setup-punchline",
+            "whatWorks": "Short, conversational phrasing that mimics real speech",
+            "whyItWorks": "Creates curiosity about what a child would name a dog, paying off with an absurd/funny reveal"
+          },
+          "limitations": [
+            "Follower count and verification status unknown, limiting audience-scale context",
+            "Likes metric reported as 0, likely a data gap rather than true zero engagement"
+          ],
+          "monetizationPotential": "Low direct monetization; format suits brand/page growth, merchandise, or book features (HONY's established revenue model) rather than product promotion.",
+          "performanceBasis": {
+            "engagementRate": null,
+            "formula": "Not computable \u2014 follower count or engagement metrics unavailable.",
+            "score": null
+          },
+          "performanceScore": 50,
+          "storyStructure": [
+            {
+              "purpose": "Introduce premise (child named the dog)",
+              "section": "Setup",
+              "timing": "caption line 1"
+            },
+            {
+              "purpose": "Reveal the funny name 'Broccoli'",
+              "section": "Payoff",
+              "timing": "caption line 2"
+            },
+            {
+              "purpose": "Show the man and dog together to humanize the story",
+              "section": "Visual anchor",
+              "timing": "slide 1"
+            }
+          ],
+          "targetAudience": {
+            "desire": "To feel warmth, humor, and connection through relatable family/pet moments",
+            "trigger": "Curiosity about an unusual name and the charm of a child's logic",
+            "who": "General social media users who enjoy heartwarming, human-interest stories"
+          },
+          "videoVisualDNA": {
+            "audioStyle": "None (static image, no audio data)",
+            "backgroundDescription": "City street at night (slide 1)",
+            "backgroundType": "Urban street",
+            "colorPalette": {
+              "accent": "#b08a5e",
+              "approximateHex": [
+                "#1a1a1a",
+                "#2e2a28",
+                "#b08a5e",
+                "#8a6a4a",
+                "#3d2b1f"
+              ],
+              "dominant": "#1a1a1a",
+              "mood": "warm, dark, intimate",
+              "secondary": "#2e2a28"
+            },
+            "contentFormat": "Single photo post",
+            "editingStyle": "Minimal, naturalistic photo edit",
+            "lightingStyle": "Low-key, night street lighting",
+            "paceAndEnergy": "Still, calm, single-frame",
+            "platformAesthetic": "Classic Humans of New York style",
+            "productionLevel": "Professional documentary photography",
+            "recreationInstructions": "Capture a candid low-angle street portrait at night with warm ambient lighting, subject crouched near their pet, paired with a short narrative caption with a humorous twist.",
+            "subjectDescription": "Man crouching next to a brown and white dog (slide 1)",
+            "subjectType": "Human and animal",
+            "textStyle": {
+              "animation": "n/a",
+              "color": "n/a",
+              "fontSize": "n/a",
+              "fontStyle": "n/a",
+              "placement": "n/a",
+              "present": false
+            }
+          },
+          "visualStyle": {
+            "colorMood": "Dark, warm urban tones (slide 1 palette: #1a1a1a, #2e2a28, #b08a5e, #8a6a4a, #3d2b1f)",
+            "composition": "Centered man and dog on sidewalk, city street background (slide 1)",
+            "editStyle": "Naturalistic documentary photo, minimal post-processing",
+            "score": 7,
+            "textOverlay": "None"
+          },
+          "whyItWorks": [
+            "Unexpected, funny name payoff creates a strong hook (caption: 'So this is Broccoli.')",
+            "Classic HONY format of human + intimate anecdote builds trust and relatability (slide 1: man crouching, dog, city street)",
+            "Short caption with a twist ending drives high comment volume (comments 35550)",
+            "Warm, candid night-time photo composition invites emotional connection (slide 1 palette/composition)"
+          ]
+        },
+        "blueprint": {
+          "audio": {
+            "music": "unknown",
+            "pacingWordsPerMin": null,
+            "transcriptFull": null,
+            "voiceStyle": "First-person conversational narrator (HONY subject's own words implied)"
+          },
+          "caption": {
+            "cta": null,
+            "exact": "\"We let our four-year-old name the dog.  So this is Broccoli.\"",
+            "hashtags": []
+          },
+          "dependencies": [
+            "Caption text for full narrative context",
+            "No video/audio data available to assess motion or sound"
+          ],
+          "kind": "post",
+          "scenes": [],
+          "slides": [
+            {
+              "backgroundHex": "#1a1a1a",
+              "exactText": "",
+              "index": 0,
+              "layoutNotes": "Single centered photo of man and dog on night street, no overlay text",
+              "mediaPath": "50e6cc7d-4b16-4d80-bebc-f1b738d5648f/8fb5a4ae-6734-4d89-8c16-af34f186fc2a/0-image.jpg",
+              "role": "hook",
+              "subject": "man crouching, brown and white dog, city street at night",
+              "textBlocks": [],
+              "textRemovalNotes": "No text present to remove"
+            }
+          ]
+        },
+        "transcript": null,
+        "source_caption": "\"We let our four-year-old name the dog.  So this is Broccoli.\""
+      }
+    },
+    {
+      "label": "melrobbins",
+      "postType": "Reel",
+      "source": {
+        "dna_analysis": {
+          "analysisConfidence": 82,
+          "blueprint": {
+            "audio": {
+              "music": "original",
+              "pacingWordsPerMin": 145,
+              "transcriptFull": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it. There is no big secret. There is no magic formula. The only thing that you need to focus on is doing the reps. It is boring, it is tedious, it takes time, but if you are willing to show up every day and just focus on doing the reps, over time, the change will happen, the success will be created, your strength will build, and you will achieve everything that you want if you're willing to just keep showing up and doing the reps.",
+              "voiceStyle": "Confident, direct, conversational coach tone"
+            },
+            "caption": {
+              "cta": "So keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25",
+              "exact": "I hate to break it to you\u2026 but there\u2019s no big secret that will magically make your dreams come true.\n\nIt\u2019s all about REPETITION.\n\nIt\u2019s tedious. It\u2019s boring. But it WORKS.\n\nSo keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25\n\n#melrobbins #motivation #makeyourdreamscometrue #achieveyourgoals #keepshowingup",
+              "hashtags": [
+                "melrobbins",
+                "motivation",
+                "makeyourdreamscometrue",
+                "achieveyourgoals",
+                "keepshowingup"
+              ]
+            },
+            "dependencies": [
+              "speaker's spoken delivery",
+              "synced on-screen captions"
+            ],
+            "kind": "reel",
+            "scenes": [
+              {
+                "audio": "A woman delivers motivational spoken advice directly to the camera with no background music.",
+                "camera": "handheld",
+                "description": "A blonde woman with thick black glasses wearing a black high-collar top speaks directly into a handheld camera indoors, gesturing with her hands.",
+                "end": 43.68,
+                "onScreenText": [
+                  {
+                    "endSec": 7.4,
+                    "position": "",
+                    "startSec": 0,
+                    "style": "",
+                    "text": "WHEN IT COMES TO ACHIEVING YOUR GOALS OR MAKING ANY KIND OF CHANGE, JUST STOP OVERCOMPLICATING IT."
+                  },
+                  {
+                    "endSec": 15.6,
+                    "position": "",
+                    "startSec": 7.43,
+                    "style": "",
+                    "text": "THERE IS NO BIG SECRET, THERE IS NO MAGIC FORMULA, THE ONLY THING THAT YOU NEED TO FOCUS ON IS DOING THE REPS."
+                  },
+                  {
+                    "endSec": 19.8,
+                    "position": "",
+                    "startSec": 15.63,
+                    "style": "",
+                    "text": "IT IS BORING. IT IS TEDIOUS. IT TAKES TIME."
+                  },
+                  {
+                    "endSec": 25.8,
+                    "position": "",
+                    "startSec": 19.83,
+                    "style": "",
+                    "text": "BUT IF YOU ARE WILLING TO SHOW UP EVERY DAY AND JUST FOCUS ON DOING THE REPS."
+                  },
+                  {
+                    "endSec": 43.68,
+                    "position": "",
+                    "startSec": 25.83,
+                    "style": "",
+                    "text": "OVER TIME THE CHANGE WILL HAPPEN THE SUCCESS WILL BE CREATED, YOUR STRENGTH WILL BUILD, AND YOU WILL ACHIEVE EVERYTHING THAT YOU WANT IF YOU'RE WILLING TO JUST KEEP SHOWING UP AND DOING THE REPS."
+                  }
+                ],
+                "spokenText": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it. There is no big secret. There is no magic formula. The only thing that you need to focus on is doing the reps. It is boring, it is tedious, it takes time, but if you are willing to show up every day and just focus on doing the reps, over time, the change will happen, the success will be created, your strength will build, and you will achieve everything that you want if you're willing to just keep showing up and doing the reps.",
+                "start": 0,
+                "transition": "none"
+              }
+            ],
+            "slides": []
+          },
+          "captionDNA": {
+            "bodyPattern": "Short declarative sentences building toward motivational payoff",
+            "ctaLine": "So keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25",
+            "ctaType": "Soft",
+            "emojiUsage": "Single fire emoji \ud83d\udd25 at end for energy",
+            "hashtagPlacement": "Grouped at end, five hashtags",
+            "hookLine": "I hate to break it to you\u2026 but there\u2019s no big secret that will magically make your dreams come true.",
+            "keywordTrigger": "REPETITION",
+            "lineBreakRhythm": "Short paragraph breaks after each key sentence for emphasis",
+            "persuasionStyle": "Myth-busting + reassurance",
+            "score": 7,
+            "structure": "Micro",
+            "tone": "Blunt, encouraging, no-nonsense"
+          },
+          "channelIntelligence": {
+            "audienceLanguage": "Casual, direct, empowering tone ('I hate to break it to you', 'keep showing up')",
+            "contentStrengths": [
+              "Consistent talking-head format",
+              "Strong verbal hooks",
+              "High personal authenticity"
+            ],
+            "primaryNiche": "Personal development / motivational speaking"
+          },
+          "contentCategory": "Motivational",
+          "contentMedium": {
+            "description": "Single continuous handheld talking-head clip, no cuts, no music, speech-driven.",
+            "mediumIsTheMessage": true,
+            "mediumSignals": [
+              "handheld camera (0:00-43.68)",
+              "no music, voice only (audio meta)",
+              "single shot, no transitions (shot list: 1 shot, 43.68s)"
+            ],
+            "primary": "text-on-video",
+            "replicationInstructions": "Film one unbroken take speaking directly to camera, no background music, use captions for key phrases, keep energy calm but firm.",
+            "secondary": null
+          },
+          "contentSummary": "Direct-to-camera talking-head motivational video where Mel Robbins explains that achieving goals requires no secret formula, only repetition ('doing the reps') shown through daily consistency.",
+          "emotionalArchitecture": {
+            "curiosity": 6,
+            "fomo": 2,
+            "inspiration": 9,
+            "relatability": 8,
+            "trust": 8,
+            "urgency": 4
+          },
+          "engagementDrivers": [
+            "Relatable truth about consistency over secrets",
+            "Motivational tone encouraging comments/shares",
+            "Simple, quotable phrase 'doing the reps'",
+            "Personal direct address fosters parasocial trust"
+          ],
+          "forensics": {
+            "provenance": [
+              {
+                "evidence": "shot list: 1 shot, 0-43.68s",
+                "field": "shot_count",
+                "provenance": "observed",
+                "value": "1 continuous shot"
+              },
+              {
+                "evidence": "shot list onScreen description",
+                "field": "camera_type",
+                "flagged": "Evidence \"shot list onScreen description\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "handheld"
+              },
+              {
+                "evidence": "speakerOnCamera:true",
+                "field": "speaker_visibility",
+                "flagged": "Evidence \"speakerOnCamera:true\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "on camera throughout"
+              },
+              {
+                "evidence": "audio meta: kind voice, energy medium",
+                "field": "audio_type",
+                "provenance": "observed",
+                "value": "voice only, no music"
+              },
+              {
+                "evidence": "onScreenText timestamps align with transcript",
+                "field": "on_screen_text_sync",
+                "flagged": "Evidence \"onScreenText timestamps align with transcript\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "captions matched to speech"
+              },
+              {
+                "evidence": "durationSec:43.68",
+                "field": "duration",
+                "flagged": "Evidence \"durationSec:43.68\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "43.68 seconds"
+              },
+              {
+                "evidence": "ctaFrame: 'Woman flexes her arm at 00:43'",
+                "field": "cta_gesture",
+                "provenance": "observed",
+                "value": "arm flex at 0:43"
+              },
+              {
+                "evidence": "shot list onScreen description",
+                "field": "clothing",
+                "flagged": "Evidence \"shot list onScreen description\" doesn't point to a real slide or timestamp.",
+                "provenance": "inferred",
+                "value": "black high-collar top"
+              },
+              {
+                "evidence": "CAPTION text: 'I hate to break it to you\u2026'",
+                "field": "caption_tone",
+                "provenance": "observed",
+                "value": "blunt and motivational"
+              },
+              {
+                "evidence": "HASHTAGS field list",
+                "field": "hashtag_count",
+                "provenance": "observed",
+                "value": "5 hashtags"
+              },
+              {
+                "evidence": null,
+                "field": "background_setting",
+                "provenance": "inferred",
+                "value": "not clearly identifiable"
+              },
+              {
+                "evidence": "metrics computation",
+                "field": "engagement_rate",
+                "provenance": "observed",
+                "value": "0.171%"
+              }
+            ],
+            "videoForensics": {
+              "audio": {
+                "audioVisualSync": "A woman delivers motivational spoken advice directly to the camera with no background music.",
+                "musicEnergy": "medium",
+                "musicType": "voice",
+                "voiceover": "yes"
+              },
+              "hook": {
+                "audioHook": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it.",
+                "curiosityGap": "Opens by denying a common assumption (that goals require complex methods), prompting curiosity about what the real answer is.",
+                "element": "spoken",
+                "exactVisibleText": "WHEN IT COMES TO ACHIEVING YOUR GOALS OR MAKING ANY KIND OF CHANGE, JUST STOP OVERCOMPLICATING IT. / THERE IS NO BIG SECRET, THERE IS NO MAGIC FORMULA, THE ONLY THING THAT YOU NEED TO FOCUS ON IS DOING THE REPS. / IT IS BORING. IT IS TEDIOUS. IT TAKES TIME. / BUT IF YOU ARE WILLING TO SHOW UP EVERY DAY AND JUST FOCUS ON DOING THE REPS. / OVER TIME THE CHANGE WILL HAPPEN THE SUCCESS WILL BE CREATED, YOUR STRENGTH WILL BUILD, AND YOU WILL ACHIEVE EVERYTHING THAT YOU WANT IF YOU'RE WILLING TO JUST KEEP SHOWING UP AND DOING THE REPS.",
+                "openingAction": "A blonde woman with thick black glasses wearing a black high-collar top speaks directly into a handheld camera indoors, gesturing with her hands.",
+                "strength": 7,
+                "type": "Myth-busting statement"
+              },
+              "pacing": {
+                "averageCutDuration": 43.68,
+                "bRollUsage": "0 of 1 shots b-roll",
+                "overall": "Steady, single continuous monologue",
+                "rhythmSynced": false,
+                "transitionTypes": "none"
+              },
+              "performance": {
+                "commentTrigger": "Invites agreement/validation on personal struggle with consistency",
+                "loopQuality": null,
+                "replayValue": null,
+                "saveValue": null,
+                "shareTrigger": "Relatable truth about consistency over secrets"
+              },
+              "structure": {
+                "act1": "Hook/myth-bust",
+                "act2": "Core lesson",
+                "act3": "Reality check",
+                "cta": "Woman flexes her arm at 00:43 saying 'doing the reps.'",
+                "type": "Linear monologue"
+              },
+              "visual": {
+                "cameraMovements": "handheld",
+                "colorGrade": "Neutral, natural tones",
+                "productionQuality": "Mid, authentic/non-polished",
+                "shootingStyle": "Handheld selfie-style talking-head",
+                "shotTypes": "talking-head"
+              }
+            }
+          },
+          "hookBreakdown": {
+            "exactText": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it.",
+            "improvement": "Could add a stronger pattern interrupt visually (text flash or zoom) to boost retention in first 3 seconds.",
+            "location": "spoken",
+            "mechanism": "Opens by denying a common assumption (that goals require complex methods), prompting curiosity about what the real answer is.",
+            "score": 7,
+            "scoreReasoning": "Clear, relatable, but not highly novel phrasing; relies on tone and delivery more than wording.",
+            "type": "Myth-busting statement",
+            "whatWorks": "Direct address and confident tone immediately engage viewer.",
+            "whyItWorks": "Challenges viewer's existing belief, creating an information gap that the rest of the video resolves."
+          },
+          "limitations": [
+            "No slide OCR data available; analysis relies solely on video shot list and transcript."
+          ],
+          "monetizationPotential": "High for personal brand/coaching upsells (courses, books, speaking) via trust-building motivational content.",
+          "performanceBasis": {
+            "engagementRate": 0.171,
+            "formula": "ER = (likes 21997 + comments 293) / followers 13001537 \u00d7 100 = 0.171%; score = clamp(50 + 25\u00b7log2(ER)) = 0",
+            "score": 0
+          },
+          "performanceScore": 0,
+          "storyStructure": [
+            {
+              "purpose": "Deny the existence of a secret formula to spark curiosity",
+              "section": "Hook",
+              "timing": "0:00-0:08"
+            },
+            {
+              "purpose": "Introduce 'doing the reps' as the real answer",
+              "section": "Core message",
+              "timing": "0:08-0:16"
+            },
+            {
+              "purpose": "Acknowledge the boredom/tedium of consistency",
+              "section": "Reality check",
+              "timing": "0:16-0:20"
+            },
+            {
+              "purpose": "Promise of success and change through repetition, ending on physical cue (flexing arm)",
+              "section": "Payoff",
+              "timing": "0:20-0:44"
+            }
+          ],
+          "targetAudience": {
+            "desire": "To find a simple, trustworthy method to achieve lasting change",
+            "trigger": "Frustration with lack of progress despite effort",
+            "who": "People pursuing personal goals or habit change who feel stuck or impatient"
+          },
+          "videoVisualDNA": {
+            "audioStyle": "Voice only, no music",
+            "backgroundDescription": "Unspecified indoor setting, likely home or office based on casual lighting",
+            "backgroundType": "Indoor, plain/neutral",
+            "colorPalette": {
+              "accent": "white (text)",
+              "approximateHex": [
+                "#000000",
+                "#D8B48C",
+                "#FFFFFF"
+              ],
+              "dominant": "black",
+              "mood": "neutral, grounded",
+              "secondary": "skin tone/beige"
+            },
+            "contentFormat": "Talking-head monologue",
+            "editingStyle": "No cuts, continuous single shot",
+            "lightingStyle": "Soft indoor lighting, even exposure",
+            "paceAndEnergy": "Calm, steady, confident delivery",
+            "platformAesthetic": "Instagram Reels native, vertical talking-head",
+            "productionLevel": "Low-to-mid, handheld authentic style",
+            "recreationInstructions": "Use handheld phone camera, speak directly addressing lens, add bold captions matching speech timing, no music, single uninterrupted take under 45 seconds.",
+            "subjectDescription": "Blonde woman with black-rimmed glasses, black high-collar top, speaking directly to camera",
+            "subjectType": "Single person",
+            "textStyle": {
+              "animation": "synced caption reveal",
+              "color": "white",
+              "fontSize": "medium",
+              "fontStyle": "bold sans-serif",
+              "placement": "center/lower screen captions",
+              "present": true
+            }
+          },
+          "visualStyle": {
+            "colorMood": "Neutral indoor tones, black clothing contrast",
+            "composition": "Centered medium close-up, handheld framing",
+            "editStyle": "Single continuous take with synced on-screen captions",
+            "score": 7,
+            "textOverlay": "Heavy"
+          },
+          "whyItWorks": [
+            "Pattern-interrupt hook denying a 'secret' creates curiosity (0:00-0:08, slide/VST on-screen text 'THERE IS NO BIG SECRET')",
+            "Repetition of phrase 'doing the reps' acts as a memorable mantra (transcript 11.4-43.1)",
+            "Direct eye contact and handheld camera build trust and relatability (0:00-43.68, onScreen handheld talking-head)",
+            "Caption reinforces video message with short punchy lines mirroring spoken script ('It\u2019s tedious. It\u2019s boring. But it WORKS.')"
+          ]
+        },
+        "blueprint": {
+          "audio": {
+            "music": "original",
+            "pacingWordsPerMin": 145,
+            "transcriptFull": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it. There is no big secret. There is no magic formula. The only thing that you need to focus on is doing the reps. It is boring, it is tedious, it takes time, but if you are willing to show up every day and just focus on doing the reps, over time, the change will happen, the success will be created, your strength will build, and you will achieve everything that you want if you're willing to just keep showing up and doing the reps.",
+            "voiceStyle": "Confident, direct, conversational coach tone"
+          },
+          "caption": {
+            "cta": "So keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25",
+            "exact": "I hate to break it to you\u2026 but there\u2019s no big secret that will magically make your dreams come true.\n\nIt\u2019s all about REPETITION.\n\nIt\u2019s tedious. It\u2019s boring. But it WORKS.\n\nSo keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25\n\n#melrobbins #motivation #makeyourdreamscometrue #achieveyourgoals #keepshowingup",
+            "hashtags": [
+              "melrobbins",
+              "motivation",
+              "makeyourdreamscometrue",
+              "achieveyourgoals",
+              "keepshowingup"
+            ]
+          },
+          "dependencies": [
+            "speaker's spoken delivery",
+            "synced on-screen captions"
+          ],
+          "kind": "reel",
+          "scenes": [
+            {
+              "audio": "A woman delivers motivational spoken advice directly to the camera with no background music.",
+              "camera": "handheld",
+              "description": "A blonde woman with thick black glasses wearing a black high-collar top speaks directly into a handheld camera indoors, gesturing with her hands.",
+              "end": 43.68,
+              "onScreenText": [
+                {
+                  "endSec": 7.4,
+                  "position": "",
+                  "startSec": 0,
+                  "style": "",
+                  "text": "WHEN IT COMES TO ACHIEVING YOUR GOALS OR MAKING ANY KIND OF CHANGE, JUST STOP OVERCOMPLICATING IT."
+                },
+                {
+                  "endSec": 15.6,
+                  "position": "",
+                  "startSec": 7.43,
+                  "style": "",
+                  "text": "THERE IS NO BIG SECRET, THERE IS NO MAGIC FORMULA, THE ONLY THING THAT YOU NEED TO FOCUS ON IS DOING THE REPS."
+                },
+                {
+                  "endSec": 19.8,
+                  "position": "",
+                  "startSec": 15.63,
+                  "style": "",
+                  "text": "IT IS BORING. IT IS TEDIOUS. IT TAKES TIME."
+                },
+                {
+                  "endSec": 25.8,
+                  "position": "",
+                  "startSec": 19.83,
+                  "style": "",
+                  "text": "BUT IF YOU ARE WILLING TO SHOW UP EVERY DAY AND JUST FOCUS ON DOING THE REPS."
+                },
+                {
+                  "endSec": 43.68,
+                  "position": "",
+                  "startSec": 25.83,
+                  "style": "",
+                  "text": "OVER TIME THE CHANGE WILL HAPPEN THE SUCCESS WILL BE CREATED, YOUR STRENGTH WILL BUILD, AND YOU WILL ACHIEVE EVERYTHING THAT YOU WANT IF YOU'RE WILLING TO JUST KEEP SHOWING UP AND DOING THE REPS."
+                }
+              ],
+              "spokenText": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it. There is no big secret. There is no magic formula. The only thing that you need to focus on is doing the reps. It is boring, it is tedious, it takes time, but if you are willing to show up every day and just focus on doing the reps, over time, the change will happen, the success will be created, your strength will build, and you will achieve everything that you want if you're willing to just keep showing up and doing the reps.",
+              "start": 0,
+              "transition": "none"
+            }
+          ],
+          "slides": []
+        },
+        "transcript": "When it comes to achieving your goals or making any kind of change, just stop overcomplicating it. There is no big secret. There is no magic formula. The only thing that you need to focus on is doing the reps. It is boring, it is tedious, it takes time, but if you are willing to show up every day and just focus on doing the reps, over time, the change will happen, the success will be created, your strength will build, and you will achieve everything that you want if you're willing to just keep showing up and doing the reps.",
+        "source_caption": "I hate to break it to you\u2026 but there\u2019s no big secret that will magically make your dreams come true.\n\nIt\u2019s all about REPETITION.\n\nIt\u2019s tedious. It\u2019s boring. But it WORKS.\n\nSo keep showing up and I promise you will start to see those big changes come to life! \ud83d\udd25\n\n#melrobbins #motivation #makeyourdreamscometrue #achieveyourgoals #keepshowingup"
+      }
+    }
+  ]
+}
