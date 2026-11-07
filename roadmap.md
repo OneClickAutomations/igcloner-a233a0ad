@@ -1,12 +1,18 @@
 # Roadmap
 
 ## Pass 4 — shared writing engine and quality
+- [ ] Mandatory per-output >=9 average / >=8 dimension gate, task-aware critic, grounded exemplars, bounded regeneration
+- [ ] Four-round score table, full five-analysis/two-niche old/new eval and full raw samples
+- [ ] Hook Lab prompt/output compaction below $0.10 target without changing prices
 - [ ] Shared grounded Claude copy engine, schemas, repair and quality rubric
 - [ ] Ranked Hook Lab, native caption packs, Sharpen and writing-model consolidation
 - [ ] Platform limits verified against official documentation
 - [ ] Carousel continuity and text verification; decide quick-generate shortcut
 - [ ] Tests, repeatable old/new evaluation and requested live checks
 - [ ] Model inventory, measured costs and final report with raw samples
+- [ ] Deterministic carousel exact-text fallback and repeat four-slide live test
+- [ ] Auto-shorten/refund/cache integration tests, all caption consumers, mobile check
+- [ ] Remove unused settings Anthropic validation; confirm direct key usage
 
 ## Content Creation Pass 2 — real analysis (done)
 - [x] Staged analysis job with stages, heartbeat, sweep + attempt refund
