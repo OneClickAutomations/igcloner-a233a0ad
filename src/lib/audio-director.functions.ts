@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
+import { copyJson, buildCopyContext, contextPrompt } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const Input = z.object({
   projectId: z.string().uuid(),
@@ -22,12 +21,10 @@ const Input = z.object({
 export const planAudioStrategy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     const system = `You are an AI Creative Director for short-form social video.
 You receive a content brief and return a complete production plan in STRICT JSON.
@@ -65,13 +62,10 @@ No prose. No markdown fences. JSON only.`;
 ${data.angle || "(none — infer from style preset)"}
 `;
 
-    const { text } = await generateText({ model, system, prompt: userPrompt });
-    const cleaned = text.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
-    let plan: any;
-    try {
-      plan = JSON.parse(cleaned);
-    } catch {
-      throw new Error("Director returned malformed JSON — try again.");
-    }
+    const {data:p}=await context.supabase.from("projects").select("analysis_id,user_preferences").eq("id",data.projectId).eq("user_id",context.userId).maybeSingle();
+    if(!p)throw new Error("Project not found");
+    const ctx=p.analysis_id?await buildCopyContext(p.analysis_id,context.userId,data.platform,p.user_preferences):{};
+    const schema=z.object({mode:z.string(),voiceCategory:z.string(),voiceTone:z.string(),musicGenre:z.string(),musicPrompt:z.string(),ambientPrompt:z.string(),sfxIntensity:z.string(),captionStyle:z.string(),strategy:z.object({visual:z.string(),motion:z.string(),voice:z.string(),music:z.string(),sound:z.string(),hook:z.string()}),hookVariations:z.array(z.string()),openingScripts:z.array(z.string())});
+    const {value:plan}=await copyJson(schema,`${userPrompt}\n${contextPrompt(ctx)}`,system,6000);
     return { plan };
   });

@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
+import { copyText } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const Input = z.object({
   prompt: z.string().max(2000).optional().default(""),
@@ -17,8 +16,6 @@ export const enhancePrompt = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     const kindHint: Record<string, string> = {
       image: "an AI image-generation instruction (visual details, composition, lighting, mood, style, subject specificity)",
@@ -41,7 +38,7 @@ Rules:
 ${data.context ? `Context (use to ground the rewrite, do not repeat verbatim):\n${data.context}\n` : ""}
 Rewrite it now.`;
 
-    const { text } = await generateText({ model, system, prompt: userPrompt });
+    const { text } = await copyText({ system, prompt: userPrompt });
     const enhanced = text.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
     return { enhanced };
   });
