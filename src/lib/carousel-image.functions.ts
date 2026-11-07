@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
+import { copyText } from "./copy-engine.server";
+import { compareText, pickBestAttempt, type GateResult } from "./clone-rules";
+import { ACTION_COSTS } from "./credits";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage } from "@/lib/source-context";
 import { CLONE_LABEL } from "@/lib/clone-modes";
 import {
@@ -82,8 +83,6 @@ export const generateCarouselSlideImage = createServerFn({ method: "POST" })
     const refImage = scraped ? await fetchVisionImage(scraped) : null;
 
     // === Step 1: enhance the visual prompt 10x ===
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const promptModel = gateway("google/gemini-3-flash-preview");
 
     const legibilityBlock = mediumCtx.allowDesignType
       ? `TEXT LEGIBILITY RULES (NON-NEGOTIABLE — the slide must be readable on a phone):
@@ -145,59 +144,41 @@ ${data.extraDirection ? `User override / extra direction: ${data.extraDirection}
 
 Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
 
-    const { text: enhanced } = await generateText({
-      model: promptModel,
+    const { text: enhanced } = await copyText({
       system: enhanceSystem,
       prompt: enhanceUser,
     });
     const finalPrompt = enhanced.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
 
-    // === Step 2: render the slide image ===
-    const userContent: any[] = [{ type: "text", text: finalPrompt }];
-    if (refImage) {
-      let bin = "";
-      const chunk = 0x8000;
-      for (let i = 0; i < refImage.image.length; i += chunk) {
-        bin += String.fromCharCode(...refImage.image.subarray(i, i + chunk));
+    if(cloneMethod==="A0" || cloneMethod==="A1") throw new Error("Use the rights-checked copy studio for source-media modes.");
+    const {debitCredits,refundCredits}=await import("./credits.server");
+    const {editImageGemini}=await import("./image-edit.server");
+    const {verifyEditedSlide}=await import("./clone-ai.server");
+    const refs:{bytes:Uint8Array;mime:string}[]=[];
+    // Fresh storage URLs, never the expired URL embedded in the document.
+    for(const index of [...new Set([1,slide.index-1])].filter(i=>i>0&&i<slide.index)) {
+      const {data:assets}=await supabase.from("project_assets").select("filename,metadata").eq("project_id",project.id).eq("user_id",userId).eq("asset_type","image").order("created_at",{ascending:false});
+      const asset=assets?.find(a=>(a.metadata as any)?.slideIndex===index);
+      if(asset?.filename){const r=await supabase.storage.from("project-assets").download(asset.filename);if(r.data)refs.push({bytes:new Uint8Array(await r.data.arrayBuffer()),mime:r.data.type||"image/png"});}
+    }
+    if(slide.index>1&&!refs.length)throw new Error("Generate slide 1 first to establish the carousel style.");
+    const intended=[slide.headline,slide.body].filter(Boolean).join("\n");
+    const attemptId=crypto.randomUUID();const cost=ACTION_COSTS.imageGeneration;
+    await debitCredits(userId,cost,"debit_image","carousel_slide",attemptId,attemptId);
+    try {
+      const attempts:{bytes:Uint8Array;mime:string;gate:GateResult;observedText:string}[]=[];
+      let retry="";
+      for(let i=0;i<3;i++) {
+        const out=await editImageGemini(`${finalPrompt}\nRender EXACTLY this text and NO text from reference slides: ${JSON.stringify(intended)}. References are slide 1 and previous slide: match their design system but use THIS slide's new content. ${retry}`,refs,"google/gemini-2.5-flash-image","1:1");
+        // A2/A3 change subject/scene; gate text strictly, use composition only as an advisory continuity note.
+        const v=await verifyEditedSlide({original:refs[0]??out,output:out,originalText:"",intendedText:intended});
+        const check=compareText(intended,v.result.observedText);
+        const gate:GateResult={pass:check.verdict==="exact",textVerdict:check.verdict,similarity:check.similarity,problems:check.verdict==="exact"?[]:[`Expected ${intended}; read ${v.result.observedText}`]};
+        attempts.push({...out,gate,observedText:v.result.observedText});
+        if(gate.pass)break;retry=`Previous text verification failed: ${gate.problems.join(" ")}. Fix spelling and remove extra reference text.`;
       }
-      const b64 = btoa(bin);
-      userContent.push({
-        type: "text",
-        text: "Reference image attached — match its visual energy, but the slide content/topic is defined above.",
-      });
-      userContent.push({
-        type: "image_url",
-        image_url: { url: `data:${refImage.mediaType};base64,${b64}` },
-      });
-    }
-
-    const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "raw-fetch",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        modalities: ["image", "text"],
-        messages: [{ role: "user", content: userContent }],
-      }),
-    });
-
-    if (!upstream.ok) {
-      const text = await upstream.text();
-      if (upstream.status === 429) throw new Error("Image generation is rate limited — please retry in a moment.");
-      if (upstream.status === 402) throw new Error("Lovable AI credits exhausted. Add credits in workspace settings.");
-      throw new Error(`Image model error [${upstream.status}]: ${text.slice(0, 200)}`);
-    }
-
-    const payload = await upstream.json();
-    const dataUrl = extractImageDataUrl(payload);
-    if (!dataUrl) throw new Error("Model did not return an image. Try regenerating the slide first.");
-
-    const { bytes, mime } = dataUrlToBytes(dataUrl);
-    const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
+      const best=pickBestAttempt(attempts);const {bytes,mime}=best;
+      const ext=mime.includes("jpeg")?"jpg":"png";
     const filename = `${userId}/${data.projectId}/slide-${slide.index}-${Date.now()}.${ext}`;
 
     const { error: upErr } = await supabase.storage
@@ -210,21 +191,22 @@ Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
       .createSignedUrl(filename, 60 * 60 * 24 * 7);
     if (sErr) throw new Error(sErr.message);
 
-    await supabase.from("project_assets").insert({
+    const {error:assetErr}=await supabase.from("project_assets").insert({
       project_id: data.projectId,
       user_id: userId,
       asset_type: "image",
       source: "generated",
       url: signed.signedUrl,
       filename,
-      metadata: { mime, slideIndex: slide.index, enhancedPrompt: finalPrompt } as any,
+      metadata: { mime, slideIndex: slide.index, enhancedPrompt: finalPrompt,referenceCount:refs.length,textGate:best.gate,observedText:best.observedText,attempts:attempts.length } as any,
     });
 
+    if(assetErr)throw new Error(assetErr.message);
     // Save the image URL onto the slide in the carousel doc.
     const updatedDoc = {
       ...doc,
       slides: (doc.slides as any[]).map((s) =>
-        s.index === slide.index ? { ...s, imageUrl: signed.signedUrl } : s,
+        s.index === slide.index ? { ...s, imageUrl: signed.signedUrl, needsLook:!best.gate.pass, textGate:best.gate } : s,
       ),
     };
     const { data: saved, error: uErr } = await supabase
@@ -235,5 +217,7 @@ Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
       .single();
     if (uErr) throw new Error(uErr.message);
 
-    return { project: saved, slideIndex: slide.index, imageUrl: signed.signedUrl, enhancedPrompt: finalPrompt };
+    if(!best.gate.pass)await refundCredits(userId,cost,"carousel_slide",attemptId,attemptId);
+    return { project: saved, slideIndex: slide.index, imageUrl: signed.signedUrl, enhancedPrompt: finalPrompt,needsLook:!best.gate.pass,attempts:attempts.length,charged:best.gate.pass?cost:0,gate:best.gate };
+    }catch(e){await refundCredits(userId,cost,"carousel_slide",attemptId,attemptId);throw e;}
   });
