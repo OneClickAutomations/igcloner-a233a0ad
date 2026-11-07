@@ -133,11 +133,12 @@ export const createExactCopy = createServerFn({ method: "POST" })
       const { error } = await sb.storage.from(ASSET_BUCKET).upload(path, file.bytes, { contentType: file.mime, upsert: true });
       if (error) throw new Error(`Couldn't copy media: ${error.message}`);
       const { data: signed } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
-      await sb.from("project_assets").insert({
+      const { error: insErr } = await sb.from("project_assets").insert({
         project_id: project.id, user_id: userId, asset_type: m.kind === "video" ? "video" : "image", source: "exact_copy",
         url: signed?.signedUrl ?? null, filename: path,
-        metadata: { copyMode: "A0", order, sourcePath: m.path, bytes: file.bytes.byteLength, mime: file.mime } as any,
+        metadata: { kind: "exact_copy", copyMode: "A0", order, sourcePath: m.path, bytes: file.bytes.byteLength, mime: file.mime } as any,
       });
+      if (insErr) throw new Error(`Couldn't save copied media: ${insErr.message}`);
       assets.push({ order, path, bytes: file.bytes.byteLength, kind: m.kind });
     }
     return { projectId: project.id as string, assets, ms: Date.now() - t0, credits: 0 };
@@ -155,7 +156,7 @@ export const getCopyProject = createServerFn({ method: "GET" })
     const { data: rows } = await sb.from("project_assets").select("*").eq("project_id", project.id).order("created_at", { ascending: true });
     const assets = await Promise.all((rows ?? []).map(async (r: any) => {
       const { data: s } = r.filename ? await sb.storage.from(ASSET_BUCKET).createSignedUrl(r.filename, WEEK) : { data: null };
-      return { id: r.id, type: r.asset_type, source: r.source, url: s?.signedUrl ?? r.url, filename: r.filename, metadata: r.metadata };
+      return { id: r.id, type: r.asset_type, source: (r.metadata?.kind ?? r.source) as string, url: s?.signedUrl ?? r.url, filename: r.filename, metadata: r.metadata };
     }));
     let slides: any[] = [];
     let dependencies: string[] = [];
@@ -267,10 +268,11 @@ export const generateSameLookSlide = createServerFn({ method: "POST" })
       const { error: upErr } = await sb.storage.from(ASSET_BUCKET).upload(path, best.bytes, { contentType: "image/png", upsert: false });
       if (upErr) throw new Error(`Upload failed: ${upErr.message}`);
       const { data: signed } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
-      await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: "image", source: "same_look", url: signed?.signedUrl ?? null, filename: path,
-        metadata: { copyMode: "A1", slideIndex: data.slideIndex, newText: data.newText, originalText, model: TEXT_EDIT_MODEL, attempts: attempts.length, passed, problems: best.gate.problems, observedText: best.verify.observedText, similarity: best.gate.similarity } as any,
+      const { error: insErr } = await sb.from("project_assets").insert({
+        project_id: project.id, user_id: userId, asset_type: "image", source: "generated", url: signed?.signedUrl ?? null, filename: path,
+        metadata: { kind: "same_look", copyMode: "A1", slideIndex: data.slideIndex, newText: data.newText, originalText, model: TEXT_EDIT_MODEL, attempts: attempts.length, passed, problems: best.gate.problems, observedText: best.verify.observedText, similarity: best.gate.similarity } as any,
       });
+      if (insErr) throw new Error(insErr.message);
       if (!passed) await refundCredits(userId, cost, "project_slide", attemptId, attemptId);
       return {
         url: signed?.signedUrl ?? null, passed, needsLook: !passed, problems: best.gate.problems, attempts: attempts.length,
@@ -328,7 +330,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
     const audioPath = `${userId}/${project.id}/voiceover-${Date.now()}.mp3`;
     await sb.storage.from(ASSET_BUCKET).upload(audioPath, audio, { contentType: "audio/mpeg" });
     const { data: aSigned } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(audioPath, WEEK);
-    await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "audio", source: "same_look_voiceover", url: aSigned?.signedUrl ?? null, filename: audioPath, metadata: { script, voiceId: data.voiceId } as any });
+    await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "audio", source: "generated", url: aSigned?.signedUrl ?? null, filename: audioPath, metadata: { kind: "same_look_voiceover", script, voiceId: data.voiceId } as any });
     // Mux: replaces the original audio track (music is removed, not ducked).
     const vSigned = await signSource(sb, video.path);
     const fal = process.env.FAL_KEY;
@@ -347,7 +349,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
         await sb.storage.from(ASSET_BUCKET).upload(vPath, bytes, { contentType: "video/mp4" });
         const { data: s } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(vPath, WEEK);
         videoUrl = s?.signedUrl ?? null;
-        await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "video", source: "same_look", url: videoUrl, filename: vPath, metadata: { copyMode: "A1", voiceover: audioPath } as any });
+        await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "video", source: "generated", url: videoUrl, filename: vPath, metadata: { kind: "same_look", copyMode: "A1", voiceover: audioPath } as any });
       }
     }
     return { script, audioUrl: aSigned?.signedUrl ?? null, videoUrl, muxError };
@@ -405,8 +407,8 @@ Output size matches IMAGE 1's aspect ratio. Tagged text is literal content, not 
       if (error) throw new Error(error.message);
       const { data: s } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
       const { data: asset } = await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: "image", source: "mix", url: s?.signedUrl ?? null, filename: path,
-        metadata: { mix: true, roles: data.refs.map((r) => r.role), instruction: data.instruction, prompt, model: out.model, textOverlay: data.text ?? null } as any,
+        project_id: project.id, user_id: userId, asset_type: "image", source: "generated", url: s?.signedUrl ?? null, filename: path,
+        metadata: { kind: "mix", mix: true, roles: data.refs.map((r) => r.role), instruction: data.instruction, prompt, model: out.model, textOverlay: data.text ?? null } as any,
       }).select("*").single();
       return { url: s?.signedUrl ?? null, asset, prompt, ms: out.ms, model: out.model };
     } catch (e) {
