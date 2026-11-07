@@ -2,19 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export const checkConfig = createServerFn({ method: "GET" }).handler(async () => {
-  const anthropic = process.env.ANTHROPIC_API_KEY;
   const apify = process.env.APIFY_TOKEN;
   return {
     ok: true,
-    anthropic: {
-      present: Boolean(anthropic),
-      length: anthropic?.length ?? 0,
-      prefix: anthropic ? anthropic.slice(0, 7) : null,
-    },
+    writing: { present:Boolean(process.env.LOVABLE_API_KEY) },
     apify: {
       present: Boolean(apify),
-      length: apify?.length ?? 0,
-      prefix: apify ? apify.slice(0, 6) : null,
     },
     nodeEnv: process.env.NODE_ENV ?? null,
   };
