@@ -32,7 +32,7 @@ export async function copyText(opts:{system?:string;prompt?:string;messages?:Mod
   // Workspace credits from authenticated catalog; USD is a separately labelled $3/$15 per million token estimate.
   return {text,usage:{inputTokens:input,outputTokens:output,workspaceCredits:input*0.000008+output*0.00004,estimatedUsd:input*0.000003+output*0.000015,ms:Date.now()-t,calls:1}};
 }
-export async function copyJson<T>(schema:z.ZodType<T>, prompt:string, system?:string, maxTokens=10000) {
+export async function copyJson<S extends z.ZodTypeAny>(schema:S, prompt:string, system?:string, maxTokens=10000):Promise<{value:z.output<S>;usage:CopyUsage;repaired:boolean}> {
   const usage=emptyUsage();
   const first=await copyText({system,prompt,maxTokens}); addUsage(usage,first.usage);
   let problem="",bad=first.text;

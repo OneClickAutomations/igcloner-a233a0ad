@@ -14,7 +14,7 @@ export function copyData(label: string, value: unknown) {
   const safe = JSON.stringify(value ?? null).replace(/</g,"\\u003c").replace(/>/g,"\\u003e");
   return `<data_${label}>${safe}</data_${label}>`;
 }
-export const tokens = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+export const tokens = (s: string):string[] => Array.from(s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
 export function tokenOverlap(a: string, b: string) {
   const aa = new Set(tokens(a)), bb = new Set(tokens(b));
   return aa.size && bb.size ? [...aa].filter(t => bb.has(t)).length / Math.min(aa.size, bb.size) : 0;
