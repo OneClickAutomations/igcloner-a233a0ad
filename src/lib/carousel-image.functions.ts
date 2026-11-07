@@ -169,15 +169,19 @@ Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
       const attempts:{bytes:Uint8Array;mime:string;gate:GateResult;observedText:string}[]=[];
       let retry="";
       for(let i=0;i<3;i++) {
-        const out=await editImageGemini(`${finalPrompt}\nRender EXACTLY this text and NO text from reference slides: ${JSON.stringify(intended)}. References are slide 1 and previous slide: match their design system but use THIS slide's new content. ${retry}`,refs,"google/gemini-2.5-flash-image","1:1");
+        const fallback=i===2;
+        const out=await editImageGemini(fallback
+          ? `Create a TEXT-FREE background for this slide: ${slide.visualNote??"abstract editorial composition"}. Match reference palette and visual style. No letters, numbers, logos, text, typography, labels or watermarks anywhere. Reserve upper 62% for a plain dark text panel; keep imagery in lower 38%. 1:1 square.`
+          : `${finalPrompt}\nUse bold clear typography, headline at least 8% canvas height, body at least 4%; no decorative or condensed lettering. Render EXACTLY this text and NO text from reference slides: ${JSON.stringify(intended)}. References are slide 1 and previous slide: match their design system but use THIS slide's new content. ${retry}`,refs,"google/gemini-2.5-flash-image","1:1");
         // A2/A3 change subject/scene; gate text strictly, use composition only as an advisory continuity note.
         const v=await verifyEditedSlide({original:refs[0]??out,output:out,originalText:"",intendedText:intended});
         const check=compareText(intended,v.result.observedText);
-        const gate:GateResult={pass:check.verdict==="exact",textVerdict:check.verdict,similarity:check.similarity,problems:check.verdict==="exact"?[]:[`Expected ${intended}; read ${v.result.observedText}`]};
+        const gate:GateResult={pass:!fallback&&check.verdict==="exact",textVerdict:check.verdict,similarity:check.similarity,problems:fallback?["Exact text overlay pending"]:check.verdict==="exact"?[]:[`Expected ${intended}; read ${v.result.observedText}`]};
         attempts.push({...out,gate,observedText:v.result.observedText});
         if(gate.pass)break;retry=`Previous text verification failed: ${gate.problems.join(" ")}. Fix spelling and remove extra reference text.`;
       }
-      const best=pickBestAttempt(attempts);const {bytes,mime}=best;
+      const overlayPending=attempts.length===3&&!attempts.some(a=>a.gate.pass);
+      const best=overlayPending?attempts[2]:pickBestAttempt(attempts);const {bytes,mime}=best;
       const ext=mime.includes("jpeg")?"jpg":"png";
     const filename = `${userId}/${data.projectId}/slide-${slide.index}-${Date.now()}.${ext}`;
 
@@ -198,7 +202,7 @@ Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
       source: "generated",
       url: signed.signedUrl,
       filename,
-      metadata: { mime, slideIndex: slide.index, enhancedPrompt: finalPrompt,referenceCount:refs.length,textGate:best.gate,observedText:best.observedText,attempts:attempts.length } as any,
+      metadata: { mime, slideIndex: slide.index, enhancedPrompt: finalPrompt,referenceCount:refs.length,textGate:best.gate,observedText:best.observedText,attempts:attempts.length,overlayPending } as any,
     });
 
     if(assetErr)throw new Error(assetErr.message);
@@ -218,6 +222,34 @@ Rewrite this into ONE expert image-generation prompt for slide ${slide.index}.`;
     if (uErr) throw new Error(uErr.message);
 
     if(!best.gate.pass)await refundCredits(userId,cost,"carousel_slide",attemptId,attemptId);
-    return { project: saved, slideIndex: slide.index, imageUrl: signed.signedUrl, enhancedPrompt: finalPrompt,needsLook:!best.gate.pass,attempts:attempts.length,charged:best.gate.pass?cost:0,gate:best.gate };
+    return { project: saved, slideIndex: slide.index, imageUrl: signed.signedUrl, enhancedPrompt: finalPrompt,needsLook:!best.gate.pass,attempts:attempts.length,charged:best.gate.pass?cost:0,gate:best.gate,overlayPending };
     }catch(e){await refundCredits(userId,cost,"carousel_slide",attemptId,attemptId);throw e;}
+  });
+
+/** Browser composites exact strings; server re-reads OCR before the asset becomes ready. */
+export const finalizeCarouselOverlay=createServerFn({method:"POST"}).middleware([requireSupabaseAuth])
+  .inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),slideIndex:z.number().int().min(1),image:z.string().max(12_000_000)}).parse(d))
+  .handler(async({data,context})=>{
+    const {supabase,userId}=context;
+    const {data:p}=await supabase.from("projects").select("project_data").eq("id",data.projectId).eq("user_id",userId).single();
+    const doc:any=p?.project_data,slide=doc?.slides?.find((s:any)=>s.index===data.slideIndex);
+    if(!slide)throw new Error("Slide not found");
+    const {data:assets}=await supabase.from("project_assets").select("id,filename,metadata").eq("project_id",data.projectId).eq("user_id",userId).order("created_at",{ascending:false}).limit(30);
+    const asset=assets?.find(a=>(a.metadata as any)?.slideIndex===data.slideIndex&&(a.metadata as any)?.overlayPending);
+    if(!asset?.filename)throw new Error("No pending text-free background for this slide");
+    const bg=await supabase.storage.from("project-assets").download(asset.filename);if(!bg.data)throw new Error("Background missing");
+    const output=dataUrlToBytes(data.image);if(output.mime!=="image/png")throw new Error("Overlay must be PNG");
+    const {verifyEditedSlide}=await import("./clone-ai.server");
+    const intended=[slide.headline,slide.body].filter(Boolean).join("\n");
+    const v=await verifyEditedSlide({original:{bytes:new Uint8Array(await bg.data.arrayBuffer()),mime:bg.data.type},output,originalText:"",intendedText:intended});
+    const check=compareText(intended,v.result.observedText);
+    const gate:GateResult={pass:check.verdict==="exact",textVerdict:check.verdict,similarity:check.similarity,problems:check.verdict==="exact"?[]:["Rendered overlay did not pass text verification"]};
+    const filename=`${userId}/${data.projectId}/slide-${data.slideIndex}-overlay-${crypto.randomUUID()}.png`;
+    const up=await supabase.storage.from("project-assets").upload(filename,output.bytes,{contentType:"image/png"});if(up.error)throw new Error(up.error.message);
+    const signed=await supabase.storage.from("project-assets").createSignedUrl(filename,604800);if(!signed.data)throw new Error("Couldn't sign overlay");
+    const meta={...(asset.metadata as any),overlayPending:false,deterministicOverlay:true,textGate:gate,observedText:v.result.observedText};
+    const a=await supabase.from("project_assets").update({filename,url:signed.data.signedUrl,metadata:meta}).eq("id",asset.id).eq("user_id",userId);if(a.error)throw new Error(a.error.message);
+    const next={...doc,slides:doc.slides.map((s:any)=>s.index===data.slideIndex?{...s,imageUrl:signed.data.signedUrl,needsLook:!gate.pass,textGate:gate}:s)};
+    const saved=await supabase.from("projects").update({project_data:next}).eq("id",data.projectId).eq("user_id",userId).select("*").single();if(saved.error)throw new Error(saved.error.message);
+    return {project:saved.data,imageUrl:signed.data.signedUrl,needsLook:!gate.pass,gate,charged:0,deterministicOverlay:true};
   });
