@@ -134,7 +134,7 @@ export const createExactCopy = createServerFn({ method: "POST" })
       if (error) throw new Error(`Couldn't copy media: ${error.message}`);
       const { data: signed } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(path, WEEK);
       const { error: insErr } = await sb.from("project_assets").insert({
-        project_id: project.id, user_id: userId, asset_type: m.kind === "video" ? "video" : "image", source: "exact_copy",
+        project_id: project.id, user_id: userId, asset_type: m.kind === "video" ? "video" : "image", source: "scraped",
         url: signed?.signedUrl ?? null, filename: path,
         metadata: { kind: "exact_copy", copyMode: "A0", order, sourcePath: m.path, bytes: file.bytes.byteLength, mime: file.mime } as any,
       });
