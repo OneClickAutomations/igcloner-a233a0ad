@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
+import { copyJson, buildCopyContext, contextPrompt } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { mediumLabel, MEDIUM_OPENINGS, type ContentMedium } from "@/lib/medium";
 
 const SlideSchema = z.object({
@@ -83,8 +82,6 @@ EVERY slide of this carousel MUST be produced in this exact medium. ${mediumOpen
       ? `\nSOURCE MEDIUM (advisory only — user may use a different format): "${mediumPrimary}".\n`
       : "";
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
 
     const system = `You are IG-Cloner's elite carousel engine. Operate as a forensic content analyst + creative director + conversion copywriter. Extract the source formula, then rebuild it for a new niche. Return ONLY a single JSON object — no prose, no markdown fences. Every slide must be 100% complete — no placeholders or "add your text here".`;
 
@@ -149,22 +146,13 @@ ${data.angle ? `\nUser angle / topic to emphasize: ${data.angle}` : ""}
 
 Output the full JSON object only.`;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 40000);
-    let parsed: CarouselDoc;
-    try {
-      const { text } = await generateText({ model, system, prompt, abortSignal: controller.signal });
-      parsed = CarouselSchema.parse(parseJsonish(text));
-      // Backfill medium fields onto the brief so downstream image gen always has them.
-      if (sourceMedium && (!parsed.designBrief.medium || enforceMedium)) {
-        parsed.designBrief.medium = enforceMedium
-          ? mediumPrimary
-          : parsed.designBrief.medium || mediumPrimary;
-        parsed.designBrief.mediumLabel =
-          parsed.designBrief.mediumLabel || mediumLabel(parsed.designBrief.medium);
-      }
-    } finally {
-      clearTimeout(timer);
+    const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",prefs) : {source:{captionDNA:{},blueprint:null},voice:prefs,research:null};
+    const sourceSlides=ctx.source.blueprint?.slides ?? [];
+    const roleBrief=sourceSlides.map((s:any)=>({role:s.role,words:String(s.exactText??"").split(/\s+/).filter(Boolean).length}));
+    const {value:parsed}=await copyJson(CarouselSchema,`${prompt}\n${contextPrompt(ctx)}\nSOURCE SLIDE ROLES/TEXT LENGTHS: ${JSON.stringify(roleBrief)}. Map source roles in order; preserve relative text length when source contains text, but write new words. Do not invent on-slide copy when source slides are intentionally text-free unless the user's new brief calls for it.`,system,10000);
+    if(sourceMedium && (!parsed.designBrief.medium || enforceMedium)) {
+      parsed.designBrief.medium=enforceMedium ? mediumPrimary : parsed.designBrief.medium || mediumPrimary;
+      parsed.designBrief.mediumLabel=parsed.designBrief.mediumLabel || mediumLabel(parsed.designBrief.medium);
     }
 
     const { data: updated, error: uErr } = await supabase
@@ -209,8 +197,6 @@ export const regenerateSlide = createServerFn({ method: "POST" })
     const slide = doc.slides.find((s) => s.index === data.slideIndex);
     if (!slide) throw new Error("Slide not found");
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-3-flash-preview");
 
     const prompt = `Rewrite this single Instagram carousel slide. Keep its role and index, but improve copy & visual note.
 Slide role: ${slide.role}. Index: ${slide.index} of ${doc.slides.length}.
@@ -224,8 +210,8 @@ ${data.instruction ? `User instruction: ${data.instruction}` : ""}
 
 Return JSON ONLY: { "index": ${slide.index}, "role": string, "headline": string, "body": string, "visualNote": string }`;
 
-    const { text } = await generateText({ model, prompt });
-    const next = SlideSchema.parse(parseJsonish(text));
+    const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",project.user_preferences) : {};
+    const {value:next}=await copyJson(SlideSchema,`${prompt}\n${contextPrompt(ctx)}`,undefined,3000);
 
     const updatedDoc: CarouselDoc = {
       ...doc,

@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText, type ModelMessage } from "ai";
+import type { ModelMessage } from "ai";
+import { copyJson, copyText, buildCopyContext, contextPrompt } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 import { fetchVisionImage, buildSourceContextBlock } from "@/lib/source-context";
 import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
 
@@ -443,8 +443,6 @@ export const generateReel = createServerFn({ method: "POST" })
       [prefs.angle, prefs.angleConcept].filter(Boolean).join(" — ") ||
       "";
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     /* ----- Pass 1: visual-first script ----- */
     const scriptSystem = `You are IG-Cloner's elite short-form video director. Write scripts that are VISUALLY FAITHFUL to an approved visual direction. Every scene you write must be visualizable WITHIN the approved visual direction. Never introduce visual elements that contradict it. Return ONLY a single JSON object — no prose, no fences.`;
@@ -517,12 +515,10 @@ Output the JSON object only.`;
         ]
       : undefined;
 
-    const { text: scriptText } = await generateText({
-      model,
-      system: scriptSystem,
-      ...(messages ? { messages } : { prompt: scriptPrompt }),
-    });
-    const parsed = ReelSchema.parse(sanitizeReelJson(parseJsonish(scriptText)));
+    const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",prefs) : {source:{captionDNA:{},blueprint:null},voice:prefs,research:null};
+    const bp=ctx.source.blueprint;
+    const pacing=`Use saved blueprint scene roles, duration proportions and on-screen text timestamps. Scale source durations to ${settings.duration}s. Match spoken words-per-second from source transcript/segments so every line fits its scene. ${JSON.stringify({scenes:bp?.scenes,audio:bp?.audio})}`;
+    const {value:parsed}=await copyJson(ReelSchema,`${scriptPrompt}\n${contextPrompt(ctx)}\n${pacing}`,scriptSystem,12000);
 
     /* ----- Pass 2: VEO 3 prompt package, visual-DNA-grounded ----- */
     const negative = buildNegativePrompt(visualDirection);
@@ -568,17 +564,7 @@ Return ONLY this JSON:
   "editingInstructions": string
 }`;
 
-    const { text: veoText } = await generateText({
-      model,
-      system: veoSystem,
-      prompt: veoRequest,
-    });
-    let veoPrompts: z.infer<typeof VeoPromptsSchema> | null = null;
-    try {
-      veoPrompts = VeoPromptsSchema.parse(parseJsonish(veoText));
-    } catch (e) {
-      console.warn("[reel] veo parse failed:", (e as Error).message);
-    }
+    const {value:veoPrompts}=await copyJson(VeoPromptsSchema,`${veoRequest}\n${contextPrompt(ctx)}\nWrite one prompt per scripted shot; preserve its precise duration and text timing.`,veoSystem,8000);
 
     const masterPrompt =
       veoPrompts?.masterPrompt ??
@@ -720,11 +706,8 @@ export const regenerateVeoPrompt = createServerFn({ method: "POST" })
 
     const doc = project.project_data as unknown as ReelDoc;
     const direction = doc.visualDirection;
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
-    const { text } = await generateText({
-      model,
+    const { text } = await copyText({
       prompt: `Rewrite this Google VEO 3 video master prompt. MUST stay inside the approved visual direction. Return ONLY the prompt text, no fences.
 
 Approved visual direction: ${JSON.stringify(direction ?? {})}

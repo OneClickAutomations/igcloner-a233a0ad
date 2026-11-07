@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { copyJson } from "./copy-engine.server";
 
 // ─────────────────────────────────────────────────────────────────────
 // Content Intelligence Engine — Campaign Planner (Phase 2)
@@ -90,8 +89,6 @@ export const createCampaign = createServerFn({ method: "POST" })
     // Generate the plan
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     const system = `You are a senior social media strategist. Produce a rigorous, non-repetitive multi-platform content campaign. Return ONLY a JSON array, no prose, no markdown fences.`;
     const shape = `[{
@@ -135,8 +132,7 @@ Rules:
 Return JSON matching:
 ${shape}`;
 
-    const { text } = await generateText({ model, system, prompt });
-    const items = parseJsonish<any[]>(text);
+    const {value:items}=await copyJson(z.array(z.object({dayOffset:z.number(),title:z.string(),postType:z.string(),platforms:z.array(z.string()),hook:z.string(),caption:z.string(),visualIdea:z.string(),objective:z.string(),audience:z.string(),cta:z.string(),hashtags:z.array(z.string()),priority:z.string(),aiNotes:z.string(),confidence:z.number()})),prompt,system,24000);
     if (!Array.isArray(items) || items.length === 0) throw new Error("AI returned no campaign items");
 
     const start = new Date(startIso + "T00:00:00");
@@ -263,8 +259,6 @@ export const directContent = createServerFn({ method: "POST" })
 
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
 
     const axis: Record<string, string> = {
       rewrite: "Rewrite fresh while keeping the core message.",
@@ -287,8 +281,7 @@ ${JSON.stringify({
   audience: item.audience, objective: item.objective,
 }, null, 2)}`;
 
-    const { text } = await generateText({ model, prompt });
-    const patch = parseJsonish<any>(text);
+    const {value:patch}=await copyJson(z.object({title:z.string(),hook:z.string(),caption:z.string(),cta:z.string(),hashtags:z.array(z.string()),aiNotes:z.string()}),prompt,undefined,4000);
     const update = {
       title: patch.title ?? item.title,
       hook: patch.hook ?? item.hook,
