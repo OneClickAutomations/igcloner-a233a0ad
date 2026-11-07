@@ -36,7 +36,8 @@ import { SlidePreviewDialog } from "@/components/SlidePreviewDialog";
 import { PostScheduleModal } from "@/components/PostScheduleModal";
 import { Send } from "lucide-react";
 import { EnhanceButton } from "@/components/EnhanceButton";
-import { generateCarouselSlideImage } from "@/lib/carousel-image.functions";
+import { generateCarouselSlideImage, finalizeCarouselOverlay } from "@/lib/carousel-image.functions";
+import { overlayCarouselText } from "@/lib/carousel-overlay";
 import { ImageIcon } from "lucide-react";
 import { InstagramCarouselPreview } from "@/components/InstagramCarouselPreview";
 import { BrandingPanel } from "@/components/BrandingPanel";
@@ -103,11 +104,20 @@ export function CarouselStudio() {
   const regenFn = useServerFn(regenerateSlide);
   const saveFn = useServerFn(saveCarousel);
   const slideImageFn = useServerFn(generateCarouselSlideImage);
+  const finalizeOverlayFn=useServerFn(finalizeCarouselOverlay);
+  const generateVerifiedImage=async(slideIndex:number)=>{
+    const res:any=await slideImageFn({data:{projectId:projectId??"",slideIndex,extraDirection:imgDirection||undefined}});
+    if(!res.overlayPending)return res;
+    const slide=(res.project?.project_data as CarouselDoc)?.slides.find(s=>s.index===slideIndex);
+    if(!slide)throw new Error("Slide missing after generation");
+    const image=await overlayCarouselText(res.imageUrl,slide.headline,slide.body);
+    return finalizeOverlayFn({data:{projectId:projectId??"",slideIndex,image}});
+  };
 
   const { data, isLoading, refetch } = useQuery({
     enabled: !!projectId,
     queryKey: ["project", projectId],
-    queryFn: () => getProjectFn({ data: { id: projectId! } }),
+    queryFn: () => {if(!projectId)throw new Error("Project missing");return getProjectFn({ data: { id: projectId } });},
   });
 
   const project = (data as any)?.project;
@@ -209,9 +219,7 @@ export function CarouselStudio() {
     setImgBusy(active.index);
     try {
       if(doc) await saveFn({data:{projectId,carousel:doc}});
-      const res: any = await slideImageFn({
-        data: { projectId, slideIndex: active.index, extraDirection: imgDirection || undefined },
-      });
+      const res: any = await generateVerifiedImage(active.index);
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
       if (updated) setDoc(updated);
       if(res.needsLook)toast.warning(`Slide ${active.index} needs a look — credit refunded`);
@@ -244,9 +252,7 @@ export function CarouselStudio() {
       setImgBusy(slide.index);
       setActiveIdx(slide.index);
       try {
-        const res: any = await slideImageFn({
-          data: { projectId, slideIndex: slide.index, extraDirection: imgDirection || undefined },
-        });
+        const res: any = await generateVerifiedImage(slide.index);
         const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
         if (updated) setDoc(updated);
         if(res.needsLook){failures++;toast.warning(`Slide ${slide.index} text needs a look — credit refunded`);}

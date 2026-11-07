@@ -5,7 +5,7 @@ import type { LedgerReason } from "./credits";
 export async function meteredCopy<T>(input:{userId:string;analysisId?:string;projectId?:string;action:string;key:unknown;cost:number;reason:LedgerReason},work:()=>Promise<T>) {
   const {supabaseAdmin:sb}=await import("@/integrations/supabase/client.server");
   await sb.rpc("sweep_stale_copy_runs");
-  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify({version:1,...input.key as object,action:input.action})));
+  const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify({version:2,...input.key as object,action:input.action})));
   const key=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,"0")).join("");
   const {data,error}=await sb.rpc("claim_copy_run",{p_user_id:input.userId,p_cache_key:key,p_action:input.action,p_analysis_id:input.analysisId,p_project_id:input.projectId});
   if(error) throw new Error(error.message);

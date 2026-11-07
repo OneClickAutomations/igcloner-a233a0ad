@@ -9,6 +9,31 @@ export function qualitySummary(scores: CopyScores) {
   const average = values.reduce((a,b) => a+b,0) / values.length;
   return { average, minimum: Math.min(...values), pass: average >= 9 && Math.min(...values) >= 8 };
 }
+export const COPY_QUALITY_VERSION = 2;
+export const MAX_QUALITY_REGENERATIONS = 2;
+export function qualityUnits(value:any, kind:string):unknown[] {
+  if(kind === "hooks") return value.hooks ?? value;
+  if(kind === "captions") return value.platforms ?? value;
+  return [value];
+}
+/** No averaging strong outputs over a weak hook/platform. Missing scores fail closed. */
+export function qualityBatchPass(scores:CopyScores[], expected:number) {
+  return scores.length === expected && expected > 0 && scores.every(s=>qualitySummary(s).pass);
+}
+export function selectCopyExemplars(analyses:any[],niche:string,limit=5) {
+  const terms=tokens(niche);
+  return analyses.filter(a=>a.analysis_status === undefined || a.analysis_status === "ready")
+    .map(a=>{const d=a.dna_analysis??{},b=a.blueprint??d.blueprint;return {
+      id:a.id??null,account:a.source_account??null,format:a.post_type??b?.kind??"unknown",
+      niche:d.channelIntelligence?.primaryNiche??d.contentCategory??"",
+      hook:d.hookBreakdown?.exactText??"",mechanism:d.hookBreakdown?.mechanism??"",
+      caption:a.source_caption??b?.caption?.exact??a.scraped_data?.caption??"",
+      structure:d.captionDNA??{},performance:d.performanceBasis??{score:d.performanceScore??null},
+      roles:(b?.slides??b?.scenes??[]).slice(0,6).map((s:any)=>({role:s.role??s.description,text:s.exactText??s.spokenText??""})),
+    };}).filter(a=>a.hook||a.caption)
+    .sort((a,b)=>Number(tokens(b.niche).some(t=>terms.includes(t)))-Number(tokens(a.niche).some(t=>terms.includes(t))) || (b.performance.score??0)-(a.performance.score??0))
+    .slice(0,limit);
+}
 /** JSON escaping prevents scraped strings from closing their data boundary. */
 export function copyData(label: string, value: unknown) {
   const safe = JSON.stringify(value ?? null).replace(/</g,"\\u003c").replace(/>/g,"\\u003e");
@@ -47,7 +72,9 @@ export function captionIssues(c: NativeCaption): string[] {
   const cap = PLATFORM_CAPABILITY_MATRIX[c.platform as PublishingPlatform];
   if(!cap) return ["Unknown platform"];
   const issues:string[]=[];
-  const limit=cap.captionAimChars ?? cap.maxCaptionChars;
+  // A caption pack is media-oriented; Telegram's 4096 standalone-message ceiling
+  // cannot safely be applied to a photo/video caption.
+  const limit=cap.captionAimChars ?? cap.maxMediaCaptionChars ?? cap.maxCaptionChars;
   const text = cap.maxDescriptionChars ? [c.description,c.hashtags.map(h=>`#${h.replace(/^#/,"")}`).join(" ")].filter(Boolean).join("\n\n") : renderedCaption(c);
   if(limit && text.length>limit) issues.push(`Caption including hashtags exceeds ${limit} characters (${text.length})`);
   if(cap.maxTitleChars && c.title.length>cap.maxTitleChars) issues.push(`Title exceeds ${cap.maxTitleChars}`);

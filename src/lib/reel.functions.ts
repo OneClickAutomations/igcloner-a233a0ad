@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ModelMessage } from "ai";
-import { copyJson, copyText, buildCopyContext, contextPrompt } from "./copy-engine.server";
+import { copyJson, qualityCopyJson, copyText, buildCopyContext, contextPrompt } from "./copy-engine.server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchVisionImage, buildSourceContextBlock } from "@/lib/source-context";
 import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
@@ -518,7 +518,7 @@ Output the JSON object only.`;
     const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",prefs) : {source:{captionDNA:{},blueprint:null},voice:prefs,research:null};
     const bp=ctx.source.blueprint;
     const pacing=`Use saved blueprint scene roles, duration proportions and on-screen text timestamps. Scale source durations to ${settings.duration}s. Match spoken words-per-second from source transcript/segments so every line fits its scene. ${JSON.stringify({scenes:bp?.scenes,audio:bp?.audio})}`;
-    const {value:parsed}=await copyJson(ReelSchema,`${scriptPrompt}\n${contextPrompt(ctx)}\n${pacing}`,scriptSystem,12000);
+    const {value:parsed}=await qualityCopyJson(ReelSchema,`${scriptPrompt}\n${contextPrompt(ctx)}\n${pacing}`,ctx,"reel",scriptSystem,12000);
 
     /* ----- Pass 2: VEO 3 prompt package, visual-DNA-grounded ----- */
     const negative = buildNegativePrompt(visualDirection);
