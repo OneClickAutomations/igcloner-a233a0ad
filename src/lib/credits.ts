@@ -118,3 +118,16 @@ export function parseInsufficientCredits(err: unknown): InsufficientCreditsInfo 
 
 /** Query key for the shared credit balance; invalidate after any credit move. */
 export const CREDIT_BALANCE_KEY = ["credit-balance"] as const;
+
+/** Measured SDK token totals; USD is an estimate at $3/$15 per million,
+ * not a cash bill. Includes failed quality attempts, excludes Apify/media.
+ * Prices above are intentionally unchanged. Full cost target NOT met. */
+export const COPY_COST_OBSERVATIONS = {
+  measuredAt: "2026-11-07",
+  hookBaseline: { inputTokens:9436, outputTokens:5927, estimatedUsd:0.117213, workspaceCreditsEstimate:0.312568, seconds:55.656, passed:false },
+  hookQualityRun: { inputTokens:103665, outputTokens:22069, estimatedUsd:0.642030, workspaceCreditsEstimate:1.71208, seconds:195.928, calls:13, passed:false },
+  captionQualityRun: { inputTokens:48314, outputTokens:7566, estimatedUsd:0.258432, workspaceCreditsEstimate:0.689152, seconds:63.716, calls:7, passed:false },
+  carouselCopy: null,
+  reelCopy: null,
+  sharpen: null,
+} as const;
