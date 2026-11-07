@@ -44,11 +44,15 @@ export interface PlatformCapability {
   maxDescriptionChars?: number;
   minHashtags?: number;
   maxHashtags?: number;
+  /** Telegram Bot API media caption; distinct from a standalone message. */
+  maxMediaCaptionChars?: number;
   /** True if Upload-Post exposes no analytics for this platform. */
   noAnalytics?: boolean;
 }
 
-// Verified against the Upload-Post platform/endpoint support matrix.
+// Conservative PRODUCT ceilings, not a claim every native API ceiling is verified.
+// Evidence/surface notes: docs/PLATFORM_LIMITS.md. visibleChars, hashtag ranges and
+// Facebook aim are editorial preferences. Native/account/provider limits may differ.
 export const PLATFORM_CAPABILITY_MATRIX: Record<PublishingPlatform, PlatformCapability> = {
   instagram: { video: true, photo: true, text: false, requiresSelector: null, maxCaptionChars:2200, visibleChars:125, minHashtags:5, maxHashtags:12 },
   // Conservative video-compatible copy; TikTok photo API separately permits 4000 descriptions / 90 titles.
@@ -82,9 +86,16 @@ export const PLATFORM_CAPABILITY_MATRIX: Record<PublishingPlatform, PlatformCapa
     text: true,
     requiresSelector: null,
     maxCaptionChars: 4096,
+    maxMediaCaptionChars: 1024,
     noAnalytics: true,
   },
 };
+
+/** Publishing media uses the same ceilings as copy validation. No silent truncation. */
+export function captionLimitFor(platform:PublishingPlatform,kind:MediaKind="text") {
+  const caps=PLATFORM_CAPABILITY_MATRIX[platform];
+  return kind!=="text"&&caps.maxMediaCaptionChars ? caps.maxMediaCaptionChars : caps.maxCaptionChars;
+}
 
 export interface PlatformMeta {
   label: string;

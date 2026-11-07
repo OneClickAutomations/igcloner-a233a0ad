@@ -72,7 +72,9 @@ export function captionIssues(c: NativeCaption): string[] {
   const cap = PLATFORM_CAPABILITY_MATRIX[c.platform as PublishingPlatform];
   if(!cap) return ["Unknown platform"];
   const issues:string[]=[];
-  const limit=cap.captionAimChars ?? cap.maxCaptionChars;
+  // A caption pack is media-oriented; Telegram's 4096 standalone-message ceiling
+  // cannot safely be applied to a photo/video caption.
+  const limit=cap.captionAimChars ?? cap.maxMediaCaptionChars ?? cap.maxCaptionChars;
   const text = cap.maxDescriptionChars ? [c.description,c.hashtags.map(h=>`#${h.replace(/^#/,"")}`).join(" ")].filter(Boolean).join("\n\n") : renderedCaption(c);
   if(limit && text.length>limit) issues.push(`Caption including hashtags exceeds ${limit} characters (${text.length})`);
   if(cap.maxTitleChars && c.title.length>cap.maxTitleChars) issues.push(`Title exceeds ${cap.maxTitleChars}`);
