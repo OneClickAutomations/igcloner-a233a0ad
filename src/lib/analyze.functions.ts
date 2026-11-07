@@ -664,10 +664,10 @@ Return:
 
     const ctx = await buildCopyContext(data.analysisId,userId,"instagram");
     const result = await meteredCopy({userId,analysisId:data.analysisId,action:"sharpen",key:{cloneId:clone.id,hook:clone.hook,caption:clone.caption,ctx},cost:ACTION_COSTS.sharpen,reason:"debit_sharpen"}, async()=>{
-      const {judgeCopy}=await import("./copy-engine.server");
+      const {judgeCopy,qualityCopyJson}=await import("./copy-engine.server");
       const before={hook:clone.hook,caption:clone.caption,cta:clone.cta};
       const beforeScores=await judgeCopy(ctx,before,"Sharpen before");
-      const r=await copyJson(z.object({improvedHook:z.string(),improvedCaption:z.string(),improvedCta:z.string(),improvements:z.array(z.string()),shareabilityScore:z.number(),savePotentialScore:z.number()}), `${prompt}\n${contextPrompt(ctx)}\nSharpen specific weak spots; explain exactly what changed in bullets.`,undefined,4000);
+      const r=await qualityCopyJson(z.object({improvedHook:z.string(),improvedCaption:z.string(),improvedCta:z.string(),improvements:z.array(z.string()),shareabilityScore:z.number(),savePotentialScore:z.number()}), `${prompt}\n${contextPrompt(ctx)}\nSharpen specific weak spots; explain exactly what changed in bullets.`,ctx,"Sharpen",undefined,4000);
       const afterScores=await judgeCopy(ctx,r.value,"Sharpen after");
       return {improved:{...r.value,before,after:{hook:r.value.improvedHook,caption:r.value.improvedCaption,cta:r.value.improvedCta},scoresBefore:beforeScores,scoresAfter:afterScores},usage:r.usage};
     });

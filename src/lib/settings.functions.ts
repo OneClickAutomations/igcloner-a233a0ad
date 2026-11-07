@@ -44,23 +44,7 @@ async function validateKey(provider: Provider, apiKey: string): Promise<Validati
     }
 
     if (provider === "anthropic") {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-haiku-4-5-20251001",
-          max_tokens: 1,
-          messages: [{ role: "user", content: "hi" }],
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-      // 401 = bad key; anything else (200, 4xx billing errors) = key is structurally valid
-      if (res.status === 401) return { valid: false, error: "Invalid API key" };
-      return { valid: true };
+      return { valid: false, error: "Direct Anthropic keys are not used. Writing is provided through Lovable AI." };
     }
 
     if (provider === "openai") {
