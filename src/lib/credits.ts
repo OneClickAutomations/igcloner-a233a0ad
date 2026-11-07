@@ -40,6 +40,7 @@ export const ACTION_COSTS = {
   hookLab: 2,
   /** Caption pack */
   captionPack: 1,
+  sharpen: 2,
 } as const;
 
 export type LedgerReason =
@@ -52,6 +53,9 @@ export type LedgerReason =
   | "debit_analysis"
   | "debit_versions"
   | "debit_image"
+  | "debit_hooks"
+  | "debit_caption"
+  | "debit_sharpen"
   | "refund_failed"
   | "trial_grant";
 
@@ -66,6 +70,9 @@ export const REASON_LABELS: Record<LedgerReason, string> = {
   debit_analysis: "Post analysis",
   debit_versions: "5 post versions",
   debit_image: "Image edit or generation",
+  debit_hooks: "Hook Lab — 10 ranked hooks",
+  debit_caption: "Platform caption pack",
+  debit_sharpen: "Sharpen copy",
   refund_failed: "Refund — action failed",
   trial_grant: "Trial credits",
 };
