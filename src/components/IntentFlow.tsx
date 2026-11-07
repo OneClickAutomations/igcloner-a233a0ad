@@ -623,7 +623,7 @@ export function IntentFlow({ analysisId }: Props) {
 
           {/* Free-form + uploads — only shown inside Advanced for A1.
               A2/A3 surface this block above (right after the creative brief). */}
-          {cloneMethod === "A1" && (
+          {(cloneMethod as string) === "A1" && (
           <Section title="Give the AI more context (optional)">
             <div className="mb-2">
               <EnhanceButton

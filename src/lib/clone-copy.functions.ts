@@ -71,9 +71,9 @@ export const getCopyModeContext = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const a = await loadAnalysis(context.supabase, context.userId, data.analysisId);
+    const a = await loadAnalysis((context.supabase as Sb), context.userId, data.analysisId);
     const f = sourceFacts(a);
-    const rows = await rightsRows(context.supabase, context.userId, data.analysisId);
+    const rows = await rightsRows((context.supabase as Sb), context.userId, data.analysisId);
     const modes = (["A0", "A1", "A2", "A3"] as CloneMethod[]).map((m) => ({ mode: m, ...modeAvailability(m, f.input) }));
     return {
       postType: a.post_type as string,
@@ -90,10 +90,10 @@ export const confirmRights = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid(), mode: z.enum(["A0", "A1"]), statement: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.statement !== RIGHTS_STATEMENT) throw new Error("The confirmation text is out of date — reload and try again.");
-    const a = await loadAnalysis(context.supabase, context.userId, data.analysisId);
+    const a = await loadAnalysis((context.supabase as Sb), context.userId, data.analysisId);
     const f = sourceFacts(a);
     const ip = getRequestHeader("cf-connecting-ip") ?? getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
-    const { error } = await context.supabase.from("rights_confirmations").insert({
+    const { error } = await (context.supabase as Sb).from("rights_confirmations").insert({
       user_id: context.userId, analysis_id: data.analysisId, source_url: a.instagram_url, source_account: f.account,
       mode: data.mode, statement_version: RIGHTS_STATEMENT_VERSION, statement_text: RIGHTS_STATEMENT, ip,
     });
@@ -106,7 +106,7 @@ export const createExactCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     await enforceRights(sb, userId, data.analysisId, "A0");
     const a = await loadAnalysis(sb, userId, data.analysisId);
     const f = sourceFacts(a);
@@ -148,7 +148,7 @@ export const getCopyProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
+    const sb = (context.supabase as Sb);
     const { data: project, error } = await sb.from("projects").select("*").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (error) throw new Error(error.message);
     if (!project) throw new Error("Project not found");
@@ -179,7 +179,7 @@ export const startSameLook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ analysisId: z.string().uuid(), preferences: z.record(z.any()).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     await enforceRights(sb, userId, data.analysisId, "A1");
     const a = await loadAnalysis(sb, userId, data.analysisId);
     const f = sourceFacts(a);
@@ -209,7 +209,7 @@ export const rewriteSameLookCopy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), what: z.enum(["slides", "caption", "both"]).default("both") }).parse(d))
   .handler(async ({ data, context }) => {
-    const { project, a, f } = await loadA1Project(context.supabase, context.userId, data.projectId);
+    const { project, a, f } = await loadA1Project((context.supabase as Sb), context.userId, data.projectId);
     const prefs = project.user_preferences ?? {};
     const ctx = { niche: prefs.niche, tone: prefs.toneOfVoice, audience: prefs.targetAudience, keywords: prefs.keywords };
     const ai = await import("@/lib/clone-ai.server");
@@ -225,7 +225,7 @@ export const generateSameLookSlide = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), slideIndex: z.number().int().min(0).max(19), newText: z.string().min(1).max(400) }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { project, f } = await loadA1Project(sb, userId, data.projectId);
     const media = f.storedMedia.find((m) => m.kind === "image" && m.index === data.slideIndex);
     if (!media) throw new Error("That slide's original image wasn't saved.");
@@ -288,10 +288,10 @@ export const saveCopyDraft = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), caption: z.string().max(5000), hashtags: z.array(z.string()).max(60), newText: z.record(z.string()).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: p } = await context.supabase.from("projects").select("project_data").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
+    const { data: p } = await (context.supabase as Sb).from("projects").select("project_data").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (!p) throw new Error("Project not found");
     const project_data = { ...(p.project_data ?? {}), caption: data.caption, hashtags: data.hashtags, ...(data.newText ? { newText: data.newText } : {}) };
-    const { error } = await context.supabase.from("projects").update({ project_data, status: "in_progress" }).eq("id", data.projectId);
+    const { error } = await (context.supabase as Sb).from("projects").update({ project_data, status: "in_progress" }).eq("id", data.projectId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -301,7 +301,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), voiceId: z.string().min(5).max(40), script: z.string().max(4000).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { project, a, f } = await loadA1Project(sb, userId, data.projectId);
     const { VOICE_CATALOG } = await import("@/lib/voiceover.functions");
     if (!VOICE_CATALOG.some((v) => v.id === data.voiceId)) throw new Error("Pick a voice from the list.");
@@ -365,7 +365,7 @@ export const mixImages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), refs: z.array(RefSchema).min(2).max(3), instruction: z.string().min(3).max(1500), text: z.string().max(200).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase, userId = context.userId;
+    const sb = (context.supabase as Sb), userId = context.userId;
     const { data: project } = await sb.from("projects").select("*").eq("id", data.projectId).eq("user_id", userId).maybeSingle();
     if (!project) throw new Error("Project not found");
     const intent = String(project.user_preferences?.intent ?? project.user_preferences?.cloneMethod ?? "");
@@ -419,7 +419,7 @@ export const listSourceSlides = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = context.supabase;
+    const sb = (context.supabase as Sb);
     const { data: project } = await sb.from("projects").select("analysis_id").eq("id", data.projectId).eq("user_id", context.userId).maybeSingle();
     if (!project?.analysis_id) return { slides: [] };
     const a = await loadAnalysis(sb, context.userId, project.analysis_id).catch(() => null);
