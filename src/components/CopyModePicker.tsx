@@ -23,7 +23,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences }: Pro
   const confirmFn = useServerFn(confirmRights);
   const exactFn = useServerFn(createExactCopy);
   const sameLookFn = useServerFn(startSameLook);
-  const { data: ctx } = useQuery({ queryKey: ["copy-mode-ctx", analysisId], queryFn: () => ctxFn({ data: { analysisId } }) });
+  const { data: ctx, error: ctxError } = useQuery({ queryKey: ["copy-mode-ctx", analysisId], queryFn: () => ctxFn({ data: { analysisId } }) });
   const [ticked, setTicked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
@@ -51,6 +51,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences }: Pro
     <div>
       <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 1</p>
       <h2 className="mt-1 text-lg font-bold tracking-tight">What do you want to make from this post?</h2>
+      {ctxError && <p className="mt-2 text-xs text-status-error">Couldn't check which modes this post supports: {(ctxError as Error).message}</p>}
       <div className="mt-3 space-y-2">
         {CLONE_METHODS.map((m) => {
           const a = avail(m.id);
