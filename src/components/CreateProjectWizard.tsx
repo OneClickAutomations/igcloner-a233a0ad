@@ -50,6 +50,7 @@ export function CreateProjectWizard() {
   const [step, setStep] = useState(search.analysisId ? 1 : 0), [id, setId] = useState('');
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [saved, setSaved] = useState('');
   const queue = useRef<Promise<unknown>>(Promise.resolve());
+  const closing = useRef(false);
   const current = useRef({ state, step }); current.current = { state, step };
   const patch = (p: Partial<CreationState>) => setState(s => ({ ...s, ...p }));
   useEffect(() => {
@@ -79,7 +80,7 @@ export function CreateProjectWizard() {
   };
   useEffect(() => {
     if (!ready) return;
-    const timer = setTimeout(() => { persist().catch(e => toast.error(`Draft not saved: ${e.message}`)); }, 700);
+    const timer = setTimeout(() => { if(!closing.current) persist().catch(e => toast.error(`Draft not saved: ${e.message}`)); }, 700);
     return () => clearTimeout(timer);
   }, [state, step, ready]);
   const move = async (target: number) => {
@@ -102,9 +103,10 @@ export function CreateProjectWizard() {
     } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const close = async (completed = false) => {
+    closing.current = true;
     setBusy(true);
     try { const tasks: Promise<unknown>[]=[]; window.dispatchEvent(new CustomEvent('creation-save',{detail:{tasks}})); await Promise.all(tasks); await persist(step, current.current.state, completed); await navigate({ to: '/projects' }); }
-    catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
+    catch(e) { closing.current=false; toast.error((e as Error).message); } finally { setBusy(false); }
   };
   if (!ready) return <div className="flex justify-center py-20"><Loader2 className="size-6 animate-spin"/></div>;
   const sourceId = state.analysisId;
