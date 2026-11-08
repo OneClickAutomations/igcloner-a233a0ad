@@ -9,6 +9,7 @@ import { AssemblyOptions,parseSrt,captionsToSrt,type AssemblySettings } from '@/
 import { generateProofNarration } from '@/lib/film-narration.functions';
 import { quoteAssembly,startAssembly,recoverAssembly,uploadAssemblyMedia } from '@/lib/assembly.functions';
 import { VideoPackAvailability } from './VideoPackAvailability';
+import { STUDIO_PRICING } from '@/lib/studio-pricing';
 import type { getInspirationStudio } from '@/lib/inspiration.functions';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
 export function AssemblyDelivery({data,busy,run,refresh,downloadClips}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>}) {
