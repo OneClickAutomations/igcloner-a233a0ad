@@ -1,17 +1,20 @@
 # Roadmap
 
 ## Pass 5A — motion then assembly (current request)
+- [x] Replace AWS/Remotion plan with hosted renderer research: recommend Shotstack, published $0.20/min PAYG; no render spend
+- [ ] Hosted assembly timeline, quote/debit/refund, durable submission/poll/private result, delivery controls and tests
+- [ ] One free-tier four-clip assembly test — blocked: owner must add Shotstack key; existing clips are not attached to a studio project
 - [x] Controlled pouring matrix: five clips, 10.42914 workspace credits; frame review finds no fully realistic pass
 - [x] Save best provisional motion template with focused tests; no existing screens or prices changed
 - [x] Confirm deployed assembly limits and document exact AWS bridge/setup/cost
-- [ ] Assemble existing four clips with voiceover/captions — blocked: owner AWS bridge/composition URL and secret are not configured
+- [ ] Assemble existing four clips with voiceover/captions — blocked: hosted-renderer key missing; no AWS setup required
 - [x] Step 3: studio tables/RLS, reference library, cached observation separation, editable storyboard/approval
 - [x] Step 3: quotes, atomic sequential attempts, gateway create/poll/private collection and refunds implemented
 - [x] Step 3: AWS assembly unavailable state, completed-clip ZIP fallback, unset pricing worksheet
 - [x] Step 3: 15 unit tests; live cross-user/duplicate debit/refund/approval checks; signed-in desktop/mobile and reference upload/delete
 - [ ] Step 3: paid still→animation smoke and measured output recovery — blocked: verified USD conversion/still quote unset; no paid generation performed
 - [ ] Step 3: independent visual-only/audio-only re-analysis, automatic pixel object checks, writing/voiceover generation — not implemented; cached evidence and explicit user checklist only
-- [ ] Step 3: AWS assembly bridge submission/collection — owner bridge missing; integration remains a stub
+- [ ] Step 3: hosted assembly submission/collection replaces the retired AWS bridge
 - [ ] Step 3: Fast product-ingredient animation mode — conflicts with approved first-frame mode; gateway disallows both in one job
 
 ## Pass 5A — Video Inspiration Studio feasibility and plan
