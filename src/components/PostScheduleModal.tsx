@@ -19,7 +19,7 @@ export function PostScheduleModal({ open, onOpenChange, caption, hashtags, forma
   const [date, setDate] = useState("");
   const [time, setTime] = useState("19:00");
 
-  const tagString = hashtags.map((h) => `#${h.replace(/^#/, "")}`).join(" ");
+  const tagString = (hashtags ?? []).map((h) => `#${h.replace(/^#/, "")}`).join(" ");
   const fullText = `${caption}\n\n${tagString}`;
 
   const cp = (text: string, label: string) => {
