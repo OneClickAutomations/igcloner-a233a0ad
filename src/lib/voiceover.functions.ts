@@ -147,9 +147,21 @@ export const generateSceneVoiceover = createServerFn({ method: "POST" })
     if (!project) throw new Error("Project not found");
 
     const {data:formatRow}=await supabase.from('projects').select('format').eq('id',data.projectId).single();
-    if(formatRow?.format==='reel')throw new Error(!STUDIO_PRICING.video.approved?'Video pack prices await approval. Attached narration is not charged to plan credits.':'Attached narration has no verified video-credit price yet. No credits charged.');
     const settings = VoiceSettingsSchema.parse(data.settings ?? {});
-    const { bytes, mime } = await callTts({text:data.text,voiceId:data.voiceId,settings});
+    // Narration attached to a video is paid from video credits at the measured narration price.
+    let refundVideo: null | (() => Promise<unknown>) = null;
+    if(formatRow?.format==='reel'){
+      const credits=STUDIO_PRICING.video.narrationCredits, attempt=crypto.randomUUID();
+      const { supabaseAdmin: db } = await import('@/integrations/supabase/client.server');
+      const { data: d, error: dErr } = await db.rpc('debit_video_credits',{p_user:userId,p_amount:credits,p_kind:'scene_voiceover',p_entity:attempt,p_attempt:attempt});
+      if(dErr)throw new Error(dErr.message);
+      if(!(d as any)?.ok)throw new Error(`You need ${credits} video credit${credits===1?'':'s'} for narration. Nothing was charged.`);
+      refundVideo=async()=>db.rpc('refund_video_credits',{p_user:userId,p_kind:'scene_voiceover',p_entity:attempt,p_attempt:attempt});
+    }
+    let tts: Awaited<ReturnType<typeof callTts>>;
+    try { tts = await callTts({text:data.text,voiceId:data.voiceId,settings}); }
+    catch (e) { await refundVideo?.(); throw e; }
+    const { bytes, mime } = tts;
 
     const filename = `${userId}/${data.projectId}/voiceover/scene-${data.sceneIndex}-${Date.now()}.mp3`;
     const { error: upErr } = await supabase.storage

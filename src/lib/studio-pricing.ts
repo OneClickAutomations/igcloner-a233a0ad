@@ -16,7 +16,7 @@ export const STUDIO_PRICING = {
     purchasesEnabled: false as boolean,
     unitCostUsd: 0.12,
     voiceoverUsdPerCharacter: 0.0002 as number | null,
-    /** Flat video credits per generated narration (covers ~600 characters at the measured ElevenLabs rate). */
+    /** Measured 2026-11-08 (12.4s take): 116 ElevenLabs chars ≈ $0.023 + Claude writing 0.033 workspace credits ≈ $0.010 = ~$0.033 → ceil($/0.12) = 1 video credit. */
     narrationCredits: 1,
     /** One-time free trial grant for new accounts. */
     trialCredits: 20,
@@ -28,7 +28,9 @@ export const STUDIO_PRICING = {
       { id: 'bulk', name: 'Bulk', credits: 400, usd: 109 },
     ],
   },
-  rates: { 'google/veo-3.1-fast':0.4, 'google/veo-3.1-lite':0.2, 'google/gemini-omni-1.1-flash':null },
+  /** Omni is input-dependent and unmeasured: PROVISIONAL rate equal to Fast, recorded as provisional. */
+  rates: { 'google/veo-3.1-fast':0.4, 'google/veo-3.1-lite':0.2, 'google/gemini-omni-1.1-flash':0.4 },
+  provisional: ['google/gemini-omni-1.1-flash','stillWorkspaceCredits'] as readonly string[],
   renderUsdPerMinute: 0.20,
 } as const;
 export const VIDEO_BALANCE_KEY = ['video-credit-balance'] as const;

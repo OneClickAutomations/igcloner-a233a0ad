@@ -57,7 +57,7 @@ import {
   type ReelDoc,
   type VisualDirection,
 } from "@/lib/reel.functions";
-import { submitVideoJob, pollVideoJob } from "@/lib/video.functions";
+import { submitVideoJob, pollVideoJob, reelClipCredits } from "@/lib/video.functions";
 import { ReelStylePresets } from "@/components/ReelStylePresets";
 import { AudioEngine } from "@/components/AudioEngine";
 import type { AudioPlan, AudioMixProfile, ReelStylePreset } from "@/lib/audio-types";
@@ -336,6 +336,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
         },
       });
       creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
+      creditsQc.invalidateQueries({ queryKey: ["video-credit-balance"] });
       toast.success(imageUrl ? "Animating your source image — ~30-90s." : "Video job queued. ~30-90s.");
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
@@ -967,9 +968,8 @@ function VideoStep({
     );
   }
   const models = [
-    { id: "veo3-fast", name: "VEO 3 Fast", price: "Video pack pricing pending", note: "Recommended", icon: Zap, time: "~30s" },
-    { id: "veo3", name: "VEO 3", price: "Video pack pricing pending", note: "Highest fidelity", icon: Crown, time: "~60–90s" },
-    { id: "kling-2.1", name: "Kling 2.1", price: "Video pack pricing pending", note: "No audio", icon: Sparkle, time: "~45s" },
+    { id: "veo3-fast", name: "Veo 3.1 Fast", price: `${reelClipCredits("veo3-fast", videoDuration)} video credits`, note: "Recommended", icon: Zap, time: "~60s" },
+    { id: "kling-2.1", name: "Veo 3.1 Lite", price: `${reelClipCredits("kling-2.1", videoDuration)} video credits`, note: "Cheaper draft, less motion", icon: Sparkle, time: "~60s" },
   ] as const;
   return (
     <div className="space-y-5">

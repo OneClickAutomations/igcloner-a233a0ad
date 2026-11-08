@@ -150,7 +150,6 @@ export const inspirationQuote = createServerFn({ method: 'POST' }).middleware([r
 export const animateInspirationScene = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ sceneId: Id, model: StudioModel, requestKey: Id, revision: z.number().int(), confirmedCredits: z.number().int().nonnegative() }).parse(d))
   .handler(async ({ data, context }) => {
-    if(!STUDIO_PRICING.video.approved)throw new Error('Video pack prices await approval. Nothing charged; your storyboard and approved stills are saved.');
     const { data: s } = await context.supabase.from('storyboard_scenes').select('*').eq('id', data.sceneId).single();
     if (!s) throw new Error('Scene not found.');
     const { assertAnimationReady } = await import('./inspiration');

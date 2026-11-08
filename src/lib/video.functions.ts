@@ -1,34 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
-import { STUDIO_PRICING } from './studio-pricing';
-import { ACTION_COSTS } from "@/lib/credits";
+import { STUDIO_PRICING, videoCreditsForWorkspace } from './studio-pricing';
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const FAL_BASE = "https://queue.fal.run";
+/**
+ * Reel video generation runs on the Lovable AI gateway (Veo 3.1) and is paid
+ * from video credits at the approved per-second rates. The old fal.ai path is gone.
+ * Legacy picker ids map onto gateway models: veo3/veo3-fast -> Fast, kling-2.1 -> Lite.
+ */
+const GATEWAY = "https://ai.gateway.lovable.dev";
+const MODEL_MAP = { "veo3-fast": "google/veo-3.1-fast", veo3: "google/veo-3.1-fast", "kling-2.1": "google/veo-3.1-lite" } as const;
+const KIND = "reel_clip";
 
-// We pick endpoint based on whether a source image is provided.
-// Image-to-video endpoints animate FROM the provided image (first frame +
-// visual anchor) instead of generating a brand-new scene.
-const MODELS = {
-  "veo3-fast": {
-    t2v: "fal-ai/veo3/fast",
-    i2v: "fal-ai/veo3/fast/image-to-video",
-  },
-  veo3: {
-    t2v: "fal-ai/veo3",
-    i2v: "fal-ai/veo3/image-to-video",
-  },
-  "kling-2.1": {
-    t2v: "fal-ai/kling-video/v2.1/standard/text-to-video",
-    i2v: "fal-ai/kling-video/v2.1/standard/image-to-video",
-  },
-} as const;
-
-type ModelKey = keyof typeof MODELS;
-
-/** Credits per video job, from the shared credits config. Derived server-side, never client-supplied. */
-function costForSlug(slug: string): number {
-  return slug.includes("veo3/fast") ? ACTION_COSTS.videoGenerationVeo3Fast : ACTION_COSTS.videoGenerationVeo3OrKling;
+export function gatewaySeconds(d: number) { return d <= 4 ? 4 : d <= 6 ? 6 : 8; }
+export function reelClipCredits(model: keyof typeof MODEL_MAP, duration: number) {
+  const rate = STUDIO_PRICING.rates[MODEL_MAP[model]];
+  return videoCreditsForWorkspace(rate * gatewaySeconds(duration));
 }
 
 const SubmitInput = z.object({
@@ -40,45 +27,47 @@ const SubmitInput = z.object({
   image_url: z.string().url().optional(),
 });
 
-function authHeader() {
-  const key = process.env.FAL_KEY;
-  if (!key) throw new Error("FAL_KEY is not configured");
-  return { Authorization: `Key ${key}`, "Content-Type": "application/json" };
-}
-
-function buildPayload(data: z.infer<typeof SubmitInput>) {
-  if (data.model === "kling-2.1") {
-    return {
-      prompt: data.prompt,
-      aspect_ratio: data.aspect_ratio,
-      duration: String(data.duration === 8 ? 5 : data.duration),
-      ...(data.image_url ? { image_url: data.image_url } : {}),
-    };
-  }
-  // veo3 / veo3-fast
-  return {
-    prompt: data.prompt,
-    aspect_ratio: data.aspect_ratio,
-    duration: `${data.duration === 5 ? 8 : data.duration}s`,
-    generate_audio: data.generate_audio,
-    resolution: "720p",
-    ...(data.image_url ? { image_url: data.image_url } : {}),
-  };
+async function imageInput(url: string) {
+  if (!url.startsWith("https://")) return null;
+  const r = await fetch(url).catch(() => null);
+  if (!r?.ok) return null;
+  const buf = new Uint8Array(await r.arrayBuffer());
+  if (!buf.length || buf.length > 10 * 1024 * 1024) return null;
+  let s = ""; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  return { bytesBase64Encoded: btoa(s), mimeType: r.headers.get("content-type") || "image/jpeg" };
 }
 
 export const submitVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data, context }) => {
-    if(!STUDIO_PRICING.video.approved)throw new Error('Video add-on prices await approval. No plan credits charged. Use the Video Inspiration Studio to review proposed video-credit quotes.');
-    throw new Error('Legacy fal video pricing has not been approved for video packs. No credits charged.');
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("AI connection is not configured.");
+    const model = MODEL_MAP[data.model], seconds = gatewaySeconds(data.duration), credits = reelClipCredits(data.model, data.duration);
+    const attemptId = crypto.randomUUID();
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { data: debit, error } = await db.rpc("debit_video_credits", { p_user: context.userId, p_amount: credits, p_kind: KIND, p_entity: attemptId, p_attempt: attemptId });
+    if (error) throw new Error(error.message);
+    if (!(debit as any)?.ok) throw new Error(`You need ${credits} video credits for this ${seconds}-second clip (you have ${(debit as any)?.balance ?? 0}). Nothing was charged.`);
+    const refund = () => db.rpc("refund_video_credits", { p_user: context.userId, p_kind: KIND, p_entity: attemptId, p_attempt: attemptId });
+    try {
+      const image = data.image_url ? await imageInput(data.image_url) : null;
+      const res = await fetch(`${GATEWAY}/v1/videos`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
+        body: JSON.stringify({ model, instances: [{ prompt: data.prompt, ...(image ? { image } : {}) }], parameters: { durationSeconds: seconds, resolution: "720p", sampleCount: 1, generateAudio: data.generate_audio, aspectRatio: data.aspect_ratio === "1:1" ? "9:16" : data.aspect_ratio } }),
+      });
+      const j: any = await res.json().catch(() => null);
+      if (!res.ok || !j?.id) throw new Error(`Video provider error (${res.status}): ${String(j?.message ?? j?.error?.message ?? "").slice(0, 300)}`);
+      return { attemptId, requestId: j.id as string, modelSlug: model, statusUrl: "", responseUrl: "", credits };
+    } catch (e) { await refund(); throw new Error(`${(e as Error).message} Your ${credits} video credits were refunded.`); }
   });
 
 const PollInput = z.object({
-  requestId: z.string().min(1),
+  requestId: z.string().min(1).max(300),
   modelSlug: z.string().min(1),
-  statusUrl: z.string().url(),
-  responseUrl: z.string().url(),
+  statusUrl: z.string().optional(),
+  responseUrl: z.string().optional(),
   attemptId: z.string().uuid().optional(),
 });
 
@@ -86,45 +75,28 @@ export const pollVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PollInput.parse(d))
   .handler(async ({ data, context }) => {
-    const allowed = Object.values(MODELS).flatMap(m=>[m.t2v,m.i2v]);
-    if(!allowed.includes(data.modelSlug as typeof allowed[number]))throw new Error('Unknown video model.');
-    const base=`${FAL_BASE}/${data.modelSlug}/requests/${encodeURIComponent(data.requestId)}`;
-    if(data.statusUrl!==`${base}/status`||data.responseUrl!==base)throw new Error('Invalid provider job URL.');
-    const {data:debits,error}=await context.supabase.from('credit_ledger').select('delta').eq('user_id',context.userId).eq('related_entity_type','video_job').eq('related_entity_id',data.attemptId??'00000000-0000-0000-0000-000000000000').eq('attempt_id',data.attemptId??'00000000-0000-0000-0000-000000000000').lt('delta',0);
-    if(error||!debits?.length)throw new Error('No owned historical video debit found.');
-    const statusRes = await fetch(data.statusUrl, { headers: authHeader() });
-    if (!statusRes.ok) {
-      const t = await statusRes.text().catch(() => "");
-      throw new Error(`status check failed (${statusRes.status}): ${t.slice(0, 200)}`);
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("AI connection is not configured.");
+    if (!data.attemptId) throw new Error("Missing video attempt.");
+    const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
+    const { data: owned } = await db.from("video_credit_ledger").select("id").eq("user_id", context.userId).eq("idempotency_key", `debit:${KIND}:${data.attemptId}:${data.attemptId}`).maybeSingle();
+    if (!owned) throw new Error("No owned video debit found for this clip.");
+    const r = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(data.requestId)}`, { headers: { Authorization: `Bearer ${key}` } });
+    const job: any = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(`Status check failed (${r.status}): ${String(job?.message ?? "").slice(0, 200)}`);
+    if (job.status === "failed") {
+      await db.rpc("refund_video_credits", { p_user: context.userId, p_kind: KIND, p_entity: data.attemptId, p_attempt: data.attemptId });
+      throw new Error(`Video generation failed: ${job.error?.message ?? "provider error"}. Video credits refunded.`);
     }
-    const status = (await statusRes.json()) as {
-      status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | "FAILED" | "ERROR";
-      queue_position?: number;
-      logs?: Array<{ message: string }>;
-    };
-
-    if (status.status === "FAILED" || status.status === "ERROR") {
-      const lastLog = status.logs?.slice(-1)[0]?.message;
-      if (data.attemptId) {
-        const { refundCredits } = await import("@/lib/credits.server");
-        await refundCredits(context.userId, debits.reduce((n,r)=>n-r.delta,0), "video_job", data.attemptId, data.attemptId);
-      }
-      throw new Error(`Video generation failed${lastLog ? `: ${lastLog}` : ""}`);
-    }
-
-    if (status.status !== "COMPLETED") {
-      return {
-        status: status.status,
-        queuePosition: status.queue_position,
-        videoUrl: null as string | null,
-      };
-    }
-
-    const resultRes = await fetch(data.responseUrl, { headers: authHeader() });
-    if (!resultRes.ok) {
-      throw new Error(`result fetch failed (${resultRes.status})`);
-    }
-    const result = (await resultRes.json()) as { video?: { url?: string } };
-    const url = result?.video?.url ?? null;
-    return { status: "COMPLETED" as const, queuePosition: null, videoUrl: url };
+    if (job.status !== "completed") return { status: job.status === "queued" ? "IN_QUEUE" : "IN_PROGRESS", queuePosition: null, videoUrl: null as string | null };
+    const path = `${context.userId}/reel-clips/${data.attemptId}.mp4`;
+    const { data: signedExisting } = await db.storage.from("project-assets").createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signedExisting?.signedUrl) return { status: "COMPLETED" as const, queuePosition: null, videoUrl: signedExisting.signedUrl };
+    const c = await fetch(`${GATEWAY}/v1/videos/${encodeURIComponent(data.requestId)}/content`, { headers: { Authorization: `Bearer ${key}` } });
+    if (!c.ok) throw new Error(`Video download failed (${c.status}).`);
+    const bytes = new Uint8Array(await c.arrayBuffer());
+    const { error: up } = await db.storage.from("project-assets").upload(path, bytes, { contentType: "video/mp4", upsert: true });
+    if (up) throw new Error(up.message);
+    const { data: signed } = await db.storage.from("project-assets").createSignedUrl(path, 60 * 60 * 24 * 7);
+    return { status: "COMPLETED" as const, queuePosition: null, videoUrl: signed?.signedUrl ?? null };
   });
