@@ -15,11 +15,10 @@ export const quoteAssembly=createServerFn({method:'POST'}).middleware([requireSu
   if(!config)return {configured:false,reason:'Assembly not configured yet. Download all clips instead.',quote:null,clips:[] as AssemblyClip[]};
   const clips=await ownedClips(context,data.projectId);const duration=clips.reduce((n,c)=>n+c.duration,0);validateCaptions(data.options.captions,duration);
   const q=renderQuote(duration,config.environment);const {data:balance,error}=await context.supabase.rpc('video_credit_balance',{p_user:context.userId});if(error)throw new Error('Video balance could not be loaded.');
-  return {configured:true,reason:!STUDIO_PRICING.video.approved?'Video pack prices await approval; no paid render can start.':null,quote:q,clips,video:videoBalanceQuote(q.customerCredits,balance??0,duration)};
+  return {configured:true,reason:null,quote:q,clips,video:videoBalanceQuote(q.customerCredits,balance??0,duration)};
 });
 export const startAssembly=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>Input.extend({requestKey:z.string().uuid(),confirmedCredits:z.number().int().nonnegative(),clips:z.array(z.object({sceneId:z.string().uuid(),attemptId:z.string().uuid(),path:z.string(),duration:z.number(),revision:z.number()})).min(1).max(30)}).parse(d)).handler(async({data,context})=>{
   const {rendererConfig,submitAssembly}=await import('./assembly.server');const config=rendererConfig();if(!config)throw new Error('Assembly not configured yet. No credits charged.');
-  if(config.environment!=='stage'&&!STUDIO_PRICING.video.approved)throw new Error('Video pack prices await approval. No credits charged.');
   const clips=await ownedClips(context,data.projectId);if(JSON.stringify(clips)!==JSON.stringify(data.clips))throw new Error('Clips changed. Review a new quote.');
   const duration=clips.reduce((n,c)=>n+c.duration,0);validateCaptions(data.options.captions,duration);const quote=renderQuote(duration,config.environment);if(quote.customerCredits!==data.confirmedCredits)throw new Error('Price changed. Review a new quote.');
   for(const path of [data.options.voiceoverPath,data.options.musicPath,data.options.logoPath].filter(Boolean)){if(!path?.startsWith(`${context.userId}/${data.projectId}/assembly-input/`) && !path?.startsWith(`${context.userId}/references/`))throw new Error('Assembly media must be privately uploaded by this account.');}
