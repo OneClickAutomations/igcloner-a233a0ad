@@ -183,6 +183,7 @@ export type Database = {
       assembly_jobs: {
         Row: {
           billed: number
+          billing_balance: string
           bridge_job_id: string | null
           callback_token_hash: string | null
           clip_snapshot: Json
@@ -206,6 +207,7 @@ export type Database = {
         }
         Insert: {
           billed?: number
+          billing_balance?: string
           bridge_job_id?: string | null
           callback_token_hash?: string | null
           clip_snapshot?: Json
@@ -229,6 +231,7 @@ export type Database = {
         }
         Update: {
           billed?: number
+          billing_balance?: string
           bridge_job_id?: string | null
           callback_token_hash?: string | null
           clip_snapshot?: Json
@@ -1418,6 +1421,7 @@ export type Database = {
       scene_attempts: {
         Row: {
           billed: number
+          billing_balance: string
           created_at: string
           failure_reason: string | null
           gateway_job_id: string | null
@@ -1442,6 +1446,7 @@ export type Database = {
         }
         Insert: {
           billed?: number
+          billing_balance?: string
           created_at?: string
           failure_reason?: string | null
           gateway_job_id?: string | null
@@ -1466,6 +1471,7 @@ export type Database = {
         }
         Update: {
           billed?: number
+          billing_balance?: string
           created_at?: string
           failure_reason?: string | null
           gateway_job_id?: string | null
@@ -1766,6 +1772,42 @@ export type Database = {
           },
         ]
       }
+      video_credit_ledger: {
+        Row: {
+          attempt_id: string | null
+          created_at: string
+          delta: number
+          id: string
+          idempotency_key: string
+          reason: string
+          related_entity_id: string | null
+          related_entity_type: string | null
+          user_id: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          created_at?: string
+          delta: number
+          id?: string
+          idempotency_key: string
+          reason: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string | null
+          created_at?: string
+          delta?: number
+          id?: string
+          idempotency_key?: string
+          reason?: string
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_inspiration_projects: {
         Row: {
           analysis_id: string | null
@@ -1924,6 +1966,16 @@ export type Database = {
         }
         Returns: Json
       }
+      debit_video_credits: {
+        Args: {
+          p_amount: number
+          p_attempt: string
+          p_entity: string
+          p_kind: string
+          p_user: string
+        }
+        Returns: Json
+      }
       fail_assembly_job: {
         Args: { p_job: string; p_reason: string }
         Returns: undefined
@@ -1947,6 +1999,10 @@ export type Database = {
         }
         Returns: string
       }
+      grant_video_credits: {
+        Args: { p_amount: number; p_purchase_key: string; p_user: string }
+        Returns: undefined
+      }
       refund_credits: {
         Args: {
           p_amount: number
@@ -1957,6 +2013,15 @@ export type Database = {
         }
         Returns: Json
       }
+      refund_video_credits: {
+        Args: {
+          p_attempt: string
+          p_entity: string
+          p_kind: string
+          p_user: string
+        }
+        Returns: Json
+      }
       sweep_inspiration_stills: { Args: { p_user: string }; Returns: number }
       sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
       sweep_stale_copy_runs: { Args: never; Returns: number }
@@ -1964,6 +2029,7 @@ export type Database = {
         Args: { p_user_id?: string }
         Returns: Json
       }
+      video_credit_balance: { Args: { p_user: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "user"

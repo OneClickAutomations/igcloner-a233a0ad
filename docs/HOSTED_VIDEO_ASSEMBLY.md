@@ -1,5 +1,7 @@
 # Hosted video assembly — checked 8 November 2026
 
+**Video add-on update:** assembly now uses the separate video ledger; proposed 32s render charge is 1 video credit (sandbox 0), not 3 plan credits. Pack approval gates paid renders. See [VIDEO_ADDON_PACKS.md](./VIDEO_ADDON_PACKS.md). Provider cost remains an estimate, not a measured render.
+
 ## Recommendation: Shotstack
 
 Its JSON timeline covers our ordered clips, supplied ElevenLabs audio, timed captions, music, timed logo and fades. API-key authentication, async job IDs, status polling and output URLs require no owner infrastructure. PAYG is $10 minimum top-up for 50 minutes ($0.20/minute), without a monthly subscription.

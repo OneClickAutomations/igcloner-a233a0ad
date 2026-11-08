@@ -6,7 +6,7 @@ export const ReferenceKind = z.enum(['character_face', 'character_body', 'charac
 export const StudioModel = z.enum(['google/veo-3.1-fast', 'google/veo-3.1-lite', 'google/gemini-omni-1.1-flash']);
 export const STUDIO_MODELS = [
   { id: 'google/veo-3.1-fast', label: 'Veo 3.1 Fast', note: 'Product / action · default', rate: STUDIO_PRICING.rates['google/veo-3.1-fast'] },
-  { id: 'google/veo-3.1-lite', label: 'Veo 3.1 Lite', note: 'Draft · less motion', rate: STUDIO_PRICING.rates['google/veo-3.1-lite'] },
+  { id: 'google/veo-3.1-lite', label: 'Veo 3.1 Lite', note: 'cheaper, less motion', rate: STUDIO_PRICING.rates['google/veo-3.1-lite'] },
   { id: 'google/gemini-omni-1.1-flash', label: 'Gemini Omni', note: 'Fallback · input-dependent cost', rate: STUDIO_PRICING.rates['google/gemini-omni-1.1-flash'] },
 ] as const;
 export const ActionObject = z.object({ name: z.string().trim().min(1).max(80), state: z.string().trim().min(1).max(160) });

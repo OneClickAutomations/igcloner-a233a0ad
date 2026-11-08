@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { STUDIO_PRICING } from './studio-pricing';
 import { ACTION_COSTS } from "@/lib/credits";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -69,42 +70,8 @@ export const submitVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data, context }) => {
-    const variants = MODELS[data.model as ModelKey];
-    const slug = data.image_url ? variants.i2v : variants.t2v;
-    const cost = costForSlug(slug);
-    const attemptId = crypto.randomUUID();
-    const { debitCredits, refundCredits } = await import("@/lib/credits.server");
-    await debitCredits(context.userId, cost, "debit_image", "video_job", attemptId, attemptId);
-    let res: Response, text: string;
-    try {
-      res = await fetch(`${FAL_BASE}/${slug}`, {
-        method: "POST",
-        headers: authHeader(),
-        body: JSON.stringify(buildPayload(data)),
-      });
-      text = await res.text();
-    } catch (e) {
-      await refundCredits(context.userId, cost, "video_job", attemptId, attemptId);
-      throw e;
-    }
-    if (!res.ok) {
-      await refundCredits(context.userId, cost, "video_job", attemptId, attemptId);
-      if (/exhausted balance|locked/i.test(text)) throw new Error("The video service is out of balance right now, so videos can't be made. Your credits were refunded.");
-      throw new Error(`Video service submit failed (${res.status}): ${text.slice(0, 300)}. Your credits were refunded.`);
-    }
-    const j = JSON.parse(text) as { request_id: string };
-    const j2 = JSON.parse(text) as {
-      request_id: string;
-      status_url?: string;
-      response_url?: string;
-    };
-    return {
-      attemptId,
-      requestId: j.request_id,
-      modelSlug: slug,
-      statusUrl: j2.status_url ?? `${FAL_BASE}/${slug}/requests/${j.request_id}/status`,
-      responseUrl: j2.response_url ?? `${FAL_BASE}/${slug}/requests/${j.request_id}`,
-    };
+    if(!STUDIO_PRICING.video.approved)throw new Error('Video add-on prices await approval. No plan credits charged. Use the Video Inspiration Studio to review proposed video-credit quotes.');
+    throw new Error('Legacy fal video pricing has not been approved for video packs. No credits charged.');
   });
 
 const PollInput = z.object({
@@ -119,6 +86,12 @@ export const pollVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => PollInput.parse(d))
   .handler(async ({ data, context }) => {
+    const allowed = Object.values(MODELS).flatMap(m=>[m.t2v,m.i2v]);
+    if(!allowed.includes(data.modelSlug as typeof allowed[number]))throw new Error('Unknown video model.');
+    const base=`${FAL_BASE}/${data.modelSlug}/requests/${encodeURIComponent(data.requestId)}`;
+    if(data.statusUrl!==`${base}/status`||data.responseUrl!==base)throw new Error('Invalid provider job URL.');
+    const {data:debits,error}=await context.supabase.from('credit_ledger').select('delta').eq('user_id',context.userId).eq('related_entity_type','video_job').eq('related_entity_id',data.attemptId??'00000000-0000-0000-0000-000000000000').eq('attempt_id',data.attemptId??'00000000-0000-0000-0000-000000000000').lt('delta',0);
+    if(error||!debits?.length)throw new Error('No owned historical video debit found.');
     const statusRes = await fetch(data.statusUrl, { headers: authHeader() });
     if (!statusRes.ok) {
       const t = await statusRes.text().catch(() => "");
@@ -134,7 +107,7 @@ export const pollVideoJob = createServerFn({ method: "POST" })
       const lastLog = status.logs?.slice(-1)[0]?.message;
       if (data.attemptId) {
         const { refundCredits } = await import("@/lib/credits.server");
-        await refundCredits(context.userId, costForSlug(data.modelSlug), "video_job", data.attemptId, data.attemptId);
+        await refundCredits(context.userId, debits.reduce((n,r)=>n-r.delta,0), "video_job", data.attemptId, data.attemptId);
       }
       throw new Error(`Video generation failed${lastLog ? `: ${lastLog}` : ""}`);
     }

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { STUDIO_PRICING } from './studio-pricing';
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -145,12 +146,10 @@ export const generateSceneVoiceover = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     if (!project) throw new Error("Project not found");
 
+    const {data:formatRow}=await supabase.from('projects').select('format').eq('id',data.projectId).single();
+    if(formatRow?.format==='reel')throw new Error(!STUDIO_PRICING.video.approved?'Video pack prices await approval. Attached narration is not charged to plan credits.':'Attached narration has no verified video-credit price yet. No credits charged.');
     const settings = VoiceSettingsSchema.parse(data.settings ?? {});
-    const { bytes, mime } = await callTts({
-      text: data.text,
-      voiceId: data.voiceId,
-      settings,
-    });
+    const { bytes, mime } = await callTts({text:data.text,voiceId:data.voiceId,settings});
 
     const filename = `${userId}/${data.projectId}/voiceover/scene-${data.sceneIndex}-${Date.now()}.mp3`;
     const { error: upErr } = await supabase.storage

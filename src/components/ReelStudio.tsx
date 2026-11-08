@@ -960,9 +960,9 @@ function VideoStep({
     );
   }
   const models = [
-    { id: "veo3-fast", name: "VEO 3 Fast", price: "15 credits", note: "Recommended", icon: Zap, time: "~30s" },
-    { id: "veo3", name: "VEO 3", price: "25 credits", note: "Highest fidelity", icon: Crown, time: "~60–90s" },
-    { id: "kling-2.1", name: "Kling 2.1", price: "25 credits", note: "No audio", icon: Sparkle, time: "~45s" },
+    { id: "veo3-fast", name: "VEO 3 Fast", price: "Video pack pricing pending", note: "Recommended", icon: Zap, time: "~30s" },
+    { id: "veo3", name: "VEO 3", price: "Video pack pricing pending", note: "Highest fidelity", icon: Crown, time: "~60–90s" },
+    { id: "kling-2.1", name: "Kling 2.1", price: "Video pack pricing pending", note: "No audio", icon: Sparkle, time: "~45s" },
   ] as const;
   return (
     <div className="space-y-5">

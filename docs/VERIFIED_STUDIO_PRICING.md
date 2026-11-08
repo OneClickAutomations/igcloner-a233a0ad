@@ -1,5 +1,7 @@
 # Verified studio pricing — 2026-11-08
 
+**Historical comparison:** owner selected separate video packs. See [VIDEO_ADDON_PACKS.md](./VIDEO_ADDON_PACKS.md); video no longer uses plan-credit quotes, and proposed pack/action prices are gated pending approval. Nonvideo prices remain unchanged.
+
 Owner-confirmed receipts: $15/50 and $30/100 Lovable workspace credits, both **$0.30/credit**. Customer credit = **$0.145**. Proposed 35% cost ceiling: `ceil(cost / 0.05075)`. Direct-cost gross margin = `1 − cost / (customer credits × 0.145)`; excludes fees, tax, overhead, failures and refunds.
 
 Conversion and video policy are recorded in `src/lib/studio-pricing.ts`. Known-rate Fast/Lite animation is now quoteable/confirmable after still approval; it still requires sufficient balance and configured AI access. Stills and Omni remain blocked on unknown action quotes. Existing studio prices and plans are unchanged. No generation was run in this request.

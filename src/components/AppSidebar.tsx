@@ -4,6 +4,8 @@ import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIc
 import { getCreditBalance } from "@/lib/credits.functions";
 import { useQuery } from "@tanstack/react-query";
 import { CREDIT_BALANCE_KEY } from "@/lib/credits";
+import { VIDEO_BALANCE_KEY } from '@/lib/studio-pricing';
+import { getVideoCreditBalance } from '@/lib/video-credits.functions';
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +53,8 @@ export function AppSidebar() {
     staleTime: 15_000,
   });
   const credits = balanceData?.balance ?? null;
+  const videoBalanceFn=useServerFn(getVideoCreditBalance);
+  const {data:videoBalance}=useQuery({queryKey:VIDEO_BALANCE_KEY,queryFn:()=>videoBalanceFn(),staleTime:15000});
 
   return (
     <Sidebar collapsible="icon">
@@ -110,10 +114,11 @@ export function AppSidebar() {
           {!collapsed && (
             <>
               <span className="font-mono font-bold tabular-nums">{credits ?? "…"}</span>
-              <span className="text-muted-foreground">credits</span>
+              <span className="text-muted-foreground">plan credits</span>
             </>
           )}
         </Link>
+        <Link to="/studio/inspiration" onClick={closeMobile} title="Separate video-credit balance" className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm"><Film className="size-4 shrink-0 text-primary"/>{!collapsed&&<><span className="font-mono font-bold tabular-nums">{videoBalance?.balance??'…'}</span><span className="text-muted-foreground">video credits</span></>}</Link>
         <Button
           variant="ghost"
           size="sm"
