@@ -2,6 +2,8 @@ import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { z } from 'zod';
 import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
+import { STUDIO_PRICING,monthlyCreditEquivalent } from './studio-pricing';
+import { PLANS } from './credits';
 
 const Id = z.string().uuid();
 export const getInspirationStudio = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -24,9 +26,8 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
       return url?.signedUrl ?? null;
     };
-    const usd = Number(process.env['VIDEO_WORKSPACE_CREDIT_USD']);
-    const conversion = Number.isFinite(usd) && usd > 0 ? usd : null;
-    const stillCost = Number(process.env['VIDEO_STILL_WORKSPACE_QUOTE']);
+    const {data:profile}=await supabase.from('profiles').select('plan').eq('id',userId).maybeSingle();
+    const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
     return {
       projects: projects ?? [], selected: selected ?? null, analyses: analyses ?? [],
       references: await Promise.all((references ?? []).map(async r => ({ ...r, preview: await sign(r.storage_path) }))),
@@ -34,7 +35,8 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       attempts: await Promise.all((attempts ?? []).map(async a => ({ ...a, preview: await sign(a.result_url) }))),
       assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
-      usdPerWorkspaceCredit: conversion, stillWorkspaceQuote: Number.isFinite(stillCost) && stillCost > 0 ? stillCost : null,
+      usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
+      monthlyAllowance: plan?.monthly ? plan.credits : null,
     };
   });
 
@@ -126,13 +128,13 @@ export const inspirationQuote = createServerFn({ method: 'POST' }).middleware([r
   .handler(async ({ data, context }) => {
     const { data: s } = await context.supabase.from('storyboard_scenes').select('duration,revision').eq('id', data.sceneId).single();
     if (!s) throw new Error('Scene not found.');
-    const usd = Number(process.env['VIDEO_WORKSPACE_CREDIT_USD']);
-    const conversion = Number.isFinite(usd) && usd > 0 ? usd : null;
+    const conversion = STUDIO_PRICING.workspaceCreditUsd;
     const rate = STUDIO_MODELS.find(m => m.id === data.model)?.rate ?? null;
-    const configuredStill = Number(process.env['VIDEO_STILL_WORKSPACE_QUOTE']);
-    const cost = data.operation === 'still' ? (Number.isFinite(configuredStill) && configuredStill > 0 ? configuredStill : null) : rate === null ? null : s.duration * rate;
+    const cost = data.operation === 'still' ? STUDIO_PRICING.stillWorkspaceCredits : rate === null ? null : s.duration * rate;
     const customerCredits = cost === null ? null : priceFromWorkspaceCost(cost, conversion);
-    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate, totalWorkspaceCredits: cost, customerCredits, revision: s.revision, available: customerCredits !== null, reason: customerCredits === null ? 'Generation pricing not configured yet. Verified USD conversion and a measured still quote are required; no credits will be charged.' : null };
+    const {data:profile}=await context.supabase.from('profiles').select('plan').eq('id',context.userId).maybeSingle();
+    const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
+    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate, totalWorkspaceCredits: cost, customerCredits, usdCost:cost===null?null:cost*conversion, monthlyEquivalent:customerCredits===null?null:monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This scene'), revision: s.revision, available: customerCredits !== null, reason: customerCredits === null ? 'This action has no verified cost quote yet; no credits will be charged. Workspace conversion is verified at $0.30.' : null };
   });
 
 export const animateInspirationScene = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -144,8 +146,7 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     assertAnimationReady({ ...s, action_objects: s.action_objects as any, object_checks: s.object_checks as unknown as ObjectCheck[] });
     if (data.revision !== s.revision) throw new Error('The scene changed. Review a new quote.');
     const rate = STUDIO_MODELS.find(m => m.id === data.model)?.rate;
-    const usd = Number(process.env['VIDEO_WORKSPACE_CREDIT_USD']);
-    const price = rate == null ? null : priceFromWorkspaceCost(rate * s.duration, Number.isFinite(usd) && usd > 0 ? usd : null);
+    const price = rate == null ? null : priceFromWorkspaceCost(rate * s.duration, STUDIO_PRICING.workspaceCreditUsd);
     if (price === null) throw new Error('Generation pricing not configured yet; no credits were charged.');
     if (price !== data.confirmedCredits) throw new Error('The price changed. Confirm a new quote.');
     const key = process.env['LOVABLE_API_KEY']; if (!key) throw new Error('AI connection is not configured.');

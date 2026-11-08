@@ -13,8 +13,9 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     if (!auth.user) return Response.json({ message: 'Sign in required.' }, { status: 401 });
     const input = z.object({ sceneId: z.string().uuid(), requestKey: z.string().uuid(), revision: z.number().int(), confirmedCredits: z.number().int(), stream: z.boolean().default(true) }).safeParse(await request.json());
     if (!input.success) return Response.json({ message: 'Invalid still request.' }, { status: 400 });
-    const usd = Number(process.env['VIDEO_WORKSPACE_CREDIT_USD']); const cost = Number(process.env['VIDEO_STILL_WORKSPACE_QUOTE']);
-    if (!Number.isFinite(usd) || usd <= 0 || !Number.isFinite(cost) || cost <= 0) return Response.json({ message: 'Generation pricing not configured yet; no credits charged.' }, { status: 409 });
+    const { STUDIO_PRICING } = await import('@/lib/studio-pricing');
+    const usd = STUDIO_PRICING.workspaceCreditUsd; const cost = STUDIO_PRICING.stillWorkspaceCredits;
+    if (cost === null) return Response.json({ message: 'Still cost has not been verified yet; no credits charged.' }, { status: 409 });
     const { priceFromWorkspaceCost, stripIdentity } = await import('@/lib/inspiration');
     const price = priceFromWorkspaceCost(cost, usd);
     if (price !== input.data.confirmedCredits) return Response.json({ message: 'Price changed. Review a new quote.' }, { status: 409 });

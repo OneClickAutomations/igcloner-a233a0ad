@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { buildMotionPrompt } from './video-motion';
+import { STUDIO_PRICING } from './studio-pricing';
 
 export const ReferenceKind = z.enum(['character_face', 'character_body', 'character_back', 'product', 'logo']);
 export const StudioModel = z.enum(['google/veo-3.1-fast', 'google/veo-3.1-lite', 'google/gemini-omni-1.1-flash']);
 export const STUDIO_MODELS = [
-  { id: 'google/veo-3.1-fast', label: 'Veo 3.1 Fast', note: 'Product / action · default', rate: 0.4 },
-  { id: 'google/veo-3.1-lite', label: 'Veo 3.1 Lite', note: 'Draft · less motion', rate: 0.2 },
-  { id: 'google/gemini-omni-1.1-flash', label: 'Gemini Omni', note: 'Fallback · input-dependent cost', rate: null },
+  { id: 'google/veo-3.1-fast', label: 'Veo 3.1 Fast', note: 'Product / action · default', rate: STUDIO_PRICING.rates['google/veo-3.1-fast'] },
+  { id: 'google/veo-3.1-lite', label: 'Veo 3.1 Lite', note: 'Draft · less motion', rate: STUDIO_PRICING.rates['google/veo-3.1-lite'] },
+  { id: 'google/gemini-omni-1.1-flash', label: 'Gemini Omni', note: 'Fallback · input-dependent cost', rate: STUDIO_PRICING.rates['google/gemini-omni-1.1-flash'] },
 ] as const;
 export const ActionObject = z.object({ name: z.string().trim().min(1).max(80), state: z.string().trim().min(1).max(160) });
 export const SceneInput = z.object({
@@ -48,8 +49,8 @@ export function assertAnimationReady(scene: { approved_at: string | null; still_
   if (!scene.still_path || !scene.approved_at || scene.approved_revision !== scene.revision) throw new Error('Approve the current still before animation.');
   if (missingActionObjects(scene.action_objects, scene.object_checks).length) throw new Error('The still has missing or unverified action objects.');
 }
-export const CUSTOMER_CREDIT_USD = 0.145;
-export const COST_CEILING = 0.35;
+export const CUSTOMER_CREDIT_USD = STUDIO_PRICING.customerCreditUsd;
+export const COST_CEILING = STUDIO_PRICING.costCeiling;
 export function priceFromWorkspaceCost(workspaceCredits: number, usdPerWorkspaceCredit: number | null) {
   if (usdPerWorkspaceCredit === null) return null;
   if (!Number.isFinite(usdPerWorkspaceCredit) || usdPerWorkspaceCredit <= 0 || workspaceCredits < 0) throw new Error('Invalid verified cost.');
