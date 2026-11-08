@@ -1,9 +1,10 @@
 # Roadmap
 
 ## Topped-up Shotstack completion and quality — current
-- [ ] Calibrate narration to actual clip duration; test word target and coverage; regenerate through Delivery
-- [ ] Submit/poll/save/download the faithful film through Delivery; measure provider usage, watermark and caption alignment
-- [ ] Diagnose product inconsistency without replacing scenes; report production options/costs and readiness order
+- [x] Add measured-rate duration word target, MP3 frame/speech coverage gate and one timing regeneration; 15 focused tests pass
+- [ ] Corrected narration proof — Delivery produced 19.487s/41 words then 12.748s/32 words at Chris speed 0.787; bounded timing check failed. Needs more reliable duration control; no further synthesis in this turn
+- [ ] Submit/poll/save/download faithful film — waiting on narration passing its timing gate; Shotstack templates check HTTP 200, no render submitted after top-up
+- [x] Diagnose product mismatch: inconsistent still silhouettes predate video; mixed models not causal proof; no evidence stills regenerated. Report reference/verification options with known/unknown costs
 
 ## Authorized imported-film proof — 2026-11-08
 - [x] Locate four original Phase 1 clips/stills; ffprobe confirms each clip has 4.000s video, 720×1280; history confirms original proof was four ~4s scenes
