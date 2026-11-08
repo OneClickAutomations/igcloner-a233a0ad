@@ -3,7 +3,7 @@ BEGIN;
 SET LOCAL ROLE service_role;
 CREATE TEMP TABLE test_video_fixture AS SELECT gen_random_uuid() uid,gen_random_uuid() project,gen_random_uuid() scene,gen_random_uuid() entity,gen_random_uuid() attempt;
 GRANT SELECT ON test_video_fixture TO authenticated;
-DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; before_plan bigint; after_plan bigint; BEGIN
+DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; j uuid; before_plan bigint; after_plan bigint; snapshot jsonb; BEGIN
  SELECT * INTO t FROM test_video_fixture;
  SELECT COALESCE(sum(delta),0) INTO before_plan FROM public.credit_ledger;
  PERFORM public.grant_video_credits(t.uid,16,'test-pack');
@@ -28,6 +28,19 @@ DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; before_plan bigint; after_plan
  IF NOT (c->>'existing')::boolean THEN RAISE EXCEPTION 'Duplicate claim'; END IF;
  PERFORM public.fail_inspiration_attempt(a,'test'); PERFORM public.fail_inspiration_attempt(a,'test');
  IF (SELECT sum(delta) FROM public.video_credit_ledger WHERE user_id=t.uid)<>16 THEN RAISE EXCEPTION 'Failed claim refund not once'; END IF;
+ PERFORM public.debit_video_credits(t.uid,16,'empty-test',t.entity,gen_random_uuid());
+ BEGIN PERFORM public.claim_inspiration_attempt(t.uid,t.scene,gen_random_uuid(),'animate','google/veo-3.1-fast',8,3.2,'{}'); RAISE EXCEPTION 'Empty balance allowed a claim'; EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE 'Insufficient credits:%' THEN RAISE; END IF; END;
+ IF NOT EXISTS(SELECT 1 FROM public.storyboard_scenes WHERE id=t.scene AND still_path IS NOT NULL AND approved_at IS NOT NULL) THEN RAISE EXCEPTION 'Empty balance destroyed approved still'; END IF;
+ IF (SELECT count(*) FROM public.scene_attempts WHERE user_id=t.uid)<>1 THEN RAISE EXCEPTION 'Empty claim persisted'; END IF;
+ PERFORM public.grant_video_credits(t.uid,16,'assembly-test');
+ UPDATE public.scene_attempts SET status='completed',result_url=t.uid::text||'/clip.mp4' WHERE id=a;
+ snapshot:=jsonb_build_array(jsonb_build_object('sceneId',t.scene,'attemptId',a,'path',t.uid::text||'/clip.mp4','duration',8,'revision',1));
+ c:=public.claim_assembly_job(t.uid,t.project,t.attempt,'{}',snapshot,1,0.0266667,'v1'); j:=(c->'job'->>'id')::uuid;
+ IF (c->'job'->>'billing_balance')<>'video' THEN RAISE EXCEPTION 'Assembly used plan balance'; END IF;
+ c:=public.claim_assembly_job(t.uid,t.project,t.attempt,'{}',snapshot,1,0.0266667,'v1');
+ IF NOT (c->>'existing')::boolean THEN RAISE EXCEPTION 'Duplicate assembly'; END IF;
+ PERFORM public.fail_assembly_job(j,'test'); PERFORM public.fail_assembly_job(j,'test');
+ IF (SELECT sum(delta) FROM public.video_credit_ledger WHERE user_id=t.uid)<>16 THEN RAISE EXCEPTION 'Assembly refund not once'; END IF;
  BEGIN UPDATE public.video_credit_ledger SET delta=100 WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  BEGIN DELETE FROM public.video_credit_ledger WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  SELECT COALESCE(sum(delta),0) INTO after_plan FROM public.credit_ledger;
@@ -35,7 +48,7 @@ DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; before_plan bigint; after_plan
 END $$;
 SELECT set_config('request.jwt.claims',json_build_object('sub',(SELECT uid FROM test_video_fixture),'role','authenticated')::text,true);
 SET LOCAL ROLE authenticated;
-DO $$ BEGIN IF (SELECT count(*) FROM public.video_credit_ledger)<>5 THEN RAISE EXCEPTION 'Owner ledger read failed'; END IF; END $$;
+DO $$ BEGIN IF (SELECT count(*) FROM public.video_credit_ledger)<>9 THEN RAISE EXCEPTION 'Owner ledger read failed'; END IF; END $$;
 RESET ROLE;
 SELECT set_config('request.jwt.claims',json_build_object('sub',gen_random_uuid(),'role','authenticated')::text,true);
 SET LOCAL ROLE authenticated;

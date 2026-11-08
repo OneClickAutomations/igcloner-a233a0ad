@@ -1,11 +1,15 @@
 # Roadmap
 
 ## Separate video add-on balance — owner decision 2026-11-08
-- [ ] Separate append-only ledger, atomic scene/render debit and attempt-bound currency-safe refunds
-- [ ] Dual balances, proposed quotes and insufficient-balance recovery; no live prices or purchases
-- [ ] Guard legacy video/attached narration; proposed pack math and complete known/unknown cost table
-- [ ] Ledger isolation/concurrency/refund tests and signed-in desktop/mobile verification
-- [ ] Provider research recheck and assembly follow-up (key and approved clips still required)
+- [x] Separate append-only ledger, atomic scene/render debit and attempt-bound currency-safe refunds
+- [x] Dual balances, proposed quotes and insufficient-balance recovery; no live prices or purchases
+- [x] Guard unapproved legacy video/attached narration; proposed pack math and complete known/unknown cost table
+- [x] Ledger isolation/concurrency/refund tests and signed-in desktop/mobile verification
+- [x] Provider research recheck; Shotstack retained, gateway audio-on Fast still cheaper than fal
+- [ ] Activate purchases/action prices — owner approval and later payment integration required; intentionally not wired
+- [ ] Measured still/voiceover/isolated-pass full totals — provider measurements missing; no spend authorized
+- [ ] Attached narration and legacy fal paid video metering — measured rates and owner approval missing; safely blocked
+- [ ] Free four-clip assembly test — Shotstack sandbox key and four attached approved clips missing
 
 ## Verified pricing — 2026-11-08
 - [x] Record owner-verified $0.30 conversion and central cost-ceiling configuration; enable known-rate generation quotes without changing existing prices/plans
