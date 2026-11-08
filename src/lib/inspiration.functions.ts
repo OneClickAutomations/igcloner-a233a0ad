@@ -168,6 +168,8 @@ export const recoverInspirationClips = createServerFn({ method: 'POST' }).middle
   .handler(async ({ context }) => {
     const key = process.env['LOVABLE_API_KEY']; if (!key) return { collected: 0 };
     const { collectPending } = await import('./inspiration.server');
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    await supabaseAdmin.rpc('finish_inspiration_collector');
     return { collected: await collectPending(key, context.userId) };
   });
 

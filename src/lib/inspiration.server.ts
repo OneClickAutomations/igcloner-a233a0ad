@@ -39,6 +39,7 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   if (!job.id) throw new Error('AI job returned no durable job ID; do not retry automatically.');
   const { error: saveError } = await supabaseAdmin.from('scene_attempts').update({ gateway_job_id: job.id, status: job.status, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id);
   if (saveError) throw new Error(`Job submitted but its ID could not be saved: ${job.id}. Do not resubmit.`);
+  await supabaseAdmin.rpc('arm_inspiration_collector');
 }
 export async function collectAttempt(attempt: any, apiKey: string) {
   if (!attempt.gateway_job_id || attempt.status === 'completed' || attempt.status === 'failed') return;
