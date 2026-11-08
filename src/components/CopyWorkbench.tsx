@@ -16,6 +16,7 @@ export function CopyWorkbench({analysisId,projects,initialNiche=''}:{analysisId:
   const [busy,setBusy]=useState(""),[hooks,setHooks]=useState<any[]>([]),[pack,setPack]=useState<any[]>([]),[history,setHistory]=useState<any[]>([]);
   const [projectId,setProjectId]=useState(""),[niche,setNiche]=useState(initialNiche),[platforms,setPlatforms]=useState(["instagram","tiktok","x","linkedin"]);
   const [used,setUsed]=useState<number|null>(null);
+  useEffect(()=>setNiche(initialNiche),[initialNiche]);
   const reload=async()=>{const r=await historyFn({data:{analysisId}});setHistory(r.runs);};
   useEffect(()=>{setHooks([]);setPack([]);reload().catch(()=>{});},[analysisId]);
   useEffect(()=>{if(!projectId&&projects[0])setProjectId(projects[0].id);},[projects,projectId]);
