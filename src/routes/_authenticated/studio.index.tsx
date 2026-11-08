@@ -10,6 +10,10 @@ export const Route = createFileRoute("/_authenticated/studio/")({
   }),
   head: () => ({
     meta: [
+      { property: "og:title", content: "Production Studio — IG-Cloner" },
+      { property: "og:description", content: "Pick a format and turn any analyzed Instagram post into a reel, carousel, voiceover, caption, or image." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Production Studio — IG-Cloner" },
       { name: "description", content: "Pick a format and turn any analyzed Instagram post into a reel, carousel, voiceover, caption, or image." },
       { name: "robots", content: "noindex" },

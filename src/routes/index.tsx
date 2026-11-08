@@ -4,6 +4,8 @@ import { LandingPage } from "@/components/LandingPage";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "IG-Cloner — Steal The Strategy. Not The Content." },
       { name: "description", content: "Paste any Instagram URL. Discover why it works. Generate 5 original content clones in seconds." },
       { property: "og:title", content: "IG-Cloner — Steal The Strategy. Not The Content." },

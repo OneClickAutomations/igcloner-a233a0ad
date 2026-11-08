@@ -6,6 +6,7 @@ export const Route = createFileRoute("/_authenticated/research")({
   validateSearch: z.object({ reportId: z.string().uuid().optional() }),
   head: () => ({
     meta: [
+      { name: "description", content: "Research for your IG-Cloner content workspace." },
       { title: "Research — IG-Cloner" },
       {
         name: "description",

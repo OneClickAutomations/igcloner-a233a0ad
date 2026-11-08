@@ -7,6 +7,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
   }),
   head: () => ({
     meta: [
+      { name: "description", content: "Settings & Integrations for your IG-Cloner content workspace." },
+      { property: "og:description", content: "Settings & Integrations for your IG-Cloner content workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Settings & Integrations — IG-Cloner" },
       {
         name: "description",

@@ -1,4 +1,6 @@
 # Project architecture
+- Video inspiration is a separate authenticated studio with server-written owner-readable tables, revision-bound still approvals and atomic attempt/debit claims; unset verified cost configuration blocks paid generation rather than inventing prices.
+- Inspiration animation uses the approved still as Veo's first frame; product ingredients populate still generation because Veo forbids mixing first-frame and ingredient inputs. Collection uses durable gateway IDs and never recreates paid jobs.
 - Video inspiration motion prompts use a browser-safe action/end-state builder; model defaults remain provisional until live action/identity gates pass, avoiding camera-only success claims.
 - Creator writing uses copy-engine.server.ts (native streamed Claude Messages, local Zod validation and one repair); media observation and image/audio/video providers remain separate.
 - Copy quality is judged per artifact with task-specific criteria and at most two regenerations; failures are withheld and flow through attempt refunds, and cache version changes when the quality contract changes.

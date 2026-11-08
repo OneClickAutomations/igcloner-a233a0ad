@@ -71,6 +71,41 @@
       "when": 1794089435897,
       "tag": "0009_copy_sweep_debit_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794110730618,
+      "tag": "0010_video_inspiration_studio",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794110992280,
+      "tag": "0011_inspiration_collector_and_reference_invalidation",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794111193324,
+      "tag": "0012_inspiration_owner_consistency",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794111231208,
+      "tag": "0013_inspiration_owner_trigger_dispatch",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794111291819,
+      "tag": "0014_inspiration_interrupted_still_recovery",
+      "breakpoints": true
     }
   ]
 }

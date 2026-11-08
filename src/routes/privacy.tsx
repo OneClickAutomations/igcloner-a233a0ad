@@ -7,6 +7,8 @@ const SITE = "https://www.igcloner.com";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Privacy Policy — IG-Cloner" },
       { name: "description", content: "How IG-Cloner collects, uses, shares, and protects your information." },
       { property: "og:title", content: "Privacy Policy — IG-Cloner" },

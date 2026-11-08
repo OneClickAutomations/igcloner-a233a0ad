@@ -10,6 +10,8 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Sign In or Create Account — IG-Cloner" },
       { name: "description", content: "Sign in to IG-Cloner or create a free account to start analyzing Instagram posts and generating original content clones." },
       { property: "og:title", content: "Sign In or Create Account — IG-Cloner" },

@@ -16,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Admin — IG-Cloner" },
       { name: "description", content: "Internal admin console for managing IG-Cloner users and content." },
       { property: "og:title", content: "Admin — IG-Cloner" },

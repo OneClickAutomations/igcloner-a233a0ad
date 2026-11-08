@@ -180,6 +180,56 @@ export type Database = {
         }
         Relationships: []
       }
+      assembly_jobs: {
+        Row: {
+          billed: number
+          bridge_job_id: string | null
+          created_at: string
+          failure_reason: string | null
+          id: string
+          project_id: string
+          request_key: string
+          result_path: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billed?: number
+          bridge_job_id?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          project_id: string
+          request_key: string
+          result_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billed?: number
+          bridge_job_id?: string | null
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          project_id?: string
+          request_key?: string
+          result_path?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assembly_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_items: {
         Row: {
           ai_notes: string | null
@@ -643,6 +693,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inspiration_collector_control: {
+        Row: {
+          id: boolean
+          lease_until: string | null
+          token_hash: string | null
+        }
+        Insert: {
+          id?: boolean
+          lease_until?: string | null
+          token_hash?: string | null
+        }
+        Update: {
+          id?: boolean
+          lease_until?: string | null
+          token_hash?: string | null
+        }
+        Relationships: []
       }
       multiplied_content: {
         Row: {
@@ -1132,6 +1200,47 @@ export type Database = {
           },
         ]
       }
+      reference_assets: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          filename: string
+          id: string
+          kind: string
+          project_id: string | null
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          filename: string
+          id?: string
+          kind: string
+          project_id?: string | null
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          filename?: string
+          id?: string
+          kind?: string
+          project_id?: string | null
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       research_reports: {
         Row: {
           created_at: string
@@ -1276,6 +1385,96 @@ export type Database = {
           },
         ]
       }
+      scene_attempts: {
+        Row: {
+          billed: number
+          created_at: string
+          failure_reason: string | null
+          gateway_job_id: string | null
+          id: string
+          lease_until: string | null
+          model: string
+          operation: string
+          project_id: string
+          reference_ids: string[]
+          refunded_at: string | null
+          request_key: string
+          result_url: string | null
+          scene_id: string
+          scene_revision: number
+          seconds: number
+          status: string
+          updated_at: string
+          usage: Json | null
+          user_id: string
+          workspace_billed: number | null
+          workspace_quote: number | null
+        }
+        Insert: {
+          billed?: number
+          created_at?: string
+          failure_reason?: string | null
+          gateway_job_id?: string | null
+          id?: string
+          lease_until?: string | null
+          model: string
+          operation: string
+          project_id: string
+          reference_ids?: string[]
+          refunded_at?: string | null
+          request_key: string
+          result_url?: string | null
+          scene_id: string
+          scene_revision: number
+          seconds?: number
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id: string
+          workspace_billed?: number | null
+          workspace_quote?: number | null
+        }
+        Update: {
+          billed?: number
+          created_at?: string
+          failure_reason?: string | null
+          gateway_job_id?: string | null
+          id?: string
+          lease_until?: string | null
+          model?: string
+          operation?: string
+          project_id?: string
+          reference_ids?: string[]
+          refunded_at?: string | null
+          request_key?: string
+          result_url?: string | null
+          scene_id?: string
+          scene_revision?: number
+          seconds?: number
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id?: string
+          workspace_billed?: number | null
+          workspace_quote?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scene_attempts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scene_attempts_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "storyboard_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       social_accounts: {
         Row: {
           connected_at: string | null
@@ -1341,6 +1540,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      storyboard_scenes: {
+        Row: {
+          action_objects: Json
+          approved_at: string | null
+          approved_revision: number | null
+          created_at: string
+          duration: number
+          id: string
+          motion_prompt: string
+          object_checks: Json
+          project_id: string
+          revision: number
+          scene_input: Json
+          scene_order: number
+          status: string
+          still_path: string | null
+          still_prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_objects?: Json
+          approved_at?: string | null
+          approved_revision?: number | null
+          created_at?: string
+          duration?: number
+          id?: string
+          motion_prompt: string
+          object_checks?: Json
+          project_id: string
+          revision?: number
+          scene_input?: Json
+          scene_order: number
+          status?: string
+          still_path?: string | null
+          still_prompt: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_objects?: Json
+          approved_at?: string | null
+          approved_revision?: number | null
+          created_at?: string
+          duration?: number
+          id?: string
+          motion_prompt?: string
+          object_checks?: Json
+          project_id?: string
+          revision?: number
+          scene_input?: Json
+          scene_order?: number
+          status?: string
+          still_path?: string | null
+          still_prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storyboard_scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       upload_post_profiles: {
         Row: {
@@ -1469,6 +1736,59 @@ export type Database = {
           },
         ]
       }
+      video_inspiration_projects: {
+        Row: {
+          analysis_id: string | null
+          aspect_ratio: string
+          audio_observations: Json
+          created_at: string
+          id: string
+          observation_notes: Json
+          pause_reason: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          visual_observations: Json
+        }
+        Insert: {
+          analysis_id?: string | null
+          aspect_ratio?: string
+          audio_observations?: Json
+          created_at?: string
+          id?: string
+          observation_notes?: Json
+          pause_reason?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+          visual_observations?: Json
+        }
+        Update: {
+          analysis_id?: string | null
+          aspect_ratio?: string
+          audio_observations?: Json
+          created_at?: string
+          id?: string
+          observation_notes?: Json
+          pause_reason?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          visual_observations?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_inspiration_projects_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_events: {
         Row: {
           event_type: string
@@ -1518,6 +1838,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      arm_inspiration_collector: { Args: never; Returns: undefined }
       claim_copy_run: {
         Args: {
           p_action: string
@@ -1527,6 +1848,23 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      claim_inspiration_attempt: {
+        Args: {
+          p_billed: number
+          p_model: string
+          p_operation: string
+          p_references?: string[]
+          p_request: string
+          p_scene: string
+          p_user: string
+          p_workspace: number
+        }
+        Returns: Json
+      }
+      claim_inspiration_collector: {
+        Args: { p_token: string }
+        Returns: boolean
       }
       credit_balance: {
         Args: { p_kind?: string; p_user_id: string }
@@ -1543,6 +1881,11 @@ export type Database = {
         }
         Returns: Json
       }
+      fail_inspiration_attempt: {
+        Args: { p_attempt: string; p_reason: string }
+        Returns: undefined
+      }
+      finish_inspiration_collector: { Args: never; Returns: undefined }
       grant_credits: {
         Args: {
           p_amount: number
@@ -1563,6 +1906,7 @@ export type Database = {
         }
         Returns: Json
       }
+      sweep_inspiration_stills: { Args: { p_user: string }; Returns: number }
       sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
       sweep_stale_copy_runs: { Args: never; Returns: number }
       sweep_stale_research_reports: {

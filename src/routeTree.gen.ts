@@ -28,9 +28,12 @@ import { Route as AuthenticatedStudioIndexRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStudioCarouselRouteImport } from './routes/_authenticated/studio.carousel'
 import { Route as AuthenticatedStudioCopyRouteImport } from './routes/_authenticated/studio.copy'
 import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenticated/studio.image'
+import { Route as AuthenticatedStudioInspirationRouteImport } from './routes/_authenticated/studio.inspiration'
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
+import { Route as ApiPublicInspirationCollectRouteImport } from './routes/api/public/inspiration-collect'
+import { Route as ApiPublicInspirationStillRouteImport } from './routes/api/public/inspiration-still'
 import { Route as ApiPublicUploadPostWebhookRouteImport } from './routes/api/public/upload-post-webhook'
 
 const IndexRoute = IndexRouteImport.update({
@@ -130,6 +133,12 @@ const AuthenticatedStudioImageRoute =
     path: '/studio/image',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedStudioInspirationRoute =
+  AuthenticatedStudioInspirationRouteImport.update({
+    id: '/studio/inspiration',
+    path: '/studio/inspiration',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedStudioReelRoute = AuthenticatedStudioReelRouteImport.update({
   id: '/studio/reel',
   path: '/studio/reel',
@@ -146,6 +155,18 @@ const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
   path: '/api/public/img',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInspirationCollectRoute =
+  ApiPublicInspirationCollectRouteImport.update({
+    id: '/api/public/inspiration-collect',
+    path: '/api/public/inspiration-collect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicInspirationStillRoute =
+  ApiPublicInspirationStillRouteImport.update({
+    id: '/api/public/inspiration-still',
+    path: '/api/public/inspiration-still',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicUploadPostWebhookRoute =
   ApiPublicUploadPostWebhookRouteImport.update({
     id: '/api/public/upload-post-webhook',
@@ -171,9 +192,12 @@ export interface FileRoutesByFullPath {
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/studio/copy': typeof AuthenticatedStudioCopyRoute
   '/studio/image': typeof AuthenticatedStudioImageRoute
+  '/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
+  '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/studio/': typeof AuthenticatedStudioIndexRoute
 }
@@ -195,9 +219,12 @@ export interface FileRoutesByTo {
   '/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/studio/copy': typeof AuthenticatedStudioCopyRoute
   '/studio/image': typeof AuthenticatedStudioImageRoute
+  '/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
+  '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/studio': typeof AuthenticatedStudioIndexRoute
 }
@@ -221,9 +248,12 @@ export interface FileRoutesById {
   '/_authenticated/studio/carousel': typeof AuthenticatedStudioCarouselRoute
   '/_authenticated/studio/copy': typeof AuthenticatedStudioCopyRoute
   '/_authenticated/studio/image': typeof AuthenticatedStudioImageRoute
+  '/_authenticated/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
+  '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/_authenticated/studio/': typeof AuthenticatedStudioIndexRoute
 }
@@ -247,9 +277,12 @@ export interface FileRouteTypes {
     | '/studio/carousel'
     | '/studio/copy'
     | '/studio/image'
+    | '/studio/inspiration'
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
+    | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/studio/'
   fileRoutesByTo: FileRoutesByTo
@@ -271,9 +304,12 @@ export interface FileRouteTypes {
     | '/studio/carousel'
     | '/studio/copy'
     | '/studio/image'
+    | '/studio/inspiration'
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
+    | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/studio'
   id:
@@ -296,9 +332,12 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/carousel'
     | '/_authenticated/studio/copy'
     | '/_authenticated/studio/image'
+    | '/_authenticated/studio/inspiration'
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
+    | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/_authenticated/studio/'
   fileRoutesById: FileRoutesById
@@ -312,6 +351,8 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiPublicImgRoute: typeof ApiPublicImgRoute
+  ApiPublicInspirationCollectRoute: typeof ApiPublicInspirationCollectRoute
+  ApiPublicInspirationStillRoute: typeof ApiPublicInspirationStillRoute
   ApiPublicUploadPostWebhookRoute: typeof ApiPublicUploadPostWebhookRoute
 }
 
@@ -450,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioImageRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/studio/inspiration': {
+      id: '/_authenticated/studio/inspiration'
+      path: '/studio/inspiration'
+      fullPath: '/studio/inspiration'
+      preLoaderRoute: typeof AuthenticatedStudioInspirationRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/studio/reel': {
       id: '/_authenticated/studio/reel'
       path: '/studio/reel'
@@ -469,6 +517,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/img'
       fullPath: '/api/public/img'
       preLoaderRoute: typeof ApiPublicImgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/inspiration-collect': {
+      id: '/api/public/inspiration-collect'
+      path: '/api/public/inspiration-collect'
+      fullPath: '/api/public/inspiration-collect'
+      preLoaderRoute: typeof ApiPublicInspirationCollectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/inspiration-still': {
+      id: '/api/public/inspiration-still'
+      path: '/api/public/inspiration-still'
+      fullPath: '/api/public/inspiration-still'
+      preLoaderRoute: typeof ApiPublicInspirationStillRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/upload-post-webhook': {
@@ -493,6 +555,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedStudioCarouselRoute: typeof AuthenticatedStudioCarouselRoute
   AuthenticatedStudioCopyRoute: typeof AuthenticatedStudioCopyRoute
   AuthenticatedStudioImageRoute: typeof AuthenticatedStudioImageRoute
+  AuthenticatedStudioInspirationRoute: typeof AuthenticatedStudioInspirationRoute
   AuthenticatedStudioReelRoute: typeof AuthenticatedStudioReelRoute
   AuthenticatedStudioVoiceoverRoute: typeof AuthenticatedStudioVoiceoverRoute
   AuthenticatedStudioIndexRoute: typeof AuthenticatedStudioIndexRoute
@@ -510,6 +573,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedStudioCarouselRoute: AuthenticatedStudioCarouselRoute,
   AuthenticatedStudioCopyRoute: AuthenticatedStudioCopyRoute,
   AuthenticatedStudioImageRoute: AuthenticatedStudioImageRoute,
+  AuthenticatedStudioInspirationRoute: AuthenticatedStudioInspirationRoute,
   AuthenticatedStudioReelRoute: AuthenticatedStudioReelRoute,
   AuthenticatedStudioVoiceoverRoute: AuthenticatedStudioVoiceoverRoute,
   AuthenticatedStudioIndexRoute: AuthenticatedStudioIndexRoute,
@@ -528,6 +592,8 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiPublicImgRoute: ApiPublicImgRoute,
+  ApiPublicInspirationCollectRoute: ApiPublicInspirationCollectRoute,
+  ApiPublicInspirationStillRoute: ApiPublicInspirationStillRoute,
   ApiPublicUploadPostWebhookRoute: ApiPublicUploadPostWebhookRoute,
 }
 export const routeTree = rootRouteImport
