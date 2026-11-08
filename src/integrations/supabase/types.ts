@@ -1928,6 +1928,10 @@ export type Database = {
         Args: { p_job: string; p_reason: string }
         Returns: undefined
       }
+      fail_claimed_assembly_job: {
+        Args: { p_job: string; p_reason: string }
+        Returns: undefined
+      }
       fail_inspiration_attempt: {
         Args: { p_attempt: string; p_reason: string }
         Returns: undefined
