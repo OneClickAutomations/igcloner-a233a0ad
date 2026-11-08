@@ -1,5 +1,11 @@
 # Roadmap
 
+## Verified pricing — 2026-11-08
+- [ ] Record owner-verified $0.30 conversion and central cost-ceiling configuration; enable known-rate generation quotes without changing existing prices/plans
+- [ ] Measured/unknown action audit, 32s Fast/Lite totals, margin options and current fal comparison
+- [ ] Monthly-allowance quote context, pricing tests and signed-in quote checks without generation spend
+- [ ] Assembly follow-up: key/four approved attached clips still missing; no render spend
+
 ## Pass 5A — motion then assembly (current request)
 - [x] Replace AWS/Remotion plan with hosted renderer research: recommend Shotstack, published $0.20/min PAYG; no render spend
 - [x] Hosted assembly timeline, quote/debit/refund, durable submission/poll/private result, delivery controls and tests; provider-backed completion blocked on key
