@@ -3,8 +3,8 @@
 ## Owner approvals and real assembly proof — 2026-11-08
 - [x] Lock approved Trial 40/$15, Standard 160/$49, Bulk 400/$109; Fast 1/sec, Lite 0.5/sec; purchases remain disabled
 - [x] Confirm readable SHOTSTACK_SANDBOX_API_KEY and verify documented templates GET returns HTTP 200
-- [ ] Exercise existing four-clip assembly in the signed-in app with narrated captions/music; stop at the first real blocker
-- [ ] Report output or exact blocker, actual spend/charges and remaining user-readiness work
+- [ ] Complete four-clip narrated assembly — stopped in owner Delivery → Quote assembly: “Every scene needs an approved, completed clip.” Available film has one draft scene / zero completed clips; import/attach existing test media and wire narration/alignment first
+- [x] Document exact real-app blocker; no render, no ElevenLabs call, $0 provider spend / 0 new video credits; output quality unverified
 
 ## Separate video add-on balance — owner decision 2026-11-08
 - [x] Separate append-only ledger, atomic scene/render debit and attempt-bound currency-safe refunds
@@ -12,10 +12,10 @@
 - [x] Guard unapproved legacy video/attached narration; proposed pack math and complete known/unknown cost table
 - [x] Ledger isolation/concurrency/refund tests and signed-in desktop/mobile verification
 - [x] Provider research recheck; Shotstack retained, gateway audio-on Fast still cheaper than fal
-- [ ] Activate purchases/action prices — owner approval and later payment integration required; intentionally not wired
+- [ ] Activate purchases — payment integration intentionally excluded; pack/rate approval now recorded
 - [ ] Measured still/voiceover/isolated-pass full totals — provider measurements missing; no spend authorized
 - [ ] Attached narration and legacy fal paid video metering — measured rates and owner approval missing; safely blocked
-- [ ] Free four-clip assembly test — Shotstack sandbox key and four attached approved clips missing
+- [ ] Free four-clip assembly test — sandbox key verified; four eligible attached clips missing
 
 ## Verified pricing — 2026-11-08
 - [x] Record owner-verified $0.30 conversion and central cost-ceiling configuration; enable known-rate generation quotes without changing existing prices/plans
@@ -23,7 +23,7 @@
 - [x] Monthly-allowance quote context, 38 price/approval/assembly/credit tests and signed-in Fast/Lite quotes; no generation spend
 - [ ] Assembly follow-up: key/four approved attached clips still missing; no render spend
 - [ ] Complete measured action pricing — blocked: no still/voiceover/fresh isolated-analysis measurements; no provider spend authorized
-- [ ] Activate video add-on prices — blocked: owner approval of pack prices and action schedule
+- [x] Record owner approval of video add-on packs and Fast/Lite rates; sales remain disabled
 
 ## Pass 5A — motion then assembly (current request)
 - [x] Replace AWS/Remotion plan with hosted renderer research: recommend Shotstack, published $0.20/min PAYG; no render spend
