@@ -16,7 +16,7 @@ export const STUDIO_PRICING = {
     purchasesEnabled: false as boolean,
     unitCostUsd: 0.12,
     voiceoverUsdPerCharacter: 0.0002 as number | null,
-    /** Flat video credits per generated narration (covers ~600 characters at the measured ElevenLabs rate). */
+    /** Measured 2026-11-08 (12.4s take): 116 ElevenLabs chars ≈ $0.023 + Claude writing 0.033 workspace credits ≈ $0.010 = ~$0.033 → ceil($/0.12) = 1 video credit. */
     narrationCredits: 1,
     /** One-time free trial grant for new accounts. */
     trialCredits: 20,
