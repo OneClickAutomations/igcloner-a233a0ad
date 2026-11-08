@@ -694,6 +694,24 @@ export type Database = {
           },
         ]
       }
+      inspiration_collector_control: {
+        Row: {
+          id: boolean
+          lease_until: string | null
+          token_hash: string | null
+        }
+        Insert: {
+          id?: boolean
+          lease_until?: string | null
+          token_hash?: string | null
+        }
+        Update: {
+          id?: boolean
+          lease_until?: string | null
+          token_hash?: string | null
+        }
+        Relationships: []
+      }
       multiplied_content: {
         Row: {
           analysis_id: string
@@ -1820,6 +1838,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      arm_inspiration_collector: { Args: never; Returns: undefined }
       claim_copy_run: {
         Args: {
           p_action: string
@@ -1843,6 +1862,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_inspiration_collector: {
+        Args: { p_token: string }
+        Returns: boolean
+      }
       credit_balance: {
         Args: { p_kind?: string; p_user_id: string }
         Returns: number
@@ -1862,6 +1885,7 @@ export type Database = {
         Args: { p_attempt: string; p_reason: string }
         Returns: undefined
       }
+      finish_inspiration_collector: { Args: never; Returns: undefined }
       grant_credits: {
         Args: {
           p_amount: number

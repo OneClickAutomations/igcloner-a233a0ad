@@ -78,6 +78,13 @@
       "when": 1794110730618,
       "tag": "0010_video_inspiration_studio",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794110992280,
+      "tag": "0011_inspiration_collector_and_reference_invalidation",
+      "breakpoints": true
     }
   ]
 }
