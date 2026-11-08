@@ -7,7 +7,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   if(!p)throw new Error('Film not found.');
   const isProof=(p.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s');
   const {STUDIO_PRICING}=await import('./studio-pricing');
-  const billed=isProof&&!data.regenerate?0:STUDIO_PRICING.video.narrationCredits;
+  const billed=STUDIO_PRICING.video.narrationCredits;void isProof;
   const key=process.env['ELEVENLABS_API_KEY'];if(!key)throw new Error('ElevenLabs is not configured.');
   const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
   const {data:existing}=await context.supabase.from('film_narration_attempts').select('*').eq('project_id',p.id).eq('status','completed').order('created_at',{ascending:false}).limit(1);
