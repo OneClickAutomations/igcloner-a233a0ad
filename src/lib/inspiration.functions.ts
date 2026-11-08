@@ -179,3 +179,24 @@ export const assembleInspiration = createServerFn({ method: 'POST' }).middleware
     if (!process.env['REMOTION_BRIDGE_SECRET'] || !process.env['REMOTION_BRIDGE_URL']) return { configured: false, message: 'Assembly not configured yet. Download all clips instead.' };
     return { configured: true, message: 'AWS bridge detected; assembly integration awaits an owner-verified render and pricing. Download all clips instead.' };
   });
+
+export const finishInspirationStill = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ requestKey: Id, base64: z.string().max(14_000_000).optional(), error: z.string().max(600).optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: a } = await context.supabase.from('scene_attempts').select('*').eq('request_key', data.requestKey).eq('operation', 'still').single();
+    if (!a) throw new Error('Still attempt not found.');
+    if (a.status === 'completed') return { ok: true };
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    if (data.error || !data.base64) { await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: a.id, p_reason: data.error ?? 'Still generation incomplete.' }); return { ok: false }; }
+    const bytes = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
+    const { imageSize } = await import('./clone-rules'); const dims = imageSize(bytes);
+    if (!dims || dims.width >= dims.height || bytes.length > 10 * 1024 * 1024) {
+      await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: a.id, p_reason: 'Still must be a portrait image under 10MB.' }); throw new Error('Still was not a valid portrait image. Credits refunded.');
+    }
+    const path = `${context.userId}/${a.project_id}/stills/${a.id}.png`;
+    const { error: up } = await supabaseAdmin.storage.from('video-inspiration').upload(path, bytes, { contentType: 'image/png', upsert: true }); if (up) throw new Error(up.message);
+    await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null }).eq('id', a.id);
+    const { error } = await supabaseAdmin.from('storyboard_scenes').update({ still_path: path, object_checks: [], approved_at: null, approved_revision: null, status: 'still_ready' }).eq('id', a.scene_id).eq('revision', a.scene_revision);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

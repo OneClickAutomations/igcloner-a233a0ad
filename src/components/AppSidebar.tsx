@@ -1,6 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins } from "lucide-react";
+import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins, Film } from "lucide-react";
 import { getCreditBalance } from "@/lib/credits.functions";
 import { useQuery } from "@tanstack/react-query";
 import { CREDIT_BALANCE_KEY } from "@/lib/credits";
@@ -24,6 +24,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, t1: "purple", t2: "pink" },
   { title: "Research", url: "/research", icon: Search, t1: "teal", t2: "green" },
   { title: "Clone Studio", url: "/app", icon: Copy, t1: "pink", t2: "rose" },
+  { title: "Video Inspiration", url: "/studio/inspiration", icon: Film, t1: "teal", t2: "green" },
   { title: "Projects", url: "/projects", icon: FolderOpen, t1: "blue", t2: "cyan" },
   { title: "Content Calendar", url: "/calendar", icon: CalendarIcon, t1: "amber", t2: "orange" },
   { title: "Publishing", url: "/publishing", icon: Send, t1: "indigo", t2: "violet" },
