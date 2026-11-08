@@ -1,3 +1,4 @@
+import { QualityNote } from "@/components/QualityNote";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -495,6 +496,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                 />
               </div>
             )}
+            <QualityNote report={(doc as any).quality}/>
             <div className="space-y-2">
               {doc.slides.map((s) => (
                 <div
