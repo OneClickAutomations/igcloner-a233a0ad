@@ -4,18 +4,13 @@ import { streamText, type ModelMessage } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayRunIdFetch } from "./copy-run-id.server";
 import { extractJson } from "./json-extract";
-import { copyData, compactCopyContext, CaptionSchema, captionIssues, HookSchema, HookRankSchema, validHookForms, copiesSource, dedupeHooks, rankHooks, COPY_DIMENSIONS, ScoresSchema, qualitySummary, qualityUnits, qualityBatchPass, selectCopyExemplars, MAX_QUALITY_REGENERATIONS } from "./copy-rules";
+import { copyData, compactCopyContext, CaptionSchema, captionIssues, HookSchema, HookRankSchema, validHookForms, copiesSource, dedupeHooks, rankHooks, COPY_DIMENSIONS, ScoresSchema, qualitySummary, qualityUnits, qualityBatchPass, selectCopyExemplars, MAX_QUALITY_REGENERATIONS, bestQualityRound } from "./copy-rules";
 import { PLATFORM_CAPABILITY_MATRIX, type PublishingPlatform } from "./upload-post/shared";
 import { PLATFORM_VOICE_PROFILES, type SocialPlatform } from "./platform-voice";
 
 export const COPY_MODEL = "anthropic/claude-sonnet-5";
 export interface CopyUsage { inputTokens:number; outputTokens:number; workspaceCredits:number; estimatedUsd:number; ms:number; calls:number }
 const emptyUsage=():CopyUsage=>({inputTokens:0,outputTokens:0,workspaceCredits:0,estimatedUsd:0,ms:0,calls:0});
-export class CopyQualityError extends Error {
-  constructor(public readonly evidence:{kind:string;rounds:any[];usage:CopyUsage;rejectedOutput:unknown}) {
-    super(`QUALITY_NOT_MET: This ${evidence.kind} did not reach 9/10 with every dimension at least 8 after three attempts. Nothing was returned. Any debited writing attempt will be refunded.`);
-  }
-}
 function addUsage(a:CopyUsage,b:CopyUsage) { for(const k of Object.keys(a) as (keyof CopyUsage)[]) a[k]+=b[k]; }
 export async function copyText(opts:{system?:string;prompt?:string;messages?:ModelMessage[];maxTokens?:number}) {
   const key=process.env.LOVABLE_API_KEY;
@@ -119,30 +114,34 @@ export async function qualityCopyJson<S extends z.ZodTypeAny>(schema:S,prompt:st
   const usage=emptyUsage();const rounds:any[]=[];let feedback="",previous:unknown=null;
   for(let round=0;round<=MAX_QUALITY_REGENERATIONS;round++) {
     const draft=await copyJson(schema,`${prompt}\nGenerate a private shortlist of alternatives, choose strongest complete version. Use concrete actions, source mechanism and supplied examples. A high-quality artifact has a precise tension, an unexpected but grounded angle, a concrete next step and no vague payoff. ${copyData("quality_feedback",feedback)}\n${copyData("previous_draft",previous)}\nIf revising, preserve strengths and resolve EVERY low-scoring dimension; don't just swap synonyms.`,system,maxTokens);addUsage(usage,draft.usage);previous=draft.value;
-    const check=await critiqueCopy(context,draft.value,kind,prompt);addUsage(usage,check.usage);rounds.push({round:round+1,items:check.items,pass:check.pass});
-    if(check.pass)return {...draft,usage,quality:rounds};
+    const check=await critiqueCopy(context,draft.value,kind,prompt);addUsage(usage,check.usage);rounds.push({round:round+1,items:check.items,pass:check.pass,output:draft});
+    if(check.pass)break;
     feedback=JSON.stringify(check.items);
   }
-  throw new CopyQualityError({kind,rounds,usage,rejectedOutput:previous});
+  // Never withhold: return the best draft; the score is shown as a note.
+  const best=bestQualityRound<{value:z.output<S>;usage:CopyUsage;repaired:boolean}>(rounds);
+  return {...best.output,usage,quality:rounds.map(({output,...r})=>r),qualityReport:best.report};
 }
 export async function hookLab(context:any) {
   const usage=emptyUsage();const rounds:any[]=[];let feedback="",previous:unknown=null;
   for(let round=0;round<=MAX_QUALITY_REGENERATIONS;round++) {
     const draft=await hookLabDraft(context,`${feedback}\n${copyData("previous_shortlist",previous)}\nRetain strong concrete angles, but resolve each weak dimension substantively. Each hook must create a new, precise unresolved tension, not a motivational slogan. The fourth word is not an excuse to hide the point.`);addUsage(usage,draft.usage);previous=draft.hooks;
     const check=await critiqueCopy(context,{hooks:draft.hooks},"hooks","10 original hooks, four short forms each, source mechanism adapted to creator niche.");addUsage(usage,check.usage);
-    rounds.push({round:round+1,items:check.items,pass:check.pass});
-    if(check.pass)return {...draft,usage,quality:rounds};
+    rounds.push({round:round+1,items:check.items,pass:check.pass,output:draft});
+    if(check.pass)break;
     feedback=JSON.stringify(check.items);
   }
-  throw new CopyQualityError({kind:"hooks",rounds,usage,rejectedOutput:previous});
+  const best=bestQualityRound<any>(rounds);
+  return {...best.output,usage,quality:rounds.map(({output,...r})=>r),qualityReport:best.report};
 }
 export async function nativeCaptionPack(context:any,platforms:string[],instruction="") {
   const usage=emptyUsage();const rounds:any[]=[];let feedback="",previous:unknown=null;
   for(let round=0;round<=MAX_QUALITY_REGENERATIONS;round++) {
     const draft=await captionPackDraft(context,platforms,`${instruction}\n${feedback}\n${copyData("previous_pack",previous)}\nPreserve accurate strong sections; revise the specific weak dimensions. Use one grounded observation as the organizing idea and a precise tension in the opener. Avoid merely listing source facts. Professional voice means useful insight, not corporate jargon.`);addUsage(usage,draft.usage);previous=draft.platforms;
-    const check=await critiqueCopy(context,draft,"captions",`Native pack: ${platforms.join(",")}. ${instruction}`);addUsage(usage,check.usage);rounds.push({round:round+1,items:check.items,pass:check.pass});
-    if(check.pass)return {...draft,usage,quality:rounds};
+    const check=await critiqueCopy(context,draft,"captions",`Native pack: ${platforms.join(",")}. ${instruction}`);addUsage(usage,check.usage);rounds.push({round:round+1,items:check.items,pass:check.pass,output:draft});
+    if(check.pass)break;
     feedback=JSON.stringify(check.items);
   }
-  throw new CopyQualityError({kind:"caption pack",rounds,usage,rejectedOutput:previous});
+  const best=bestQualityRound<Awaited<ReturnType<typeof captionPackDraft>>>(rounds);
+  return {...best.output,usage,quality:rounds.map(({output,...r})=>r),qualityReport:best.report};
 }

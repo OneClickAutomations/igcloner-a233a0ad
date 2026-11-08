@@ -9,7 +9,29 @@ export function qualitySummary(scores: CopyScores) {
   const average = values.reduce((a,b) => a+b,0) / values.length;
   return { average, minimum: Math.min(...values), pass: average >= 9 && Math.min(...values) >= 8 };
 }
-export const COPY_QUALITY_VERSION = 2;
+export const COPY_QUALITY_VERSION = 3;
+export const QUALITY_TARGET = 9;
+export const QUALITY_LOW = 6;
+export type QualityReport = { score:number; minimum:number; passed:boolean; level:"pass"|"soft"|"low"; note:string|null };
+/** Average of each judged item's average; the gate informs, it never withholds output. */
+export function roundScore(items:{scores:CopyScores}[]) {
+  if(!items.length) return {average:0,minimum:0};
+  const sums=items.map(i=>qualitySummary(i.scores));
+  return {average:sums.reduce((a,b)=>a+b.average,0)/sums.length,minimum:Math.min(...sums.map(x=>x.minimum))};
+}
+export function qualityReport(average:number,minimum:number,passed:boolean):QualityReport {
+  const score=Math.round(average*10)/10;
+  if(passed) return {score,minimum,passed:true,level:"pass",note:null};
+  if(score<QUALITY_LOW) return {score,minimum,passed:false,level:"low",note:`Quality score ${score.toFixed(1)} — this one is weak. We recommend regenerating.`};
+  return {score,minimum,passed:false,level:"soft",note:`Quality score ${score.toFixed(1)} — regenerate if this isn't right.`};
+}
+/** Pick the highest-scoring round's output. Always returns an output when at least one round exists. */
+export function bestQualityRound<T>(rounds:{output:T;items:{scores:CopyScores}[];pass:boolean}[]) {
+  if(!rounds.length) throw new Error("No writing attempt finished.");
+  const scored=rounds.map(r=>({...r,...roundScore(r.items)}));
+  const best=scored.find(r=>r.pass) ?? scored.reduce((a,b)=>b.average>a.average?b:a);
+  return {output:best.output,report:qualityReport(best.average,best.minimum,best.pass)};
+}
 export const MAX_QUALITY_REGENERATIONS = 2;
 export function qualityUnits(value:any, kind:string):unknown[] {
   if(kind === "hooks") return value.hooks ?? value;

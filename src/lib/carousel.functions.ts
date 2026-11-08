@@ -151,7 +151,8 @@ Output the full JSON object only.`;
     const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",prefs) : {source:{captionDNA:{},blueprint:null},voice:prefs,research:null};
     const sourceSlides=ctx.source.blueprint?.slides ?? [];
     const roleBrief=sourceSlides.map((s:any)=>({role:s.role,words:String(s.exactText??"").split(/\s+/).filter(Boolean).length}));
-    const {value:parsed}=await qualityCopyJson(CarouselSchema,`${prompt}\n${contextPrompt(ctx)}\nSOURCE SLIDE ROLES/TEXT LENGTHS: ${JSON.stringify(roleBrief)}. Map source roles in order; preserve relative text length when source contains text, but write new words. Headline <=8 words; body <=25 words for readable typography. Do not invent on-slide copy when source slides are intentionally text-free unless the user's new brief calls for it.`,ctx,"carousel",system,10000);
+    const {value:parsed,qualityReport}=await qualityCopyJson(CarouselSchema,`${prompt}\n${contextPrompt(ctx)}\nSOURCE SLIDE ROLES/TEXT LENGTHS: ${JSON.stringify(roleBrief)}. Map source roles in order; preserve relative text length when source contains text, but write new words. Headline <=8 words; body <=25 words for readable typography. Do not invent on-slide copy when source slides are intentionally text-free unless the user's new brief calls for it.`,ctx,"carousel",system,10000);
+    (parsed as any).quality=qualityReport;
     if(sourceMedium && (!parsed.designBrief.medium || enforceMedium)) {
       parsed.designBrief.medium=enforceMedium ? mediumPrimary : parsed.designBrief.medium || mediumPrimary;
       parsed.designBrief.mediumLabel=parsed.designBrief.mediumLabel || mediumLabel(parsed.designBrief.medium);
