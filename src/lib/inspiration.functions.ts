@@ -26,6 +26,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
       return url?.signedUrl ?? null;
     };
+    const { data: sourceAnalysis } = selected?.analysis_id ? await supabase.from('analyses').select('id,instagram_url,source_account').eq('id', selected.analysis_id).maybeSingle() : { data: null };
     const {data:profile}=await supabase.from('profiles').select('plan').eq('id',userId).maybeSingle();
     const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
     const {data:videoBalance,error:videoError}=await supabase.rpc('video_credit_balance',{p_user:userId});
@@ -39,7 +40,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
-      videoBalance: videoBalance??0, videoPricingApproved:STUDIO_PRICING.video.approved,
+      sourceAnalysis, storyboardPlanCredits: STUDIO_PRICING.storyboardPlanCredits, videoBalance: videoBalance??0, videoPricingApproved:STUDIO_PRICING.video.approved,
     };
   });
 
