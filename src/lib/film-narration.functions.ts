@@ -13,7 +13,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   const filmSeconds=scenes.reduce((sum,s)=>sum+Number(s.duration),0);
   const previous=existing?.[0];
   const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
-  if(previousUsage.timingVersion===NARRATION_TIMING_VERSION&&narrationFits(Number(previous?.duration_seconds),filmSeconds))return previous;
+  if(previous&&previousUsage.timingVersion===NARRATION_TIMING_VERSION&&narrationFits(Number(previous.duration_seconds),filmSeconds))return previous;
   const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:0,p_usd:0});if(error)throw new Error(error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
   const subscription=async()=>{const r=await fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':key}});return r.ok?await r.json() as any:null;};
   const before=await subscription();const started=Date.now();
