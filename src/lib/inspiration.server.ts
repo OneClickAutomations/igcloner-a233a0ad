@@ -35,26 +35,41 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
     // must animate the approved frame; references are already used in that frame.
     request = { instances: [{ prompt, image: start }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: PHYSICAL_NEGATIVES } };
   }
-  const job = await createVideo(config, request);
+  let job;
+  try { job = await createVideo(config, request); }
+  catch (e) {
+    if (!(e as any).status) {
+      await supabaseAdmin.from('scene_attempts').update({ status: 'submission_unknown', failure_reason: 'Submission response was lost. Do not retry until reconciled.', lease_until: null }).eq('id', attempt.id);
+      await supabaseAdmin.from('video_inspiration_projects').update({ pause_reason: 'Animation submission needs reconciliation; no paid retry is allowed.' }).eq('id', attempt.project_id);
+    }
+    throw e;
+  }
   if (!job.id) throw new Error('AI job returned no durable job ID; do not retry automatically.');
   const { error: saveError } = await supabaseAdmin.from('scene_attempts').update({ gateway_job_id: job.id, status: job.status, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id);
-  if (saveError) throw new Error(`Job submitted but its ID could not be saved: ${job.id}. Do not resubmit.`);
+  if (saveError) {
+    await supabaseAdmin.from('scene_attempts').update({ status: 'submission_unknown', gateway_job_id: job.id, failure_reason: 'Submitted job needs reconciliation. Do not resubmit.' }).eq('id', attempt.id);
+    throw new Error('Submitted job needs reconciliation; no automatic retry is allowed.');
+  }
   await supabaseAdmin.rpc('arm_inspiration_collector');
 }
 export async function collectAttempt(attempt: any, apiKey: string) {
   if (!attempt.gateway_job_id || attempt.status === 'completed' || attempt.status === 'failed') return;
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-  const job = await pollVideo({ baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model }, attempt.gateway_job_id);
+  const now = new Date();
+  const { data: locked } = await supabaseAdmin.from('scene_attempts').update({ lease_until: new Date(now.getTime() + 120000).toISOString() }).eq('id', attempt.id).in('status', ['queued','in_progress','collecting']).or(`lease_until.is.null,lease_until.lt.${now.toISOString()}`).select('id').maybeSingle();
+  if (!locked) return;
+  let job;
+  try { job = await pollVideo({ baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model }, attempt.gateway_job_id); }
+  catch (e) { await supabaseAdmin.from('scene_attempts').update({ lease_until: null }).eq('id', attempt.id); throw e; }
   if (job.status === 'failed') {
     await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: attempt.id, p_reason: job.error?.message ?? 'Animation failed.' });
     return;
   }
   if (job.status !== 'completed') {
-    await supabaseAdmin.from('scene_attempts').update({ status: job.status, updated_at: new Date().toISOString() }).eq('id', attempt.id);
+    await supabaseAdmin.from('scene_attempts').update({ status: job.status, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id).in('status', ['queued','in_progress','collecting']);
     return;
   }
-  const now = new Date();
-  const { data: won } = await supabaseAdmin.from('scene_attempts').update({ status: 'collecting', lease_until: new Date(now.getTime() + 120000).toISOString() }).eq('id', attempt.id).or(`lease_until.is.null,lease_until.lt.${now.toISOString()}`).neq('status', 'completed').select('id').maybeSingle();
+  const { data: won } = await supabaseAdmin.from('scene_attempts').update({ status: 'collecting' }).eq('id', attempt.id).in('status', ['queued','in_progress','collecting']).select('id').maybeSingle();
   if (!won) return;
   const path = `${attempt.user_id}/${attempt.project_id}/clips/${attempt.id}.mp4`;
   try {
@@ -65,7 +80,8 @@ export async function collectAttempt(attempt: any, apiKey: string) {
     if (!bytes.length || bytes.length > 50 * 1024 * 1024) throw new Error('Clip is empty or exceeds the 50MB limit.');
     const { error } = await supabaseAdmin.storage.from(INSPIRATION_BUCKET).upload(path, bytes, { contentType: 'video/mp4', upsert: true });
     if (error) throw new Error(error.message);
-    await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id);
+    const { error: saved } = await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id);
+    if (saved) throw new Error(saved.message);
     await supabaseAdmin.from('storyboard_scenes').update({ status: 'animated' }).eq('id', attempt.scene_id);
   } catch (e) {
     await supabaseAdmin.from('scene_attempts').update({ lease_until: null, failure_reason: `Clip generated; saving needs recovery: ${(e as Error).message}` }).eq('id', attempt.id);

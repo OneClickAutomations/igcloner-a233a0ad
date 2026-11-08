@@ -159,7 +159,8 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     } catch (e) {
       const status = (e as any).status;
       if ([402,403,404].includes(status)) await supabaseAdmin.from('video_inspiration_projects').update({ pause_reason: (e as Error).message }).eq('id', s.project_id);
-      await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: c.attempt.id, p_reason: (e as Error).message });
+      const { data: current } = await supabaseAdmin.from('scene_attempts').select('status').eq('id', c.attempt.id).single();
+      if (current?.status !== 'submission_unknown') await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: c.attempt.id, p_reason: (e as Error).message });
       throw e;
     }
     return { attemptId: c.attempt.id };
