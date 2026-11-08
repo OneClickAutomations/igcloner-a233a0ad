@@ -28,8 +28,8 @@ DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; before_plan bigint; after_plan
  IF NOT (c->>'existing')::boolean THEN RAISE EXCEPTION 'Duplicate claim'; END IF;
  PERFORM public.fail_inspiration_attempt(a,'test'); PERFORM public.fail_inspiration_attempt(a,'test');
  IF (SELECT sum(delta) FROM public.video_credit_ledger WHERE user_id=t.uid)<>16 THEN RAISE EXCEPTION 'Failed claim refund not once'; END IF;
- BEGIN UPDATE public.video_credit_ledger SET delta=100 WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Video ledger is append-only' THEN RAISE; END IF; END;
- BEGIN DELETE FROM public.video_credit_ledger WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Video ledger is append-only' THEN RAISE; END IF; END;
+ BEGIN UPDATE public.video_credit_ledger SET delta=100 WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ BEGIN DELETE FROM public.video_credit_ledger WHERE user_id=t.uid; RAISE EXCEPTION 'append-only failed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
  SELECT COALESCE(sum(delta),0) INTO after_plan FROM public.credit_ledger;
  IF after_plan<>before_plan THEN RAISE EXCEPTION 'Plan ledger changed'; END IF;
 END $$;
