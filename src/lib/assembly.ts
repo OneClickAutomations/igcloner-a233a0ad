@@ -18,6 +18,7 @@ export function renderQuote(seconds: number, environment: 'v1'|'stage' = 'v1') {
   return { seconds, rateUsdPerMinute: SHOTSTACK_USD_PER_MINUTE, renderUsd: usd, customerCredits: Math.ceil(usd / (CUSTOMER_CREDIT_USD * COST_CEILING)), environment };
 }
 export function assemblyConfigured(key?: string, sandboxKey?: string) { return Boolean(key || sandboxKey); }
+export function definitiveRenderRejection(status: number) { return [400,401,402,403,404,422,429].includes(status); }
 export function validateCaptions(captions: z.infer<typeof Caption>[], duration: number) {
   let previous = 0;
   for (const c of captions) {
@@ -49,12 +50,12 @@ export function buildAssemblyTimeline(clips: (AssemblyClip & { url: string })[],
   const voiceDuration = settings.voiceoverDuration ?? duration;
   if (media.voiceover && voiceDuration > duration) throw new Error('Voiceover is longer than the film.');
   const tracks: { clips: Record<string,unknown>[] }[] = [];
-  if (media.captions) tracks.push({ clips:[{ asset:{ type:'rich-caption',src:media.captions,font:{ family:ASSEMBLY_STYLE.font,size:40,color:ASSEMBLY_STYLE.foreground },background:{color:ASSEMBLY_STYLE.background,opacity:0.65,padding:12}},start:0,length:duration,position:'bottom',offset:{x:0,y:0.12},scale:0.9 }] });
+  if (media.captions) tracks.push({ clips:[{ asset:{ type:'rich-caption',src:media.captions,font:{ family:ASSEMBLY_STYLE.font,size:40,color:ASSEMBLY_STYLE.foreground },background:{color:ASSEMBLY_STYLE.background,opacity:0.65,wrap:true,padding:12}},start:0,length:duration,position:'bottom',offset:{x:0,y:0.12},scale:0.9 }] });
   if (media.logo) { const end=settings.logoEnd ?? duration; if (end<=settings.logoStart || end>duration) throw new Error('Logo timing must be inside the film.'); tracks.push({clips:[{asset:{type:'image',src:media.logo},start:settings.logoStart,length:end-settings.logoStart,scale:0.16,position:'topRight',offset:{x:-0.04,y:-0.04}}]}); }
   if (media.voiceover) tracks.push({clips:[{asset:{type:'audio',src:media.voiceover,volume:1},start:0,length:voiceDuration}]});
   if (media.music) {
     // Known voiceover interval drives deterministic ducking; no unverified speech detector.
-    const volume = media.voiceover ? [{from:0.12,to:0.12,start:0,length:voiceDuration},{from:0.12,to:0.35,start:voiceDuration,length:Math.min(0.3,Math.max(0,duration-voiceDuration))}] : 0.35;
+    const volume = media.voiceover ? [{from:0.12,to:0.12,start:0,length:voiceDuration},...(voiceDuration<duration?[{from:0.12,to:0.35,start:voiceDuration,length:Math.min(0.3,duration-voiceDuration)}]:[])] : 0.35;
     tracks.push({clips:[{asset:{type:'audio',src:media.music,volume,effect:'fadeInFadeOut'},start:0,length:duration}]});
   }
   let start=0;

@@ -1,4 +1,4 @@
-import { AssemblyOptions, buildAssemblyTimeline, captionsToSrt, type AssemblyClip } from './assembly';
+import { AssemblyOptions, buildAssemblyTimeline, captionsToSrt, definitiveRenderRejection, type AssemblyClip } from './assembly';
 export function rendererConfig() {
   const sandbox=process.env['SHOTSTACK_SANDBOX_API_KEY'];
   const production=process.env['SHOTSTACK_API_KEY'];
@@ -31,20 +31,20 @@ export async function submitAssembly(job:any,config:{key:string;environment:'v1'
     const {error}=await db.storage.from('video-inspiration').upload(path,new TextEncoder().encode(captionsToSrt(settings.captions,job.duration_seconds)),{contentType:'text/plain',upsert:true});
     if(error) throw new Error('Caption file could not be saved.'); media.captions=await sign(path);
   }
+  const timeline=buildAssemblyTimeline(clips,settings,media);
   const token=crypto.randomUUID()+crypto.randomUUID();
   const {data:won,error:lockError}=await db.from('assembly_jobs').update({status:'submitting',callback_token_hash:await hashCallback(token),updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','claimed').select('id').maybeSingle();
   if(lockError) throw new Error('Assembly claim could not be saved.'); if(!won)return;
-  const timeline=buildAssemblyTimeline(clips,settings,media);
   let response:any;
   try { response=await shotstack('render',config,{...timeline,callback:`https://igcloner.lovable.app/api/public/assembly-callback?job=${job.id}&token=${encodeURIComponent(token)}`}); }
   catch(e) {
-    if(e instanceof RenderHttpError || (e as Error).message.startsWith('Shotstack rejected')) { await db.rpc('fail_assembly_job',{p_job:job.id,p_reason:(e as Error).message}); }
+    if((e instanceof RenderHttpError && definitiveRenderRejection(e.status)) || (e as Error).message.startsWith('Shotstack rejected')) { const {error}=await db.rpc('fail_assembly_job',{p_job:job.id,p_reason:(e as Error).message});if(error)throw new Error('Render rejected; refund requires recovery.'); }
     else await db.from('assembly_jobs').update({status:'submission_unknown',lease_until:null,failure_reason:'Submission response was lost. Do not submit again; check Shotstack render history.'}).eq('id',job.id);
     throw e;
   }
   if(!response?.id) { await db.from('assembly_jobs').update({status:'submission_unknown',lease_until:null,failure_reason:'Provider did not return a render ID. Reconciliation required; no automatic retry.'}).eq('id',job.id); throw new Error('Render submission needs reconciliation.'); }
-  const {error}=await db.from('assembly_jobs').update({provider_job_id:response.id,status:'queued',lease_until:null,updated_at:new Date().toISOString()}).eq('id',job.id).eq('status','submitting');
-  if(error) throw new Error('Render submitted but saving its ID needs recovery; do not resubmit.');
+  const {data:saved,error}=await db.from('assembly_jobs').update({provider_job_id:response.id,status:'queued',lease_until:null,updated_at:new Date().toISOString()}).eq('id',job.id).in('status',['submitting','submission_unknown']).select('id').maybeSingle();
+  if(error || !saved) { const {data:current}=await db.from('assembly_jobs').select('provider_job_id').eq('id',job.id).single();if(current?.provider_job_id!==response.id)throw new Error('Render submitted but saving its ID needs recovery; do not resubmit.'); }
 }
 async function boundedMp4(url:string) {
   const parsed=new URL(url);
@@ -69,7 +69,8 @@ export async function collectAssembly(job:any) {
     if(state.status==='failed'){await db.rpc('fail_assembly_job',{p_job:job.id,p_reason:'Shotstack render failed. Assembly credits refunded; scene clips are unchanged.'});return;}
     if(state.status!=='done'){await db.from('assembly_jobs').update({status:['queued','fetching','rendering'].includes(state.status)?state.status:'rendering',lease_until:null,updated_at:new Date().toISOString()}).eq('id',job.id);return;}
     if(!state.url)throw new Error('Finished render has no output URL.');
-    if(state.output?.size && state.output.size.width>=state.output.size.height)throw new Error('Provider output is not portrait.');
+    const size=state.data?.output?.size;
+    if(size && size.width>=size.height)throw new Error('Provider output is not portrait.');
     await db.from('assembly_jobs').update({status:'saving'}).eq('id',job.id);
     const bytes=await boundedMp4(state.url);const path=`${job.user_id}/${job.project_id}/assembly/${job.id}.mp4`;
     const {error}=await db.storage.from('video-inspiration').upload(path,bytes,{contentType:'video/mp4',upsert:true});if(error)throw new Error('Rendered video could not be saved privately.');
