@@ -150,7 +150,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Slides</h2>
             <Button size="sm" variant="outline" onClick={() => rewrite("slides")} disabled={!!busy} className="gap-1.5">
-              {busy === "rewrite-slides" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite all for me
+              {busy === "rewrite-slides" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite all for me · no plan credit charge
             </Button>
           </div>
           {slides.map((s: any) => {
@@ -219,6 +219,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
         <Textarea value={tags} onChange={(e) => setTags(e.target.value)} rows={2} className="text-xs" placeholder="#hashtags" />
       </section>}
 
+      {wizardStage==='deliver' && <div className="flex flex-wrap gap-2">{finalMedia.map((m,i)=><Button key={i} variant="outline" asChild><a href={m.url} download target="_blank" rel="noreferrer">Download {finalMedia.length>1?`file ${i+1}`:'file'}</a></Button>)}</div>}
       <div className="flex flex-wrap gap-2">
         <Button onClick={toPublishing} disabled={!!busy || !finalMedia.length} className="gap-1.5">{busy === "publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Save to Publishing Center</Button>
         <Button variant="outline" onClick={() => save().then(() => toast.success("Saved to project"))} disabled={!!busy}>Save to project</Button>
