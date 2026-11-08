@@ -41,7 +41,7 @@ function detectPostType(url: string): string | null {
   return c.kind;
 }
 
-export function AppPage() {
+export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, onUrlChange, onAnalysisReady }: { embedded?: boolean; initialUrl?: string; sourceAnalysisId?: string; onUrlChange?: (url: string) => void; onAnalysisReady?: (id: string) => void } = {}) {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
@@ -58,7 +58,7 @@ export function AppPage() {
   });
   const creditBalance = creditData?.balance ?? null;
 
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(initialUrl);
   const [postType, setPostType] = useState<string | null>(null);
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
   const [progress, setProgress] = useState(0);
@@ -110,6 +110,7 @@ export function AppPage() {
     setClones(p.clones ?? []);
     setFallbackMode(Boolean(p.fallback));
     setPhase("results");
+    if (p.analysisId) onAnalysisReady?.(p.analysisId);
   };
 
   const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 65, building_blueprint: 80 };
@@ -164,7 +165,7 @@ export function AppPage() {
   useEffect(() => () => { jobRef.current = null; }, []);
 
   useEffect(() => {
-    const id = (search as any)?.analysisId as string | undefined;
+    const id = sourceAnalysisId ?? (search as any)?.analysisId as string | undefined;
     if (!id || id === analysisId || id === jobRef.current) return;
     (async () => {
       try {
@@ -173,8 +174,8 @@ export function AppPage() {
         setStepLabel("Loading saved analysis…");
         const res: any = await loadFn({ data: { id } });
         if (res.status === "processing") {
-          setStepLabel("Resuming the analysis…");
-          void runJob(id);
+          setAnalysisId(id);
+          setStepLabel("Analysis paused. Continue when you are ready.");
           return;
         }
         if (res.status === "failed" || !res.dna) {
@@ -193,7 +194,7 @@ export function AppPage() {
         setPhase("input");
       }
     })();
-  }, [search, analysisId, loadFn]);
+  }, [search, sourceAnalysisId, analysisId, loadFn]);
 
   const handleAnalyze = async () => {
     if (!isSupportedUrl(url)) {
@@ -226,7 +227,7 @@ export function AppPage() {
       setProgress(5);
       jobRef.current = result.analysisId;
       // Put the job in the URL so a reload or reopened tab resumes it.
-      navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
+      if (!embedded) navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
       await runJob(result.analysisId);
     } catch (err: any) {
       const msg: string = err?.message || "Analysis failed.";
@@ -253,7 +254,7 @@ export function AppPage() {
 
   return (
     <div className="min-h-full">
-      {creditBalance !== null && (
+      {!embedded && creditBalance !== null && (
         <div className="flex items-center justify-end border-b border-border px-4 py-2 lg:px-8">
           <div className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
             <Coins className="h-3.5 w-3.5" />
@@ -269,7 +270,7 @@ export function AppPage() {
               Paste any Instagram or Facebook URL
             </h1>
             <p className="mb-8 text-center text-muted-foreground">
-              We'll deconstruct why it works and give you 5 viral angles for your niche.
+              Review the real post first. Writing and making content are separate choices.
             </p>
             <div className="relative w-full max-w-xl">
               <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
@@ -277,7 +278,7 @@ export function AppPage() {
                 <Input
                   ref={inputRef}
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => { setUrl(e.target.value); onUrlChange?.(e.target.value); }}
                   onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
                   placeholder={PLACEHOLDERS[placeholderIndex]}
                   className="border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -334,13 +335,14 @@ export function AppPage() {
                 />
               </div>
               <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually about a minute. If you close this tab it pauses, and picks up where it left off when you reopen it from your dashboard (within 15 minutes, or it's cancelled and refunded).</p>
+              {analysisId && jobRef.current !== analysisId && <Button className="mt-4" onClick={() => runJob(analysisId)}>Continue existing analysis · already charged</Button>}
             </div>
           </div>
         )}
 
         {phase === "results" && dna && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-3">
+            {!embedded && <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold tracking-tight gradient-text">Post Intelligence</h2>
                 {savedBadge && (
@@ -350,7 +352,7 @@ export function AppPage() {
               <Button size="sm" variant="outline" onClick={reset} className="gap-1.5">
                 <Plus className="h-4 w-4" /> New Analysis
               </Button>
-            </div>
+            </div>}
 
             {/* Post Intelligence Card */}
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
@@ -377,7 +379,7 @@ export function AppPage() {
             )}
 
             {/* Collapsible Full DNA */}
-            <div className="rounded-xl border border-border bg-card">
+            {!embedded && <div className="rounded-xl border border-border bg-card">
               <button
                 onClick={() => setDnaOpen((o) => !o)}
                 className="flex w-full items-center justify-between p-4 text-left"
@@ -422,10 +424,10 @@ export function AppPage() {
                   </Section>
                 </div>
               )}
-            </div>
+            </div>}
 
             {/* THE MAIN OUTPUT — Intent → Preferences → 5 Viral Angles → Format */}
-            {analysisProjects.length > 0 && (
+            {!embedded && analysisProjects.length > 0 && (
               <div className="rounded-2xl border border-accent-primary/30 bg-accent-primary/5 p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <div>
@@ -476,12 +478,9 @@ export function AppPage() {
               </div>
             )}
 
-            {analysisId && <CloneVersionsPanel analysisId={analysisId} clones={clones} onClones={setClones} onCredits={refreshCredits} />}
-            {analysisId && <CopyWorkbench analysisId={analysisId} projects={analysisProjects} />}
+            {!embedded && analysisId && <IntentFlow analysisId={analysisId} />}
 
-            {analysisId && <IntentFlow analysisId={analysisId} />}
-
-            {viral && (
+            {!embedded && viral && (
               <DecisionCard
                 score={viral.score}
                 band={viral.band}

@@ -95,10 +95,10 @@ const STEPS: { id: StepId; label: string; icon: typeof Eye }[] = [
   { id: "video",     label: "Render", icon: Film },
 ];
 
-export function ReelStudio() {
+export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio/reel" });
-  const projectId = (search as any)?.projectId as string | undefined;
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
 
   const getProjectFn = useServerFn(getProject);
   const updateProjectFn = useServerFn(updateProject);
@@ -152,6 +152,9 @@ export function ReelStudio() {
       if (p?.project_data) {
         setDoc(p.project_data as ReelDoc);
         const pd = p.project_data as ReelDoc;
+        const savedSettings = (p.project_data as any).wizardSettings;
+        if (savedSettings) { setAngle(savedSettings.angle??''); setDuration(savedSettings.duration??20); setFormat(savedSettings.format??'9:16'); setStyle(savedSettings.style??'cinematic UGC'); setPace(savedSettings.pace??'fast'); setStep(savedSettings.step??'direction'); }
+        if ((p.project_data as any).videoUrl) setVideoUrl((p.project_data as any).videoUrl);
         if (pd.visualDirection) {
           setDirection(pd.visualDirection);
           if (pd.visualDirection.approved) setStep(pd.hook ? "script" : "direction");
@@ -169,12 +172,6 @@ export function ReelStudio() {
           !prefs.angle && !prefs.angleConcept ? dna?.hookBreakdown?.whatWorks : null,
         ].filter(Boolean).join("\n\n");
         if (seeded) setAngle(seeded);
-      }
-      if (!(p?.project_data as any)?.visualDirection) {
-        try {
-          const d: any = await deriveFn({ data: { projectId: projectId! } });
-          setDirection(d.visualDirection);
-        } catch (e) { console.warn("derive direction failed", e); }
       }
       return p;
     },
@@ -197,6 +194,12 @@ export function ReelStudio() {
     }, 1500);
     return () => clearTimeout(t);
   }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile]);
+  useEffect(()=>{
+    if(!embeddedProjectId)return;
+    const handler=(event:Event)=>{(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
+    window.addEventListener('creation-save',handler);
+    return()=>window.removeEventListener('creation-save',handler);
+  },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn]);
 
   useEffect(() => {
     const onBeforeUnload = () => {
@@ -394,14 +397,14 @@ export function ReelStudio() {
             icon: ArrowRight, disabled: false,
             onClick: () => setStep("audio"),
             secondary: {
-              label: "Regenerate",
+              label: "Regenerate · no plan credit charge",
               icon: Sparkles,
               onClick: handleGenerate,
             },
           };
         }
         return {
-          label: busy ? "Writing…" : "Generate script",
+          label: busy ? "Writing…" : "Generate script · no plan credit charge",
           icon: busy ? Loader2 : Sparkles, disabled: busy,
           onClick: handleGenerate, loading: busy,
         };
@@ -509,9 +512,9 @@ export function ReelStudio() {
       </div>
 
       {/* 3-panel layout */}
-      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
+      <div className={wizardStage ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_320px]"}>
         {/* LEFT — Context */}
-        <aside className="space-y-3">
+        <aside className={wizardStage ? "hidden" : "space-y-3"}>
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Source
@@ -568,7 +571,8 @@ export function ReelStudio() {
         {/* CENTER — Focus */}
         <section className="min-w-0">
           <div className="min-h-[400px] rounded-2xl border border-border bg-card p-5 lg:p-6">
-            {step === "direction" && (
+            {step === "direction" && !direction && <Button onClick={async () => { if (!projectId) return; setBusy(true); try { const d = await deriveFn({data:{projectId}}); setDirection(d.visualDirection); } catch(e) {toast.error((e as Error).message);} finally {setBusy(false);} }} disabled={busy}>Read visual direction · no plan credit charge</Button>}
+            {step === "direction" && direction && (
               <DirectionStep
                 direction={direction}
                 setDirection={setDirection}
@@ -1065,7 +1069,7 @@ function VideoStep({
         />
         <Button size="sm" variant="outline" className="mt-2" onClick={onVeoRegen} disabled={veoBusy}>
           {veoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-          Rewrite prompt
+          Rewrite prompt · no plan credit charge
         </Button>
       </div>
 

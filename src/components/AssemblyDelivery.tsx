@@ -12,9 +12,10 @@ import { VideoPackAvailability } from './VideoPackAvailability';
 import { STUDIO_PRICING } from '@/lib/studio-pricing';
 import type { getInspirationStudio } from '@/lib/inspiration.functions';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
-export function AssemblyDelivery({data,busy,run,refresh,downloadClips}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>}) {
+export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraft,onWizardDraft}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>;wizardDraft?:Record<string,unknown>;onWizardDraft?:(draft:Record<string,unknown>)=>void}) {
   const quote=useServerFn(quoteAssembly),start=useServerFn(startAssembly),recover=useServerFn(recoverAssembly),upload=useServerFn(uploadAssemblyMedia),narrate=useServerFn(generateProofNarration);
-  const [settings,setSettings]=useState<AssemblySettings>(AssemblyOptions.parse({})),[srt,setSrt]=useState(''),[names,setNames]=useState<Record<string,string>>({});
+  const [settings,setSettings]=useState<AssemblySettings>(AssemblyOptions.parse(wizardDraft?.settings??{})),[srt,setSrt]=useState(String(wizardDraft?.srt??'')),[names,setNames]=useState<Record<string,string>>((wizardDraft?.names as Record<string,string>)??{});
+  useEffect(()=>{const next={settings,srt,names};if(onWizardDraft&&JSON.stringify(next)!==JSON.stringify(wizardDraft))onWizardDraft(next);},[settings,srt,names]);
   const [confirmation,setConfirmation]=useState<{result:Awaited<ReturnType<typeof quoteAssembly>>;options:AssemblySettings;requestKey:string}|null>(null);
   const project=data.selected;const jobs=data.assemblies;const active=jobs.some(j=>['claimed','submitting','queued','fetching','rendering','saving'].includes(j.status));
   useEffect(()=>{if(!project)return;recover({data:{projectId:project.id}}).then(refresh).catch(()=>{});},[project?.id]);

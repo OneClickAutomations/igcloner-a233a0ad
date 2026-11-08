@@ -66,10 +66,10 @@ const ASPECTS: { id: "1:1" | "4:5" | "9:16" | "16:9"; label: string }[] = [
   { id: "16:9", label: "Wide 16:9" },
 ];
 
-export function ImageStudio() {
+export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio/image" });
-  const projectId = (search as any)?.projectId as string | undefined;
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
 
   const getProjectFn = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
@@ -150,6 +150,7 @@ export function ImageStudio() {
         setAspect(saved.aspect ?? "4:5");
         setTextOverlay(saved.textOverlay ?? "");
         setBrandColor(saved.brandColor ?? "");
+        setExtra(saved.extra ?? "");
         setCaption(saved.caption ?? "");
         setHashtags(saved.hashtags ?? []);
         setGoal((saved.goal ?? prefs.goal ?? null) as PostGoal | null);
@@ -206,8 +207,6 @@ export function ImageStudio() {
       setActiveUrl(res.signedUrl);
       setImages((prev) => [res.asset, ...prev]);
       toast.success("Image ready");
-      // Auto-generate caption alongside the first image
-      if (!caption) regenerateCaption();
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {
@@ -229,7 +228,7 @@ export function ImageStudio() {
     }
   };
 
-  const save = async () => {
+  const save = async (quiet = false) => {
     if (!projectId) return;
     try {
       await updateFn({
@@ -242,6 +241,7 @@ export function ImageStudio() {
               aspect,
               textOverlay,
               brandColor,
+              extra,
               caption,
               hashtags,
               activeUrl,
@@ -254,11 +254,24 @@ export function ImageStudio() {
           },
         },
       });
-      toast.success("Saved");
+      if (!quiet) toast.success("Saved");
     } catch (e: any) {
       toast.error(e?.message || "Couldn't save");
     }
   };
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const timer = setTimeout(() => { save(true); }, 600);
+    return () => clearTimeout(timer);
+  }, [embeddedProjectId, project, concept, style, aspect, textOverlay, brandColor, extra, caption, hashtags, activeUrl, goal, selectedPlatforms, platformCopy, branding]);
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const handler = (event: Event) => { (event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(save(true)); };
+    window.addEventListener('creation-save', handler);
+    return () => window.removeEventListener('creation-save', handler);
+  }, [embeddedProjectId, project, concept, caption, activeUrl, textOverlay, style, aspect, branding, hashtags, brandColor, extra, goal, selectedPlatforms, platformCopy]);
 
   // Persist branding to localStorage in addition to project record
   useEffect(() => {
@@ -350,7 +363,7 @@ export function ImageStudio() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6 lg:py-8">
-      <div className="mb-5 flex items-center justify-between gap-2">
+      {!wizardStage && <div className="mb-5 flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/projects" })} className="gap-1">
           <ArrowLeft className="h-4 w-4" /> Projects
         </Button>
@@ -365,19 +378,19 @@ export function ImageStudio() {
             <p className="text-[11px] text-accent-primary">Goal: {GOAL_LABEL[goal]}</p>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={save}>
+        <Button size="sm" variant="outline" onClick={() => save()}>
           Save
         </Button>
-      </div>
+      </div>}
 
-      <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
+      <div className={wizardStage==='deliver'?'space-y-5':'grid gap-5 lg:grid-cols-[420px_1fr]'}>
         {/* Left — controls */}
-        <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-ig">
+        {wizardStage!=='deliver' && <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-ig">
           {projectId && (
             <MixImagesPanel projectId={projectId} onCreated={(asset) => setImages((prev) => [asset, ...prev])} />
           )}
           {/* GOAL SELECTOR — REQUIRED */}
-          <div>
+          {!wizardStage && <div>
             <Label className="text-xs font-semibold uppercase tracking-wide">
               Post goal <span className="text-status-error">*</span>
             </Label>
@@ -405,7 +418,7 @@ export function ImageStudio() {
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wide">Image concept</Label>
@@ -504,7 +517,7 @@ export function ImageStudio() {
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4" /> Generate Image
+                <Wand2 className="h-4 w-4" /> Generate Image · 1 plan credit
               </>
             )}
           </Button>
@@ -516,7 +529,7 @@ export function ImageStudio() {
           </p>
 
           {/* PLATFORMS button */}
-          <div className="border-t border-border pt-3">
+          <div className={wizardStage ? "hidden" : "border-t border-border pt-3"}>
             <button
               type="button"
               onClick={() => setShowPlatformPicker((o) => !o)}
@@ -590,7 +603,7 @@ export function ImageStudio() {
                     ) : (
                       <Sparkles className="h-3 w-3" />
                     )}
-                    Generate copy
+                    Generate copy · no plan credit charge
                   </Button>
                 </div>
                 <p className="rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
@@ -627,7 +640,7 @@ export function ImageStudio() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* Right — preview + caption */}
         <div className="space-y-4">
@@ -725,7 +738,7 @@ export function ImageStudio() {
                     ) : (
                       <RefreshCw className="h-3.5 w-3.5" />
                     )}
-                    Regenerate now
+                    Regenerate now · 1 plan credit
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRegenOpen(false)}>
                     Cancel
@@ -757,7 +770,7 @@ export function ImageStudio() {
           </div>
 
           {/* Per-platform copy tabs (replaces single-caption block when platforms are picked) */}
-          {selectedPlatforms.length > 0 ? (
+          {wizardStage ? null : selectedPlatforms.length > 0 ? (
             <div className="rounded-2xl border border-border bg-card p-4 shadow-ig">
               <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border pb-2">
                 {selectedPlatforms.map((p) => {
@@ -793,7 +806,7 @@ export function ImageStudio() {
                   ) : (
                     <Sparkles className="h-3 w-3" />
                   )}
-                  Generate all
+                  Generate all · no plan credit charge
                 </Button>
               </div>
 
@@ -822,7 +835,7 @@ export function ImageStudio() {
                         onClick={() => regenerateOnePlatform(activePlatform)}
                         disabled={!goal}
                       >
-                        <Sparkles className="h-3.5 w-3.5" /> Generate for {profile.platform}
+                        <Sparkles className="h-3.5 w-3.5" /> Generate for {profile.platform} · no plan credit charge
                       </Button>
                     </div>
                   );
@@ -893,7 +906,7 @@ export function ImageStudio() {
                         className="gap-1"
                         onClick={() => regenerateOnePlatform(activePlatform)}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" /> Regenerate for {profile.platform}
+                        <RefreshCw className="h-3.5 w-3.5" /> Regenerate for {profile.platform} · no plan credit charge
                       </Button>
                       <Button
                         size="sm"
@@ -925,7 +938,7 @@ export function ImageStudio() {
                 ) : (
                   <RefreshCw className="h-3.5 w-3.5" />
                 )}
-                {caption ? "Regenerate" : "Generate"}
+                {caption ? "Regenerate" : "Generate"} · no plan credit charge
               </Button>
             </div>
             <Textarea

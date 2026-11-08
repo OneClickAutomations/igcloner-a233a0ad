@@ -680,6 +680,36 @@ export type Database = {
           },
         ]
       }
+      creation_drafts: {
+        Row: {
+          completed: boolean
+          id: string
+          state: Json
+          step: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          id?: string
+          state?: Json
+          step?: number
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          id?: string
+          state?: Json
+          step?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           attempt_id: string | null

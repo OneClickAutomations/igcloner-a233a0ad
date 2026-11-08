@@ -14,8 +14,9 @@ import { CLONE_LABEL } from "@/lib/clone-modes";
 
 type SlideResult = { url: string | null; passed: boolean; problems: string[]; attempts: number; observedText: string; charged: number };
 
-export function CopyStudio() {
-  const { projectId } = useSearch({ from: "/_authenticated/studio/copy" });
+export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'words'|'make'|'deliver' } = {}) {
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any).projectId as string;
   const qc = useQueryClient();
   const getFn = useServerFn(getCopyProject);
   const rewriteFn = useServerFn(rewriteSameLookCopy);
@@ -45,6 +46,18 @@ export function CopyStudio() {
     setNewText(pd.newText ?? {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.id]);
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const timer = setTimeout(() => { saveFn({data:{projectId,caption,hashtags:tags.split(/\s+/).map(t=>t.replace(/^#/, '')).filter(Boolean),newText}}).catch(e=>toast.error(e.message)); }, 600);
+    return () => clearTimeout(timer);
+  }, [embeddedProjectId, project, caption, tags, newText, saveFn]);
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const handler=(event:Event)=>{(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(saveFn({data:{projectId,caption,hashtags:tags.split(/\s+/).map(t=>t.replace(/^#/, '')).filter(Boolean),newText}}));};
+    window.addEventListener('creation-save',handler);
+    return ()=>window.removeEventListener('creation-save',handler);
+  },[embeddedProjectId,project,caption,tags,newText,saveFn]);
 
   if (!data) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
@@ -116,13 +129,13 @@ export function CopyStudio() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between gap-3">
+      {!wizardStage && <div className="flex items-center justify-between gap-3">
         <div>
           <Link to="/projects" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3 w-3" /> Projects</Link>
           <h1 className="mt-1 text-xl font-bold tracking-tight">{CLONE_LABEL[mode]}</h1>
           <p className="text-sm text-muted-foreground">{project.source_account ? `From @${project.source_account}` : "From your analyzed post"} · {mode === "A0" ? "Free — original files, unchanged" : "1 credit per slide that has text"}</p>
         </div>
-      </div>
+      </div>}
 
       {data.dependencies.length > 0 && (
         <div className="rounded-xl border border-status-warning/40 bg-status-warning/10 p-3 text-sm">
@@ -132,12 +145,12 @@ export function CopyStudio() {
         </div>
       )}
 
-      {mode === "A1" && !isVideo && (
+      {mode === "A1" && !isVideo && wizardStage!=='deliver' && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Slides</h2>
             <Button size="sm" variant="outline" onClick={() => rewrite("slides")} disabled={!!busy} className="gap-1.5">
-              {busy === "rewrite-slides" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite all for me
+              {busy === "rewrite-slides" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite all for me · no plan credit charge
             </Button>
           </div>
           {slides.map((s: any) => {
@@ -175,7 +188,7 @@ export function CopyStudio() {
         </section>
       )}
 
-      {mode === "A1" && isVideo && (
+      {mode === "A1" && isVideo && wizardStage!=='deliver' && (
         <section className="space-y-3 rounded-xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">New voiceover over the original video</h2>
           <p className="rounded-md bg-muted p-2 text-xs">Original on-screen text can't be edited for this video. The original audio (including music) is replaced by your new voiceover.</p>
@@ -189,7 +202,7 @@ export function CopyStudio() {
         </section>
       )}
 
-      {(mode === "A0" || isVideo) && finalMedia.length > 0 && (
+      {(mode === "A0" || isVideo || wizardStage==='deliver') && finalMedia.length > 0 && (
         <section className="grid grid-cols-2 gap-2 md:grid-cols-3">
           {finalMedia.map((m, i) => m.kind === "video"
             ? <video key={i} src={m.url} controls className="w-full rounded-md border border-border" />
@@ -197,15 +210,16 @@ export function CopyStudio() {
         </section>
       )}
 
-      <section className="space-y-2 rounded-xl border border-border bg-card p-4">
+      {wizardStage!=='make' && <section className="space-y-2 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Caption</h2>
           {mode === "A1" && <Button size="sm" variant="outline" onClick={() => rewrite("caption")} disabled={!!busy} className="gap-1.5">{busy === "rewrite-caption" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite like the original</Button>}
         </div>
         <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={8} className="text-sm" />
         <Textarea value={tags} onChange={(e) => setTags(e.target.value)} rows={2} className="text-xs" placeholder="#hashtags" />
-      </section>
+      </section>}
 
+      {wizardStage==='deliver' && <div className="flex flex-wrap gap-2">{finalMedia.map((m,i)=><Button key={i} variant="outline" asChild><a href={m.url} download target="_blank" rel="noreferrer">Download {finalMedia.length>1?`file ${i+1}`:'file'}</a></Button>)}</div>}
       <div className="flex flex-wrap gap-2">
         <Button onClick={toPublishing} disabled={!!busy || !finalMedia.length} className="gap-1.5">{busy === "publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Save to Publishing Center</Button>
         <Button variant="outline" onClick={() => save().then(() => toast.success("Saved to project"))} disabled={!!busy}>Save to project</Button>
