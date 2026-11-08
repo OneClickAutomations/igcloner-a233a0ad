@@ -307,7 +307,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
   return (
     <div className={`mx-auto max-w-[1280px] px-4 py-6 lg:py-8 ${doc ? "pb-28" : ""}`}>
       {/* Header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      {!wizardStage && <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <button
             onClick={() => navigate({ to: "/projects" })}
@@ -334,7 +334,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
             </p>
           )}
         </div>
-      </div>
+      </div>}
 
       {doc && (
         <PostScheduleModal
@@ -437,7 +437,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                 </>
               ) : (
                 <>
-                  <Wand2 className="h-4 w-4" /> Generate carousel
+                  <Wand2 className="h-4 w-4" /> Generate carousel · no plan credit charge
                 </>
               )}
             </Button>
@@ -477,7 +477,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
               ) : (
                 <>
                   <ImageIcon className="h-3.5 w-3.5" />
-                  {doc.slides.every((s) => s.imageUrl) ? "Regenerate all images" : "Generate all images"}
+                  {doc.slides.every((s) => s.imageUrl) ? "Regenerate all images" : "Generate all images"} · {(doc.slides.some(s=>!s.imageUrl)?doc.slides.filter(s=>!s.imageUrl).length:doc.slides.length)} plan credits
                 </>
               )}
             </Button>
@@ -637,7 +637,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       ) : (
                         <Wand2 className="h-3.5 w-3.5" />
                       )}
-                      Regenerate
+                      Regenerate · no plan credit charge
                     </Button>
                   </div>
                 </div>
@@ -684,7 +684,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       ) : (
                         <ImageIcon className="h-3.5 w-3.5" />
                       )}
-                      {active.imageUrl ? "Regenerate image" : "Generate slide image"}
+                      {active.imageUrl ? "Regenerate image" : "Generate slide image"} · 1 plan credit
                     </Button>
                   </div>
                 </div>

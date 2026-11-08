@@ -150,6 +150,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
         setAspect(saved.aspect ?? "4:5");
         setTextOverlay(saved.textOverlay ?? "");
         setBrandColor(saved.brandColor ?? "");
+        setExtra(saved.extra ?? "");
         setCaption(saved.caption ?? "");
         setHashtags(saved.hashtags ?? []);
         setGoal((saved.goal ?? prefs.goal ?? null) as PostGoal | null);
@@ -240,6 +241,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
               aspect,
               textOverlay,
               brandColor,
+              extra,
               caption,
               hashtags,
               activeUrl,
@@ -388,7 +390,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
             <MixImagesPanel projectId={projectId} onCreated={(asset) => setImages((prev) => [asset, ...prev])} />
           )}
           {/* GOAL SELECTOR — REQUIRED */}
-          <div>
+          {!wizardStage && <div>
             <Label className="text-xs font-semibold uppercase tracking-wide">
               Post goal <span className="text-status-error">*</span>
             </Label>
@@ -416,7 +418,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           <div>
             <Label className="text-xs font-semibold uppercase tracking-wide">Image concept</Label>
@@ -527,7 +529,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
           </p>
 
           {/* PLATFORMS button */}
-          <div className="border-t border-border pt-3">
+          <div className={wizardStage ? "hidden" : "border-t border-border pt-3"}>
             <button
               type="button"
               onClick={() => setShowPlatformPicker((o) => !o)}
@@ -601,7 +603,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                     ) : (
                       <Sparkles className="h-3 w-3" />
                     )}
-                    Generate copy
+                    Generate copy · no plan credit charge
                   </Button>
                 </div>
                 <p className="rounded-md border border-dashed border-border bg-card px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
@@ -736,7 +738,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                     ) : (
                       <RefreshCw className="h-3.5 w-3.5" />
                     )}
-                    Regenerate now
+                    Regenerate now · 1 plan credit
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRegenOpen(false)}>
                     Cancel
@@ -768,7 +770,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
           </div>
 
           {/* Per-platform copy tabs (replaces single-caption block when platforms are picked) */}
-          {selectedPlatforms.length > 0 ? (
+          {wizardStage ? null : selectedPlatforms.length > 0 ? (
             <div className="rounded-2xl border border-border bg-card p-4 shadow-ig">
               <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-border pb-2">
                 {selectedPlatforms.map((p) => {
@@ -804,7 +806,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                   ) : (
                     <Sparkles className="h-3 w-3" />
                   )}
-                  Generate all
+                  Generate all · no plan credit charge
                 </Button>
               </div>
 
@@ -833,7 +835,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                         onClick={() => regenerateOnePlatform(activePlatform)}
                         disabled={!goal}
                       >
-                        <Sparkles className="h-3.5 w-3.5" /> Generate for {profile.platform}
+                        <Sparkles className="h-3.5 w-3.5" /> Generate for {profile.platform} · no plan credit charge
                       </Button>
                     </div>
                   );
@@ -904,7 +906,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                         className="gap-1"
                         onClick={() => regenerateOnePlatform(activePlatform)}
                       >
-                        <RefreshCw className="h-3.5 w-3.5" /> Regenerate for {profile.platform}
+                        <RefreshCw className="h-3.5 w-3.5" /> Regenerate for {profile.platform} · no plan credit charge
                       </Button>
                       <Button
                         size="sm"
@@ -936,7 +938,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                 ) : (
                   <RefreshCw className="h-3.5 w-3.5" />
                 )}
-                {caption ? "Regenerate" : "Generate"}
+                {caption ? "Regenerate" : "Generate"} · no plan credit charge
               </Button>
             </div>
             <Textarea

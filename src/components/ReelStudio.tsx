@@ -388,14 +388,14 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
             icon: ArrowRight, disabled: false,
             onClick: () => setStep("audio"),
             secondary: {
-              label: "Regenerate",
+              label: "Regenerate · no plan credit charge",
               icon: Sparkles,
               onClick: handleGenerate,
             },
           };
         }
         return {
-          label: busy ? "Writing…" : "Generate script",
+          label: busy ? "Writing…" : "Generate script · no plan credit charge",
           icon: busy ? Loader2 : Sparkles, disabled: busy,
           onClick: handleGenerate, loading: busy,
         };
@@ -503,9 +503,9 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
       </div>
 
       {/* 3-panel layout */}
-      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_320px]">
+      <div className={wizardStage ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_320px]"}>
         {/* LEFT — Context */}
-        <aside className="space-y-3">
+        <aside className={wizardStage ? "hidden" : "space-y-3"}>
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Source
@@ -1060,7 +1060,7 @@ function VideoStep({
         />
         <Button size="sm" variant="outline" className="mt-2" onClick={onVeoRegen} disabled={veoBusy}>
           {veoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-          Rewrite prompt
+          Rewrite prompt · no plan credit charge
         </Button>
       </div>
 

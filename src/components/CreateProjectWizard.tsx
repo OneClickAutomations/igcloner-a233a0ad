@@ -18,7 +18,7 @@ import { CopyStudio } from './CopyStudio';
 import { InspirationStudio } from './InspirationStudio';
 import { creationSources, loadCreationDraft, saveCreationDraft } from '@/lib/creation-drafts.functions';
 import { EMPTY_CREATION, restoreCreation, resumeStep, type CreationState } from '@/lib/creation-draft';
-import { createProject } from '@/lib/projects.functions';
+import { updateProject, createProject } from '@/lib/projects.functions';
 import { createInspirationProject } from '@/lib/inspiration.functions';
 import { POST_GOALS } from '@/lib/post-goals';
 import { CREDIT_BALANCE_KEY } from '@/lib/credits';
@@ -40,6 +40,7 @@ export function CreateProjectWizard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const saveFn = useServerFn(saveCreationDraft), loadFn = useServerFn(loadCreationDraft), sourcesFn = useServerFn(creationSources);
+  const updateFn = useServerFn(updateProject);
   const createFn = useServerFn(createProject), filmFn = useServerFn(createInspirationProject);
   const balanceFn = useServerFn(getCreditBalance), videoFn = useServerFn(getVideoCreditBalance);
   const { data: credits } = useQuery({ queryKey: CREDIT_BALANCE_KEY, queryFn: () => balanceFn() });
@@ -86,19 +87,21 @@ export function CreateProjectWizard() {
     try {
       let next = current.current.state;
       if (target===3 && !next.projectId && next.analysisId) {
-        if (next.mode==='A0'||next.mode==='A1') throw new Error('Confirm permission and open the copy first.');
+        if (next.format!=='film' && (next.mode==='A0'||next.mode==='A1')) throw new Error('Confirm permission and open the copy first.');
         const preferences = { intent: next.mode, cloneMethod: next.mode, goal: next.goal || undefined, niche: next.niche || undefined, toneOfVoice: next.tone || undefined, targetAudience: next.audience || undefined, selectedPlatforms: next.platforms, angle: next.brief || undefined };
         const projectId = next.format==='film'
           ? (await filmFn({ data: { title: next.title.trim() || 'New film', analysisId: next.analysisId } })).id
           : (await createFn({ data: { analysisId: next.analysisId, format: next.format, title: next.title.trim() || 'New project', userPreferences: preferences } })).project.id;
         next = { ...next, projectId }; setState(next);
       }
+      if (target===4 && next.projectId && next.format!=='film' && !next.copyProject) await updateFn({ data: { id: next.projectId, patch: { user_preferences: { intent:next.mode,cloneMethod:next.mode,goal:next.goal||undefined,niche:next.niche,toneOfVoice:next.tone,targetAudience:next.audience,selectedPlatforms:next.platforms,angle:next.brief } } } });
+      window.dispatchEvent(new Event('creation-save'));
       await persist(target, next); setStep(target); window.scrollTo({ top: 0, behavior: 'instant' });
     } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const close = async (completed = false) => {
     setBusy(true);
-    try { await persist(step, current.current.state, completed); await navigate({ to: '/projects' }); }
+    try { window.dispatchEvent(new Event('creation-save')); await persist(step, current.current.state, completed); await navigate({ to: '/projects' }); }
     catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   if (!ready) return <div className="flex justify-center py-20"><Loader2 className="size-6 animate-spin"/></div>;
@@ -111,9 +114,9 @@ export function CreateProjectWizard() {
       : <ReelStudio embeddedProjectId={state.projectId} wizardStage={stage}/>}
   </Suspense> : null;
   return <CreationWizardShell step={step} instructions={instructions[step]} saved={saved} busy={busy}
-    disabled={(step<2&&!sourceId)||(step===2&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId)}
+    disabled={(step<2&&!sourceId)||(step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId)}
     onBack={() => move(step-1)} onNext={() => step===5?close(true):move(step+1)} onClose={() => close()}>
-    <div className="mb-5 flex flex-wrap justify-end gap-4 text-xs text-muted-foreground"><span>{credits?.balance ?? '…'} plan credits</span><span>{video?.balance ?? '…'} video credits</span></div>
+    
     {step===0 && <div className="space-y-5"><label className="block max-w-xl text-sm">Use a saved analysis<select aria-label="Choose saved analysis" value={sourceId??''} className="mt-2 w-full rounded-md border border-input bg-background p-3" onChange={e => { patch({ analysisId: e.target.value || undefined, projectId: undefined, copyProject: false }); }}><option value="">Paste a new link instead</option>{sources.map(s => <option key={s.id} value={s.id}>{s.source_account ?? s.instagram_url}</option>)}</select></label>{!sourceId && <AppPage embedded initialUrl={state.url} onUrlChange={url => patch({ url })} onAnalysisReady={analysisId => patch({ analysisId })}/>}</div>}
     {step===1 && sourceId && <AppPage key={sourceId} embedded sourceAnalysisId={sourceId} onAnalysisReady={() => {}}/>}
     {step===2 && sourceId && <div className="space-y-6"><label className="block max-w-xl text-sm">Project name<Input aria-label="Project name" className="mt-2" value={state.title} onChange={e => patch({ title: e.target.value })}/></label><div className="grid gap-3 sm:grid-cols-4">{([{id:'image',label:'Image',Icon:Image},{id:'carousel',label:'Carousel',Icon:LayoutGrid},{id:'reel',label:'Reel',Icon:Film},{id:'film',label:'Video film',Icon:Film}] as const).map(f => <Button key={f.id} variant={state.format===f.id?'secondary':'outline'} className="h-16" disabled={!!state.projectId} onClick={() => patch({ format:f.id })}><f.Icon className="size-5"/>{f.label}</Button>)}</div>{state.format==='film' ? <p className="text-sm text-muted-foreground">New scenes inspired by the post’s order and pacing, with your own subjects and words.</p> : <CopyModePicker analysisId={sourceId} value={state.mode} onChange={mode => patch({mode,projectId:undefined,copyProject:false})} onCreated={projectId => { patch({projectId,copyProject:true}); }}/>}</div>}
