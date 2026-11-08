@@ -1,19 +1,19 @@
 # Video add-on decision — 2026-11-08
 
 ## Built and approval status
-Video has a separate owner-readable, server-written, append-only ledger. New inspiration animation and assembly claims debit that ledger atomically; persisted billing currency sends historical jobs' refunds back to their original ledger. Refund keys are `kind:entityId:attemptId`, prefixed by debit/refund, and refund amounts come from the original debit, not a caller amount. No balances were converted or seeded. No Stripe or purchase endpoint exists. All proposed numbers live in `STUDIO_PRICING`; `video.approved=false` blocks new paid video. Customers see proposals, not pack prices advertised as final.
+Video has a separate owner-readable, server-written, append-only ledger. New inspiration animation and assembly claims debit that ledger atomically; persisted billing currency sends historical jobs' refunds back to their original ledger. Refund keys are `kind:entityId:attemptId`, prefixed by debit/refund, and refund amounts come from the original debit, not a caller amount. No balances were converted or seeded. No Stripe or purchase endpoint exists. Approved numbers live in `STUDIO_PRICING`; `video.approved=true` records owner approval, while `video.purchasesEnabled=false` keeps purchases unavailable. Trial 40/$15, Standard 160/$49 and Bulk 400/$109 were approved on 2026-11-08.
 
-Fast proposal: 1 unit/second; Lite: 0.5 unit/second, rounded up per action. External renders convert USD cost at $0.12/unit, rounded up. An ordinary 32s Shotstack render is 1 video credit. Still images, writing and analysis remain plan-funded at their existing prices. No nonvideo action price was changed. Unknown rates remain unset.
+Approved Fast rate: 1 unit/second; Lite: 0.5 unit/second, rounded up per action. External renders convert USD cost at $0.12/unit, rounded up. An ordinary 32s Shotstack render is 1 video credit. Still images, writing and analysis remain plan-funded at their existing prices. No nonvideo action price was changed. Unknown rates remain unset.
 
 The app displays both balances, scene quote balance/remaining, a whole-storyboard clip+render budget, and separate plan-cost lines. Insufficient video funds cannot debit plan credits or delete storyboards/stills. “Buy a video pack” opens an honest purchases-unavailable state until approval/payment work. Still images are currently blocked on measurement, not on video funds.
 
 Legacy fal generation and A1 narration/mux are explicitly blocked pending approved video pricing. Existing standalone voiceover behavior is unchanged; narration generated for a reel is blocked pending verified rate. Inspiration narration generation is not implemented; existing audio uploads work without a new generation fee. This is not claimed as a finished paid narration implementation.
 
-## Proposed packs — not live
+## Approved packs — not sold
 
 Verified conversion: $15/50 = $30/100 = $0.30/workspace credit, owner-confirmed 2026-11-08. Fast cost: 0.4 × $0.30 = $0.12/sec. Direct-cost margin = 1 − (units × $0.12)/pack price. Stills/writing/analysis are excluded because they use plan credits; generated narration/render consume video units and must have verified unit quotes.
 
-| Pack | Video credits | Proposed price | Price/unit | Maximum Fast-unit cost | Direct margin |
+| Pack | Video credits | Approved price | Price/unit | Maximum Fast-unit cost | Direct margin |
 |---|---:|---:|---:|---:|---:|
 | Trial | 40 | $15 | $0.375 | $4.80 | 68.00% |
 | Standard | 160 | $49 | $0.30625 | $19.20 | 60.82% |
@@ -25,7 +25,7 @@ Recommend Standard as the default. Bulk still leaves ~56% before payment fees, t
 
 The 35% column is the old plan-credit comparison only: ceil(USD/$0.05075). It is NOT the new video charge. Video margins below use the Standard pack's $0.30625/unit; pack-level margin is the conservative baseline. Unknown means not measured; no invented cost.
 
-| Action | Workspace credits | USD | 35% comparison credits | New balance / proposal | Direct margin (Standard video / 35% comparison) |
+| Action | Workspace credits | USD | 35% comparison credits | New balance / approved rate | Direct margin (Standard video / 35% comparison) |
 |---|---:|---:|---:|---|---|
 | Fast 8s | 3.2 measured | $0.96 | 19 | Video 8 | 60.82% / 65.15% |
 | Fast 4s | 1.6 measured | $0.48 | 10 | Video 4 | 60.82% / 66.90% |
@@ -74,3 +74,11 @@ Owner setup: sign up at dashboard.shotstack.io → API Keys → copy sandbox key
 
 ## Verification
 46 focused unit tests pass. Actual migration-created ledger and claim functions passed isolated PostgreSQL rollback tests for duplicate grants/debits, insufficient balance, attempt-scoped single refunds, plan-ledger isolation, append-only grants, owner reads and cross-user denial. Concurrent identical debit/competing balance tests run in a disposable PostgreSQL database, not customer accounts. Hosted privileged execution of these tests is unavailable through the read-only sandbox DB role; schema/claim definitions were independently read back from the hosted database. Signed-in desktop/390px checks show both balances, saved storyboard, unavailable pack purchases and missing-key assembly, no horizontal overflow. No paid generation performed; spend $0.
+## Real-app proof attempt — 2026-11-08
+Readable secret: `SHOTSTACK_SANDBOX_API_KEY`. Documented `GET /edit/stage/templates` returned HTTP 200 and `success:true`; no render was submitted. An initial unsupported GET to `/render` returned 404, not a credential failure.
+
+Signed-in owner opened `/studio/inspiration`, selected the available Studio verification film, entered Delivery and clicked Quote assembly. The real flow rejected it with **Every scene needs an approved, completed clip.** The film has one 8-second draft scene and zero completed clips, not the requested four eligible scenes. Stopped there, without manufacturing approved attempts or using a script-only render.
+
+No finished MP4; render time not applicable; Shotstack render spend $0, ElevenLabs spend $0 (not called), new video-credit charge 0. Caption/audio alignment, coherence, identity, motion and pacing cannot be judged without output. Narration generation and automatic speech-aligned captions are not wired into this studio; uploads/manual SRT are implemented. Music upload and interval ducking exist but remain unverified with a real render.
+
+Next prerequisite: attach the four original paid test clips to a project through an owner-authorized import with honest source provenance and revision eligibility, not fabricated still approvals. Then wire measured video-ledger narration and speech-aligned captions, supply licensed music, and repeat the actual Delivery flow. Independent visual/audio passes, AI storyboard writing, measured still pricing, real callback/collection recovery and production output QA remain open. Purchases intentionally remain off.
