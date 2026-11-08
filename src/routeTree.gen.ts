@@ -32,6 +32,7 @@ import { Route as AuthenticatedStudioInspirationRouteImport } from './routes/_au
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
+import { Route as ApiPublicInspirationCollectRouteImport } from './routes/api/public/inspiration-collect'
 import { Route as ApiPublicInspirationStillRouteImport } from './routes/api/public/inspiration-still'
 import { Route as ApiPublicUploadPostWebhookRouteImport } from './routes/api/public/upload-post-webhook'
 
@@ -154,6 +155,12 @@ const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
   path: '/api/public/img',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInspirationCollectRoute =
+  ApiPublicInspirationCollectRouteImport.update({
+    id: '/api/public/inspiration-collect',
+    path: '/api/public/inspiration-collect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicInspirationStillRoute =
   ApiPublicInspirationStillRouteImport.update({
     id: '/api/public/inspiration-still',
@@ -189,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/studio/': typeof AuthenticatedStudioIndexRoute
@@ -215,6 +223,7 @@ export interface FileRoutesByTo {
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/studio': typeof AuthenticatedStudioIndexRoute
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/img': typeof ApiPublicImgRoute
+  '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
   '/api/public/upload-post-webhook': typeof ApiPublicUploadPostWebhookRoute
   '/_authenticated/studio/': typeof AuthenticatedStudioIndexRoute
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/studio/'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/studio'
@@ -324,6 +336,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
     | '/api/public/img'
+    | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
     | '/api/public/upload-post-webhook'
     | '/_authenticated/studio/'
@@ -338,6 +351,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiPublicImgRoute: typeof ApiPublicImgRoute
+  ApiPublicInspirationCollectRoute: typeof ApiPublicInspirationCollectRoute
   ApiPublicInspirationStillRoute: typeof ApiPublicInspirationStillRoute
   ApiPublicUploadPostWebhookRoute: typeof ApiPublicUploadPostWebhookRoute
 }
@@ -505,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicImgRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/inspiration-collect': {
+      id: '/api/public/inspiration-collect'
+      path: '/api/public/inspiration-collect'
+      fullPath: '/api/public/inspiration-collect'
+      preLoaderRoute: typeof ApiPublicInspirationCollectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/inspiration-still': {
       id: '/api/public/inspiration-still'
       path: '/api/public/inspiration-still'
@@ -571,6 +592,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiPublicImgRoute: ApiPublicImgRoute,
+  ApiPublicInspirationCollectRoute: ApiPublicInspirationCollectRoute,
   ApiPublicInspirationStillRoute: ApiPublicInspirationStillRoute,
   ApiPublicUploadPostWebhookRoute: ApiPublicUploadPostWebhookRoute,
 }
