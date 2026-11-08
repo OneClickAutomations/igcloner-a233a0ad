@@ -184,10 +184,20 @@ export type Database = {
         Row: {
           billed: number
           bridge_job_id: string | null
+          callback_token_hash: string | null
+          clip_snapshot: Json
           created_at: string
+          duration_seconds: number
+          environment: string
           failure_reason: string | null
           id: string
+          input: Json
+          lease_until: string | null
           project_id: string
+          provider: string
+          provider_job_id: string | null
+          refunded_at: string | null
+          render_quote_usd: number
           request_key: string
           result_path: string | null
           status: string
@@ -197,10 +207,20 @@ export type Database = {
         Insert: {
           billed?: number
           bridge_job_id?: string | null
+          callback_token_hash?: string | null
+          clip_snapshot?: Json
           created_at?: string
+          duration_seconds?: number
+          environment?: string
           failure_reason?: string | null
           id?: string
+          input?: Json
+          lease_until?: string | null
           project_id: string
+          provider?: string
+          provider_job_id?: string | null
+          refunded_at?: string | null
+          render_quote_usd?: number
           request_key: string
           result_path?: string | null
           status?: string
@@ -210,10 +230,20 @@ export type Database = {
         Update: {
           billed?: number
           bridge_job_id?: string | null
+          callback_token_hash?: string | null
+          clip_snapshot?: Json
           created_at?: string
+          duration_seconds?: number
+          environment?: string
           failure_reason?: string | null
           id?: string
+          input?: Json
+          lease_until?: string | null
           project_id?: string
+          provider?: string
+          provider_job_id?: string | null
+          refunded_at?: string | null
+          render_quote_usd?: number
           request_key?: string
           result_path?: string | null
           status?: string
@@ -1839,6 +1869,19 @@ export type Database = {
     }
     Functions: {
       arm_inspiration_collector: { Args: never; Returns: undefined }
+      claim_assembly_job: {
+        Args: {
+          p_billed: number
+          p_environment: string
+          p_input: Json
+          p_project: string
+          p_request: string
+          p_snapshot: Json
+          p_usd: number
+          p_user: string
+        }
+        Returns: Json
+      }
       claim_copy_run: {
         Args: {
           p_action: string
@@ -1880,6 +1923,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      fail_assembly_job: {
+        Args: { p_job: string; p_reason: string }
+        Returns: undefined
+      }
+      fail_claimed_assembly_job: {
+        Args: { p_job: string; p_reason: string }
+        Returns: undefined
       }
       fail_inspiration_attempt: {
         Args: { p_attempt: string; p_reason: string }

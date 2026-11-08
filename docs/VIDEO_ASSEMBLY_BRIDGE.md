@@ -1,5 +1,7 @@
 # Pass 5A: motion and assembly, 8 November 2026
 
+> Historical investigation only. The owner retired AWS/Remotion assembly. Current implementation and setup are in [HOSTED_VIDEO_ASSEMBLY.md](./HOSTED_VIDEO_ASSEMBLY.md); do not follow the bridge checklist below.
+
 ## Motion evidence
 Five calls cost exactly 10.42914 workspace credits, excluding chat/build. All outputs are 720×1280 with audio tracks (sound quality not listened to). Elapsed create/poll/download times: Fast 4s 58.55s; Fast 8s 58.71s; Fast ingredients 8s 42.42s; Lite 4s 50.49s; Omni 4s 51.19s.
 
