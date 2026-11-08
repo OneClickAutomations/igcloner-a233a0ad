@@ -4,20 +4,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ACTION_COSTS } from "./credits";
 import { PUBLISHING_PLATFORMS } from "./upload-post/shared";
 
-export const runHookLab=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid(),preferences:z.record(z.unknown()).optional(),regenerate:z.number().int().optional()}).parse(d)).handler(async({data,context})=>{
+export const runHookLab=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid(),preferences:z.record(z.unknown()).optional(),regenerate:z.number().int().optional(),requestId:z.string().uuid().optional()}).parse(d)).handler(async({data,context})=>{
   const {buildCopyContext,hookLab}=await import("./copy-engine.server");
   const {meteredCopy}=await import("./copy-meter.server");
   const ctx=await buildCopyContext(data.analysisId,context.userId,undefined,data.preferences);
-  return meteredCopy({userId:context.userId,analysisId:data.analysisId,action:"hooks",key:{analysisId:data.analysisId,context:ctx,regenerate:data.regenerate},cost:ACTION_COSTS.hookLab,reason:"debit_hooks"},()=>hookLab(ctx));
+  return meteredCopy({userId:context.userId,analysisId:data.analysisId,action:"hooks",key:{analysisId:data.analysisId,context:ctx,regenerate:data.regenerate},cost:ACTION_COSTS.hookLab,reason:"debit_hooks",requestId:data.requestId},progress=>hookLab(ctx,progress));
 });
-export const generateCaptionPack=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),platforms:z.array(z.enum(PUBLISHING_PLATFORMS)).min(1),instruction:z.string().max(2000).optional(),regenerate:z.number().int().optional()}).parse(d)).handler(async({data,context})=>{
+export const generateCaptionPack=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),platforms:z.array(z.enum(PUBLISHING_PLATFORMS)).min(1),instruction:z.string().max(2000).optional(),regenerate:z.number().int().optional(),requestId:z.string().uuid().optional()}).parse(d)).handler(async({data,context})=>{
   const {data:p,error}=await context.supabase.from("projects").select("*").eq("id",data.projectId).eq("user_id",context.userId).maybeSingle();
   if(error || !p) throw new Error("Project not found");
   const {buildCopyContext,nativeCaptionPack}=await import("./copy-engine.server");
   const {meteredCopy}=await import("./copy-meter.server");
   const ctx=p.analysis_id ? await buildCopyContext(p.analysis_id,context.userId,undefined,p.user_preferences) : {source:{captionDNA:{},exactHook:"",caption:"",blueprint:null},voice:p.user_preferences,research:null};
   const platforms=[...new Set(data.platforms)].sort();
-  const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction:data.instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption"},()=>nativeCaptionPack(ctx,platforms,data.instruction));
+  const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction:data.instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,data.instruction,progress));
   const pd=(p.project_data ?? {}) as any;
   const {error:saveErr}=await context.supabase.from("projects").update({project_data:{...pd,captionPack:result.platforms,captionQuality:(result as any).qualityReport??null} as any}).eq("id",p.id).eq("user_id",context.userId);
   if(saveErr) throw new Error(saveErr.message);
