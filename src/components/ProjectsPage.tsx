@@ -114,7 +114,8 @@ export function ProjectsPage() {
     try {
       const [res, savedDrafts] = await Promise.all([listFn(), draftsFn()]);
       setDrafts(savedDrafts);
-      setProjects((res as any).projects || []);
+      const linked = new Set(savedDrafts.map(d => (d.state as any)?.projectId).filter(Boolean));
+      setProjects(((res as any).projects || []).filter((p:any)=>!linked.has(p.id)));
     } catch (e: any) {
       toast.error(e?.message || "Couldn't load projects");
     } finally {

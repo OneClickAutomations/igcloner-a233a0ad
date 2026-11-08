@@ -46,7 +46,7 @@ export function CreateProjectWizard() {
   const { data: credits } = useQuery({ queryKey: CREDIT_BALANCE_KEY, queryFn: () => balanceFn() });
   const { data: video } = useQuery({ queryKey: VIDEO_BALANCE_KEY, queryFn: () => videoFn() });
   const { data: sources = [] } = useQuery({ queryKey: ['creation-sources'], queryFn: () => sourcesFn() });
-  const [state, setState] = useState<CreationState>({ ...EMPTY_CREATION, analysisId: search.analysisId });
+  const [state, setState] = useState<CreationState>({ ...EMPTY_CREATION, analysisId: search.analysisId, format:search.format??'image' });
   const [step, setStep] = useState(search.analysisId ? 1 : 0), [id, setId] = useState('');
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [saved, setSaved] = useState('');
   const queue = useRef<Promise<unknown>>(Promise.resolve());
@@ -63,13 +63,13 @@ export function CreateProjectWizard() {
           setId(d.id); setState(restoreCreation(d.state)); setStep(resumeStep(d.step));
         } else {
           if (!live) return;
-          setId(crypto.randomUUID()); setState({ ...EMPTY_CREATION, analysisId: search.analysisId }); setStep(search.analysisId ? 1 : 0);
+          setId(crypto.randomUUID()); setState({ ...EMPTY_CREATION, analysisId: search.analysisId, format: search.format??'image' }); setStep(search.analysisId ? 1 : 0);
         }
         setReady(true);
       } catch(e) { toast.error((e as Error).message); }
     })();
     return () => { live = false; };
-  }, [search.draftId]);
+  }, [search.draftId, search.format]);
   const persist = (nextStep = current.current.step, nextState = current.current.state, completed = false) => {
     if (!id) return Promise.resolve();
     setSaved('Saving…');
@@ -95,13 +95,15 @@ export function CreateProjectWizard() {
         next = { ...next, projectId }; setState(next);
       }
       if (target===4 && next.projectId && next.format!=='film' && !next.copyProject) await updateFn({ data: { id: next.projectId, patch: { user_preferences: { intent:next.mode,cloneMethod:next.mode,goal:next.goal||undefined,niche:next.niche,toneOfVoice:next.tone,targetAudience:next.audience,selectedPlatforms:next.platforms,angle:next.brief } } } });
-      window.dispatchEvent(new Event('creation-save'));
+      const tasks: Promise<unknown>[] = [];
+      window.dispatchEvent(new CustomEvent('creation-save', { detail: { tasks } }));
+      await Promise.all(tasks);
       await persist(target, next); setStep(target); window.scrollTo({ top: 0, behavior: 'instant' });
     } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   const close = async (completed = false) => {
     setBusy(true);
-    try { window.dispatchEvent(new Event('creation-save')); await persist(step, current.current.state, completed); await navigate({ to: '/projects' }); }
+    try { const tasks: Promise<unknown>[]=[]; window.dispatchEvent(new CustomEvent('creation-save',{detail:{tasks}})); await Promise.all(tasks); await persist(step, current.current.state, completed); await navigate({ to: '/projects' }); }
     catch(e) { toast.error((e as Error).message); } finally { setBusy(false); }
   };
   if (!ready) return <div className="flex justify-center py-20"><Loader2 className="size-6 animate-spin"/></div>;

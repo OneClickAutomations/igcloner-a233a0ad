@@ -169,6 +169,12 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     return () => clearTimeout(timer);
   }, [embeddedProjectId, doc, saveFn]);
   useEffect(() => { if (wizardStage) setViewMode(wizardStage==='deliver'?'preview':'editor'); }, [wizardStage]);
+  useEffect(() => {
+    if (!embeddedProjectId || !doc) return;
+    const handler = (event: Event) => { (event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(saveFn({data:{projectId:embeddedProjectId,carousel:doc}})); };
+    window.addEventListener('creation-save',handler);
+    return () => window.removeEventListener('creation-save',handler);
+  }, [embeddedProjectId,doc,saveFn]);
   const cloneMode = (project?.user_preferences as any)?.cloneMode === "inspired" ? "inspired" : "formula";
 
   if (!projectId) {

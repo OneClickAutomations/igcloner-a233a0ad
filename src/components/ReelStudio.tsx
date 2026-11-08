@@ -191,6 +191,12 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
     }, 1500);
     return () => clearTimeout(t);
   }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile]);
+  useEffect(()=>{
+    if(!embeddedProjectId)return;
+    const handler=(event:Event)=>{(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
+    window.addEventListener('creation-save',handler);
+    return()=>window.removeEventListener('creation-save',handler);
+  },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn]);
 
   useEffect(() => {
     const onBeforeUnload = () => {

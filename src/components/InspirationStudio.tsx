@@ -32,17 +32,17 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   const [tab, setTab] = useState<'storyboard'|'references'|'observations'|'delivery'>('storyboard');
   const [newProject, setNewProject] = useState(false), [title, setTitle] = useState(''), [analysisId, setAnalysisId] = useState('');
   const [editing, setEditing] = useState<Scene | 'new' | null>(null), [draft, setDraft] = useState<SceneDraft>((wizardDraft?.sceneDraft as SceneDraft) ?? blank);
-  const [busy, setBusy] = useState(false), [checks, setChecks] = useState<Record<string,ObjectCheck[]>>({});
-  const [model, setModel] = useState<(typeof STUDIO_MODELS)[number]['id']>('google/veo-3.1-fast');
+  const [busy, setBusy] = useState(false), [checks, setChecks] = useState<Record<string,ObjectCheck[]>>((wizardDraft?.checks as Record<string,ObjectCheck[]>)??{});
+  const [model, setModel] = useState<(typeof STUDIO_MODELS)[number]['id']>((wizardDraft?.model as (typeof STUDIO_MODELS)[number]['id'])??'google/veo-3.1-fast');
   const [confirmation, setConfirmation] = useState<{ scene: Scene; operation: 'still'|'animate'; q: Awaited<ReturnType<typeof inspirationQuote>> } | null>(null);
   const [partial, setPartial] = useState<Record<string,{ url: string; final: boolean }>>({});
   const [makePart, setMakePart] = useState<'stills'|'animate'>((wizardDraft?.makePart as 'stills'|'animate') ?? 'stills');
   useEffect(() => { if (wizardStage) setTab(wizardStage==='deliver'?'delivery':'storyboard'); }, [wizardStage]);
   useEffect(() => {
     if (!onWizardDraft) return;
-    const next = { ...wizardDraft, sceneDraft: draft, makePart, model };
+    const next = { ...wizardDraft, sceneDraft: draft, makePart, model, checks };
     if (JSON.stringify(next)!==JSON.stringify(wizardDraft)) onWizardDraft(next);
-  }, [draft, makePart, model]);
+  }, [draft, makePart, model, checks]);
   const refresh = async () => { await qc.invalidateQueries({ queryKey: ['inspiration-studio'] }); await qc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY }); await qc.invalidateQueries({queryKey:VIDEO_BALANCE_KEY}); };
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await refresh(); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); } };
   useEffect(() => {
@@ -84,7 +84,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   return <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
     {!wizardStage && <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Film className="size-4"/> Production / Structure-only inspiration</div><h1 className="text-3xl font-bold">Video Inspiration Studio</h1><p className="mt-2 text-sm text-muted-foreground">New subjects, settings and words. Never copy a real person’s likeness.</p></div>
-      <Button onClick={() => setNewProject(true)}><Plus className="size-4"/> New film</Button>
+      <Button onClick={() => navigate({to:'/app',search:{format:'film'}})}><Plus className="size-4"/> New film</Button>
     </div>}
     {!wizardStage && <div className="flex flex-wrap items-center justify-between gap-4 py-5">
       <select aria-label="Film" className="max-w-full rounded-md border border-input bg-background p-2 text-sm" value={data.selected?.id ?? ''} onChange={e => navigate({ to: '/studio/inspiration', search: { projectId: e.target.value } })}><option value="" disabled>Select a film</option>{data.projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>

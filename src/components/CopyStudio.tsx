@@ -52,6 +52,12 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
     const timer = setTimeout(() => { saveFn({data:{projectId,caption,hashtags:tags.split(/\s+/).map(t=>t.replace(/^#/, '')).filter(Boolean),newText}}).catch(e=>toast.error(e.message)); }, 600);
     return () => clearTimeout(timer);
   }, [embeddedProjectId, project, caption, tags, newText, saveFn]);
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const handler=(event:Event)=>{(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(saveFn({data:{projectId,caption,hashtags:tags.split(/\s+/).map(t=>t.replace(/^#/, '')).filter(Boolean),newText}}));};
+    window.addEventListener('creation-save',handler);
+    return ()=>window.removeEventListener('creation-save',handler);
+  },[embeddedProjectId,project,caption,tags,newText,saveFn]);
 
   if (!data) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 

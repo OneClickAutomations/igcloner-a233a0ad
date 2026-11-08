@@ -268,10 +268,10 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
 
   useEffect(() => {
     if (!embeddedProjectId || !project) return;
-    const handler = () => save(true);
+    const handler = (event: Event) => { (event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(save(true)); };
     window.addEventListener('creation-save', handler);
     return () => window.removeEventListener('creation-save', handler);
-  }, [embeddedProjectId, project, concept, caption, activeUrl, textOverlay, style, aspect, branding]);
+  }, [embeddedProjectId, project, concept, caption, activeUrl, textOverlay, style, aspect, branding, hashtags, brandColor, extra, goal, selectedPlatforms, platformCopy]);
 
   // Persist branding to localStorage in addition to project record
   useEffect(() => {
