@@ -1,5 +1,6 @@
 # Project architecture
 - Video inspiration is a separate authenticated studio with server-written owner-readable tables, revision-bound still approvals and atomic attempt/debit claims; unset verified cost configuration blocks paid generation rather than inventing prices.
+- Hosted assembly uses Shotstack JSON timelines, atomic project-scoped debit claims, durable provider IDs and token-verified callbacks that re-poll the provider; unknown submissions never trigger automatic paid retries, and owner-open recovery retries private collection only. AWS API connector supports direct Lambda invocation if Remotion is revisited, so no custom bridge is required.
 - Inspiration animation uses the approved still as Veo's first frame; product ingredients populate still generation because Veo forbids mixing first-frame and ingredient inputs. Collection uses durable gateway IDs and never recreates paid jobs.
 - Video inspiration motion prompts use a browser-safe action/end-state builder; model defaults remain provisional until live action/identity gates pass, avoiding camera-only success claims.
 - Creator writing uses copy-engine.server.ts (native streamed Claude Messages, local Zod validation and one repair); media observation and image/audio/video providers remain separate.

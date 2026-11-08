@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
 
 const Id = z.string().uuid();
-const ProjectInput = z.object({ projectId: Id });
 export const getInspirationStudio = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: Id.optional() }).parse(d))
   .handler(async ({ data, context }) => {
@@ -19,6 +18,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     const { data: analyses } = await supabase.from('analyses').select('id,instagram_url,source_account,post_type').eq('user_id', userId).eq('analysis_status', 'ready').in('post_type', ['Reel', 'Video']).order('created_at', { ascending: false }).limit(50);
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
+    const { data: assemblies } = selected ? await supabase.from('assembly_jobs').select('id,project_id,status,billed,duration_seconds,environment,render_quote_usd,result_path,failure_reason,refunded_at,created_at').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
     const sign = async (path: string | null) => {
       if (!path || !path.startsWith(`${userId}/`)) return null;
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
@@ -32,7 +32,8 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       references: await Promise.all((references ?? []).map(async r => ({ ...r, preview: await sign(r.storage_path) }))),
       scenes: await Promise.all((scenes ?? []).map(async s => ({ ...s, preview: await sign(s.still_path) }))),
       attempts: await Promise.all((attempts ?? []).map(async a => ({ ...a, preview: await sign(a.result_url) }))),
-      assemblyConfigured: Boolean(process.env['REMOTION_BRIDGE_SECRET'] && process.env['REMOTION_BRIDGE_URL']),
+      assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
+      assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: conversion, stillWorkspaceQuote: Number.isFinite(stillCost) && stillCost > 0 ? stillCost : null,
     };
   });
@@ -174,15 +175,6 @@ export const recoverInspirationClips = createServerFn({ method: 'POST' }).middle
     const { collectPending } = await import('./inspiration.server');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     return { collected: await collectPending(key, context.userId) };
-  });
-
-export const assembleInspiration = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => ProjectInput.parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: p } = await context.supabase.from('video_inspiration_projects').select('id').eq('id', data.projectId).single();
-    if (!p) throw new Error('Project not found.');
-    if (!process.env['REMOTION_BRIDGE_SECRET'] || !process.env['REMOTION_BRIDGE_URL']) return { configured: false, message: 'Assembly not configured yet. Download all clips instead.' };
-    return { configured: true, message: 'AWS bridge detected; assembly integration awaits an owner-verified render and pricing. Download all clips instead.' };
   });
 
 export const finishInspirationStill = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])

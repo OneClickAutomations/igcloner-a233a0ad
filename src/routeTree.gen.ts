@@ -31,6 +31,7 @@ import { Route as AuthenticatedStudioImageRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStudioInspirationRouteImport } from './routes/_authenticated/studio.inspiration'
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
+import { Route as ApiPublicAssemblyCallbackRouteImport } from './routes/api/public/assembly-callback'
 import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
 import { Route as ApiPublicInspirationCollectRouteImport } from './routes/api/public/inspiration-collect'
 import { Route as ApiPublicInspirationStillRouteImport } from './routes/api/public/inspiration-still'
@@ -150,6 +151,12 @@ const AuthenticatedStudioVoiceoverRoute =
     path: '/studio/voiceover',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicAssemblyCallbackRoute =
+  ApiPublicAssemblyCallbackRouteImport.update({
+    id: '/api/public/assembly-callback',
+    path: '/api/public/assembly-callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
   id: '/api/public/img',
   path: '/api/public/img',
@@ -195,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -222,6 +230,7 @@ export interface FileRoutesByTo {
   '/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -251,6 +260,7 @@ export interface FileRoutesById {
   '/_authenticated/studio/inspiration': typeof AuthenticatedStudioInspirationRoute
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
+  '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -280,6 +290,7 @@ export interface FileRouteTypes {
     | '/studio/inspiration'
     | '/studio/reel'
     | '/studio/voiceover'
+    | '/api/public/assembly-callback'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -307,6 +318,7 @@ export interface FileRouteTypes {
     | '/studio/inspiration'
     | '/studio/reel'
     | '/studio/voiceover'
+    | '/api/public/assembly-callback'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -335,6 +347,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/inspiration'
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
+    | '/api/public/assembly-callback'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -350,6 +363,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  ApiPublicAssemblyCallbackRoute: typeof ApiPublicAssemblyCallbackRoute
   ApiPublicImgRoute: typeof ApiPublicImgRoute
   ApiPublicInspirationCollectRoute: typeof ApiPublicInspirationCollectRoute
   ApiPublicInspirationStillRoute: typeof ApiPublicInspirationStillRoute
@@ -512,6 +526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioVoiceoverRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/assembly-callback': {
+      id: '/api/public/assembly-callback'
+      path: '/api/public/assembly-callback'
+      fullPath: '/api/public/assembly-callback'
+      preLoaderRoute: typeof ApiPublicAssemblyCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/img': {
       id: '/api/public/img'
       path: '/api/public/img'
@@ -591,6 +612,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  ApiPublicAssemblyCallbackRoute: ApiPublicAssemblyCallbackRoute,
   ApiPublicImgRoute: ApiPublicImgRoute,
   ApiPublicInspirationCollectRoute: ApiPublicInspirationCollectRoute,
   ApiPublicInspirationStillRoute: ApiPublicInspirationStillRoute,
