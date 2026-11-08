@@ -1,5 +1,12 @@
 # Roadmap
 
+## Pass 5A — motion then assembly (current request)
+- [ ] Controlled pouring matrix: at most five clips, under 15 workspace credits, frame review and ranked results
+- [ ] Save winning motion template with a focused test; no existing screens or prices changed
+- [ ] Confirm deployed assembly limits and document exact AWS bridge/setup/cost
+- [ ] Assemble existing four clips with voiceover/captions only if supported setup is available; otherwise stop at owner setup blocker
+- [ ] Studio implementation only after motion and assembly results are reported and assembly is unblocked
+
 ## Pass 5A — Video Inspiration Studio feasibility and plan
 - [ ] Live gateway capabilities and per-call recorded costs; no fal.ai calls
 - [ ] Four-scene saved-blueprint proof: new subject reference, four approved stills, four 720p portrait clips
