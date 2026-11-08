@@ -71,6 +71,13 @@
       "when": 1794089435897,
       "tag": "0009_copy_sweep_debit_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794110730618,
+      "tag": "0010_video_inspiration_studio",
+      "breakpoints": true
     }
   ]
 }
