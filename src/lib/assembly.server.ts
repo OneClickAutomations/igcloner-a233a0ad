@@ -50,7 +50,7 @@ async function boundedMp4(url:string) {
   const parsed=new URL(url);
   // Provider URLs only. Never follow arbitrary URLs or private network redirects.
   if(parsed.protocol!=='https:' || !(/(^|\.)shotstack\.io$/.test(parsed.hostname)||/\.s3[.-][a-z0-9-]+\.amazonaws\.com$/.test(parsed.hostname)||/\.s3\.amazonaws\.com$/.test(parsed.hostname))) throw new Error('Unexpected Shotstack output host.');
-  const res=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(30000)});
+  const res=await fetch(url,{redirect:'manual',signal:AbortSignal.timeout(30000)});
   if(!res.ok||!res.body) throw new Error('Finished video download unavailable.');
   const limit=50*1024*1024; if(Number(res.headers.get('content-length'))>limit) throw new Error('Finished video exceeds 50MB.');
   const reader=res.body.getReader(); const chunks:Uint8Array[]=[]; let total=0;

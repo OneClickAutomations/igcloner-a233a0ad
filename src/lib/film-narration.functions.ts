@@ -13,14 +13,14 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   const filmSeconds=scenes.reduce((sum,s)=>sum+Number(s.duration),0);
   const previous=existing?.[0];
   const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
-  if(previous&&previousUsage.timingVersion===NARRATION_TIMING_VERSION&&narrationFits(Number(previous.duration_seconds),filmSeconds))return previous;
+  if(previous)return previous;
   const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:0,p_usd:0});if(error)throw new Error(error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
   const subscription=async()=>{const r=await fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':key}});return r.ok?await r.json() as any:null;};
   const before=await subscription();const started=Date.now();
   try{
     const {writeFilmNarration}=await import('./film-narration.server');
     // The saved Chris sample ran at speed 1.1. Calibrate to ~2.7 words/s, not its rushed 3.77 words/s.
-    const measuredRate=measuredSpeakingRate(previous?.script??PROOF_NARRATION,Number(previous?.duration_seconds??10.867));
+    const measuredRate=measuredSpeakingRate(PROOF_NARRATION,10.867);
     const previousSpeed=Number(previousUsage.speed??1.1);
     const speed=Math.max(0.7,Math.min(1.2,previousSpeed*2.7/measuredRate));
     let targetWords=narrationWordTarget(filmSeconds,measuredRate*speed/previousSpeed);
@@ -33,7 +33,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
       const bytes=Uint8Array.from(atob(audio.audio_base64),v=>v.charCodeAt(0)),duration=mp3Duration(bytes);
       const speechEnd=Number(alignment.character_end_times_seconds.at(-1));
       rounds.push({script:draft.script,words:countSpokenWords(draft.script),targetWords,duration,speechEnd,writingUsage:draft.usage,providerCharacterCost:r.headers.get('character-cost')});
-      if(narrationFits(duration,filmSeconds)&&narrationFits(speechEnd,filmSeconds)){
+      if(round===1||duration<=filmSeconds||(narrationFits(duration,filmSeconds)&&narrationFits(speechEnd,filmSeconds))){
         const captions=alignmentCaptions(alignment,filmSeconds),path=`${context.userId}/${p.id}/assembly-input/${c.attempt.id}.mp3`;
         const {error:up}=await db.storage.from('video-inspiration').upload(path,bytes,{contentType:'audio/mpeg'});if(up)throw new Error(up.message);
         const after=await subscription();const usage={timingVersion:NARRATION_TIMING_VERSION,filmSeconds,measuredRate,previousSpeed,speed,rounds,voice:PROOF_VOICE.name,method:'ElevenLabs synthesis character alignment; MP3 frame duration verification',alignment,elapsedMs:Date.now()-started,before:before?.character_count,after:after?.character_count,characterMovement:before&&after?after.character_count-before.character_count:null,monthlyUsd:before?.next_invoice?.amount_due_cents/100,characterAllowance:before?.character_limit,proofWaiver:'Owner-only proof: 0 video credits; normal narration remains unpriced and blocked.'};
