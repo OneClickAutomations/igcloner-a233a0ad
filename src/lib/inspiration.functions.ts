@@ -9,6 +9,8 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
   .inputValidator((d: unknown) => z.object({ projectId: Id.optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+    await supabaseAdmin.rpc('sweep_inspiration_stills', { p_user: userId });
     const { data: projects, error } = await supabase.from('video_inspiration_projects').select('*').order('updated_at', { ascending: false });
     if (error) throw new Error(error.message);
     const selected = data.projectId ? projects?.find(p => p.id === data.projectId) : projects?.[0];
