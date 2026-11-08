@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CUSTOMER_CREDIT_USD, COST_CEILING } from './inspiration';
+import { STUDIO_PRICING, priceUsd } from './studio-pricing';
 
 export const Caption = z.object({ start: z.number().nonnegative(), end: z.number().positive(), text: z.string().trim().min(1).max(300) });
 export const AssemblyOptions = z.object({
@@ -10,12 +10,12 @@ export const AssemblyOptions = z.object({
 });
 export type AssemblySettings = z.infer<typeof AssemblyOptions>;
 export type AssemblyClip = { sceneId: string; attemptId: string; path: string; duration: number; revision: number };
-export const SHOTSTACK_USD_PER_MINUTE = 0.20; // Official PAYG rate checked 2026-11-08; no monthly commitment.
+export const SHOTSTACK_USD_PER_MINUTE = STUDIO_PRICING.renderUsdPerMinute; // Official PAYG rate checked 2026-11-08.
 export const ASSEMBLY_STYLE = { foreground: '#ffffff', background: '#000000', font: 'Open Sans' };
 export function renderQuote(seconds: number, environment: 'v1'|'stage' = 'v1') {
   if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 240) throw new Error('Film must be between 0 and 240 seconds.');
   const usd = environment === 'stage' ? 0 : Math.floor(seconds) / 60 * SHOTSTACK_USD_PER_MINUTE;
-  return { seconds, rateUsdPerMinute: SHOTSTACK_USD_PER_MINUTE, renderUsd: usd, customerCredits: Math.ceil(usd / (CUSTOMER_CREDIT_USD * COST_CEILING)), environment };
+  return { seconds, rateUsdPerMinute: SHOTSTACK_USD_PER_MINUTE, renderUsd: usd, customerCredits: priceUsd(usd).customerCredits, environment };
 }
 export function assemblyConfigured(key?: string, sandboxKey?: string) { return Boolean(key || sandboxKey); }
 export function definitiveRenderRejection(status: number) { return [400,401,402,403,404,422,429].includes(status); }

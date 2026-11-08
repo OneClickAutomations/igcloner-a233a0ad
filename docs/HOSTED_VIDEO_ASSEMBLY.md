@@ -4,7 +4,7 @@
 
 Its JSON timeline covers our ordered clips, supplied ElevenLabs audio, timed captions, music, timed logo and fades. API-key authentication, async job IDs, status polling and output URLs require no owner infrastructure. PAYG is $10 minimum top-up for 50 minutes ($0.20/minute), without a monthly subscription.
 
-**32-second estimate:** 32 / 60 × $0.20 = **$0.106667**. Layers do not add timeline duration. This is a pricing estimate, not a measured render. Customer assembly credits = ceil(0.106667 / ($0.145 × 0.35)) = **3**. Successful clips are not debited again. Full production pricing also includes scene/still/writing/voiceover generation, whose verified workspace-credit USD conversion remains unset.
+**32-second estimate:** 32 / 60 × $0.20 = **$0.106667**. Layers do not add timeline duration. This is a pricing estimate, not a measured render. Customer assembly credits = ceil(0.106667 / ($0.145 × 0.35)) = **3**. Successful clips are not debited again. Workspace-credit conversion is now owner-verified at $0.30; see [VERIFIED_STUDIO_PRICING.md](./VERIFIED_STUDIO_PRICING.md). Still and voiceover measurements remain unknown.
 
 ## Provider comparison
 
