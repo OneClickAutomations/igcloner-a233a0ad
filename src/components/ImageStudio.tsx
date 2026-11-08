@@ -66,10 +66,10 @@ const ASPECTS: { id: "1:1" | "4:5" | "9:16" | "16:9"; label: string }[] = [
   { id: "16:9", label: "Wide 16:9" },
 ];
 
-export function ImageStudio() {
+export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio/image" });
-  const projectId = (search as any)?.projectId as string | undefined;
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
 
   const getProjectFn = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
@@ -206,8 +206,6 @@ export function ImageStudio() {
       setActiveUrl(res.signedUrl);
       setImages((prev) => [res.asset, ...prev]);
       toast.success("Image ready");
-      // Auto-generate caption alongside the first image
-      if (!caption) regenerateCaption();
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {
@@ -229,7 +227,7 @@ export function ImageStudio() {
     }
   };
 
-  const save = async () => {
+  const save = async (quiet = false) => {
     if (!projectId) return;
     try {
       await updateFn({
@@ -254,11 +252,24 @@ export function ImageStudio() {
           },
         },
       });
-      toast.success("Saved");
+      if (!quiet) toast.success("Saved");
     } catch (e: any) {
       toast.error(e?.message || "Couldn't save");
     }
   };
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const timer = setTimeout(() => { save(true); }, 600);
+    return () => clearTimeout(timer);
+  }, [embeddedProjectId, project, concept, style, aspect, textOverlay, brandColor, extra, caption, hashtags, activeUrl, goal, selectedPlatforms, platformCopy, branding]);
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const handler = () => save(true);
+    window.addEventListener('creation-save', handler);
+    return () => window.removeEventListener('creation-save', handler);
+  }, [embeddedProjectId, project, concept, caption, activeUrl, textOverlay, style, aspect, branding]);
 
   // Persist branding to localStorage in addition to project record
   useEffect(() => {
@@ -350,7 +361,7 @@ export function ImageStudio() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-6 lg:py-8">
-      <div className="mb-5 flex items-center justify-between gap-2">
+      {!wizardStage && <div className="mb-5 flex items-center justify-between gap-2">
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/projects" })} className="gap-1">
           <ArrowLeft className="h-4 w-4" /> Projects
         </Button>
@@ -365,14 +376,14 @@ export function ImageStudio() {
             <p className="text-[11px] text-accent-primary">Goal: {GOAL_LABEL[goal]}</p>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={save}>
+        <Button size="sm" variant="outline" onClick={() => save()}>
           Save
         </Button>
-      </div>
+      </div>}
 
-      <div className="grid gap-5 lg:grid-cols-[420px_1fr]">
+      <div className={wizardStage==='deliver'?'space-y-5':'grid gap-5 lg:grid-cols-[420px_1fr]'}>
         {/* Left — controls */}
-        <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-ig">
+        {wizardStage!=='deliver' && <div className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-ig">
           {projectId && (
             <MixImagesPanel projectId={projectId} onCreated={(asset) => setImages((prev) => [asset, ...prev])} />
           )}
@@ -504,7 +515,7 @@ export function ImageStudio() {
               </>
             ) : (
               <>
-                <Wand2 className="h-4 w-4" /> Generate Image
+                <Wand2 className="h-4 w-4" /> Generate Image · 1 plan credit
               </>
             )}
           </Button>
@@ -627,7 +638,7 @@ export function ImageStudio() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* Right — preview + caption */}
         <div className="space-y-4">

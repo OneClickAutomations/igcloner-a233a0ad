@@ -41,7 +41,7 @@ function detectPostType(url: string): string | null {
   return c.kind;
 }
 
-export function AppPage({ embedded = false, initialUrl = '', onUrlChange, onAnalysisReady }: { embedded?: boolean; initialUrl?: string; onUrlChange?: (url: string) => void; onAnalysisReady?: (id: string) => void } = {}) {
+export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, onUrlChange, onAnalysisReady }: { embedded?: boolean; initialUrl?: string; sourceAnalysisId?: string; onUrlChange?: (url: string) => void; onAnalysisReady?: (id: string) => void } = {}) {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
@@ -165,7 +165,7 @@ export function AppPage({ embedded = false, initialUrl = '', onUrlChange, onAnal
   useEffect(() => () => { jobRef.current = null; }, []);
 
   useEffect(() => {
-    const id = (search as any)?.analysisId as string | undefined;
+    const id = sourceAnalysisId ?? (search as any)?.analysisId as string | undefined;
     if (!id || id === analysisId || id === jobRef.current) return;
     (async () => {
       try {
@@ -194,7 +194,7 @@ export function AppPage({ embedded = false, initialUrl = '', onUrlChange, onAnal
         setPhase("input");
       }
     })();
-  }, [search, analysisId, loadFn]);
+  }, [search, sourceAnalysisId, analysisId, loadFn]);
 
   const handleAnalyze = async () => {
     if (!isSupportedUrl(url)) {

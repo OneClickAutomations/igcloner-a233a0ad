@@ -14,8 +14,9 @@ import { CLONE_LABEL } from "@/lib/clone-modes";
 
 type SlideResult = { url: string | null; passed: boolean; problems: string[]; attempts: number; observedText: string; charged: number };
 
-export function CopyStudio() {
-  const { projectId } = useSearch({ from: "/_authenticated/studio/copy" });
+export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'words'|'make'|'deliver' } = {}) {
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any).projectId as string;
   const qc = useQueryClient();
   const getFn = useServerFn(getCopyProject);
   const rewriteFn = useServerFn(rewriteSameLookCopy);
@@ -45,6 +46,12 @@ export function CopyStudio() {
     setNewText(pd.newText ?? {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.id]);
+
+  useEffect(() => {
+    if (!embeddedProjectId || !project) return;
+    const timer = setTimeout(() => { saveFn({data:{projectId,caption,hashtags:tags.split(/\s+/).map(t=>t.replace(/^#/, '')).filter(Boolean),newText}}).catch(e=>toast.error(e.message)); }, 600);
+    return () => clearTimeout(timer);
+  }, [embeddedProjectId, project, caption, tags, newText, saveFn]);
 
   if (!data) return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 

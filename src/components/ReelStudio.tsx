@@ -95,10 +95,10 @@ const STEPS: { id: StepId; label: string; icon: typeof Eye }[] = [
   { id: "video",     label: "Render", icon: Film },
 ];
 
-export function ReelStudio() {
+export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio/reel" });
-  const projectId = (search as any)?.projectId as string | undefined;
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
 
   const getProjectFn = useServerFn(getProject);
   const updateProjectFn = useServerFn(updateProject);
@@ -169,12 +169,6 @@ export function ReelStudio() {
           !prefs.angle && !prefs.angleConcept ? dna?.hookBreakdown?.whatWorks : null,
         ].filter(Boolean).join("\n\n");
         if (seeded) setAngle(seeded);
-      }
-      if (!(p?.project_data as any)?.visualDirection) {
-        try {
-          const d: any = await deriveFn({ data: { projectId: projectId! } });
-          setDirection(d.visualDirection);
-        } catch (e) { console.warn("derive direction failed", e); }
       }
       return p;
     },
@@ -568,7 +562,8 @@ export function ReelStudio() {
         {/* CENTER — Focus */}
         <section className="min-w-0">
           <div className="min-h-[400px] rounded-2xl border border-border bg-card p-5 lg:p-6">
-            {step === "direction" && (
+            {step === "direction" && !direction && <Button onClick={async () => { if (!projectId) return; setBusy(true); try { const d = await deriveFn({data:{projectId}}); setDirection(d.visualDirection); } catch(e) {toast.error((e as Error).message);} finally {setBusy(false);} }} disabled={busy}>Read visual direction · no plan credit charge</Button>}
+            {step === "direction" && direction && (
               <DirectionStep
                 direction={direction}
                 setDirection={setDirection}

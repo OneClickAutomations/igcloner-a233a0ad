@@ -10,11 +10,11 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from ".
 import { runHookLab, generateCaptionPack, listCopyHistory, useProjectHook } from "@/lib/copy.functions";
 import { CREDIT_BALANCE_KEY, parseInsufficientCredits } from "@/lib/credits";
 
-export function CopyWorkbench({analysisId,projects}:{analysisId:string;projects:any[]}) {
+export function CopyWorkbench({analysisId,projects,initialNiche=''}:{analysisId:string;projects:any[];initialNiche?:string}) {
   const hooksFn=useServerFn(runHookLab),packFn=useServerFn(generateCaptionPack),historyFn=useServerFn(listCopyHistory),useFn=useServerFn(useProjectHook);
   const qc=useQueryClient();
   const [busy,setBusy]=useState(""),[hooks,setHooks]=useState<any[]>([]),[pack,setPack]=useState<any[]>([]),[history,setHistory]=useState<any[]>([]);
-  const [projectId,setProjectId]=useState(""),[niche,setNiche]=useState(""),[platforms,setPlatforms]=useState(["instagram","tiktok","x","linkedin"]);
+  const [projectId,setProjectId]=useState(""),[niche,setNiche]=useState(initialNiche),[platforms,setPlatforms]=useState(["instagram","tiktok","x","linkedin"]);
   const [used,setUsed]=useState<number|null>(null);
   const reload=async()=>{const r=await historyFn({data:{analysisId}});setHistory(r.runs);};
   useEffect(()=>{setHooks([]);setPack([]);reload().catch(()=>{});},[analysisId]);
@@ -29,9 +29,9 @@ export function CopyWorkbench({analysisId,projects}:{analysisId:string;projects:
     finally{setBusy("");qc.invalidateQueries({queryKey:CREDIT_BALANCE_KEY});}
   };
   return <section className="space-y-4 border-t border-border py-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-semibold">Hook Lab & captions</h3><Input className="max-w-64" aria-label="Writing niche" placeholder="Your niche" value={niche} onChange={e=>setNiche(e.target.value)}/></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-semibold">Optional hooks and captions</h3></div>
     <div className="flex flex-wrap items-center gap-3">
-      <Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="w-64" aria-label="Active writing project"><SelectValue placeholder="Choose a project"/></SelectTrigger><SelectContent>{projects.map(p=><SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}</SelectContent></Select>
+      {projects.length>1&&<Select value={projectId} onValueChange={setProjectId}><SelectTrigger className="w-64" aria-label="Active writing project"><SelectValue placeholder="Choose a project"/></SelectTrigger><SelectContent>{projects.map(p=><SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}</SelectContent></Select>}
       <Button disabled={!!busy} onClick={()=>run("hooks")}><Sparkles className="mr-2 h-4 w-4"/>{busy==="hooks"?"Writing & ranking…":"Generate hooks (2 credits)"}</Button>
       <Button variant="outline" disabled={!!busy||!projectId||!platforms.length} onClick={()=>run("caption")}>{busy==="caption"?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Sparkles className="mr-2 h-4 w-4"/>}Caption pack (1 credit)</Button>
     </div>

@@ -93,11 +93,11 @@ function designBriefText(doc: CarouselDoc): string {
   return lines.join("\n");
 }
 
-export function CarouselStudio() {
+export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
   const creditQueryClient=useQueryClient();
   const navigate = useNavigate();
-  const search = useSearch({ from: "/_authenticated/studio/carousel" });
-  const projectId = (search as any)?.projectId as string | undefined;
+  const search = useSearch({ strict: false });
+  const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
 
   const getProjectFn = useServerFn(getProject);
   const generateFn = useServerFn(generateCarousel);
@@ -163,6 +163,12 @@ export function CarouselStudio() {
   }, [project?.id]);
 
   const active = useMemo(() => doc?.slides.find((s) => s.index === activeIdx) ?? null, [doc, activeIdx]);
+  useEffect(() => {
+    if (!embeddedProjectId || !doc) return;
+    const timer = setTimeout(() => { saveFn({ data: { projectId: embeddedProjectId, carousel: doc } }).catch(e => toast.error(e.message)); }, 600);
+    return () => clearTimeout(timer);
+  }, [embeddedProjectId, doc, saveFn]);
+  useEffect(() => { if (wizardStage) setViewMode(wizardStage==='deliver'?'preview':'editor'); }, [wizardStage]);
   const cloneMode = (project?.user_preferences as any)?.cloneMode === "inspired" ? "inspired" : "formula";
 
   if (!projectId) {
@@ -779,7 +785,7 @@ export function CarouselStudio() {
       />
 
       {doc && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <div className={wizardStage ? 'mt-6 border-t border-border py-3' : 'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80'}>
           <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
