@@ -25,17 +25,24 @@ type Scene = StudioData['scenes'][number];
 const blank: SceneDraft = { environment: 'A new sunlit garden table', action: 'A hand pours water from the open bottle into the cup', endState: 'The cup is half full and the bottle rests upright', camera: 'One slow push-in', audio: 'Water pouring and outdoor ambience', duration: 8, objects: [{ name: 'cup', state: 'empty, beside the bottle' }, { name: 'open bottle', state: 'open, hand gripping it; cap resting on the table' }] };
 const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }] as const;
 
-export function InspirationStudio({ projectId }: { projectId?: string }) {
+export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft }: { projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void }) {
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
   const navigate = useNavigate(); const qc = useQueryClient();
   const create = useServerFn(createInspirationProject), save = useServerFn(saveInspirationScene), refs = useServerFn(manageInspirationReference), approve = useServerFn(approveInspirationStill), quote = useServerFn(inspirationQuote), animate = useServerFn(animateInspirationScene), recover = useServerFn(recoverInspirationClips), finish = useServerFn(finishInspirationStill), write = useServerFn(writeInspirationStoryboard);
   const [tab, setTab] = useState<'storyboard'|'references'|'observations'|'delivery'>('storyboard');
   const [newProject, setNewProject] = useState(false), [title, setTitle] = useState(''), [analysisId, setAnalysisId] = useState('');
-  const [editing, setEditing] = useState<Scene | 'new' | null>(null), [draft, setDraft] = useState<SceneDraft>(blank);
+  const [editing, setEditing] = useState<Scene | 'new' | null>(null), [draft, setDraft] = useState<SceneDraft>((wizardDraft?.sceneDraft as SceneDraft) ?? blank);
   const [busy, setBusy] = useState(false), [checks, setChecks] = useState<Record<string,ObjectCheck[]>>({});
   const [model, setModel] = useState<(typeof STUDIO_MODELS)[number]['id']>('google/veo-3.1-fast');
   const [confirmation, setConfirmation] = useState<{ scene: Scene; operation: 'still'|'animate'; q: Awaited<ReturnType<typeof inspirationQuote>> } | null>(null);
   const [partial, setPartial] = useState<Record<string,{ url: string; final: boolean }>>({});
+  const [makePart, setMakePart] = useState<'stills'|'animate'>((wizardDraft?.makePart as 'stills'|'animate') ?? 'stills');
+  useEffect(() => { if (wizardStage) setTab(wizardStage==='deliver'?'delivery':'storyboard'); }, [wizardStage]);
+  useEffect(() => {
+    if (!onWizardDraft) return;
+    const next = { ...wizardDraft, sceneDraft: draft, makePart, model };
+    if (JSON.stringify(next)!==JSON.stringify(wizardDraft)) onWizardDraft(next);
+  }, [draft, makePart, model]);
   const refresh = async () => { await qc.invalidateQueries({ queryKey: ['inspiration-studio'] }); await qc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY }); await qc.invalidateQueries({queryKey:VIDEO_BALANCE_KEY}); };
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await refresh(); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); } };
   useEffect(() => {
@@ -75,15 +82,17 @@ export function InspirationStudio({ projectId }: { projectId?: string }) {
   };
   const completed = data.attempts.filter(a => a.operation === 'animate' && a.status === 'completed');
   return <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
+    {!wizardStage && <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Film className="size-4"/> Production / Structure-only inspiration</div><h1 className="text-3xl font-bold">Video Inspiration Studio</h1><p className="mt-2 text-sm text-muted-foreground">New subjects, settings and words. Never copy a real person’s likeness.</p></div>
       <Button onClick={() => setNewProject(true)}><Plus className="size-4"/> New film</Button>
-    </div>
-    <div className="flex flex-wrap items-center justify-between gap-4 py-5">
+    </div>}
+    {!wizardStage && <div className="flex flex-wrap items-center justify-between gap-4 py-5">
       <select aria-label="Film" className="max-w-full rounded-md border border-input bg-background p-2 text-sm" value={data.selected?.id ?? ''} onChange={e => navigate({ to: '/studio/inspiration', search: { projectId: e.target.value } })}><option value="" disabled>Select a film</option>{data.projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
       <span className="text-sm font-semibold">{data.videoBalance} video credits · separate balance</span><span className="text-sm text-muted-foreground">9:16 · 720p · {data.scenes.length} scenes · {completed.length} clips</span>
-    </div>
-    <div className="mb-6 flex flex-wrap gap-1 border-b border-border">{(['storyboard','references','observations','delivery'] as const).map(t => <Button key={t} variant={tab === t ? 'secondary' : 'ghost'} className="mb-2 capitalize" onClick={() => setTab(t)}>{t}</Button>)}</div>
+    </div>}
+    {!wizardStage && <div className="mb-6 flex flex-wrap gap-1 border-b border-border">{(['storyboard','references','observations','delivery'] as const).map(t => <Button key={t} variant={tab === t ? 'secondary' : 'ghost'} className="mb-2 capitalize" onClick={() => setTab(t)}>{t}</Button>)}</div>}
+    {wizardStage==='words' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={tab==='storyboard'?'secondary':'outline'} onClick={()=>setTab('storyboard')}>Scene words</Button><Button variant={tab==='references'?'secondary':'outline'} onClick={()=>setTab('references')}>Your reference photos</Button></div>}
+    {wizardStage==='make' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={makePart==='stills'?'secondary':'outline'} onClick={()=>setMakePart('stills')}>Make and approve stills</Button><Button variant={makePart==='animate'?'secondary':'outline'} onClick={()=>setMakePart('animate')}>Animate approved scenes</Button></div>}
     {data.videoBalance===0&&<div role="status" className="mb-5 flex flex-wrap items-center gap-4 border-b border-border pb-5"><div><p className="font-semibold">You need video credits to animate scenes, narrate and render.</p><p className="text-sm text-muted-foreground">Storyboards and stills use plan credits and still work. Everything you make stays saved; nothing is charged.</p></div><VideoPackAvailability/></div>}
     {data.selected?.pause_reason && <p role="alert" className="mb-5 text-destructive">Paused: {data.selected.pause_reason}</p>}
     {!data.selected && tab !== 'references' ? <div className="py-16 text-center"><Film className="mx-auto mb-5 size-12 text-muted-foreground"/><h2 className="text-xl font-semibold">Your first film</h2><Button className="mt-5" onClick={() => setNewProject(true)}><Plus className="size-4"/> Create film</Button></div> : null}
