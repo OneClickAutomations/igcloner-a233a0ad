@@ -1,5 +1,10 @@
 # Roadmap
 
+## Topped-up Shotstack completion and quality — current
+- [ ] Calibrate narration to actual clip duration; test word target and coverage; regenerate through Delivery
+- [ ] Submit/poll/save/download the faithful film through Delivery; measure provider usage, watermark and caption alignment
+- [ ] Diagnose product inconsistency without replacing scenes; report production options/costs and readiness order
+
 ## Authorized imported-film proof — 2026-11-08
 - [x] Locate four original Phase 1 clips/stills; ffprobe confirms each clip has 4.000s video, 720×1280; history confirms original proof was four ~4s scenes
 - [x] Offline owner-only import with provenance into TEST DEMO — Summit Bottle — Phase 1 (16s), ID 29d394ba-e247-439b-8a51-cfc77b21a710; four original clips/stills, no new generation or import charge
