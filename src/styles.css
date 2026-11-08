@@ -411,3 +411,16 @@
   color: #fff !important;
   box-shadow: -3px 0 12px -2px color-mix(in oklab, var(--tone-pink) 70%, transparent), 0 4px 14px -6px color-mix(in oklab, var(--tone-purple) 70%, transparent);
 }
+
+/* Soft gradient field behind the create wizard so its glass panels have depth. */
+@utility wizard-backdrop {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(60% 45% at 10% 0%, color-mix(in oklab, var(--color-accent-primary) 22%, transparent), transparent 70%),
+      radial-gradient(50% 40% at 95% 20%, color-mix(in oklab, var(--color-accent-secondary) 20%, transparent), transparent 70%),
+      radial-gradient(60% 50% at 50% 100%, color-mix(in oklab, var(--color-accent-primary) 12%, transparent), transparent 70%);
+  }
+}

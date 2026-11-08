@@ -3,22 +3,42 @@ import { Check, ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import { Button } from './ui/button';
 import { CREATION_STEPS } from '@/lib/creation-draft';
 
-export function CreationWizardShell({ step, instructions, children, onBack, onNext, onClose, disabled, busy, saved }: {
+export function CreationWizardShell({ step, instructions, children, onBack, onNext, onClose, disabled, busy, saved, nextHint }: {
   step: number; instructions: string; children: ReactNode; onBack: () => void; onNext: () => void;
-  onClose: () => void; disabled?: boolean; busy?: boolean; saved?: string;
+  onClose: () => void; disabled?: boolean; busy?: boolean; saved?: string; nextHint?: string;
 }) {
-  return <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8">
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-      <h1 className="text-xl font-semibold">Create a project</h1>
-      <div className="flex items-center gap-3"><span role="status" className="text-xs text-muted-foreground">{saved}</span><Button variant="outline" size="sm" disabled={busy} onClick={onClose}><Save className="size-4"/>Save and close</Button></div>
+  const total = CREATION_STEPS.length;
+  return <div className="wizard-backdrop min-h-full">
+    <div className="mx-auto max-w-6xl px-4 py-8 text-base sm:px-8">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-bold tracking-tight">Create a project</h1>
+        <div className="flex items-center gap-3"><span role="status" className="text-sm text-muted-foreground">{saved}</span><Button variant="outline" disabled={busy} onClick={onClose}><Save className="size-4"/>Save and close</Button></div>
+      </div>
+
+      <nav aria-label="Progress" className="glass-surface mb-8 px-5 py-5 sm:px-6">
+        <p className="text-base font-semibold sm:mb-4">Step {step + 1} of {total}<span className="sm:hidden"> — {CREATION_STEPS[step]}</span></p>
+        <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted sm:hidden"><div className="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-secondary" style={{ width: `${((step + 1) / total) * 100}%` }}/></div>
+        <ol aria-label="Creation steps" className="hidden grid-cols-6 gap-3 sm:grid">{CREATION_STEPS.map((name, i) => {
+          const done = i < step, cur = i === step;
+          return <li key={name} aria-current={cur ? 'step' : undefined} className="flex flex-col items-start gap-2">
+            <span className={`grid size-9 place-items-center rounded-full text-sm font-bold ${cur ? 'bg-gradient-to-br from-accent-primary to-accent-secondary text-primary-foreground shadow-lg' : done ? 'bg-status-success/15 text-status-success' : 'bg-muted text-muted-foreground'}`}>{done ? <Check className="size-4"/> : i + 1}</span>
+            <span className={`text-sm leading-snug ${cur ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{name}</span>
+          </li>;
+        })}</ol>
+      </nav>
+
+      <section className="glass-surface p-6 sm:p-10">
+        <header className="mb-8"><h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{CREATION_STEPS[step]}</h2><p className="mt-3 max-w-2xl text-lg leading-relaxed text-muted-foreground">{instructions}</p></header>
+        <div className="min-h-64">{children}</div>
+      </section>
+
+      <footer className="glass-surface sticky bottom-3 z-30 mt-6 flex items-center justify-between gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+        <Button variant="outline" size="lg" disabled={step === 0 || busy} onClick={onBack}><ChevronLeft className="size-5"/>Back</Button>
+        <div className="flex items-center gap-4">
+          {nextHint && <span className="hidden text-sm text-muted-foreground sm:inline">{nextHint}</span>}
+          <Button size="lg" className="px-8 text-base" disabled={disabled || busy} onClick={onNext}>{busy ? 'Saving…' : step === total - 1 ? 'Save and finish' : 'Next'}<ChevronRight className="size-5"/></Button>
+        </div>
+      </footer>
     </div>
-    <p className="mb-4 text-sm font-medium">Step {step + 1} of {CREATION_STEPS.length}<span className="sm:hidden"> — {CREATION_STEPS[step]}</span></p>
-    <ol aria-label="Creation steps" className="mb-8 hidden grid-cols-6 gap-3 sm:grid">{CREATION_STEPS.map((name,i) => <li key={name} aria-current={i===step?'step':undefined} className={`border-t-2 pt-3 ${i===step?'border-primary text-foreground':i<step?'border-status-success text-muted-foreground':'border-border text-muted-foreground'}`}><span className="mb-2 flex items-center gap-2 text-xs">{i<step?<Check className="size-4 text-status-success"/>:i+1}{i<step?'Done':i===step?'Current':'To come'}</span><span className="text-sm font-medium">{name}</span></li>)}</ol>
-    <header className="mb-6"><h2 className="text-2xl font-semibold">{CREATION_STEPS[step]}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{instructions}</p></header>
-    <div className="min-h-64 pb-6">{children}</div>
-    <footer className="sticky bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-background py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-      <Button variant="outline" disabled={step===0||busy} onClick={onBack}><ChevronLeft className="size-4"/>Back</Button>
-      <Button disabled={disabled||busy} onClick={onNext}>{busy?'Saving…':step===5?'Save and finish':'Next'}<ChevronRight className="size-4"/></Button>
-    </footer>
   </div>;
 }

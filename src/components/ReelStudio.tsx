@@ -150,7 +150,8 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
       const r = await getProjectFn({ data: { id: projectId! } });
       const p: any = (r as any).project;
       if (p?.project_data) {
-        setDoc(p.project_data as ReelDoc);
+        // Wizard autosave stores settings without a script; only a real script counts as a reel document.
+        if ((p.project_data as ReelDoc).hook) setDoc(p.project_data as ReelDoc);
         const pd = p.project_data as ReelDoc;
         const savedSettings = (p.project_data as any).wizardSettings;
         if (savedSettings) { setAngle(savedSettings.angle??''); setDuration(savedSettings.duration??20); setFormat(savedSettings.format??'9:16'); setStyle(savedSettings.style??'cinematic UGC'); setPace(savedSettings.pace??'fast'); setStep(savedSettings.step??'direction'); }

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { AnalysisProgress } from "./AnalysisProgress";
 import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { CopyWorkbench } from "@/components/CopyWorkbench";
@@ -63,6 +64,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const [phase, setPhase] = useState<"input" | "analyzing" | "results">("input");
   const [progress, setProgress] = useState(0);
   const [stepLabel, setStepLabel] = useState("");
+  const [lastProgressAt, setLastProgressAt] = useState<string | null>(null);
   const [dna, setDna] = useState<any>(null);
   const [scraped, setScraped] = useState<any>(null);
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -113,7 +115,8 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
     if (p.analysisId) onAnalysisReady?.(p.analysisId);
   };
 
-  const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 65, building_blueprint: 80 };
+  const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 70, building_blueprint: 85 };
+  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'Watching the video', transcribing: 'Listening to what is said', building_blueprint: 'Working out the structure' };
 
   /** Drive the job one stage per request. Work already done is saved server-side, so this can resume after a reload. */
   const runJob = async (id: string) => {
@@ -123,7 +126,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
     const poll = setInterval(async () => {
       try {
         const st: any = await statusFn({ data: { analysisId: id } });
-        if (jobRef.current === id && st?.status === "processing" && st.label) { setStepLabel(`${st.label}…`); setProgress(stagePct[st.stage] ?? 10); }
+        if (jobRef.current === id && st?.status === "processing" && st.stage) { setStepLabel(stageWords[st.stage] ?? st.label ?? 'Working'); setProgress(stagePct[st.stage] ?? 10); setLastProgressAt(st.lastProgressAt ?? null); }
       } catch {}
     }, 2500);
     try { await driveJob(id); } finally { clearInterval(poll); }
@@ -155,7 +158,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
         navigate({ to: "/app", search: {} });
         return;
       }
-      if (res.label) setStepLabel(`${res.label}…`);
+      if (res.stage) setStepLabel(stageWords[res.stage] ?? res.label ?? 'Working');
       setProgress(stagePct[res.stage] ?? 10);
       // Another tab may hold the stage lease — wait before asking again.
       await new Promise((r) => setTimeout(r, 1500));
@@ -317,26 +320,9 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
         )}
 
         {phase === "analyzing" && (
-          <div className="mx-auto max-w-xl py-20">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10">
-                  <Loader2 className="h-5 w-5 animate-spin text-accent-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Analyzing content</p>
-                  <p className="text-sm text-muted-foreground">{stepLabel}</p>
-                </div>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent-primary to-accent-secondary transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">Reading the real media — usually about a minute. If you close this tab it pauses, and picks up where it left off when you reopen it from your dashboard (within 15 minutes, or it's cancelled and refunded).</p>
-              {analysisId && jobRef.current !== analysisId && <Button className="mt-4" onClick={() => runJob(analysisId)}>Continue existing analysis · already charged</Button>}
-            </div>
+          <div className="mx-auto max-w-xl py-12">
+            <AnalysisProgress percent={progress} label={progress >= 85 && progress < 100 ? `${stepLabel} — almost done` : stepLabel} lastProgressAt={lastProgressAt}/>
+            {analysisId && jobRef.current !== analysisId && <div className="mt-4 text-center"><Button size="lg" onClick={() => runJob(analysisId)}>Continue this analysis · already paid for</Button></div>}
           </div>
         )}
 

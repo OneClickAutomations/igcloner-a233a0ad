@@ -419,10 +419,10 @@ export const getAnalysisStatus = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ analysisId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: row } = await context.supabase.from("analyses")
-      .select("analysis_status, analysis_stage, error_message").eq("id", data.analysisId).eq("user_id", context.userId).maybeSingle();
-    if (!row) return { status: null, stage: null, label: null, error: null };
+      .select("analysis_status, analysis_stage, error_message, last_progress_at").eq("id", data.analysisId).eq("user_id", context.userId).maybeSingle();
+    if (!row) return { status: null, stage: null, label: null, error: null, lastProgressAt: null };
     const r = row as any;
-    return { status: r.analysis_status as string, stage: r.analysis_stage as string | null, label: r.analysis_stage ? STAGE_LABELS[r.analysis_stage as AnalysisStage] ?? null : null, error: r.error_message as string | null };
+    return { status: r.analysis_status as string, stage: r.analysis_stage as string | null, label: r.analysis_stage ? STAGE_LABELS[r.analysis_stage as AnalysisStage] ?? null : null, error: r.error_message as string | null, lastProgressAt: r.last_progress_at as string | null };
   });
 
 /**
