@@ -636,7 +636,7 @@ Return ONLY this JSON:
 
     const doc: ReelDoc = {
       ...parsed,
-      quality: qualityReport,
+      ...({ quality: qualityReport } as object),
       veoPrompt: anchoredMaster,
       veoPrompts: anchoredVeoPrompts ?? undefined,
       visualDirection: { ...visualDirection, approved: true },
