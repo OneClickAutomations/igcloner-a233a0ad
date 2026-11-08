@@ -1,6 +1,8 @@
 -- Run with psql -v ON_ERROR_STOP=1. All fixtures roll back; no provider calls.
 BEGIN;
+SET LOCAL ROLE service_role;
 CREATE TEMP TABLE test_video_fixture AS SELECT gen_random_uuid() uid,gen_random_uuid() project,gen_random_uuid() scene,gen_random_uuid() entity,gen_random_uuid() attempt;
+GRANT SELECT ON test_video_fixture TO authenticated;
 DO $$ DECLARE t record; d jsonb; c jsonb; a uuid; before_plan bigint; after_plan bigint; BEGIN
  SELECT * INTO t FROM test_video_fixture;
  SELECT COALESCE(sum(delta),0) INTO before_plan FROM public.credit_ledger;

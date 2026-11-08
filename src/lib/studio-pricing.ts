@@ -24,7 +24,7 @@ export const STUDIO_PRICING = {
 export const VIDEO_BALANCE_KEY = ['video-credit-balance'] as const;
 export function videoCreditsForUsd(usd: number) {
   if (!Number.isFinite(usd) || usd < 0) throw new Error('Invalid video cost.');
-  return Math.ceil(usd / STUDIO_PRICING.video.unitCostUsd - 1e-9);
+  return Math.max(0, Math.ceil(usd / STUDIO_PRICING.video.unitCostUsd - 1e-9));
 }
 export function videoCreditsForWorkspace(workspace: number) {
   return videoCreditsForUsd(workspace * STUDIO_PRICING.workspaceCreditUsd);
