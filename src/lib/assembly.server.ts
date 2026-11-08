@@ -5,10 +5,10 @@ export function rendererConfig() {
   return sandbox ? {key:sandbox,environment:'stage' as const} : production ? {key:production,environment:'v1' as const} : null;
 }
 export async function hashCallback(token:string) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))),b=>b.toString(16).padStart(2,'0')).join(''); }
-export class RenderHttpError extends Error { constructor(public status:number) { super(`Shotstack request failed (${status}). Check your account and key before retrying.`); } }
+export class RenderHttpError extends Error { constructor(public status:number,detail:string) { super(`Shotstack request failed (${status}): ${detail}`); } }
 export async function shotstack(path:string,config:{key:string;environment:'v1'|'stage'},body?:unknown) {
   const res=await fetch(`https://api.shotstack.io/edit/${config.environment}/${path}`,{method:body?'POST':'GET',headers:{'x-api-key':config.key,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(25000)});
-  if(!res.ok) throw new RenderHttpError(res.status);
+  if(!res.ok) { const detail=await res.text();console.error(`Shotstack ${res.status}: ${detail}`);throw new RenderHttpError(res.status,detail.slice(0,1500)); }
   const result=await res.json() as any;
   if(result.success===false) throw new Error('Shotstack rejected the render. Review your media and settings.');
   return result.response;
