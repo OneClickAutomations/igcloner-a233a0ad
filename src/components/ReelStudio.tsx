@@ -687,7 +687,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
               <div className="space-y-2">
                 <div className="rounded-lg bg-muted/40 p-2 text-xs">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Hook</div>
-                  <div className="mt-0.5 font-medium leading-snug">{doc.hook.text}</div>
+                  <div className="mt-0.5 font-medium leading-snug">{doc.hook.text || doc.hook.onScreenText || doc.hook.visualNote}</div>
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {doc.scenes?.length ?? 0} scene{(doc.scenes?.length ?? 0) === 1 ? "" : "s"}
