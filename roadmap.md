@@ -2,11 +2,11 @@
 
 ## Authorized imported-film proof — 2026-11-08
 - [x] Locate four original Phase 1 clips/stills; ffprobe confirms each clip has 4.000s video, 720×1280; history confirms original proof was four ~4s scenes
-- [ ] Owner-only import with provenance — waiting for owner duration decision: original clips total 16s, not requested 32s; no regeneration/import charge
-- [ ] Wire ElevenLabs narration, verified pricing, atomic video debit/refund and speech-derived captions
-- [ ] Write 32s outdoor bottle narration; skip music unless licensing is confirmed
-- [ ] Submit through signed-in app assembly, poll/save/download and inspect audiovisual output — blocked before import/narration: owner must choose 16s faithful assembly or explicit 32s retiming/holds
-- [ ] Report actual costs/charges/watermark/alignment, honest customer-readiness verdict and remaining blockers
+- [x] Offline owner-only import with provenance into TEST DEMO — Summit Bottle — Phase 1 (16s), ID 29d394ba-e247-439b-8a51-cfc77b21a710; four original clips/stills, no new generation or import charge
+- [ ] Production ElevenLabs narration pricing/debits — atomic claim/refund scaffold and owner-proof-only generation exist; proof waived to 0 video credits, normal paid narration remains blocked/unpriced; stale-attempt recovery remains
+- [x] Generate 41-word outdoor bottle narration using Chris / eleven_multilingual_v2; no music; synthesis character timestamps produce nine captions. Actual speech/audio 10.867s, shorter than ideal 16s pacing; not retimed
+- [ ] Finished-film proof — two real signed-in app submissions rejected HTTP 403 by Shotstack: sandbox requires at least 1 account credit, account has 0.00. Owner must restore account entitlement at https://dashboard.shotstack.io/subscription; no provider job IDs/output, polling/save/download/watermark/alignment not verified
+- [x] Measure/report: Shotstack no accepted render, $0 quoted/charged in app; 0 plan/video credits, ledger empty. ElevenLabs count moved 106479→106572 (+93, delayed/approximate), ~$0.0168 allocated at $22/121739 allowance, not exact invoice cost; 26 focused tests pass
 
 ## Owner approvals and real assembly proof — 2026-11-08
 - [x] Lock approved Trial 40/$15, Standard 160/$49, Bulk 400/$109; Fast 1/sec, Lite 0.5/sec; purchases remain disabled

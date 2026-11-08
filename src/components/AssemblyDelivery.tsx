@@ -5,13 +5,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Dialog,DialogContent,DialogHeader,DialogTitle } from './ui/dialog';
-import { AssemblyOptions,parseSrt,type AssemblySettings } from '@/lib/assembly';
+import { AssemblyOptions,parseSrt,captionsToSrt,type AssemblySettings } from '@/lib/assembly';
+import { generateProofNarration } from '@/lib/film-narration.functions';
 import { quoteAssembly,startAssembly,recoverAssembly,uploadAssemblyMedia } from '@/lib/assembly.functions';
 import { VideoPackAvailability } from './VideoPackAvailability';
 import type { getInspirationStudio } from '@/lib/inspiration.functions';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
 export function AssemblyDelivery({data,busy,run,refresh,downloadClips}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>}) {
-  const quote=useServerFn(quoteAssembly),start=useServerFn(startAssembly),recover=useServerFn(recoverAssembly),upload=useServerFn(uploadAssemblyMedia);
+  const quote=useServerFn(quoteAssembly),start=useServerFn(startAssembly),recover=useServerFn(recoverAssembly),upload=useServerFn(uploadAssemblyMedia),narrate=useServerFn(generateProofNarration);
   const [settings,setSettings]=useState<AssemblySettings>(AssemblyOptions.parse({})),[srt,setSrt]=useState(''),[names,setNames]=useState<Record<string,string>>({});
   const [confirmation,setConfirmation]=useState<{result:Awaited<ReturnType<typeof quoteAssembly>>;options:AssemblySettings;requestKey:string}|null>(null);
   const project=data.selected;const jobs=data.assemblies;const active=jobs.some(j=>['claimed','submitting','queued','fetching','rendering','saving'].includes(j.status));
@@ -31,6 +32,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips}:{data:Dat
     <section className="border-b border-border pb-6">
       <h2 className="text-xl font-semibold">{data.assemblyConfigured?'Assemble film · Shotstack':'Assembly not configured yet'}</h2>
       {!data.assemblyConfigured&&<p className="mt-3 text-sm text-status-warning">Shotstack key missing. No rendering charges.</p>}
+      {(project.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s')&&<Button className="mt-4" disabled={busy||active} onClick={()=>run(async()=>{const n=await narrate({data:{projectId:project.id,requestKey:crypto.randomUUID()}});setSettings(s=>({...s,voiceoverPath:n.result_path??undefined,voiceoverDuration:Number(n.duration_seconds)}));setSrt(captionsToSrt(n.captions as {start:number;end:number;text:string}[],16));setNames(s=>({...s,voiceover:'Chris · ElevenLabs · speech-timed captions · owner proof, 0 video credits'}));})}>Generate test narration · Chris · 0 video credits</Button>}
       <div className="mt-5 grid gap-5 sm:grid-cols-3">{(['voiceover','music','logo'] as const).map(kind=><label key={kind} className="text-sm capitalize">{kind==='voiceover'?'Voiceover audio':kind==='music'?'Licensed background music':'Logo'}<Input type="file" className="mt-2" aria-label={`Assembly ${kind}`} accept={kind==='logo'?'image/png,image/jpeg,image/webp':'audio/mpeg,audio/wav,audio/mp4'} disabled={busy||active} onChange={e=>{const file=e.target.files?.[0];if(file)run(()=>uploadFile(file,kind));}}/>{names[kind]&&<span className="mt-2 block break-words text-xs text-muted-foreground">{names[kind]}</span>}{settings[`${kind}Path`]&&<Button size="sm" variant="ghost" onClick={()=>{setSettings(old=>({...old,[`${kind}Path`]:undefined,...(kind==='voiceover'?{voiceoverDuration:undefined}:{})}));setNames(old=>({...old,[kind]:''}));}}>Remove</Button>}</label>)}</div>
       <label className="mt-5 block text-sm">Timed captions · SRT<Textarea aria-label="Assembly captions SRT" className="mt-2 min-h-28" value={srt} onChange={e=>setSrt(e.target.value)} disabled={busy||active}/></label>
       <div className="mt-4 flex flex-wrap items-end gap-4"><label className="text-sm">Transition<select aria-label="Assembly transition" className="ml-3 rounded-md border border-input bg-background p-2" value={settings.transition} onChange={e=>setSettings(s=>({...s,transition:e.target.value as 'none'|'fade'}))}><option value="none">Cut</option><option value="fade">Fade</option></select></label>{settings.logoPath&&<><label className="text-sm">Logo start (s)<Input aria-label="Logo start" type="number" min="0" value={settings.logoStart} onChange={e=>setSettings(s=>({...s,logoStart:Number(e.target.value)}))}/></label><label className="text-sm">Logo end (s)<Input aria-label="Logo end" type="number" min="0" value={settings.logoEnd??''} onChange={e=>setSettings(s=>({...s,logoEnd:e.target.value?Number(e.target.value):undefined}))}/></label></>}</div>

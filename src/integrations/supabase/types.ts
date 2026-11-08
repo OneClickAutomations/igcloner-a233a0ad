@@ -727,6 +727,71 @@ export type Database = {
           },
         ]
       }
+      film_narration_attempts: {
+        Row: {
+          billed: number
+          captions: Json | null
+          created_at: string
+          duration_seconds: number | null
+          estimated_usd: number
+          failure_reason: string | null
+          id: string
+          project_id: string
+          request_key: string
+          result_path: string | null
+          script: string
+          status: string
+          updated_at: string
+          usage: Json | null
+          user_id: string
+          voice_id: string
+        }
+        Insert: {
+          billed: number
+          captions?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          estimated_usd: number
+          failure_reason?: string | null
+          id?: string
+          project_id: string
+          request_key: string
+          result_path?: string | null
+          script: string
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id: string
+          voice_id: string
+        }
+        Update: {
+          billed?: number
+          captions?: Json | null
+          created_at?: string
+          duration_seconds?: number | null
+          estimated_usd?: number
+          failure_reason?: string | null
+          id?: string
+          project_id?: string
+          request_key?: string
+          result_path?: string | null
+          script?: string
+          status?: string
+          updated_at?: string
+          usage?: Json | null
+          user_id?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "film_narration_attempts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inspiration_collector_control: {
         Row: {
           id: boolean
@@ -1934,6 +1999,18 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_film_narration: {
+        Args: {
+          p_billed: number
+          p_project: string
+          p_request: string
+          p_script: string
+          p_usd: number
+          p_user: string
+          p_voice: string
+        }
+        Returns: Json
+      }
       claim_inspiration_attempt: {
         Args: {
           p_billed: number
@@ -1982,6 +2059,10 @@ export type Database = {
       }
       fail_claimed_assembly_job: {
         Args: { p_job: string; p_reason: string }
+        Returns: undefined
+      }
+      fail_film_narration: {
+        Args: { p_attempt: string; p_reason: string }
         Returns: undefined
       }
       fail_inspiration_attempt: {
