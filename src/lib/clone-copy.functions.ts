@@ -305,7 +305,6 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), voiceId: z.string().min(5).max(40), script: z.string().max(4000).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = (context.supabase as Sb), userId = context.userId;
-    if(!STUDIO_PRICING.video.approved||STUDIO_PRICING.video.voiceoverUsdPerCharacter===null)throw new Error('Video narration and mux pricing awaits verification and pack approval. No credits charged; your project stays saved.');
     const { project, a, f } = await loadA1Project(sb, userId, data.projectId);
     const { VOICE_CATALOG } = await import("@/lib/voiceover.functions");
     if (!VOICE_CATALOG.some((v) => v.id === data.voiceId)) throw new Error("Pick a voice from the list.");
@@ -335,25 +334,10 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
     await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "audio", source: "generated", url: aSigned?.signedUrl ?? null, filename: audioPath, metadata: { kind: "same_look_voiceover", script, voiceId: data.voiceId } as any });
     // Mux: replaces the original audio track (music is removed, not ducked).
     const vSigned = await signSource(sb, video.path);
-    const fal = process.env.FAL_KEY;
-    let muxError: string | null = null, videoUrl: string | null = null;
-    if (!fal) muxError = "Video service isn't configured.";
-    else {
-      const res = await fetch("https://fal.run/fal-ai/ffmpeg-api/merge-audio-video", {
-        method: "POST", headers: { Authorization: `Key ${fal}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ video_url: vSigned, audio_url: aSigned?.signedUrl }),
-      });
-      const j: any = await res.json().catch(() => ({}));
-      if (!res.ok || !j?.video?.url) muxError = `Couldn't combine the voiceover with the video (${res.status}): ${String(j?.detail ?? j?.message ?? "").slice(0, 160)}`;
-      else {
-        const bytes = new Uint8Array(await (await fetch(j.video.url)).arrayBuffer());
-        const vPath = `${userId}/${project.id}/same-look-video-${Date.now()}.mp4`;
-        await sb.storage.from(ASSET_BUCKET).upload(vPath, bytes, { contentType: "video/mp4" });
-        const { data: s } = await sb.storage.from(ASSET_BUCKET).createSignedUrl(vPath, WEEK);
-        videoUrl = s?.signedUrl ?? null;
-        await sb.from("project_assets").insert({ project_id: project.id, user_id: userId, asset_type: "video", source: "generated", url: videoUrl, filename: vPath, metadata: { kind: "same_look", copyMode: "A1", voiceover: audioPath } as any });
-      }
-    }
+    // Putting the new voice onto the original video has no gateway equivalent yet; the voiceover itself is delivered.
+    void vSigned;
+    const videoUrl: string | null = null;
+    const muxError = "Combining the new voice with the original video is unavailable right now. Download the voiceover and add it in your editor.";
     return { script, audioUrl: aSigned?.signedUrl ?? null, videoUrl, muxError };
   });
 
