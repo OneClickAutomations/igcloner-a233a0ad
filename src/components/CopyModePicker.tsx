@@ -15,9 +15,10 @@ type Props = {
   value: CloneMethod;
   onChange: (m: CloneMethod) => void;
   preferences?: Record<string, unknown>;
+  onCreated?: (projectId: string) => void;
 };
 
-export function CopyModePicker({ analysisId, value, onChange, preferences }: Props) {
+export function CopyModePicker({ analysisId, value, onChange, preferences, onCreated }: Props) {
   const navigate = useNavigate();
   const ctxFn = useServerFn(getCopyModeContext);
   const confirmFn = useServerFn(confirmRights);
@@ -39,7 +40,8 @@ export function CopyModePicker({ analysisId, value, onChange, preferences }: Pro
       const res = value === "A0"
         ? await exactFn({ data: { analysisId } })
         : await sameLookFn({ data: { analysisId, preferences } });
-      navigate({ to: "/studio/copy", search: { projectId: res.projectId } });
+      if (onCreated) onCreated(res.projectId);
+      else navigate({ to: "/studio/copy", search: { projectId: res.projectId } });
     } catch (e: any) {
       toast.error(String(e?.message ?? "Couldn't start").replace(/^RIGHTS_REQUIRED:\s*/, ""));
     } finally {
@@ -49,8 +51,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences }: Pro
 
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-accent-primary">Step 1</p>
-      <h2 className="mt-1 text-lg font-bold tracking-tight">What do you want to make from this post?</h2>
+      <h3 className="mt-1 text-lg font-bold">How much should change?</h3>
       {ctxError && <p className="mt-2 text-xs text-status-error">Couldn't check which modes this post supports: {(ctxError as Error).message}</p>}
       <div className="mt-3 space-y-2">
         {CLONE_METHODS.map((m) => {

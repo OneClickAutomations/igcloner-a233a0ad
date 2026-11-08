@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { AppPage } from "@/components/AppPage";
+import { CreateProjectWizard } from "@/components/CreateProjectWizard";
 
 export const Route = createFileRoute("/_authenticated/app")({
   validateSearch: z.object({
     analysisId: z.string().uuid().optional(),
+    draftId: z.string().uuid().optional(),
   }),
   head: () => ({
     meta: [
@@ -17,5 +18,5 @@ export const Route = createFileRoute("/_authenticated/app")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: AppPage,
+  component: CreateProjectWizard,
 });

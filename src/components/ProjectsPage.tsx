@@ -37,6 +37,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { listProjects, deleteProject, type ProjectFormat } from "@/lib/projects.functions";
+import { listCreationDrafts } from '@/lib/creation-drafts.functions';
+import { CREATION_STEPS } from '@/lib/creation-draft';
 import {
   applyFilters,
   distinctTypes,
@@ -78,6 +80,8 @@ export function ProjectsPage() {
   const search = routeApi.useSearch();
   const listFn = useServerFn(listProjects);
   const delFn = useServerFn(deleteProject);
+  const draftsFn = useServerFn(listCreationDrafts);
+  const [drafts, setDrafts] = useState<Awaited<ReturnType<typeof listCreationDrafts>>>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDel, setConfirmDel] = useState<null | { id: string; title: string }>(null);
@@ -108,7 +112,8 @@ export function ProjectsPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await listFn();
+      const [res, savedDrafts] = await Promise.all([listFn(), draftsFn()]);
+      setDrafts(savedDrafts);
       setProjects((res as any).projects || []);
     } catch (e: any) {
       toast.error(e?.message || "Couldn't load projects");
@@ -176,10 +181,11 @@ export function ProjectsPage() {
           <p className="text-muted-foreground">Every content production session you've started.</p>
         </div>
         <Button onClick={() => navigate({ to: "/app" })} className="gap-1.5">
-          <Plus className="h-4 w-4" /> New Clone
+          <Plus className="h-4 w-4" /> New project
         </Button>
       </div>
 
+      {drafts.length > 0 && <section className="mb-8"><h2 className="mb-4 text-lg font-semibold">Drafts</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{drafts.map(d => <article key={d.id} className="rounded-lg border border-border bg-card p-4"><p className="text-xs font-semibold text-muted-foreground">Draft · Step {d.step+1} of 6</p><h3 className="mt-2 font-semibold">{d.title}</h3><p className="mt-1 text-sm text-muted-foreground">{CREATION_STEPS[d.step]}</p><Button size="sm" className="mt-4" onClick={() => navigate({ to: '/app', search: { draftId: d.id } })}>Continue draft</Button></article>)}</div></section>}
       {loading ? (
         <div className="flex items-center justify-center py-20 text-muted-foreground">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading projects…
