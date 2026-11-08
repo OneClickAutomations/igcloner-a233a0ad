@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { z } from 'zod';
 import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
-import { STUDIO_PRICING,monthlyCreditEquivalent } from './studio-pricing';
+import { STUDIO_PRICING,monthlyCreditEquivalent,videoCreditsForWorkspace,videoBalanceQuote } from './studio-pricing';
 import { PLANS } from './credits';
 
 const Id = z.string().uuid();
@@ -28,6 +28,8 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     };
     const {data:profile}=await supabase.from('profiles').select('plan').eq('id',userId).maybeSingle();
     const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
+    const {data:videoBalance,error:videoError}=await supabase.rpc('video_credit_balance',{p_user:userId});
+    if(videoError)throw new Error('Video balance could not be loaded.');
     return {
       projects: projects ?? [], selected: selected ?? null, analyses: analyses ?? [],
       references: await Promise.all((references ?? []).map(async r => ({ ...r, preview: await sign(r.storage_path) }))),
@@ -37,6 +39,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
+      videoBalance: videoBalance??0, videoPricingApproved:STUDIO_PRICING.video.approved,
     };
   });
 
@@ -131,22 +134,29 @@ export const inspirationQuote = createServerFn({ method: 'POST' }).middleware([r
     const conversion = STUDIO_PRICING.workspaceCreditUsd;
     const rate = STUDIO_MODELS.find(m => m.id === data.model)?.rate ?? null;
     const cost = data.operation === 'still' ? STUDIO_PRICING.stillWorkspaceCredits : rate === null ? null : s.duration * rate;
-    const customerCredits = cost === null ? null : priceFromWorkspaceCost(cost, conversion);
+    const customerCredits = cost === null ? null : data.operation==='animate' ? videoCreditsForWorkspace(cost) : priceFromWorkspaceCost(cost, conversion);
     const {data:profile}=await context.supabase.from('profiles').select('plan').eq('id',context.userId).maybeSingle();
     const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
-    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate:data.operation==='still'?null:rate, totalWorkspaceCredits: cost, customerCredits, usdCost:cost===null?null:cost*conversion, monthlyEquivalent:customerCredits===null?null:monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This scene'), revision: s.revision, available: customerCredits !== null, reason: customerCredits === null ? 'This action has no verified cost quote yet; no credits will be charged. Workspace conversion is verified at $0.30.' : null };
+    const {data:balance,error}=await context.supabase.rpc('video_credit_balance',{p_user:context.userId});if(error)throw new Error('Video balance could not be loaded.');
+    const video=data.operation==='animate'&&customerCredits!==null?videoBalanceQuote(customerCredits,balance??0,s.duration):null;
+    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate:data.operation==='still'?null:rate, totalWorkspaceCredits: cost, customerCredits, billingBalance:data.operation==='animate'?'video' as const:'plan' as const, video,
+      planCharges:{stills:'Separate plan credits; verified still price unset',storyboardWriting:'Manual builder: 0 plan credits',analysis:'Cached import: 0 added plan credits; new analysis: existing 3-credit price'},
+      usdCost:cost===null?null:cost*conversion, monthlyEquivalent:data.operation==='still'&&customerCredits!==null?monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This still'):null, revision: s.revision,
+      available:customerCredits!==null&&(data.operation==='still'||(STUDIO_PRICING.video.approved&&Boolean(video?.sufficient))),
+      reason:customerCredits===null?'This action has no verified cost quote yet; no credits will be charged.':data.operation==='animate'&&!STUDIO_PRICING.video.approved?'Video-credit prices are proposed, awaiting approval. No video or plan credits will be charged.':video&&!video.sufficient?video.afterwards:null };
   });
 
 export const animateInspirationScene = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ sceneId: Id, model: StudioModel, requestKey: Id, revision: z.number().int(), confirmedCredits: z.number().int().nonnegative() }).parse(d))
   .handler(async ({ data, context }) => {
+    if(!STUDIO_PRICING.video.approved)throw new Error('Video pack prices await approval. Nothing charged; your storyboard and approved stills are saved.');
     const { data: s } = await context.supabase.from('storyboard_scenes').select('*').eq('id', data.sceneId).single();
     if (!s) throw new Error('Scene not found.');
     const { assertAnimationReady } = await import('./inspiration');
     assertAnimationReady({ ...s, action_objects: s.action_objects as any, object_checks: s.object_checks as unknown as ObjectCheck[] });
     if (data.revision !== s.revision) throw new Error('The scene changed. Review a new quote.');
     const rate = STUDIO_MODELS.find(m => m.id === data.model)?.rate;
-    const price = rate == null ? null : priceFromWorkspaceCost(rate * s.duration, STUDIO_PRICING.workspaceCreditUsd);
+    const price = rate == null ? null : videoCreditsForWorkspace(rate * s.duration);
     if (price === null) throw new Error('Generation pricing not configured yet; no credits were charged.');
     if (price !== data.confirmedCredits) throw new Error('The price changed. Confirm a new quote.');
     const key = process.env['LOVABLE_API_KEY']; if (!key) throw new Error('AI connection is not configured.');
