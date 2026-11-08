@@ -20,7 +20,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   try{
     const {writeFilmNarration}=await import('./film-narration.server');
     // The saved Chris sample ran at speed 1.1. Calibrate to ~2.7 words/s, not its rushed 3.77 words/s.
-    const measuredRate=measuredSpeakingRate(previous?.script??PROOF_NARRATION,Number(previous?.duration_seconds??10.867));
+    const measuredRate=measuredSpeakingRate(PROOF_NARRATION,10.867);
     const previousSpeed=Number(previousUsage.speed??1.1);
     const speed=Math.max(0.7,Math.min(1.2,previousSpeed*2.7/measuredRate));
     let targetWords=narrationWordTarget(filmSeconds,measuredRate*speed/previousSpeed);
