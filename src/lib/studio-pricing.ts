@@ -9,7 +9,8 @@ export const STUDIO_PRICING = {
   source: 'Owner-confirmed purchase prices: $15/50 credits and $30/100 credits, 2026-11-08',
   stillWorkspaceCredits: null as number | null,
   video: {
-    approved: false as boolean,
+    approved: true as boolean,
+    purchasesEnabled: false as boolean,
     unitCostUsd: 0.12,
     voiceoverUsdPerCharacter: null as number | null,
     packs: [
