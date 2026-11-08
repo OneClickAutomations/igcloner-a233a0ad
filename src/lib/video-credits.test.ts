@@ -10,5 +10,5 @@ describe('approved separate video add-on prices',()=>{
  it('never permits an insufficient video quote',()=>{expect(videoBalanceQuote(8,0,8).sufficient).toBe(false);expect(videoBalanceQuote(8,7,8).remaining).toBe(0);expect(videoBalanceQuote(8,8,8).sufficient).toBe(true);});
  it('leaves plan analysis/hooks/captions/images and Sharpen prices alone',()=>{expect(ACTION_COSTS.analysis).toBe(3);expect(ACTION_COSTS.hookLab).toBe(2);expect(ACTION_COSTS.captionPack).toBe(1);expect(ACTION_COSTS.imageGeneration).toBe(1);expect(ACTION_COSTS.sharpen).toBe(2);});
  it.each([[0,0.68],[1,1-19.2/49],[2,1-48/109]])('calculates pack %s direct margin',(index,margin)=>{expect(videoPackMargin(STUDIO_PRICING.video.packs[index]).grossMargin).toBeCloseTo(margin);});
- it('leaves unknown narration pricing unset',()=>{expect(STUDIO_PRICING.video.voiceoverUsdPerCharacter).toBeNull();expect(STUDIO_PRICING.stillWorkspaceCredits).toBeNull();});
+ it('charges 1 video credit per narration',()=>{expect(STUDIO_PRICING.video.narrationCredits).toBe(1);});
 });

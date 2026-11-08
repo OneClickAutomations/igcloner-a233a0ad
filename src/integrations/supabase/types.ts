@@ -1837,6 +1837,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       video_credit_ledger: {
         Row: {
           attempt_id: string | null
@@ -2083,6 +2101,22 @@ export type Database = {
       grant_video_credits: {
         Args: { p_amount: number; p_purchase_key: string; p_user: string }
         Returns: undefined
+      }
+      grant_video_credits_keyed: {
+        Args: {
+          p_amount: number
+          p_key: string
+          p_reason: string
+          p_user: string
+        }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
       }
       refund_credits: {
         Args: {

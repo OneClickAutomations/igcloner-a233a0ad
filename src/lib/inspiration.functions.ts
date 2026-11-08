@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { z } from 'zod';
-import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
+import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, referencedActionObjects, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
 import { STUDIO_PRICING,monthlyCreditEquivalent,videoCreditsForWorkspace,videoBalanceQuote } from './studio-pricing';
 import { PLANS } from './credits';
 
@@ -26,6 +26,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
       return url?.signedUrl ?? null;
     };
+    const { data: sourceAnalysis } = selected?.analysis_id ? await supabase.from('analyses').select('id,instagram_url,source_account').eq('id', selected.analysis_id).maybeSingle() : { data: null };
     const {data:profile}=await supabase.from('profiles').select('plan').eq('id',userId).maybeSingle();
     const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
     const {data:videoBalance,error:videoError}=await supabase.rpc('video_credit_balance',{p_user:userId});
@@ -39,7 +40,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
-      videoBalance: videoBalance??0, videoPricingApproved:STUDIO_PRICING.video.approved,
+      sourceAnalysis, storyboardPlanCredits: STUDIO_PRICING.storyboardPlanCredits, videoBalance: videoBalance??0, videoPricingApproved:STUDIO_PRICING.video.approved,
     };
   });
 
@@ -140,7 +141,7 @@ export const inspirationQuote = createServerFn({ method: 'POST' }).middleware([r
     const {data:balance,error}=await context.supabase.rpc('video_credit_balance',{p_user:context.userId});if(error)throw new Error('Video balance could not be loaded.');
     const video=data.operation==='animate'&&customerCredits!==null?videoBalanceQuote(customerCredits,balance??0,s.duration):null;
     return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate:data.operation==='still'?null:rate, totalWorkspaceCredits: cost, customerCredits, billingBalance:data.operation==='animate'?'video' as const:'plan' as const, video,
-      planCharges:{stills:'Separate plan credits; verified still price unset',storyboardWriting:'Manual builder: 0 plan credits',analysis:'Cached import: 0 added plan credits; new analysis: existing 3-credit price'},
+      planCharges:{stills:'Stills use plan credits',storyboardWriting:`AI storyboard: ${STUDIO_PRICING.storyboardPlanCredits} plan credits (manual: 0)`,analysis:'Cached import: 0 added plan credits; new analysis: existing 3-credit price'},
       usdCost:cost===null?null:cost*conversion, monthlyEquivalent:data.operation==='still'&&customerCredits!==null?monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This still'):null, revision: s.revision,
       available:customerCredits!==null&&(data.operation==='still'||(STUDIO_PRICING.video.approved&&Boolean(video?.sufficient))),
       reason:customerCredits===null?'This action has no verified cost quote yet; no credits will be charged.':data.operation==='animate'&&!STUDIO_PRICING.video.approved?'Video-credit prices are proposed, awaiting approval. No video or plan credits will be charged.':video&&!video.sufficient?video.afterwards:null };
@@ -208,4 +209,53 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
     const { error } = await supabaseAdmin.from('storyboard_scenes').update({ still_path: path, object_checks: [], approved_at: null, approved_revision: null, status: 'still_ready' }).eq('id', a.scene_id).eq('revision', a.scene_revision);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+const WrittenScene = z.object({
+  environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),
+  duration: z.union([z.literal(4), z.literal(6), z.literal(8)]), onScreenText: z.string().max(200).default(''),
+  objects: z.array(z.object({ name: z.string(), state: z.string() })).min(1).max(8),
+});
+const WrittenBoard = z.object({ scenes: z.array(WrittenScene).min(1).max(8) });
+
+/** Claude writes the storyboard from the film's saved source analysis; plan credits, refunded on failure. */
+export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default('') }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: p } = await supabase.from('video_inspiration_projects').select('id,title,analysis_id').eq('id', data.projectId).single();
+    if (!p) throw new Error('Film not found.');
+    if (!p.analysis_id) throw new Error('This film has no source analysis. Create a film from a saved analysis to use AI storyboard writing.');
+    const { data: a } = await supabase.from('analyses').select('id,dna_analysis,evidence,transcript,source_caption,post_type').eq('id', p.analysis_id).eq('user_id', userId).single();
+    if (!a) throw new Error('Source analysis not found.');
+    const { count } = await supabase.from('storyboard_scenes').select('id', { count: 'exact', head: true }).eq('project_id', p.id);
+    if (count) throw new Error('This film already has scenes. Edit them, or start a new film for a fresh AI storyboard.');
+    const { debitCredits, refundCredits } = await import('./credits.server');
+    const cost = STUDIO_PRICING.storyboardPlanCredits; const attempt = crypto.randomUUID();
+    await debitCredits(userId, cost, 'debit_storyboard' as any, 'video_inspiration_project', p.id, attempt);
+    try {
+      const { copyJson } = await import('./copy-engine.server');
+      const ev = a.evidence as any; const dna = a.dna_analysis as any;
+      const source = JSON.stringify({ format: a.post_type, blueprint: dna?.blueprint ?? null, shots: ev?.shots ?? ev?.shot_timeline ?? ev?.timeline ?? null, pacing: dna?.pacing ?? null, hook: dna?.hook ?? null, transcript: a.transcript?.slice(0, 2000) ?? null }).slice(0, 14000);
+      const prompt = `Write a structure-only video storyboard for the film "${p.title}". ${data.brief ? `Owner brief: ${data.brief}.` : ''}
+Copy only the SOURCE's structure: same number of scenes as its shots (max 8) and the same pacing. Use a NEW setting, NEW subjects and NEW words; never a real person's likeness, names or the source's words.
+Per scene: environment (new setting), action (ONE concrete physical action that starts immediately), endState (observable end state), camera (exactly one camera move), audio (specified sound), duration (4, 6 or 8 seconds, matching the source shot length), onScreenText (short on-screen text or empty), objects (EVERY object the action touches or needs — hands, product, cups, lids etc. — each with its initial visible state, so the opening still contains everything the motion needs).
+Physical realism: liquids pour downward, objects keep shape, colors and proportions; one continuous shot per scene.
+Return JSON {"scenes":[...]}.
+<SOURCE>${source}</SOURCE>`;
+      const { value } = await copyJson(WrittenBoard, prompt, 'You are a senior short-form video director writing shot-by-shot storyboards.', 8000);
+      const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
+      const rows = value.scenes.map((sc, i) => {
+        const scene = { ...sc, objects: [...sc.objects] };
+        // Keep the rule: the still must contain every object the motion references.
+        for (const name of referencedActionObjects(`${scene.action}`)) if (!scene.objects.some(o => `${o.name} ${o.state}`.toLowerCase().includes(name))) scene.objects.push({ name, state: 'clearly visible, ready for the action' });
+        const parsed = SceneInput.parse(scene); const prompts = buildScenePrompts(parsed);
+        return { project_id: p.id, user_id: userId, scene_order: i, duration: parsed.duration, still_prompt: prompts.stillPrompt, motion_prompt: prompts.motionPrompt, action_objects: parsed.objects, scene_input: parsed, object_checks: [] };
+      });
+      const { error } = await supabaseAdmin.from('storyboard_scenes').insert(rows);
+      if (error) throw new Error(error.message);
+      return { scenes: rows.length, charged: cost };
+    } catch (e) {
+      await refundCredits(userId, cost, 'video_inspiration_project', p.id, attempt);
+      throw new Error(`Storyboard writing failed; ${cost} plan credits refunded. ${(e as Error).message}`.slice(0, 400));
+    }
   });
