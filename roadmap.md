@@ -1,5 +1,12 @@
 # Roadmap
 
+## Pass 5A — motion then assembly (current request)
+- [x] Controlled pouring matrix: five clips, 10.42914 workspace credits; frame review finds no fully realistic pass
+- [x] Save best provisional motion template with focused tests; no existing screens or prices changed
+- [x] Confirm deployed assembly limits and document exact AWS bridge/setup/cost
+- [ ] Assemble existing four clips with voiceover/captions — blocked: owner AWS bridge/composition URL and secret are not configured
+- [ ] Studio implementation — blocked until assembly setup/proof; motion candidate not production-approved
+
 ## Pass 5A — Video Inspiration Studio feasibility and plan
 - [ ] Live gateway capabilities and per-call recorded costs; no fal.ai calls
 - [ ] Four-scene saved-blueprint proof: new subject reference, four approved stills, four 720p portrait clips
