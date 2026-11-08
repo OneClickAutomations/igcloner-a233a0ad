@@ -1,5 +1,12 @@
 # Roadmap
 
+## Authorized imported-film proof — 2026-11-08
+- [ ] Locate four original Phase 1 clips/stills and owner-only import with provenance; no regeneration or import charge
+- [ ] Wire ElevenLabs narration, verified pricing, atomic video debit/refund and speech-derived captions
+- [ ] Write 32s outdoor bottle narration; skip music unless licensing is confirmed
+- [ ] Submit through signed-in app assembly, poll/save/download and inspect audiovisual output
+- [ ] Report actual costs/charges/watermark/alignment, honest customer-readiness verdict and remaining blockers
+
 ## Owner approvals and real assembly proof — 2026-11-08
 - [x] Lock approved Trial 40/$15, Standard 160/$49, Bulk 400/$109; Fast 1/sec, Lite 0.5/sec; purchases remain disabled
 - [x] Confirm readable SHOTSTACK_SANDBOX_API_KEY and verify documented templates GET returns HTTP 200
