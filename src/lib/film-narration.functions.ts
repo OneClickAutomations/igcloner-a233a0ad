@@ -2,12 +2,12 @@ import {createServerFn} from '@tanstack/react-start';
 import {requireSupabaseAuth} from '@/integrations/supabase/auth-middleware';
 import {z} from 'zod';
 import {PROOF_NARRATION,PROOF_VOICE,alignmentCaptions,measuredSpeakingRate,narrationWordTarget,narrationFits,mp3Duration,countSpokenWords,NARRATION_TIMING_VERSION} from './film-narration';
-export const generateProofNarration=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),requestKey:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
+export const generateProofNarration=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),requestKey:z.string().uuid(),regenerate:z.boolean().optional()}).parse(d)).handler(async({data,context})=>{
   const {data:p}=await context.supabase.from('video_inspiration_projects').select('id,observation_notes').eq('id',data.projectId).eq('user_id',context.userId).single();
   if(!p)throw new Error('Film not found.');
   const isProof=(p.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s');
   const {STUDIO_PRICING}=await import('./studio-pricing');
-  const billed=isProof?0:STUDIO_PRICING.video.narrationCredits;
+  const billed=isProof&&!data.regenerate?0:STUDIO_PRICING.video.narrationCredits;
   const key=process.env['ELEVENLABS_API_KEY'];if(!key)throw new Error('ElevenLabs is not configured.');
   const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
   const {data:existing}=await context.supabase.from('film_narration_attempts').select('*').eq('project_id',p.id).eq('status','completed').order('created_at',{ascending:false}).limit(1);
@@ -16,7 +16,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   const filmSeconds=scenes.reduce((sum,s)=>sum+Number(s.duration),0);
   const previous=existing?.[0];
   const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
-  if(previous)return previous;
+  if(previous&&!data.regenerate)return previous;
   const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:billed,p_usd:billed*STUDIO_PRICING.video.unitCostUsd});if(error)throw new Error(/Insufficient video credits/.test(error.message)?'You need video credits to generate narration. Nothing was charged.':error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
   const subscription=async()=>{const r=await fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':key}});return r.ok?await r.json() as any:null;};
   const before=await subscription();const started=Date.now();
