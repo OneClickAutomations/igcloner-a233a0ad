@@ -12,7 +12,8 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   if(sceneError||!scenes?.length)throw new Error('Film scenes could not be read.');
   const filmSeconds=scenes.reduce((sum,s)=>sum+Number(s.duration),0);
   const previous=existing?.[0];
-  if(previous?.usage?.timingVersion===NARRATION_TIMING_VERSION&&narrationFits(Number(previous.duration_seconds),filmSeconds))return previous;
+  const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
+  if(previousUsage.timingVersion===NARRATION_TIMING_VERSION&&narrationFits(Number(previous?.duration_seconds),filmSeconds))return previous;
   const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:0,p_usd:0});if(error)throw new Error(error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
   const subscription=async()=>{const r=await fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':key}});return r.ok?await r.json() as any:null;};
   const before=await subscription();const started=Date.now();
@@ -20,7 +21,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
     const {writeFilmNarration}=await import('./film-narration.server');
     // The saved Chris sample ran at speed 1.1. Calibrate to ~2.7 words/s, not its rushed 3.77 words/s.
     const measuredRate=measuredSpeakingRate(previous?.script??PROOF_NARRATION,Number(previous?.duration_seconds??10.867));
-    const previousSpeed=Number(previous?.usage?.speed??1.1);
+    const previousSpeed=Number(previousUsage.speed??1.1);
     const speed=Math.max(0.7,Math.min(1.2,previousSpeed*2.7/measuredRate));
     let targetWords=narrationWordTarget(filmSeconds,measuredRate*speed/previousSpeed);
     const rounds:any[]=[];let feedback='';
@@ -36,7 +37,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
         const captions=alignmentCaptions(alignment,filmSeconds),path=`${context.userId}/${p.id}/assembly-input/${c.attempt.id}.mp3`;
         const {error:up}=await db.storage.from('video-inspiration').upload(path,bytes,{contentType:'audio/mpeg'});if(up)throw new Error(up.message);
         const after=await subscription();const usage={timingVersion:NARRATION_TIMING_VERSION,filmSeconds,measuredRate,previousSpeed,speed,rounds,voice:PROOF_VOICE.name,method:'ElevenLabs synthesis character alignment; MP3 frame duration verification',alignment,elapsedMs:Date.now()-started,before:before?.character_count,after:after?.character_count,characterMovement:before&&after?after.character_count-before.character_count:null,monthlyUsd:before?.next_invoice?.amount_due_cents/100,characterAllowance:before?.character_limit,proofWaiver:'Owner-only proof: 0 video credits; normal narration remains unpriced and blocked.'};
-        const {data:row,error:saved}=await db.from('film_narration_attempts').update({script:draft.script,status:'completed',result_path:path,captions,duration_seconds:duration,usage,updated_at:new Date().toISOString()}).eq('id',c.attempt.id).eq('status','in_progress').select('*').single();if(saved)throw new Error(saved.message);return row;
+        const {data:row,error:saved}=await db.from('film_narration_attempts').update({script:draft.script,status:'completed',result_path:path,captions,duration_seconds:duration,usage,updated_at:new Date().toISOString()}).eq('id',c.attempt.id).eq('status','claimed').select('*').single();if(saved)throw new Error(saved.message);return row;
       }
       targetWords=narrationWordTarget(filmSeconds,measuredSpeakingRate(draft.script,duration));
       feedback=`Previous delivery was ${duration.toFixed(2)} seconds (${speechEnd.toFixed(2)} seconds speech); film is ${filmSeconds} seconds. Adjust wording to fill 95% at the same voice speed.`;
