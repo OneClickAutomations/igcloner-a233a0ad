@@ -20,7 +20,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     const { data: analyses } = await supabase.from('analyses').select('id,instagram_url,source_account,post_type').eq('user_id', userId).eq('analysis_status', 'ready').in('post_type', ['Reel', 'Video']).order('created_at', { ascending: false }).limit(50);
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
-    const { data: assemblies } = selected ? await supabase.from('assembly_jobs').select('id,project_id,status,billed,duration_seconds,environment,render_quote_usd,result_path,failure_reason,refunded_at,created_at').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
+    const { data: assemblies } = selected ? await supabase.from('assembly_jobs').select('id,project_id,status,billed,billing_balance,duration_seconds,environment,render_quote_usd,result_path,failure_reason,refunded_at,created_at').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
     const sign = async (path: string | null) => {
       if (!path || !path.startsWith(`${userId}/`)) return null;
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);

@@ -304,6 +304,7 @@ export const buildSameLookVoiceover = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid(), voiceId: z.string().min(5).max(40), script: z.string().max(4000).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = (context.supabase as Sb), userId = context.userId;
+    throw new Error('Video narration and mux pricing awaits verification and pack approval. No credits charged; your project stays saved.');
     const { project, a, f } = await loadA1Project(sb, userId, data.projectId);
     const { VOICE_CATALOG } = await import("@/lib/voiceover.functions");
     if (!VOICE_CATALOG.some((v) => v.id === data.voiceId)) throw new Error("Pick a voice from the list.");

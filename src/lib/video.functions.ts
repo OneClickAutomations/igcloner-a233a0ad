@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { STUDIO_PRICING } from './studio-pricing';
 import { ACTION_COSTS } from "@/lib/credits";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -69,6 +70,8 @@ export const submitVideoJob = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SubmitInput.parse(d))
   .handler(async ({ data, context }) => {
+    if(!STUDIO_PRICING.video.approved)throw new Error('Video add-on prices await approval. No plan credits charged. Use the Video Inspiration Studio to review proposed video-credit quotes.');
+    throw new Error('Legacy video pricing is not configured for video packs yet. No credits charged.');
     const variants = MODELS[data.model as ModelKey];
     const slug = data.image_url ? variants.i2v : variants.t2v;
     const cost = costForSlug(slug);
