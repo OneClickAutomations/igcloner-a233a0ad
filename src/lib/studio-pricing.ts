@@ -7,12 +7,21 @@ export const STUDIO_PRICING = {
   customerCreditUsd: 0.145,
   costCeiling: 0.35,
   source: 'Owner-confirmed purchase prices: $15/50 credits and $30/100 credits, 2026-11-08',
-  stillWorkspaceCredits: null as number | null,
+  /** Upper-bound estimate from the gateway's published GPT Image rate (~0.00012 credits/output token, ~8k tokens). */
+  stillWorkspaceCredits: 1 as number | null,
+  /** AI storyboard writing, plan credits per film. */
+  storyboardPlanCredits: 2,
   video: {
     approved: true as boolean,
     purchasesEnabled: false as boolean,
     unitCostUsd: 0.12,
-    voiceoverUsdPerCharacter: null as number | null,
+    voiceoverUsdPerCharacter: 0.0002 as number | null,
+    /** Flat video credits per generated narration (covers ~600 characters at the measured ElevenLabs rate). */
+    narrationCredits: 1,
+    /** One-time free trial grant for new accounts. */
+    trialCredits: 20,
+    /** Accounts created on/after this date receive the trial. */
+    trialStartsAt: '2026-11-08T00:00:00Z',
     packs: [
       { id: 'trial', name: 'Trial', credits: 40, usd: 15 },
       { id: 'standard', name: 'Standard', credits: 160, usd: 49 },
