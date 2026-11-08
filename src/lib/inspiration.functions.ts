@@ -134,7 +134,7 @@ export const inspirationQuote = createServerFn({ method: 'POST' }).middleware([r
     const customerCredits = cost === null ? null : priceFromWorkspaceCost(cost, conversion);
     const {data:profile}=await context.supabase.from('profiles').select('plan').eq('id',context.userId).maybeSingle();
     const plan=profile?.plan && profile.plan in PLANS ? PLANS[profile.plan as keyof typeof PLANS] : null;
-    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate, totalWorkspaceCredits: cost, customerCredits, usdCost:cost===null?null:cost*conversion, monthlyEquivalent:customerCredits===null?null:monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This scene'), revision: s.revision, available: customerCredits !== null, reason: customerCredits === null ? 'This action has no verified cost quote yet; no credits will be charged. Workspace conversion is verified at $0.30.' : null };
+    return { model: data.operation === 'still' ? 'openai/gpt-image-2.5-sunburst' : data.model, seconds: data.operation === 'still' ? 0 : s.duration, rate:data.operation==='still'?null:rate, totalWorkspaceCredits: cost, customerCredits, usdCost:cost===null?null:cost*conversion, monthlyEquivalent:customerCredits===null?null:monthlyCreditEquivalent(customerCredits,plan?.monthly?plan.credits:null,'This scene'), revision: s.revision, available: customerCredits !== null, reason: customerCredits === null ? 'This action has no verified cost quote yet; no credits will be charged. Workspace conversion is verified at $0.30.' : null };
   });
 
 export const animateInspirationScene = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
