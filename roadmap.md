@@ -1,5 +1,11 @@
 # Roadmap
 
+## Topped-up Shotstack completion and quality — current
+- [x] Add measured-rate duration word target, MP3 frame/speech coverage gate and one timing regeneration; 15 focused tests pass
+- [ ] Corrected narration proof — Delivery produced 19.487s/41 words then 12.748s/32 words at Chris speed 0.787; bounded timing check failed. Needs more reliable duration control; no further synthesis in this turn
+- [ ] Submit/poll/save/download faithful film — waiting on narration passing its timing gate; Shotstack templates check HTTP 200, no render submitted after top-up
+- [x] Diagnose product mismatch: inconsistent still silhouettes predate video; mixed models not causal proof; no evidence stills regenerated. Report reference/verification options with known/unknown costs
+
 ## Authorized imported-film proof — 2026-11-08
 - [x] Locate four original Phase 1 clips/stills; ffprobe confirms each clip has 4.000s video, 720×1280; history confirms original proof was four ~4s scenes
 - [x] Offline owner-only import with provenance into TEST DEMO — Summit Bottle — Phase 1 (16s), ID 29d394ba-e247-439b-8a51-cfc77b21a710; four original clips/stills, no new generation or import charge
