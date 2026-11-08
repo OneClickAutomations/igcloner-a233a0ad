@@ -1,5 +1,11 @@
 # Roadmap
 
+## Owner approvals and real assembly proof — 2026-11-08
+- [x] Lock approved Trial 40/$15, Standard 160/$49, Bulk 400/$109; Fast 1/sec, Lite 0.5/sec; purchases remain disabled
+- [x] Confirm readable SHOTSTACK_SANDBOX_API_KEY and verify documented templates GET returns HTTP 200
+- [ ] Exercise existing four-clip assembly in the signed-in app with narrated captions/music; stop at the first real blocker
+- [ ] Report output or exact blocker, actual spend/charges and remaining user-readiness work
+
 ## Separate video add-on balance — owner decision 2026-11-08
 - [x] Separate append-only ledger, atomic scene/render debit and attempt-bound currency-safe refunds
 - [x] Dual balances, proposed quotes and insufficient-balance recovery; no live prices or purchases

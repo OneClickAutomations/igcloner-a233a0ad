@@ -1,8 +1,9 @@
 import {describe,it,expect} from 'vitest';
 import {STUDIO_PRICING,videoCreditsForWorkspace,videoCreditsForUsd,videoBalanceQuote,videoPackMargin} from './studio-pricing';
 import {ACTION_COSTS} from './credits';
-describe('separate video add-on proposal',()=>{
- it('keeps proposed prices and purchases inactive',()=>{expect(STUDIO_PRICING.video.approved).toBe(false);});
+describe('approved separate video add-on prices',()=>{
+ it('records owner approval without enabling purchases',()=>{expect(STUDIO_PRICING.video.approved).toBe(true);expect(STUDIO_PRICING.video.purchasesEnabled).toBe(false);});
+ it.each([['trial',40,15],['standard',160,49],['bulk',400,109]])('locks the approved %s pack',(id,credits,usd)=>{const pack=STUDIO_PRICING.video.packs.find(p=>p.id===id);expect(pack?.credits).toBe(credits);expect(pack?.usd).toBe(usd);});
  it('makes one video credit one measured Fast second',()=>{expect(videoCreditsForWorkspace(3.2)).toBe(8);expect(videoCreditsForWorkspace(1.6)).toBe(4);});
  it('makes Lite half the video credits per second',()=>{expect(videoCreditsForWorkspace(0.8)).toBe(2);expect(videoCreditsForWorkspace(8*0.2)).toBe(4);});
  it('quotes a 32-second Fast film plus render separately from plan credits',()=>{const clips=4*videoCreditsForWorkspace(3.2);const render=videoCreditsForUsd(32/60*0.20);expect(clips).toBe(32);expect(render).toBe(1);expect(videoBalanceQuote(clips+render,160,32).remaining).toBe(127);});
