@@ -54,7 +54,7 @@ Earlier illustrative Lambda compute: 2 GB × 60–300 aggregate execution second
 
 ## Verification and blockers
 
-20 targeted assembly/studio tests passed; signed-in desktop and 390px delivery checks showed disabled quote with missing key, no horizontal overflow and no runtime errors. Database assembly fields applied. Paid/free render execution and provider-backed refund/finished-video recovery remain **unverified**: no Shotstack key exists and the available studio project has one scene / zero completed clips, not four attached approved clips. No render submitted: **new render cost exactly $0, zero customer render credits**. The requested one free-tier four-clip test remains blocked on those two prerequisites.
+22 targeted assembly/studio tests passed; signed-in desktop and 390px delivery checks showed disabled quote with missing key, no horizontal overflow and no runtime errors. Database assembly fields and conditional interrupted-claim refunds applied. Paid/free render execution and provider-backed refund/finished-video recovery remain **unverified**: no Shotstack key exists and the available studio project has one scene / zero completed clips, not four attached approved clips. No render submitted: **new render cost exactly $0, zero customer render credits**. The requested one free-tier four-clip test remains blocked on those two prerequisites. Actual encoded portrait dimensions and provider callback ID payload still require live verification. If both submission response and callback are lost, history reconciliation is manual; no reconciliation control is exposed in the app yet.
 
 ## Official technical sources
 - https://shotstack.io/docs/api/
