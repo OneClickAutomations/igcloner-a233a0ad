@@ -1,19 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AdminPage } from "@/components/AdminPage";
+import { VideoCreditGrantPanel } from "@/components/VideoCreditGrantPanel";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) throw redirect({ to: "/auth" });
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userData.user.id)
-      .single();
-    if (profile?.role !== "admin") throw redirect({ to: "/app" });
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userData.user.id, _role: "admin" });
+    if (!isAdmin) throw redirect({ to: "/app" });
   },
-  component: AdminPage,
+  component: () => (<><VideoCreditGrantPanel /><AdminPage /></>),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
