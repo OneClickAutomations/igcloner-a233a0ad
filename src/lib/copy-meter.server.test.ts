@@ -11,4 +11,5 @@ describe("copy billing integration",()=>{
   it("quality failure refunds precisely its attempt",async()=>{await expect(meteredCopy(input,async()=>{throw new Error("QUALITY_NOT_MET");})).rejects.toThrow("QUALITY_NOT_MET");expect(state.refund).toHaveBeenCalledExactlyOnceWith("owner",2,"copy_run","run","attempt");});
   it("insufficient balance never refunds an undebited attempt",async()=>{state.debit.mockRejectedValue(new Error("INSUFFICIENT_CREDITS"));await expect(meteredCopy(input,vi.fn())).rejects.toThrow("INSUFFICIENT_CREDITS");expect(state.refund).not.toHaveBeenCalled();});
   it("late save is withheld and refunded",async()=>{state.save=false;await expect(meteredCopy(input,async()=>({hooks:[]}))).rejects.toThrow("expired");expect(state.refund).toHaveBeenCalledTimes(1);});
+  it("an expired progress attempt refunds its two-credit debit",async()=>{state.save=false;const work=vi.fn();await expect(meteredCopy({...input,requestId:"request"},work)).rejects.toThrow("attempt has ended");expect(work).not.toHaveBeenCalled();expect(state.refund).toHaveBeenCalledExactlyOnceWith("owner",2,"copy_run","run","attempt");});
 });
