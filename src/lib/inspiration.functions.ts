@@ -14,7 +14,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     const selected = data.projectId ? projects?.find(p => p.id === data.projectId) : projects?.[0];
     if (data.projectId && !selected) throw new Error('Project not found.');
     const { data: references } = await supabase.from('reference_assets').select('*').eq('user_id', userId).order('created_at');
-    const { data: analyses } = await supabase.from('analyses').select('id,instagram_url,source_account,post_type').eq('analysis_status', 'ready').in('post_type', ['Reel', 'Video']).order('created_at', { ascending: false }).limit(50);
+    const { data: analyses } = await supabase.from('analyses').select('id,instagram_url,source_account,post_type').eq('user_id', userId).eq('analysis_status', 'ready').in('post_type', ['Reel', 'Video']).order('created_at', { ascending: false }).limit(50);
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
     const sign = async (path: string | null) => {
@@ -41,7 +41,7 @@ export const createInspirationProject = createServerFn({ method: 'POST' }).middl
     let observations = splitCachedObservations(null, null);
     const t0 = Date.now();
     if (data.analysisId) {
-      const { data: a } = await context.supabase.from('analyses').select('evidence,transcript,transcript_segments,analysis_status').eq('id', data.analysisId).single();
+      const { data: a } = await context.supabase.from('analyses').select('evidence,transcript,transcript_segments,analysis_status').eq('user_id', context.userId).eq('id', data.analysisId).single();
       if (!a || a.analysis_status !== 'ready') throw new Error('A ready, owned analysis is required.');
       observations = splitCachedObservations(a.evidence, a.transcript, Array.isArray(a.transcript_segments) ? a.transcript_segments : []);
     }
@@ -112,8 +112,9 @@ export const approveInspirationStill = createServerFn({ method: 'POST' }).middle
     if (!s?.still_path) throw new Error('Generate a still first.');
     if (missingActionObjects(s.action_objects as any, data.checks).length) throw new Error('Check each action object and its initial state in the still.');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    const { error } = await supabaseAdmin.from('storyboard_scenes').update({ approved_at: new Date().toISOString(), approved_revision: s.revision, object_checks: data.checks, status: 'approved' }).eq('id', s.id).eq('revision', s.revision);
+    const { data: updated, error } = await supabaseAdmin.from('storyboard_scenes').update({ approved_at: new Date().toISOString(), approved_revision: s.revision, object_checks: data.checks, status: 'approved' }).eq('id', s.id).eq('revision', s.revision).select('id').maybeSingle();
     if (error) throw new Error(error.message);
+    if (!updated) throw new Error('The scene changed. Review and approve it again.');
     return { ok: true };
   });
 
@@ -169,7 +170,6 @@ export const recoverInspirationClips = createServerFn({ method: 'POST' }).middle
     const key = process.env['LOVABLE_API_KEY']; if (!key) return { collected: 0 };
     const { collectPending } = await import('./inspiration.server');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    await supabaseAdmin.rpc('finish_inspiration_collector');
     return { collected: await collectPending(key, context.userId) };
   });
 
@@ -185,9 +185,10 @@ export const assembleInspiration = createServerFn({ method: 'POST' }).middleware
 export const finishInspirationStill = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ requestKey: Id, base64: z.string().max(14_000_000).optional(), error: z.string().max(600).optional() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: a } = await context.supabase.from('scene_attempts').select('*').eq('request_key', data.requestKey).eq('operation', 'still').single();
+    const { data: a } = await context.supabase.from('scene_attempts').select('*').eq('user_id', context.userId).eq('request_key', data.requestKey).eq('operation', 'still').single();
     if (!a) throw new Error('Still attempt not found.');
     if (a.status === 'completed') return { ok: true };
+    if (a.status === 'failed') throw new Error('This attempt failed; start a fresh request.');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     if (data.error || !data.base64) { await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: a.id, p_reason: data.error ?? 'Still generation incomplete.' }); return { ok: false }; }
     const bytes = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));

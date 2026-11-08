@@ -11,6 +11,9 @@ describe('inspiration scene rules', () => {
   it('does not claim an unverified cup is visibly present', () => {
     expect(missingActionObjects(draft.objects, [{ ...draft.objects[0], present: null }])).toHaveLength(2);
   });
+  it('rejects a motion referencing a cup not in the initial still objects', () => {
+    expect(() => buildScenePrompts({ ...draft, objects: [draft.objects[1]] })).toThrow('cup');
+  });
   it('strips physical identity and named likeness from edited prompts', () => {
     const s = stripIdentity('A blonde woman with blue eyes and fair skin, looks like Mel Robbins. Pour water.');
     expect(s).not.toMatch(/blonde|blue eyes|fair skin|Mel Robbins|woman/i);

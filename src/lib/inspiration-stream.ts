@@ -89,15 +89,7 @@ export async function streamImage(
   signal?.throwIfAborted();
   if (streamError) throw new Error(streamError);
   if (!sawAnyEvent) {
-    const replay = await send(false);
-    if (!replay.ok) {
-      throw new Error(`Image generation failed: ${replay.status} ${await replay.text().catch(() => "")}`);
-    }
-    const json = (await replay.json()) as { data?: { b64_json?: string }[] };
-    const b64 = json.data?.[0]?.b64_json;
-    if (!b64) throw new Error("Image generation returned no image");
-    onFrame(`data:image/png;base64,${b64}`, true);
-    return;
+    throw new Error('Image stream ended without a result. No automatic paid retry was started.');
   }
   if (!sawCompleted) throw new Error("Image stream ended without a completed event");
 }

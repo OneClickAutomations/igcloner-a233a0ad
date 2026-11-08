@@ -27,12 +27,18 @@ export function stripIdentity(text: string): string {
     .replace(/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/g, 'the reference subject').trim();
 }
 export function buildScenePrompts(scene: SceneDraft) {
+  const referenced = referencedActionObjects(`${scene.action} ${scene.motionPrompt ?? ''}`);
+  const missing = referenced.filter(name => !scene.objects.some(o => `${o.name} ${o.state}`.toLowerCase().includes(name)));
+  if (missing.length) throw new Error(`Motion references objects missing from the still checklist: ${missing.join(', ')}.`);
   const objects = scene.objects.map(o => `${stripIdentity(o.name)}: ${stripIdentity(o.state)}`).join('; ');
   const still = stripIdentity(scene.stillPrompt ?? `Portrait 9:16 photograph. New setting: ${scene.environment}. Every required action object is clearly visible in its initial state: ${objects}. Subject identity only from supplied references. Before the action begins; hands positioned to perform: ${scene.action}. Preserve referenced product shape, colors and proportions. No source-person likeness, source words or unreferenced logos.`);
   // Even custom still instructions must include the prerequisites.
   const stillPrompt = `${still}\nRequired initial objects and states: ${objects}.`;
   const motionPrompt = stripIdentity(scene.motionPrompt ?? buildMotionPrompt({ action: scene.action, endState: scene.endState, camera: scene.camera, speed: 'normal speed', audio: scene.audio, durationSeconds: scene.duration }));
   return { stillPrompt, motionPrompt };
+}
+export function referencedActionObjects(text: string) {
+  return ['cup','bottle','hand','cap','glass','backpack','box','phone','lid','table'].filter(word => new RegExp(`\\b${word}s?\\b`, 'i').test(text));
 }
 export type ObjectCheck = { name: string; state: string; present: boolean | null; reason?: string };
 export function missingActionObjects(objects: SceneDraft['objects'], checks: ObjectCheck[]) {
