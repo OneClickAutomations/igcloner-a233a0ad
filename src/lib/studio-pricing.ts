@@ -28,7 +28,9 @@ export const STUDIO_PRICING = {
       { id: 'bulk', name: 'Bulk', credits: 400, usd: 109 },
     ],
   },
-  rates: { 'google/veo-3.1-fast':0.4, 'google/veo-3.1-lite':0.2, 'google/gemini-omni-1.1-flash':null },
+  /** Omni is input-dependent and unmeasured: PROVISIONAL rate equal to Fast, recorded as provisional. */
+  rates: { 'google/veo-3.1-fast':0.4, 'google/veo-3.1-lite':0.2, 'google/gemini-omni-1.1-flash':0.4 },
+  provisional: ['google/gemini-omni-1.1-flash','stillWorkspaceCredits'] as readonly string[],
   renderUsdPerMinute: 0.20,
 } as const;
 export const VIDEO_BALANCE_KEY = ['video-credit-balance'] as const;
