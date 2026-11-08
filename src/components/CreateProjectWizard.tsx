@@ -25,6 +25,7 @@ import { CREDIT_BALANCE_KEY } from '@/lib/credits';
 import { VIDEO_BALANCE_KEY } from '@/lib/studio-pricing';
 import { getCreditBalance } from '@/lib/credits.functions';
 import { getVideoCreditBalance } from '@/lib/video-credits.functions';
+import { getProject } from '@/lib/projects.functions';
 
 const instructions = [
   'Paste a public Instagram or Facebook link, or choose a post you already analyzed.',
@@ -41,6 +42,7 @@ export function CreateProjectWizard() {
   const qc = useQueryClient();
   const saveFn = useServerFn(saveCreationDraft), loadFn = useServerFn(loadCreationDraft), sourcesFn = useServerFn(creationSources);
   const updateFn = useServerFn(updateProject);
+  const projectFn = useServerFn(getProject);
   const createFn = useServerFn(createProject), filmFn = useServerFn(createInspirationProject);
   const balanceFn = useServerFn(getCreditBalance), videoFn = useServerFn(getVideoCreditBalance);
   const { data: credits } = useQuery({ queryKey: CREDIT_BALANCE_KEY, queryFn: () => balanceFn() });

@@ -152,6 +152,9 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
       if (p?.project_data) {
         setDoc(p.project_data as ReelDoc);
         const pd = p.project_data as ReelDoc;
+        const savedSettings = (p.project_data as any).wizardSettings;
+        if (savedSettings) { setAngle(savedSettings.angle??''); setDuration(savedSettings.duration??20); setFormat(savedSettings.format??'9:16'); setStyle(savedSettings.style??'cinematic UGC'); setPace(savedSettings.pace??'fast'); setStep(savedSettings.step??'direction'); }
+        if ((p.project_data as any).videoUrl) setVideoUrl((p.project_data as any).videoUrl);
         if (pd.visualDirection) {
           setDirection(pd.visualDirection);
           if (pd.visualDirection.approved) setStep(pd.hook ? "script" : "direction");

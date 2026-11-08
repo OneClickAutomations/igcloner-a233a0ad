@@ -227,7 +227,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
       setProgress(5);
       jobRef.current = result.analysisId;
       // Put the job in the URL so a reload or reopened tab resumes it.
-      navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
+      if (!embedded) navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
       await runJob(result.analysisId);
     } catch (err: any) {
       const msg: string = err?.message || "Analysis failed.";
