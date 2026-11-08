@@ -4,7 +4,7 @@
 - Carousel deterministic text compositing executes only in the browser on a generated background; server OCR re-verifies before marking it ready, avoiding native image dependencies in the deployed runtime.
 - Copy run history/cache is owner-readable and server-written; an atomic claim precedes debit, failure refunds its attempt, and stale sweeping checks actual debits before refunding.
 - A2/A3 carousel rendering reads slide 1 and previous slide from saved assets and verifies exact intended text; free retries are bounded at two and flagged final output refunds its slide.
-- The A1 quick-generate shortcut is intentionally dropped: use the editable rights-checked slide flow so users can review text before paid generation.
+- The A1 + image quick-generate shortcut still exists in IntentFlow.tsx (one-click clone panel calling quickGenerate); the editable rights-checked slide flow is the alternative for reviewing text before paid generation.
 - Clone mode names and summaries share a browser-safe display mapping keyed by unchanged A0–A3 IDs, preserving saved preferences and generation behavior when labels change.
 - Modes that reuse source media (A0/A1) require a versioned rights_confirmations row, checked server-side in every entry point (enforceRights), never only in the UI.
 - Same-look slide edits use gateway image edits with source-matched size, then a Claude vision gate (exact normalized text, no residual text, same composition) with free retries and a per-attempt refund when flagged.
