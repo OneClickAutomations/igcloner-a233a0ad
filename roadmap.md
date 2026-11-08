@@ -1,5 +1,11 @@
 # Roadmap
 
+## Pass 5A — Video Inspiration Studio feasibility and plan
+- [ ] Live gateway capabilities and per-call recorded costs; no fal.ai calls
+- [ ] Four-scene saved-blueprint proof: new subject reference, four approved stills, four 720p portrait clips
+- [ ] Assembly and split visual/audio analysis design; full feature plan, pricing and risks
+- [ ] Final evidence report and preview links; no existing screens or prices changed
+
 ## Pass 4 — shared writing engine and quality
 - [x] Mandatory per-output gate for Hook Lab, packs, carousel/reel core copy and Sharpen; bounded regeneration, task-aware critic, real saved exemplars
 - [ ] Quality acceptance: latest hooks 7.66/min5 and NASA pack 8.07/min7; four prompt-development configurations exhausted without a pass
@@ -33,7 +39,7 @@
 - [x] Mix images panel; video credits with refunds
 
 ## Open
-- [ ] Video service (fal.ai) balance exhausted: blocks video text-edit test, voiceover mux, and all Veo/Kling video generation until topped up
+- [ ] fal.ai work and source-video text-replacement tests paused by owner; gateway-first inspiration feasibility replaces this investigation
 - [ ] A2/A3 carousel continuity/text gate implemented; browser exact-text fallback implemented but four-slide live recheck outstanding
 - [ ] Facebook multi-photo posts: capture path unverified (pass 1 open item)
 - [ ] Analysis jobs only advance while a tab is open; truly unattended runs need a scheduled background worker (owner decision)
