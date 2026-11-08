@@ -14,25 +14,25 @@
 - [x] Provider research recheck; Shotstack retained, gateway audio-on Fast still cheaper than fal
 - [ ] Activate purchases — payment integration intentionally excluded; pack/rate approval now recorded
 - [ ] Measured still/voiceover/isolated-pass full totals — provider measurements missing; no spend authorized
-- [ ] Attached narration and legacy fal paid video metering — measured rates and owner approval missing; safely blocked
+- [ ] Attached narration and legacy fal paid video metering — measured rates/wiring missing; safely blocked
 - [ ] Free four-clip assembly test — sandbox key verified; four eligible attached clips missing
 
 ## Verified pricing — 2026-11-08
 - [x] Record owner-verified $0.30 conversion and central cost-ceiling configuration; enable known-rate generation quotes without changing existing prices/plans
 - [x] Measured/unknown action audit, 32s Fast/Lite subtotals, margin options and current fal comparison; full totals blocked on still/voiceover measurements
 - [x] Monthly-allowance quote context, 38 price/approval/assembly/credit tests and signed-in Fast/Lite quotes; no generation spend
-- [ ] Assembly follow-up: key/four approved attached clips still missing; no render spend
+- [ ] Assembly follow-up: key verified; four eligible attached clips still missing; no render spend
 - [ ] Complete measured action pricing — blocked: no still/voiceover/fresh isolated-analysis measurements; no provider spend authorized
 - [x] Record owner approval of video add-on packs and Fast/Lite rates; sales remain disabled
 
 ## Pass 5A — motion then assembly (current request)
 - [x] Replace AWS/Remotion plan with hosted renderer research: recommend Shotstack, published $0.20/min PAYG; no render spend
 - [x] Hosted assembly timeline, quote/debit/refund, durable submission/poll/private result, delivery controls and tests; provider-backed completion blocked on key
-- [ ] One free-tier four-clip assembly test — blocked: owner must add Shotstack key; existing clips are not attached to a studio project
+- [ ] One free-tier four-clip assembly test — blocked: existing test clips are not attached to a studio project; sandbox key verified
 - [x] Controlled pouring matrix: five clips, 10.42914 workspace credits; frame review finds no fully realistic pass
 - [x] Save best provisional motion template with focused tests; no existing screens or prices changed
 - [x] Confirm deployed assembly limits and document exact AWS bridge/setup/cost
-- [ ] Assemble existing four clips with voiceover/captions — blocked: hosted-renderer key missing; no AWS setup required
+- [ ] Assemble existing four clips with voiceover/captions — blocked: four eligible attached clips missing, narration/alignment not wired; sandbox key verified
 - [x] Step 3: studio tables/RLS, reference library, cached observation separation, editable storyboard/approval
 - [x] Step 3: quotes, atomic sequential attempts, gateway create/poll/private collection and refunds implemented
 - [x] Step 3: hosted assembly unavailable state, completed-clip ZIP fallback, generation pricing unset; assembly quoted separately
