@@ -119,7 +119,7 @@ export async function qualityCopyJson<S extends z.ZodTypeAny>(schema:S,prompt:st
     feedback=JSON.stringify(check.items);
   }
   // Never withhold: return the best draft; the score is shown as a note.
-  const best=bestQualityRound<any>(rounds);
+  const best=bestQualityRound<{value:z.output<S>;usage:CopyUsage;repaired:boolean}>(rounds);
   return {...best.output,usage,quality:rounds.map(({output,...r})=>r),qualityReport:best.report};
 }
 export async function hookLab(context:any) {
@@ -142,6 +142,6 @@ export async function nativeCaptionPack(context:any,platforms:string[],instructi
     if(check.pass)break;
     feedback=JSON.stringify(check.items);
   }
-  const best=bestQualityRound<any>(rounds);
+  const best=bestQualityRound<Awaited<ReturnType<typeof captionPackDraft>>>(rounds);
   return {...best.output,usage,quality:rounds.map(({output,...r})=>r),qualityReport:best.report};
 }
