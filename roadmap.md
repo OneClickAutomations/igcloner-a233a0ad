@@ -5,7 +5,10 @@
 - [x] Save best provisional motion template with focused tests; no existing screens or prices changed
 - [x] Confirm deployed assembly limits and document exact AWS bridge/setup/cost
 - [ ] Assemble existing four clips with voiceover/captions — blocked: owner AWS bridge/composition URL and secret are not configured
-- [ ] Studio implementation — blocked until assembly setup/proof; motion candidate not production-approved
+- [ ] Step 3: studio data/RLS, references, separated cached observations, storyboard approval
+- [ ] Step 3: quoted sequential durable animation, private collection, attempt refunds
+- [ ] Step 3: AWS assembly flag/download fallback and unset pricing math
+- [ ] Step 3: focused tests, cross-user/debit checks, desktop/mobile and at most one smoke test
 
 ## Pass 5A — Video Inspiration Studio feasibility and plan
 - [ ] Live gateway capabilities and per-call recorded costs; no fal.ai calls
