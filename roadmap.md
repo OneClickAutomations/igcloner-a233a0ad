@@ -2,10 +2,10 @@
 
 ## Authorized imported-film proof — 2026-11-08
 - [x] Locate four original Phase 1 clips/stills; ffprobe confirms each clip has 4.000s video, 720×1280; history confirms original proof was four ~4s scenes
-- [ ] Owner-only import with provenance — waiting for owner duration decision: original clips total 16s, not requested 32s; no regeneration/import charge
+- [ ] Owner-only import with provenance — authorized faithful 16s, four 4s clips; no regeneration/import charge
 - [ ] Wire ElevenLabs narration, verified pricing, atomic video debit/refund and speech-derived captions
-- [ ] Write 32s outdoor bottle narration; skip music unless licensing is confirmed
-- [ ] Submit through signed-in app assembly, poll/save/download and inspect audiovisual output — blocked before import/narration: owner must choose 16s faithful assembly or explicit 32s retiming/holds
+- [ ] Write 38–45-word 16s outdoor bottle narration; natural voice, no unlicensed music, speech-derived timing
+- [ ] Submit through signed-in app assembly, poll/save/download and inspect audiovisual output; retry provider-side sandbox failure once
 - [ ] Report actual costs/charges/watermark/alignment, honest customer-readiness verdict and remaining blockers
 
 ## Owner approvals and real assembly proof — 2026-11-08
