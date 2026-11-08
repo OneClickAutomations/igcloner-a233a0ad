@@ -1906,6 +1906,7 @@ export type Database = {
         }
         Returns: Json
       }
+      sweep_inspiration_stills: { Args: { p_user: string }; Returns: number }
       sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
       sweep_stale_copy_runs: { Args: never; Returns: number }
       sweep_stale_research_reports: {
