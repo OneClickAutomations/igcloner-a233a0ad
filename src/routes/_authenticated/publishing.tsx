@@ -15,6 +15,11 @@ export const Route = createFileRoute("/_authenticated/publishing")({
   }),
   head: () => ({
     meta: [
+      { name: "description", content: "Publishing for your IG-Cloner content workspace." },
+      { property: "og:title", content: "Publishing — IG-Cloner" },
+      { property: "og:description", content: "Publishing for your IG-Cloner content workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Publishing — IG-Cloner" },
       {
         name: "description",

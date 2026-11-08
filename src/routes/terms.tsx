@@ -7,6 +7,8 @@ const SITE = "https://www.igcloner.com";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Terms of Service — IG-Cloner" },
       { name: "description", content: "The terms that govern your use of IG-Cloner, including acceptable use, disclaimers, and limitations of liability." },
       { property: "og:title", content: "Terms of Service — IG-Cloner" },

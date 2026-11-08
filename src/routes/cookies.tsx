@@ -7,6 +7,8 @@ const SITE = "https://www.igcloner.com";
 export const Route = createFileRoute("/cookies")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Cookie Policy — IG-Cloner" },
       { name: "description", content: "How IG-Cloner uses cookies and similar technologies, and how to manage your choices." },
       { property: "og:title", content: "Cookie Policy — IG-Cloner" },

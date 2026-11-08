@@ -16,6 +16,10 @@ export const Route = createFileRoute("/_authenticated/projects")({
   validateSearch: zodValidator(projectsSearchSchema),
   head: () => ({
     meta: [
+      { property: "og:title", content: "Projects — IG-Cloner" },
+      { property: "og:description", content: "All your IG-Cloner content production projects in one place." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Projects — IG-Cloner" },
       { name: "description", content: "All your IG-Cloner content production projects in one place." },
       { name: "robots", content: "noindex" },

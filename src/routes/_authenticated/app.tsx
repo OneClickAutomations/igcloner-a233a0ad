@@ -8,6 +8,8 @@ export const Route = createFileRoute("/_authenticated/app")({
   }),
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Clone Studio — IG-Cloner" },
       { name: "description", content: "Paste any Instagram URL to break down its Content DNA and generate five original clone variations." },
       { property: "og:title", content: "Clone Studio — IG-Cloner" },
