@@ -127,7 +127,10 @@ export async function hookLab(context:any,progress: (stage:string)=>Promise<void
   const usage=emptyUsage();const rounds:any[]=[];let feedback="",previous:unknown=null;
   for(let round=0;round<=1;round++) {
     await progress(round ? "Improving the hooks — final attempt…" : "Writing 12 hooks…");
-    const draft=await hookLabDraft(context,`${feedback}\n${copyData("previous_shortlist",previous)}\nRetain strong concrete angles, but resolve each weak dimension substantively. Each hook must create a new, precise unresolved tension, not a motivational slogan. The fourth word is not an excuse to hide the point.`,progress);addUsage(usage,draft.usage);previous=draft.hooks;
+    let draft:Awaited<ReturnType<typeof hookLabDraft>>;
+    try {draft=await hookLabDraft(context,`${feedback}\n${copyData("previous_shortlist",previous)}\nRetain strong concrete angles, but resolve each weak dimension substantively. Each hook must create a new, precise unresolved tension, not a motivational slogan. The fourth word is not an excuse to hide the point.`,progress);}
+    catch(error){if(rounds.length)break;throw error;}
+    addUsage(usage,draft.usage);previous=draft.hooks;
     await progress("Picking the best 10 — checking quality…");
     const check=await critiqueCopy(context,{hooks:draft.hooks},"hooks","10 original hooks, four short forms each, source mechanism adapted to creator niche.");addUsage(usage,check.usage);
     rounds.push({round:round+1,items:check.items,pass:check.pass,output:draft});
@@ -141,7 +144,10 @@ export async function nativeCaptionPack(context:any,platforms:string[],instructi
   const usage=emptyUsage();const rounds:any[]=[];let feedback="",previous:unknown=null;
   for(let round=0;round<=1;round++) {
     await progress(round ? "Improving captions — final attempt…" : "Writing your captions…");
-    const draft=await captionPackDraft(context,platforms,`${instruction}\n${feedback}\n${copyData("previous_pack",previous)}\nPreserve accurate strong sections; revise the specific weak dimensions. Use one grounded observation as the organizing idea and a precise tension in the opener. Avoid merely listing source facts. Professional voice means useful insight, not corporate jargon.`);addUsage(usage,draft.usage);previous=draft.platforms;
+    let draft:Awaited<ReturnType<typeof captionPackDraft>>;
+    try {draft=await captionPackDraft(context,platforms,`${instruction}\n${feedback}\n${copyData("previous_pack",previous)}\nPreserve accurate strong sections; revise the specific weak dimensions. Use one grounded observation as the organizing idea and a precise tension in the opener. Avoid merely listing source facts. Professional voice means useful insight, not corporate jargon.`);}
+    catch(error){if(rounds.length)break;throw error;}
+    addUsage(usage,draft.usage);previous=draft.platforms;
     await progress("Checking the captions…");
     const check=await critiqueCopy(context,draft,"captions",`Native pack: ${platforms.join(",")}. ${instruction}`);addUsage(usage,check.usage);rounds.push({round:round+1,items:check.items,pass:check.pass,output:draft});
     if(check.pass)break;

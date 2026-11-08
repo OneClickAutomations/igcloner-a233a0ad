@@ -22,7 +22,7 @@ export async function meteredCopy<T>(input:{userId:string;analysisId?:string;pro
     };
     await progress("Preparing your saved post…");
     const output=await work(progress);
-    const {data:saved,error:saveErr}=await sb.from("copy_runs").update({status:"ready",output:output as any,usage:(output as any).usage ?? null,updated_at:new Date().toISOString()}).eq("id",row.id).eq("attempt_id",row.attempt_id).eq("status","processing").select("id").maybeSingle();
+    const {data:saved,error:saveErr}=await sb.from("copy_runs").update({status:"ready",output:{...output,...(input.requestId?{requestId:input.requestId}:{})} as any,usage:(output as any).usage ?? null,updated_at:new Date().toISOString()}).eq("id",row.id).eq("attempt_id",row.attempt_id).eq("status","processing").select("id").maybeSingle();
     if(saveErr || !saved) throw new Error("Writing finished after its attempt expired; not saved.");
     return {...output,charged:input.cost,cached:false,runId:row.id};
   } catch(e) {
