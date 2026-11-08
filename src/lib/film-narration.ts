@@ -34,6 +34,7 @@ export function alignmentCaptions(alignment: {characters:string[];character_star
   const captions:{start:number;end:number;text:string}[]=[];let text='',start=0,end=0;
   alignment.characters.forEach((char,i)=>{if(!text)start=alignment.character_start_times_seconds[i];text+=char;end=alignment.character_end_times_seconds[i];if((/[.!?,]/.test(char)||text.trim().split(/\s+/).length>=6&&char===' ')&&text.trim()){captions.push({start,end,text:text.trim()});text='';}});
   if(text.trim())captions.push({start,end,text:text.trim()});
-  if(!captions.length||captions.some(c=>!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.end>duration||c.end<=c.start))throw new Error('Narration timing does not fit the film.');
-  return captions;
+  // Never refuse: speech running past the film is clipped to the film; captions follow it.
+  return captions.filter(c=>Number.isFinite(c.start)&&Number.isFinite(c.end)&&c.start<duration)
+    .map(c=>({...c,end:Math.min(c.end,duration)})).filter(c=>c.end>c.start);
 }
