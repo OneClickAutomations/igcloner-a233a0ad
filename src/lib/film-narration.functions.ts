@@ -4,7 +4,10 @@ import {z} from 'zod';
 import {PROOF_NARRATION,PROOF_VOICE,alignmentCaptions,measuredSpeakingRate,narrationWordTarget,narrationFits,mp3Duration,countSpokenWords,NARRATION_TIMING_VERSION} from './film-narration';
 export const generateProofNarration=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),requestKey:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const {data:p}=await context.supabase.from('video_inspiration_projects').select('id,observation_notes').eq('id',data.projectId).eq('user_id',context.userId).single();
-  if(!p||!(p.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s'))throw new Error('Narration proof is restricted to the owner-authorized imported film.');
+  if(!p)throw new Error('Film not found.');
+  const isProof=(p.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s');
+  const {STUDIO_PRICING}=await import('./studio-pricing');
+  const billed=isProof?0:STUDIO_PRICING.video.narrationCredits;
   const key=process.env['ELEVENLABS_API_KEY'];if(!key)throw new Error('ElevenLabs is not configured.');
   const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
   const {data:existing}=await context.supabase.from('film_narration_attempts').select('*').eq('project_id',p.id).eq('status','completed').order('created_at',{ascending:false}).limit(1);
@@ -14,7 +17,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   const previous=existing?.[0];
   const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
   if(previous)return previous;
-  const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:0,p_usd:0});if(error)throw new Error(error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
+  const {data:claim,error}=await db.rpc('claim_film_narration',{p_user:context.userId,p_project:p.id,p_request:data.requestKey,p_script:PROOF_NARRATION,p_voice:PROOF_VOICE.id,p_billed:billed,p_usd:billed*STUDIO_PRICING.video.unitCostUsd});if(error)throw new Error(/Insufficient video credits/.test(error.message)?'You need video credits to generate narration. Nothing was charged.':error.message);const c=claim as any;if(c.existing)throw new Error('Narration already started. Do not duplicate the provider call.');
   const subscription=async()=>{const r=await fetch('https://api.elevenlabs.io/v1/user/subscription',{headers:{'xi-api-key':key}});return r.ok?await r.json() as any:null;};
   const before=await subscription();const started=Date.now();
   try{
@@ -36,7 +39,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
       if(round===1||duration<=filmSeconds||(narrationFits(duration,filmSeconds)&&narrationFits(speechEnd,filmSeconds))){
         const captions=alignmentCaptions(alignment,filmSeconds),path=`${context.userId}/${p.id}/assembly-input/${c.attempt.id}.mp3`;
         const {error:up}=await db.storage.from('video-inspiration').upload(path,bytes,{contentType:'audio/mpeg'});if(up)throw new Error(up.message);
-        const after=await subscription();const usage={timingVersion:NARRATION_TIMING_VERSION,filmSeconds,measuredRate,previousSpeed,speed,rounds,voice:PROOF_VOICE.name,method:'ElevenLabs synthesis character alignment; MP3 frame duration verification',alignment,elapsedMs:Date.now()-started,before:before?.character_count,after:after?.character_count,characterMovement:before&&after?after.character_count-before.character_count:null,monthlyUsd:before?.next_invoice?.amount_due_cents/100,characterAllowance:before?.character_limit,proofWaiver:'Owner-only proof: 0 video credits; normal narration remains unpriced and blocked.'};
+        const after=await subscription();const usage={timingVersion:NARRATION_TIMING_VERSION,filmSeconds,measuredRate,previousSpeed,speed,rounds,voice:PROOF_VOICE.name,method:'ElevenLabs synthesis character alignment; MP3 frame duration verification',alignment,elapsedMs:Date.now()-started,before:before?.character_count,after:after?.character_count,characterMovement:before&&after?after.character_count-before.character_count:null,monthlyUsd:before?.next_invoice?.amount_due_cents/100,characterAllowance:before?.character_limit,billedVideoCredits:billed};
         const {data:row,error:saved}=await db.from('film_narration_attempts').update({script:draft.script,status:'completed',result_path:path,captions,duration_seconds:duration,usage,updated_at:new Date().toISOString()}).eq('id',c.attempt.id).eq('status','claimed').select('*').single();if(saved)throw new Error(saved.message);return row;
       }
       targetWords=narrationWordTarget(filmSeconds,measuredSpeakingRate(draft.script,duration));
