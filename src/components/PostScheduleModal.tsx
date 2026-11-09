@@ -9,12 +9,12 @@ import { toast } from "sonner";
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  caption: string;
-  hashtags: string[];
+  caption?: string;
+  hashtags?: string[];
   format: "image" | "reel" | "carousel" | "voiceover" | "caption";
 };
 
-export function PostScheduleModal({ open, onOpenChange, caption, hashtags, format }: Props) {
+export function PostScheduleModal({ open, onOpenChange, caption = '', hashtags = [], format }: Props) {
   const [mode, setMode] = useState<"now" | "schedule">("now");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("19:00");
@@ -82,7 +82,7 @@ export function PostScheduleModal({ open, onOpenChange, caption, hashtags, forma
             <p className="mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap text-xs text-foreground/90">
               {caption}
             </p>
-            {hashtags.length > 0 && (
+            {(hashtags ?? []).length > 0 && (
               <p className="mt-2 text-[11px] text-muted-foreground">{tagString}</p>
             )}
           </div>

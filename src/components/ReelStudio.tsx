@@ -96,7 +96,7 @@ const STEPS: { id: StepId; label: string; icon: typeof Eye }[] = [
   { id: "video",     label: "Render", icon: Film },
 ];
 
-export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver' } = {}) {
+export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { embeddedProjectId?: string; wizardStage?: 'make'|'deliver'; speechMode?: 'voiceover'|'silent' } = {}) {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   const projectId = embeddedProjectId ?? (search as any)?.projectId as string | undefined;
@@ -260,7 +260,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
         data: {
           projectId,
           angle: angle || undefined,
-          settings: { format, duration, style, pace },
+          settings: { format, duration, style, pace, speechMode },
           visualDirection: direction,
         },
       });
@@ -321,7 +321,10 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
     setVideoError(null);
     setQueuePos(null);
     try {
-      const full = neg ? `${prompt}\n\nNegative prompt: ${neg}` : prompt;
+      const speaks=(speechMode??project.data?.user_preferences?.speechMode??'voiceover')!=='silent';
+      const lines=doc?.scenes?.map(s=>s.voiceover).filter(Boolean).join(' ') || doc?.hook?.text || angle;
+      const spoken=lines?.split(/\s+/).slice(0,Math.floor(videoDuration*2.5)).join(' ');
+      const full = `${prompt}${neg?`\n\nNegative prompt: ${neg}`:''}\nAUDIO: ${speaks?`Generate audible, clear natural voiceover saying exactly: "${spoken}". Speech begins immediately. Do not output a silent or music-only clip.`:'No speech or dialogue. Music and ambient sound only.'}`;
       const imageUrl = useSourceImage
         ? (doc?.sourceImageUrl ||
             (project.data as any)?.source_thumbnail ||
@@ -331,7 +334,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage }: { embeddedProject
       const { attemptId, requestId, modelSlug, statusUrl, responseUrl }: any = await submitVideoFn({
         data: {
           prompt: full, model: videoModel, aspect_ratio: format,
-          duration: videoDuration, generate_audio: videoAudio,
+          duration: videoDuration, generate_audio: speaks || videoAudio,
           ...(imageUrl ? { image_url: imageUrl } : {}),
         },
       });
