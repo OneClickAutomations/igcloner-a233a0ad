@@ -214,13 +214,14 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
 const WrittenScene = z.object({
   environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),
   duration: z.union([z.literal(4), z.literal(6), z.literal(8)]), onScreenText: z.string().max(200).default(''),
+  voiceover: z.string().max(1000).default(''),
   objects: z.array(z.object({ name: z.string(), state: z.string() })).min(1).max(8),
 });
 const WrittenBoard = z.object({ scenes: z.array(WrittenScene).min(1).max(8) });
 
 /** Claude writes the storyboard from the film's saved source analysis; plan credits, refunded on failure. */
 export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default('') }).parse(d))
+  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default(''), speechMode:z.enum(['voiceover','silent']).default('voiceover') }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase.from('video_inspiration_projects').select('id,title,analysis_id').eq('id', data.projectId).single();
@@ -241,6 +242,7 @@ export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).mid
 Copy only the SOURCE's structure: same number of scenes as its shots (max 8) and the same pacing. Use a NEW setting, NEW subjects and NEW words; never a real person's likeness, names or the source's words.
 Per scene: environment (new setting), action (ONE concrete physical action that starts immediately), endState (observable end state), camera (exactly one camera move), audio (specified sound), duration (4, 6 or 8 seconds, matching the source shot length), onScreenText (short on-screen text or empty), objects (EVERY object the action touches or needs — hands, product, cups, lids etc. — each with its initial visible state, so the opening still contains everything the motion needs).
 Physical realism: liquids pour downward, objects keep shape, colors and proportions; one continuous shot per scene.
+Output audio choice overrides the source: ${data.speechMode==='voiceover'?'Someone speaks. Write a real, natural spoken line in every scene.voiceover, around 2.5 words per second, even if the source has no speech.':'No talking. Every scene.voiceover is empty.'}
 Return JSON {"scenes":[...]}.
 <SOURCE>${source}</SOURCE>`;
       const { value } = await copyJson(WrittenBoard, prompt, 'You are a senior short-form video director writing shot-by-shot storyboards.', 8000);

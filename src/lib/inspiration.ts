@@ -14,7 +14,7 @@ export const SceneInput = z.object({
   environment: z.string().trim().min(1).max(500), action: z.string().trim().min(1).max(800),
   endState: z.string().trim().min(1).max(300), camera: z.string().trim().min(1).max(160),
   audio: z.string().trim().min(1).max(300), duration: z.union([z.literal(4), z.literal(6), z.literal(8)]).default(8),
-  objects: z.array(ActionObject).min(1).max(12), onScreenText: z.string().max(200).optional(), stillPrompt: z.string().max(5000).optional(), motionPrompt: z.string().max(5000).optional(),
+  objects: z.array(ActionObject).min(1).max(12), voiceover: z.string().max(1000).optional(), onScreenText: z.string().max(200).optional(), stillPrompt: z.string().max(5000).optional(), motionPrompt: z.string().max(5000).optional(),
 });
 export type SceneDraft = z.infer<typeof SceneInput>;
 
