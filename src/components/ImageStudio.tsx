@@ -206,7 +206,8 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
       });
       setActiveUrl(res.signedUrl);
       setImages((prev) => [res.asset, ...prev]);
-      toast.success("Image ready");
+      window.dispatchEvent(new Event('content-generated'));
+      toast.success("Image ready — saved to your content library", { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {

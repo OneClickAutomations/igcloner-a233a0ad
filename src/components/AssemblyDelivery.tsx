@@ -1,4 +1,5 @@
 import { useEffect,useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { Film,Download,Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
@@ -22,6 +23,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   const project=data.selected;const jobs=data.assemblies;const active=jobs.some(j=>['claimed','submitting','queued','fetching','rendering','saving'].includes(j.status));
   useEffect(()=>{if(!project)return;recover({data:{projectId:project.id}}).then(refresh).catch(()=>{});},[project?.id]);
   useEffect(()=>{if(!active||!project)return;const timer=setInterval(()=>recover({data:{projectId:project.id}}).then(refresh).catch(()=>{}),8000);return()=>clearInterval(timer);},[active,project?.id,recover]);
+  useEffect(()=>{if(jobs.some(j=>j.status==='completed'))window.dispatchEvent(new Event('content-generated'));},[jobs.filter(j=>j.status==='completed').map(j=>j.id).join(',')]);
   if(!project)return null;
   const uploadFile=async(file:File,kind:'voiceover'|'music'|'logo')=>{
     if(file.size>10*1024*1024)throw new Error('Maximum file size is 10MB.');
@@ -44,6 +46,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
     const result=await quote({data:{projectId:project.id,options}});setConfirmation({result,options,requestKey:crypto.randomUUID()});
   };
   return <>
+    {jobs.some(j=>j.status==='completed')&&<p className="mb-5 text-base">Your finished film is saved to your content library. <Link to="/library" search={{projectId:project.id}} className="text-primary underline">Open film in library</Link></p>}
     <section className="border-b border-border pb-6">
       <h2 className="text-xl font-semibold">{data.assemblyConfigured?'Assemble film · Shotstack':'Assembly not configured yet'}</h2>
       {savedNarration?.script&&speechMode==='voiceover'&&<div className="mt-4"><h3 className="font-medium">Spoken words</h3><p className="mt-2 whitespace-pre-wrap text-sm">{savedNarration.script}</p></div>}
