@@ -152,7 +152,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       const p: any = (r as any).project;
       if (p?.project_data) {
         // Wizard autosave stores settings without a script; only a real script counts as a reel document.
-        if ((p.project_data as ReelDoc).hook) setDoc(p.project_data as ReelDoc);
+        if ((p.project_data as ReelDoc).hook || Array.isArray((p.project_data as ReelDoc).scenes)) setDoc(p.project_data as ReelDoc);
         const pd = p.project_data as ReelDoc;
         const savedSettings = (p.project_data as any).wizardSettings;
         if (savedSettings) { setAngle(savedSettings.angle??''); setDuration(savedSettings.duration??20); setFormat(savedSettings.format??'9:16'); setStyle(savedSettings.style??'cinematic UGC'); setPace(savedSettings.pace??'fast'); setStep(savedSettings.step??'direction'); }
@@ -188,20 +188,20 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       lastSavedRef.current = snapshot;
       const patch: any = {};
       const audioBits = { stylePreset, audioPlan, mixProfile };
-      if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection, ...audioBits };
+      if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection, ...audioBits, videoUrl };
       else if (direction) patch.project_data = { visualDirection: direction, ...audioBits };
       if (!patch.project_data) return;
       patch.status = doc?.hook ? "in_progress" : "draft";
       updateProjectFn({ data: { id: projectId, patch } }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile]);
+  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile, videoUrl]);
   useEffect(()=>{
     if(!embeddedProjectId)return;
-    const handler=(event:Event)=>{(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
+    const handler=(event:Event)=>{if(!project.data)return;(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(project.data.project_data??{}),...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
     window.addEventListener('creation-save',handler);
     return()=>window.removeEventListener('creation-save',handler);
-  },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn]);
+  },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn,project.data]);
 
   useEffect(() => {
     const onBeforeUnload = () => {
@@ -349,6 +349,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         setQueuePos(s.queuePosition ?? null);
         if (s.status === "COMPLETED") {
           setVideoUrl(s.videoUrl);
+          if(projectId)await updateProjectFn({data:{id:projectId,patch:{project_data:{...(project.data?.project_data??{}),...(doc??{}),videoUrl:s.videoUrl,visualDirection:direction,stylePreset,audioPlan,mixProfile},status:'completed'}}});
           toast.success("Video ready");
           return;
         }
