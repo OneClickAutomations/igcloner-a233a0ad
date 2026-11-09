@@ -12,10 +12,10 @@ vi.mock("ai",()=>({streamText:()=>{
 }}));
 import {hookLab} from "./copy-engine.server";
 describe("bounded Hook Lab",()=>{
-  it("writes twelve candidates, keeps ten, and never exceeds one quality retry",async()=>{
+  it("writes twelve candidates, keeps ten, and returns low-scored hooks after one writing round without quality regeneration",async()=>{
     vi.stubEnv("LOVABLE_API_KEY","test-key");calls.count=0;const progress=vi.fn(async()=>{});
     const result=await hookLab({source:{hookLocation:"caption",exactHook:"",blueprint:null},voice:{},research:null},progress);
-    expect(result.candidatesGenerated).toBe(12);expect(result.hooks).toHaveLength(10);expect(result.quality).toHaveLength(2);expect(calls.count).toBe(6);
+    expect(result.candidatesGenerated).toBe(12);expect(result.hooks).toHaveLength(10);expect(result.quality).toHaveLength(1);expect(calls.count).toBe(3);
     expect(progress).toHaveBeenCalledWith("Ranking them…");vi.unstubAllEnvs();
   });
 });
