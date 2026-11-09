@@ -21,6 +21,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
     const { data: assemblies } = selected ? await supabase.from('assembly_jobs').select('id,project_id,status,billed,billing_balance,duration_seconds,environment,render_quote_usd,result_path,failure_reason,refunded_at,created_at').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
+    const { data: narrations } = selected ? await supabase.from('film_narration_attempts').select('script,result_path,duration_seconds,captions').eq('project_id', selected.id).eq('status','completed').order('created_at',{ascending:false}).limit(1) : { data: [] };
     const sign = async (path: string | null) => {
       if (!path || !path.startsWith(`${userId}/`)) return null;
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
@@ -37,6 +38,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       scenes: await Promise.all((scenes ?? []).map(async s => ({ ...s, preview: await sign(s.still_path) }))),
       attempts: await Promise.all((attempts ?? []).map(async a => ({ ...a, preview: await sign(a.result_url) }))),
       assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
+      narration: narrations?.[0] ?? null,
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
