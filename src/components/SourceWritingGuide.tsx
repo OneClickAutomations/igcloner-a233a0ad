@@ -10,7 +10,7 @@ export function SourceWritingGuide({ analysis, onUse }: { analysis: any; onUse: 
   const suggestions = [
     { title: 'Keep the tension, change the subject', text: hook.whyItWorks || hook.whatWorks, brief: `Use the source’s ${hook.mechanism || hook.type || 'opening'} to address ${audience.desire || 'one specific audience problem'}. Start with a concrete situation, then show the payoff.` },
     { title: 'Answer the audience’s real question', text: audience.desire, brief: `Show ${audience.who || 'my audience'} how to approach ${audience.desire || 'the problem in the source'}. Use one visible example, not a broad promise.` },
-    { title: 'Make the original clearer', text: hook.scoreReasoning || cap.bodyPattern, brief: `Keep the source’s ${cap.bodyPattern || 'hook, explanation and payoff'} structure. Make the opening specific, demonstrate the main point, and finish with ${cap.ctaType || 'one clear next step'}.` },
+    { title: 'Make the original clearer', text: hook.improvement || hook.scoreReasoning || cap.bodyPattern, brief: `Keep the source’s ${cap.bodyPattern || 'hook, explanation and payoff'} structure. ${hook.improvement || 'Make the opening specific and demonstrate the main point.'} Finish with ${cap.ctaType || 'one clear next step'}.` },
   ].filter(s => s.text);
   return <section className="space-y-6">
     <div><h3 className="text-xl font-semibold">Start with what worked</h3><p className="mt-2 text-sm text-muted-foreground">Use the post’s strongest idea, then make the message yours.</p></div>
