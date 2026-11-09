@@ -1,3 +1,4 @@
+import { MetricHelp } from "./MetricHelp";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertCircle, Eye, Sparkles } from "lucide-react";
@@ -19,7 +20,7 @@ function fmt(sec: number) {
 export function ProvenanceBadge({ p }: { p: "observed" | "inferred" }) {
   return (
     <span
-      className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+      className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${
         p === "observed" ? "bg-accent-primary/10 text-accent-primary" : "bg-muted text-muted-foreground"
       }`}
     >
@@ -30,8 +31,8 @@ export function ProvenanceBadge({ p }: { p: "observed" | "inferred" }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h4>
+    <div className="report-section">
+      <h3 className="text-2xl font-semibold">{title}</h3>
       {children}
     </div>
   );
@@ -65,25 +66,40 @@ export function AnalysisEvidencePanel({ analysisId, dna, blueprint, transcript, 
   const perf = dna?.performanceBasis;
 
   return (
-    <div className="space-y-4">
+    <div className="analysis-report space-y-0">
       <Card title="Analysis confidence">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-2xl font-bold text-accent-primary">{analysisConfidence ?? "—"}</span>
-          <span className="text-xs text-muted-foreground">/ 100 — how much of this was read from the real media</span>
+          <span className="metric-value text-foreground">{analysisConfidence ?? "—"}</span>
+          <span className="text-sm text-muted-foreground">/ 100 · evidence coverage</span><MetricHelp label="Analysis confidence">How much of the judgement is supported by saved media. Low confidence means you should review the evidence before recreating the idea, not that the post is poor.</MetricHelp>
         </div>
         {limitations.length > 0 && (
           <ul className="mt-2 space-y-0.5 text-xs text-status-warning">
             {limitations.map((l, i) => <li key={i}>· {l}</li>)}
           </ul>
         )}
-        {perf?.formula && <p className="mt-2 text-[11px] text-muted-foreground">Performance: {perf.formula}</p>}
+        {perf?.formula && <p className="mt-2 text-sm text-muted-foreground">Performance: {perf.formula}</p>}
+      </Card>
+
+      <Card title="Overall grade">
+        <div className="flex items-center gap-4"><span className="metric-value">{typeof dna?.performanceScore === 'number' ? (dna.performanceScore >= 85 ? 'A' : dna.performanceScore >= 70 ? 'B' : dna.performanceScore >= 55 ? 'C' : 'D') : 'Not rated'}</span><MetricHelp label="Overall grade">A summary of the saved analysis score, not a prediction of views. A is 85+, B is 70–84, C is 55–69 and D is below 55; check the evidence and adapt weaknesses before recreating.</MetricHelp></div>
+        <p className="mt-3 text-base text-muted-foreground">{typeof dna?.performanceScore !== 'number' ? 'There is not enough scored evidence to recommend copying this post.' : dna.performanceScore >= 85 ? 'Strong starting point. Keep the central mechanism; make the topic and proof your own.' : dna.performanceScore >= 70 ? 'Worth adapting. Keep the strongest parts and improve the weaknesses below.' : dna.performanceScore >= 55 ? 'Recreate selectively. The idea needs a clearer opening or payoff.' : 'Use as a lesson, not a template. Rework the message before recreating.'}</p>
+        <p className="mt-2 text-sm text-muted-foreground">Inferred · saved analysis score {dna?.performanceScore ?? 'unavailable'}{typeof dna?.performanceScore === 'number' ? '/100' : ''}. Not a measured performance forecast.</p>
+      </Card>
+      <Card title="Why someone would care">
+        <div className="mb-4"><ProvenanceBadge p="inferred"/></div>
+        <p className="text-lg leading-relaxed">{hook.whyItWorks || hook.whatWorks || 'No psychological explanation was captured in this analysis.'}</p>
+        <dl className="mt-6 grid gap-6 sm:grid-cols-2">{[['Audience tension',dna?.targetAudience?.desire],['Identity or emotional trigger',dna?.targetAudience?.trigger]].filter(([,v])=>v).map(([label,value])=><div key={label}><dt className="metric-label">{label}</dt><dd className="mt-2 text-base">{value}</dd></div>)}</dl>
+        {hook.exactText && <p className="mt-5 border-l-2 border-border pl-4 text-sm"><strong>Opening evidence:</strong> “{hook.exactText}”</p>}
+      </Card>
+      <Card title="What to keep — what to change">
+        <div className="grid gap-8 sm:grid-cols-2"><div><h4 className="mb-3 text-lg font-semibold">Keep the working parts</h4><ProvenanceBadge p="inferred"/><ul className="mt-3 space-y-3 text-base">{(dna?.whyItWorks || []).map((text:string,i:number)=><li key={i}>{text}</li>)}</ul>{!(dna?.whyItWorks?.length) && <p className="mt-3 text-muted-foreground">No detailed strengths were captured.</p>}</div><div><h4 className="mb-3 text-lg font-semibold">Improve the weak points</h4><ProvenanceBadge p="inferred"/><p className="mt-3 text-base">{hook.scoreReasoning || 'No specific hook weakness was captured. Review the opening against the payoff before recreating.'}</p>{limitations.length>0 && <ul className="mt-4 space-y-2 text-sm text-muted-foreground">{limitations.map((l,i)=><li key={i}>{l}</li>)}</ul>}<p className="mt-4 text-sm text-muted-foreground">When you recreate: keep the opening mechanism and order of the argument. Replace the subject, examples and claims with evidence you can support.</p></div></div>
       </Card>
 
       <Card title="The hook">
         <div className="mb-2 flex items-center gap-2">
           <span className="rounded-md bg-accent-primary/10 px-2 py-0.5 text-xs font-medium text-accent-primary">{hook.mechanism || hook.type}</span>
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{hook.location}</span>
-          <span className="ml-auto font-mono text-sm font-bold text-accent-primary">{hook.score}/10</span>
+          <span className="text-sm uppercase tracking-wide text-muted-foreground">{hook.location}</span>
+          <span className="ml-auto font-mono text-sm font-bold text-accent-primary">{hook.score}/10</span><MetricHelp label="Hook score">The saved judgement of how well the opening earns attention. Use its reasoning to sharpen the first line; it is not measured watch time.</MetricHelp>
         </div>
         <p className="whitespace-pre-line text-base font-semibold">“{hook.exactText}”</p>
         {hook.whyItWorks && <p className="mt-2 text-sm text-secondary-foreground">{hook.whyItWorks}</p>}
@@ -103,7 +119,7 @@ export function AnalysisEvidencePanel({ analysisId, dna, blueprint, transcript, 
             ["Keyword trigger", cap.keywordTrigger || "none"],
           ].map(([k, v]) => (
             <div key={k as string} className="min-w-0">
-              <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{k}</dt>
+              <dt className="text-sm uppercase tracking-wide text-muted-foreground">{k}</dt>
               <dd className="text-secondary-foreground break-words">{v || "—"}</dd>
             </div>
           ))}
@@ -172,7 +188,7 @@ export function AnalysisEvidencePanel({ analysisId, dna, blueprint, transcript, 
           <span>Can't be recreated exactly: {blueprint.dependencies.join(" · ")}</span>
         </div>
       )}
-      <p className="flex items-center gap-1 text-[11px] text-muted-foreground"><Sparkles className="h-3 w-3" /> Observed = read from the saved media. Inferred = the AI's judgment.</p>
+      <p className="flex items-center gap-1 text-sm text-muted-foreground"><Sparkles className="h-3 w-3" /> Observed = read from the saved media. Inferred = the AI's judgment.</p>
     </div>
   );
 }
