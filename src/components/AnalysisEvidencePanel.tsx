@@ -31,8 +31,8 @@ export function ProvenanceBadge({ p }: { p: "observed" | "inferred" }) {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="report-section">
-      <h3 className="text-2xl font-semibold">{title}</h3>
+    <div className="rounded-xl border border-border bg-card p-4">
+      <h4 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{title}</h4>
       {children}
     </div>
   );
@@ -66,10 +66,10 @@ export function AnalysisEvidencePanel({ analysisId, dna, blueprint, transcript, 
   const perf = dna?.performanceBasis;
 
   return (
-    <div className="analysis-report space-y-0">
+    <div className="space-y-4">
       <Card title="Analysis confidence">
         <div className="flex items-center gap-3">
-          <span className="metric-value text-foreground">{analysisConfidence ?? "—"}</span>
+          <span className="font-mono text-2xl font-bold text-accent-primary">{analysisConfidence ?? "—"}</span>
           <span className="text-sm text-muted-foreground">/ 100 · evidence coverage</span><MetricHelp label="Analysis confidence">How much of the judgement is supported by saved media. Low confidence means you should review the evidence before recreating the idea, not that the post is poor.</MetricHelp>
         </div>
         {limitations.length > 0 && (
@@ -81,18 +81,18 @@ export function AnalysisEvidencePanel({ analysisId, dna, blueprint, transcript, 
       </Card>
 
       <Card title="Overall grade">
-        <div className="flex items-center gap-4"><span className="metric-value">{typeof dna?.performanceScore === 'number' ? (dna.performanceScore >= 85 ? 'A' : dna.performanceScore >= 70 ? 'B' : dna.performanceScore >= 55 ? 'C' : 'D') : 'Not rated'}</span><MetricHelp label="Overall grade">A summary of the saved analysis score, not a prediction of views. A is 85+, B is 70–84, C is 55–69 and D is below 55; check the evidence and adapt weaknesses before recreating.</MetricHelp></div>
+        <div className="flex items-center gap-4"><span className="font-mono text-2xl font-bold text-accent-primary">{typeof dna?.performanceScore === 'number' ? (dna.performanceScore >= 85 ? 'A' : dna.performanceScore >= 70 ? 'B' : dna.performanceScore >= 55 ? 'C' : 'D') : 'Not rated'}</span><MetricHelp label="Overall grade">A summary of the saved analysis score, not a prediction of views. A is 85+, B is 70–84, C is 55–69 and D is below 55; check the evidence and adapt weaknesses before recreating.</MetricHelp></div>
         <p className="mt-3 text-base text-muted-foreground">{typeof dna?.performanceScore !== 'number' ? 'There is not enough scored evidence to recommend copying this post.' : dna.performanceScore >= 85 ? 'Strong starting point. Keep the central mechanism; make the topic and proof your own.' : dna.performanceScore >= 70 ? 'Worth adapting. Keep the strongest parts and improve the weaknesses below.' : dna.performanceScore >= 55 ? 'Recreate selectively. The idea needs a clearer opening or payoff.' : 'Use as a lesson, not a template. Rework the message before recreating.'}</p>
         <p className="mt-2 text-sm text-muted-foreground">Inferred · saved analysis score {dna?.performanceScore ?? 'unavailable'}{typeof dna?.performanceScore === 'number' ? '/100' : ''}. Not a measured performance forecast.</p>
       </Card>
       <Card title="Why someone would care">
         <div className="mb-4"><ProvenanceBadge p="inferred"/></div>
         <p className="text-lg leading-relaxed">{hook.whyItWorks || hook.whatWorks || 'No psychological explanation was captured in this analysis.'}</p>
-        <dl className="mt-6 grid gap-6 sm:grid-cols-2">{[['Audience tension',dna?.targetAudience?.desire],['Identity or emotional trigger',dna?.targetAudience?.trigger]].filter(([,v])=>v).map(([label,value])=><div key={label}><dt className="metric-label">{label}</dt><dd className="mt-2 text-base">{value}</dd></div>)}</dl>
+        <dl className="mt-6 grid gap-6 sm:grid-cols-2">{[['Audience tension',dna?.targetAudience?.desire],['Identity or emotional trigger',dna?.targetAudience?.trigger]].filter(([,v])=>v).map(([label,value])=><div key={label}><dt className="text-xs font-semibold uppercase text-muted-foreground">{label}</dt><dd className="mt-2 text-base">{value}</dd></div>)}</dl>
         {hook.exactText && <p className="mt-5 border-l-2 border-border pl-4 text-sm"><strong>Opening evidence:</strong> “{hook.exactText}”</p>}
       </Card>
       <Card title="What to keep — what to change">
-        <div className="grid gap-8 sm:grid-cols-2"><div><h4 className="mb-3 text-lg font-semibold">Keep the working parts</h4><ProvenanceBadge p="inferred"/><ul className="mt-3 space-y-3 text-base">{(dna?.whyItWorks || []).map((text:string,i:number)=><li key={i}>{text}</li>)}</ul>{!(dna?.whyItWorks?.length) && <p className="mt-3 text-muted-foreground">No detailed strengths were captured.</p>}</div><div><h4 className="mb-3 text-lg font-semibold">Improve the weak points</h4><ProvenanceBadge p="inferred"/><p className="mt-3 text-base">{hook.scoreReasoning || 'No specific hook weakness was captured. Review the opening against the payoff before recreating.'}</p>{hook.improvement && <div className="mt-5 border-l-2 border-border pl-4"><p className="metric-label">A stronger version would</p><p className="mt-2 text-base">{hook.improvement}</p></div>}{limitations.length>0 && <ul className="mt-4 space-y-2 text-sm text-muted-foreground">{limitations.map((l,i)=><li key={i}>{l}</li>)}</ul>}<p className="mt-4 text-sm text-muted-foreground">When you recreate: keep the opening mechanism and order of the argument. Replace the subject, examples and claims with evidence you can support.</p></div></div>
+        <div className="grid gap-8 sm:grid-cols-2"><div><h4 className="mb-3 text-lg font-semibold">Keep the working parts</h4><ProvenanceBadge p="inferred"/><ul className="mt-3 space-y-3 text-base">{(dna?.whyItWorks || []).map((text:string,i:number)=><li key={i}>{text}</li>)}</ul>{!(dna?.whyItWorks?.length) && <p className="mt-3 text-muted-foreground">No detailed strengths were captured.</p>}</div><div><h4 className="mb-3 text-lg font-semibold">Improve the weak points</h4><ProvenanceBadge p="inferred"/><p className="mt-3 text-base">{hook.scoreReasoning || 'No specific hook weakness was captured. Review the opening against the payoff before recreating.'}</p>{hook.improvement && <div className="mt-5 border-l-2 border-border pl-4"><p className="text-xs font-semibold uppercase text-muted-foreground">A stronger version would</p><p className="mt-2 text-base">{hook.improvement}</p></div>}{limitations.length>0 && <ul className="mt-4 space-y-2 text-sm text-muted-foreground">{limitations.map((l,i)=><li key={i}>{l}</li>)}</ul>}<p className="mt-4 text-sm text-muted-foreground">When you recreate: keep the opening mechanism and order of the argument. Replace the subject, examples and claims with evidence you can support.</p></div></div>
       </Card>
 
       <Card title="The hook">

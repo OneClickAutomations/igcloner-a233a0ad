@@ -97,20 +97,28 @@ function MetricCell({
   highlight?: boolean;
 }) {
   return (
-    <div className={`min-w-0 py-4 ${highlight ? "border-l-2 border-primary pl-4" : ""}`}>
-      <div className="flex items-center gap-2">
-        <span className="metric-label">{label}</span>
-        <MetricHelp label={label}>{metricGuidance[label] || tooltip || `This describes the source post. Use it to choose the format and production effort for your version.`}</MetricHelp>
-        {source && <span className="text-xs text-muted-foreground">{source === 'calc' ? 'Calculated' : source === 'est' ? 'Inferred' : 'Observed'}</span>}
+    <div
+      title={tooltip}
+      className={`rounded-xl border p-3 ${highlight ? "border-accent-primary/40 bg-accent-primary/5" : "border-border bg-muted/30"}`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <MetricHelp label={label}>{metricGuidance[label] || tooltip || "Context from the source post."}</MetricHelp>
+        {source === "calc" && (
+          <span className="rounded bg-muted px-1 py-px text-[9px] font-semibold uppercase text-muted-foreground">calc</span>
+        )}
+        {source === "est" && (
+          <span className="rounded bg-accent-secondary/15 px-1 py-px text-[9px] font-semibold uppercase text-accent-secondary">est</span>
+        )}
       </div>
-      <div className={`mt-1 break-words font-semibold tabular-nums ${highlight || ['Likes','Comments','Video views'].includes(label) ? 'text-3xl' : 'text-xl'}`}>{value}</div>
+      <div className="mt-1 truncate text-base font-bold leading-tight text-foreground">{value}</div>
     </div>
   );
 }
 
 function Dash({ tooltip = "Not available from public data" }: { tooltip?: string }) {
   return (
-    <span title={tooltip} className="text-muted-foreground">
+    <span title={tooltip} className="text-muted-foreground/70">
       —
     </span>
   );
@@ -132,7 +140,7 @@ function Pill({
           ? "bg-status-warning/10 text-status-warning border-status-warning/25"
           : "bg-muted text-foreground border-border";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-sm font-semibold ${cls}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${cls}`}>
       {children}
     </span>
   );
@@ -216,11 +224,11 @@ export function ChannelIntelHeader({
   const [zoomSrc, setZoomSrc] = useState<string | null>(null);
 
   return (
-    <div className="analysis-report overflow-hidden border-b border-border">
-      
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-ig">
+      <div className="h-1 gradient-accent" />
 
       {/* HEADER: thumbnail + identity */}
-      <div className="grid gap-6 py-6 md:grid-cols-[180px_1fr]">
+      <div className="grid gap-5 p-5 md:grid-cols-[180px_1fr]">
         <a
           href={url}
           target="_blank"
@@ -240,10 +248,10 @@ export function ChannelIntelHeader({
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gradient-card text-muted-foreground">
                 <ImageIcon className="h-8 w-8 opacity-50" />
-                <span className="mt-1 text-sm uppercase tracking-wider">No preview</span>
+                <span className="mt-1 text-[11px] uppercase tracking-wider">No preview</span>
               </div>
             )}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[var(--media-overlay)] to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent" />
             {thumb && (
               <button
                 type="button"
@@ -254,21 +262,21 @@ export function ChannelIntelHeader({
                 }}
                 aria-label="Enlarge image"
                 title="Enlarge image"
-                className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--media-overlay)] text-[var(--media-foreground)] shadow-md backdrop-blur transition hover:bg-[var(--media-overlay)] hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring"
+                className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white shadow-md backdrop-blur transition hover:bg-black/75 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-white/70"
               >
                 <ZoomIn className="h-3.5 w-3.5" />
               </button>
             )}
             {isReel && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-card shadow-lg backdrop-blur transition-transform group-hover:scale-110">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/95 shadow-lg backdrop-blur transition-transform group-hover:scale-110">
                   <Play className="h-5 w-5 text-accent-secondary" fill="currentColor" />
                 </div>
               </div>
             )}
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-sm font-semibold text-[var(--media-foreground)]">
+            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] font-semibold text-white">
               <span className="truncate">@{username}</span>
-              <span className="inline-flex items-center gap-1 rounded-md bg-[var(--media-overlay)] px-1.5 py-0.5 backdrop-blur opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/15 px-1.5 py-0.5 backdrop-blur opacity-0 transition-opacity group-hover:opacity-100">
                 <ExternalLink className="h-3 w-3" /> Open
               </span>
             </div>
@@ -277,10 +285,10 @@ export function ChannelIntelHeader({
 
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-2xl font-semibold text-foreground">@{username}</span>
+            <span className="text-lg font-bold gradient-text">@{username}</span>
             {verified && <BadgeCheck className="h-4 w-4 text-accent-secondary" fill="currentColor" />}
             <Pill tone="brand">{isPrivate ? "Private" : "Public"}</Pill>
-            <span title={`Data quality: ${confidence.label}`} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-sm font-semibold ${confidence.tone}`}>
+            <span title={`Data quality: ${confidence.label}`} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${confidence.tone}`}>
               <span className="h-1.5 w-1.5 rounded-full bg-current" />
               {confidence.label}
             </span>
@@ -414,8 +422,8 @@ export function ChannelIntelHeader({
                     className="group relative h-12 w-12 overflow-hidden rounded-md focus:outline-none focus:ring-2 focus:ring-accent-primary"
                   >
                     <img src={sThumb} alt={`Slide ${i + 1}`} className="h-full w-full object-cover transition-transform group-hover:scale-110" />
-                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[var(--media-overlay)] opacity-0 transition-opacity group-hover:opacity-100">
-                      <ZoomIn className="h-4 w-4 text-[var(--media-foreground)]" />
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                      <ZoomIn className="h-4 w-4 text-white" />
                     </span>
                   </button>
                 ) : (
@@ -489,7 +497,7 @@ export function ChannelIntelHeader({
       {(intel.primaryNiche || intel.audienceLanguage || intel.estimatedMonthlyRevenue || intel.estimatedMonthlyViews) && (
         <Section title="AI estimates">
           <div className="rounded-xl border border-accent-secondary/30 bg-accent-secondary/5 p-3">
-            <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-accent-secondary">
+            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-accent-secondary">
               <Sparkles className="h-3 w-3" /> AI estimates — based on public data + niche benchmarks
             </div>
             <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
@@ -510,7 +518,7 @@ export function ChannelIntelHeader({
               )}
             </dl>
             {intel.confidence && (
-              <div className="mt-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <div className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">
                 Confidence: <span className="text-foreground">{intel.confidence}</span>
               </div>
             )}
@@ -519,10 +527,10 @@ export function ChannelIntelHeader({
       )}
 
       <Dialog open={!!zoomSrc} onOpenChange={(o) => !o && setZoomSrc(null)}>
-        <DialogContent className="max-w-4xl border-0 bg-background p-0 sm:rounded-2xl">
+        <DialogContent className="max-w-4xl border-0 bg-black/95 p-0 sm:rounded-2xl">
           {zoomSrc && (
             <div className="flex flex-col">
-              <div className="flex max-h-[80vh] items-center justify-center overflow-auto bg-background p-2">
+              <div className="flex max-h-[80vh] items-center justify-center overflow-auto bg-black p-2">
                 <img
                   src={zoomSrc}
                   alt="Enlarged post"
@@ -530,7 +538,7 @@ export function ChannelIntelHeader({
                   className="max-h-[78vh] w-auto max-w-full object-contain"
                 />
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-4 py-3 text-xs text-white/80">
                 <span className="inline-flex items-center gap-1.5">
                   <AlertCircle className="h-3.5 w-3.5" />
                   You must be logged into Instagram to view the actual post.
@@ -539,7 +547,7 @@ export function ChannelIntelHeader({
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition hover:opacity-90"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-black transition hover:opacity-90"
                 >
                   <ExternalLink className="h-3.5 w-3.5" /> Open on Instagram
                 </a>
@@ -554,8 +562,8 @@ export function ChannelIntelHeader({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-border py-8">
-      <h3 className="mb-4 text-xl font-semibold">{title}</h3>
+    <div className="border-t border-border px-5 py-4">
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{title}</div>
       {children}
     </div>
   );
