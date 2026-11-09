@@ -9,6 +9,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { getAnalysisById } from '@/lib/analyze.functions';
 import { SourceWritingGuide } from './SourceWritingGuide';
+import { ReviewAndPublish } from './ReviewAndPublish';
 import { CreationWizardShell } from './CreationWizardShell';
 import { AppPage } from './AppPage';
 import { CopyModePicker } from './CopyModePicker';
@@ -34,7 +35,7 @@ const instructions = [
   'Give your project a name and pick what to make. For posts, also pick how close to the original it should be.',
   'Start with a direction from the source, or write your own message. Edit it until it sounds like you. Optional hooks and captions show their price before you start.',
   'Now make it. Go through each small step in the panel below. Nothing is charged until you press a button that shows a price.',
-  'Your content is ready. Download it and copy your caption, then post it wherever you like.',
+  'Review your content, choose where to post and edit your captions. Post now, schedule it, or save to your library.',
 ];
 const formatHints: Record<string, string[]> = {
   reel: ['', '', '', 'Your reel script is written on the next step, after you approve the look of the reel.', 'For a reel: 1) Read the visual direction and approve it, 2) choose a style, 3) press "Generate script", then add audio and render.', ''],
@@ -141,6 +142,6 @@ export function CreateProjectWizard() {
     {step===3 && <div className="space-y-8">{writingSource && <SourceWritingGuide analysis={writingSource} onUse={brief => patch({brief})}/>}<label className="block text-lg font-medium">Your message — use a direction above or start fresh<Textarea aria-label="Your message" className="mt-3 min-h-28 text-base" placeholder="What do you want people to know or do? One or two sentences is enough." value={state.brief} onChange={e => patch({brief:e.target.value})}/></label><details className="rounded-lg border border-border bg-card p-5"><summary className="cursor-pointer text-base font-medium">More options — goal, niche, audience and tone</summary><div className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-base font-medium">What should this post achieve?<select aria-label="Post goal" value={state.goal} onChange={e => patch({ goal:e.target.value })} className="mt-2 w-full rounded-md border border-input bg-background p-3 text-base"><option value="">Choose a goal</option>{POST_GOALS.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></label><label className="text-base font-medium">Your niche<Input aria-label="Your niche" className="mt-2 h-11 text-base" value={state.niche} onChange={e => patch({niche:e.target.value})}/></label><label className="text-base font-medium">Who is this for?<Input aria-label="Audience" className="mt-2 h-11 text-base" value={state.audience} onChange={e => patch({audience:e.target.value})}/></label><label className="text-base font-medium">Tone of voice<Input aria-label="Tone of voice" className="mt-2 h-11 text-base" value={state.tone} onChange={e => patch({tone:e.target.value})}/></label></div></details>{sourceId && state.format!=='film' && !state.copyProject && <CopyWorkbench analysisId={sourceId} projects={state.projectId?[{id:state.projectId,title:state.title||'This project'}]:[]} initialNiche={state.niche}/>}{state.format==='film' && state.projectId && <Suspense fallback={<p>Loading…</p>}><InspirationStudio projectId={state.projectId} wizardStage="words" speechMode={state.speechMode} wizardBrief={state.brief} wizardDraft={state.production} onWizardDraft={production => patch({production})}/></Suspense>}{state.copyProject && state.projectId && <CopyStudio embeddedProjectId={state.projectId} wizardStage="words"/>}</div>}
     {step===2 && (state.format==='film'||state.format==='reel') && <fieldset className="mt-6 space-y-3"><legend className="mb-3 text-lg font-medium">Will someone speak?</legend>{([{id:'voiceover',label:'Someone speaks (voiceover)'},{id:'silent',label:'No talking (music and text only)'}] as const).map(o=><label key={o.id} className="flex items-center gap-3 text-base"><input type="radio" name="speech-mode" checked={(state.speechMode??'voiceover')===o.id} onChange={()=>patch({speechMode:o.id})}/>{o.label}</label>)}</fieldset>}
     {step===4 && production('make')}
-    {step===5 && production('deliver')}
+    {step===5 && state.projectId && <ReviewAndPublish projectId={state.projectId} production={production('deliver')}/>}
   </CreationWizardShell>;
 }

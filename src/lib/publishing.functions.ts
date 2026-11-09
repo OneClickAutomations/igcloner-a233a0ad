@@ -8,6 +8,7 @@ import {
   PLATFORM_CAPABILITY_MATRIX,
   PUBLISHING_PLATFORMS,
   mediaKindForContentType,
+  captionLimitFor,
   platformIncompatibilityReason,
   type ContentType,
   type PublishingPlatform,
@@ -59,9 +60,9 @@ function composeCaptions(
   for (const p of platforms) {
     const caption = captionPerPlatform[p] ?? "";
     const tags = (hashtagsPerPlatform[p] ?? []).map((t) => `#${t.replace(/^#/, "")}`);
-    let text = tags.length ? `${caption}\n\n${tags.join(" ")}`.trim() : caption.trim();
-    const max = PLATFORM_CAPABILITY_MATRIX[p as PublishingPlatform]?.maxCaptionChars;
-    if (max && text.length > max) text = text.slice(0, max);
+    const text = tags.length ? `${caption}\n\n${tags.join(" ")}`.trim() : caption.trim();
+    const max = captionLimitFor(p as PublishingPlatform, mediaKindForContentType(contentType));
+    if (max && text.length > max) throw new Error(`${p}: caption is ${text.length - max} characters over the limit. Edit it or save as a draft; nothing was truncated.`);
     out[p] = text;
   }
   return out;
@@ -72,6 +73,7 @@ export const publishContent = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => PublishInput.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const captions = composeCaptions(data.platforms, data.contentType as ContentType, data.captionPerPlatform, data.hashtagsPerPlatform);
 
     // ── 1. Capability validation — reject before any external call ──
     const validationErrors: string[] = [];
@@ -174,13 +176,6 @@ export const publishContent = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .single();
     if (!profile) throw new Error("PROFILE_NOT_FOUND");
-
-    const captions = composeCaptions(
-      data.platforms,
-      data.contentType as ContentType,
-      data.captionPerPlatform,
-      data.hashtagsPerPlatform,
-    );
 
     try {
       const apiKey = await getUserUploadPostApiKey(userId);

@@ -1,4 +1,4 @@
-export const CREATION_STEPS = ['Pick a source', 'Review the post', 'Choose your output', 'Write your words', 'Make your content', 'Review and download'] as const;
+export const CREATION_STEPS = ['Pick a source', 'Review the post', 'Choose your output', 'Write your words', 'Make your content', 'Review and publish'] as const;
 export type CreationState = {
   url: string; analysisId?: string; format: 'image' | 'carousel' | 'reel' | 'film';
   mode: 'A0' | 'A1' | 'A2' | 'A3'; title: string; brief: string;
