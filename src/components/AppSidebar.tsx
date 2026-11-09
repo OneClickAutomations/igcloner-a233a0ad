@@ -60,10 +60,10 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <Link to="/app" className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary shrink-0">
-            <span className="text-sm font-semibold text-foreground">IG</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg cta-glow [animation:none] shrink-0 shadow-ig">
+            <span className="text-sm font-black text-white">IG</span>
           </div>
-          {!collapsed && <span className="text-base font-semibold text-foreground">IG-Cloner</span>}
+          {!collapsed && <span className="text-base font-extrabold tracking-tight gradient-text">IG-Cloner</span>}
         </Link>
       </SidebarHeader>
       <SidebarContent>
@@ -77,14 +77,19 @@ export function AppSidebar() {
                     <Link
                       to={item.url}
                       onClick={closeMobile}
-                      className={`flex items-center gap-2.5 rounded-md transition-colors ${
+                      className={`flex items-center gap-2.5 rounded-xl transition-colors ${
                         isActive(item.url)
                           ? "nav-active font-semibold"
-                          : "text-muted-foreground hover:bg-accent"
+                          : "text-muted-foreground hover:bg-accent-primary/8"
                       }`}
                     >
                       <span
-                        className="flex h-6 w-6 shrink-0 items-center justify-center text-muted-foreground"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-primary-foreground"
+                        style={{
+                          background: isActive(item.url)
+                            ? "color-mix(in oklab, var(--primary-foreground) 22%, transparent)"
+                            : `linear-gradient(135deg, var(--tone-${item.t1}), var(--tone-${item.t2}))`,
+                        }}
                       >
                         <item.icon className="h-3.5 w-3.5" />
                       </span>
@@ -102,7 +107,7 @@ export function AppSidebar() {
           to="/settings"
           search={{ section: "usage" } as any}
           onClick={closeMobile}
-          className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm transition-colors hover:bg-accent"
+          className="flex items-center gap-2 rounded-xl border border-border bg-card/60 px-3 py-2 text-sm transition-colors hover:bg-accent-primary/8"
           title="Credit balance — see Settings → Usage for history"
         >
           <Coins className="h-4 w-4 shrink-0 text-accent-primary" />
