@@ -21,6 +21,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
     const { data: assemblies } = selected ? await supabase.from('assembly_jobs').select('id,project_id,status,billed,billing_balance,duration_seconds,environment,render_quote_usd,result_path,failure_reason,refunded_at,created_at').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
+    const { data: narrations } = selected ? await supabase.from('film_narration_attempts').select('script,result_path,duration_seconds,captions').eq('project_id', selected.id).eq('status','completed').order('created_at',{ascending:false}).limit(1) : { data: [] };
     const sign = async (path: string | null) => {
       if (!path || !path.startsWith(`${userId}/`)) return null;
       const { data: url } = await supabase.storage.from('video-inspiration').createSignedUrl(path, 3600);
@@ -37,6 +38,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       scenes: await Promise.all((scenes ?? []).map(async s => ({ ...s, preview: await sign(s.still_path) }))),
       attempts: await Promise.all((attempts ?? []).map(async a => ({ ...a, preview: await sign(a.result_url) }))),
       assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
+      narration: narrations?.[0] ?? null,
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
@@ -212,13 +214,14 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
 const WrittenScene = z.object({
   environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),
   duration: z.union([z.literal(4), z.literal(6), z.literal(8)]), onScreenText: z.string().max(200).default(''),
+  voiceover: z.string().max(1000).default(''),
   objects: z.array(z.object({ name: z.string(), state: z.string() })).min(1).max(8),
 });
 const WrittenBoard = z.object({ scenes: z.array(WrittenScene).min(1).max(8) });
 
 /** Claude writes the storyboard from the film's saved source analysis; plan credits, refunded on failure. */
 export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default('') }).parse(d))
+  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default(''), speechMode:z.enum(['voiceover','silent']).default('voiceover') }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase.from('video_inspiration_projects').select('id,title,analysis_id').eq('id', data.projectId).single();
@@ -239,6 +242,7 @@ export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).mid
 Copy only the SOURCE's structure: same number of scenes as its shots (max 8) and the same pacing. Use a NEW setting, NEW subjects and NEW words; never a real person's likeness, names or the source's words.
 Per scene: environment (new setting), action (ONE concrete physical action that starts immediately), endState (observable end state), camera (exactly one camera move), audio (specified sound), duration (4, 6 or 8 seconds, matching the source shot length), onScreenText (short on-screen text or empty), objects (EVERY object the action touches or needs — hands, product, cups, lids etc. — each with its initial visible state, so the opening still contains everything the motion needs).
 Physical realism: liquids pour downward, objects keep shape, colors and proportions; one continuous shot per scene.
+Output audio choice overrides the source: ${data.speechMode==='voiceover'?'Someone speaks. Write a real, natural spoken line in every scene.voiceover, around 2.5 words per second, even if the source has no speech.':'No talking. Every scene.voiceover is empty.'}
 Return JSON {"scenes":[...]}.
 <SOURCE>${source}</SOURCE>`;
       const { value } = await copyJson(WrittenBoard, prompt, 'You are a senior short-form video director writing shot-by-shot storyboards.', 8000);

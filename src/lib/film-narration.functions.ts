@@ -29,7 +29,8 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
     let targetWords=narrationWordTarget(filmSeconds,measuredRate*speed/previousSpeed);
     const rounds:any[]=[];let feedback='';
     for(let round=0;round<2;round++){
-      const draft=await writeFilmNarration(targetWords,scenes.map(s=>s.scene_input),feedback);
+      const spokenLines=scenes.map(s=>{const input=s.scene_input;return input&&typeof input==='object'&&!Array.isArray(input)&&typeof input.voiceover==='string'?input.voiceover:'';}).filter(Boolean).join(' ');
+      const draft=spokenLines?{script:spokenLines,usage:null}:await writeFilmNarration(targetWords,scenes.map(s=>s.scene_input),feedback);
       const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${PROOF_VOICE.id}/with-timestamps?output_format=mp3_44100_128`,{method:'POST',headers:{'xi-api-key':key,'Content-Type':'application/json'},body:JSON.stringify({text:draft.script,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75,style:0.2,use_speaker_boost:true,speed}})});
       if(!r.ok)throw new Error(`ElevenLabs ${r.status}: ${(await r.text()).slice(0,700)}`);
       const audio=await r.json() as any,alignment=audio.normalized_alignment??audio.alignment;

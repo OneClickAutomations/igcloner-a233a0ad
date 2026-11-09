@@ -47,8 +47,7 @@ export function parseSrt(text: string) {
 export function buildAssemblyTimeline(clips: (AssemblyClip & { url: string })[], settings: AssemblySettings, media: { voiceover?: string; music?: string; logo?: string; captions?: string }) {
   if (!clips.length) throw new Error('No approved clips.');
   const duration = clips.reduce((n,c) => n+c.duration,0); renderQuote(duration); validateCaptions(settings.captions,duration);
-  const voiceDuration = settings.voiceoverDuration ?? duration;
-  if (media.voiceover && voiceDuration > duration) throw new Error('Voiceover is longer than the film.');
+  const voiceDuration = Math.min(settings.voiceoverDuration ?? duration,duration);
   const tracks: { clips: Record<string,unknown>[] }[] = [];
   if (media.captions) tracks.push({ clips:[{ asset:{ type:'rich-caption',src:media.captions,font:{ family:ASSEMBLY_STYLE.font,size:40,color:ASSEMBLY_STYLE.foreground },background:{color:ASSEMBLY_STYLE.background,opacity:0.65,wrap:true,padding:12}},start:0,length:duration,position:'bottom',offset:{x:0,y:0.12},scale:0.9 }] });
   if (media.logo) { const end=settings.logoEnd ?? duration; if (end<=settings.logoStart || end>duration) throw new Error('Logo timing must be inside the film.'); tracks.push({clips:[{asset:{type:'image',src:media.logo},start:settings.logoStart,length:end-settings.logoStart,scale:0.16,position:'topRight',offset:{x:-0.04,y:-0.04}}]}); }

@@ -148,6 +148,7 @@ const SettingsSchema = z.object({
   duration: z.number().int().min(8).max(60).default(20),
   style: z.string().max(120).default("cinematic UGC"),
   pace: z.enum(["fast", "medium", "slow"]).default("fast"),
+  speechMode: z.enum(['voiceover','silent']).optional(),
 });
 
 import { extractJson } from "./json-extract";
@@ -407,6 +408,7 @@ export const generateReel = createServerFn({ method: "POST" })
     const cloneMode: "formula" | "inspired" =
       prefs.cloneMode === "inspired" ? "inspired" : "formula";
     const settings = SettingsSchema.parse(data.settings ?? {});
+    const speaks = (settings.speechMode ?? prefs.speechMode ?? 'voiceover') !== 'silent';
 
     // Visual direction: prefer explicit input, else stored, else derived.
     const stored = (project.project_data as any)?.visualDirection;
@@ -479,9 +481,9 @@ ${effectiveAngle ? `- Chosen angle: ${effectiveAngle}` : ""}
 Rules:
 1. Every scene's visualDescription MUST match the visual direction. If subject=text-graphic, NO people/environments — only typography on background.
 2. If textStyle.present is true, every scene includes exact text-on-screen copy.
-3. NEVER return null for ANY string field. If voiceover does not apply (text-on-screen-only / music-only formats), return "" (empty string).
+3. NEVER return null for ANY string field. OUTPUT SPEECH CHOICE overrides the source audio and approved audio description: ${speaks ? 'Someone speaks. Write real, nonempty spoken lines in EVERY scene.voiceover, even when the source is music-only or hasSpeech:false. Voiceover can accompany any visual format.' : 'No talking. All scene.voiceover fields must be empty; use music and on-screen text.'}
 4. hook.text MUST be a non-empty string (the spoken hook OR the on-screen text — never null).
-5. Every scene.voiceover MUST be a string ("" if no voiceover in this format).
+5. Every scene.voiceover MUST be a string ${speaks ? 'with natural spoken sentences, around 2.5 words per second, fitting the scene.' : '(empty, because the user chose no talking).'}
 6. Every scene.onScreenText MUST be a string ("" if none).
 7. Scene count: 3-6; durations sum ≈ ${settings.duration}s.
 
@@ -517,7 +519,7 @@ Output the JSON object only.`;
 
     const ctx=project.analysis_id ? await buildCopyContext(project.analysis_id,userId,"instagram",prefs) : {source:{captionDNA:{},blueprint:null},voice:prefs,research:null};
     const bp=ctx.source.blueprint;
-    const pacing=`Use saved blueprint scene roles, duration proportions and on-screen text timestamps. Scale source durations to ${settings.duration}s. Match spoken words-per-second from source transcript/segments so every line fits its scene. ${JSON.stringify({scenes:bp?.scenes,audio:bp?.audio})}`;
+    const pacing=`Use saved blueprint scene roles, duration proportions and on-screen text timestamps. Scale source durations to ${settings.duration}s. ${speaks?'Use natural spoken delivery around 2.5 words/second, regardless of whether the source contains speech.':'No spoken lines.'} ${JSON.stringify({scenes:bp?.scenes})}`;
     const {value:parsed,qualityReport}=await qualityCopyJson(ReelSchema,`${scriptPrompt}\n${contextPrompt(ctx)}\n${pacing}`,ctx,"reel",scriptSystem,12000);
 
     /* ----- Pass 2: VEO 3 prompt package, visual-DNA-grounded ----- */
