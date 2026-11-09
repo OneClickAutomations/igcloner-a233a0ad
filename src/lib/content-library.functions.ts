@@ -76,7 +76,7 @@ export const saveLibraryContent = createServerFn({ method: 'POST' }).middleware(
     const { error } = await db.from('projects').insert({ id: item.id, user_id: context.userId, analysis_id: item.analysis_id, title: item.title, format: 'reel', status: item.finished && item.media.length ? 'complete' : 'draft', source_url: item.source_url, source_account: item.source_account, project_data: { libraryFilm: true } });
     if (error) throw new Error(error.message);
   }
-  const pd = existing?.project_data ?? { libraryFilm: true };
+  const pd = existing?.project_data && typeof existing.project_data === 'object' && !Array.isArray(existing.project_data) ? existing.project_data : { libraryFilm: true };
   const { error } = await db.from('projects').update({ project_data: { ...pd, ...(data.wrapup ? { wrapup: data.wrapup } : {}) }, ...(item.media.length && item.finished ? { status: 'complete' } : {}) }).eq('id', item.id).eq('user_id', context.userId);
   if (error) throw new Error(error.message);
   if (item.format === 'film' && item.media[0]?.path) {
