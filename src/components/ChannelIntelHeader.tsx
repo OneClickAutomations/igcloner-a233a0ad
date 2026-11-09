@@ -103,6 +103,7 @@ function MetricCell({
     >
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <MetricHelp label={label}>{metricGuidance[label] || tooltip || "Context from the source post."}</MetricHelp>
         {source === "calc" && (
           <span className="rounded bg-muted px-1 py-px text-[9px] font-semibold uppercase text-muted-foreground">calc</span>
         )}
