@@ -236,7 +236,8 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
       if (updated) setDoc(updated);
       if(res.needsLook)toast.warning(`Slide ${active.index} needs a look — credit refunded`);
-      else toast.success(`Slide ${active.index} image generated`);
+      else toast.success(`Slide ${active.index} saved to your content library`, { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
+      window.dispatchEvent(new Event('content-generated'));
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {
@@ -279,7 +280,8 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     }
     setImgBusy(null);
     setBatchBusy(false);
-    if (failures === 0) toast.success(`All ${targets.length} slides generated — ready to post`);
+    window.dispatchEvent(new Event('content-generated'));
+    if (failures === 0) toast.success(`All ${targets.length} slides saved to your content library`, { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
     else toast.warning(`${targets.length - failures}/${targets.length} slides generated. Retry the failed ones.`);
     setTimeout(() => setBatchProgress(null), 4000);
   };

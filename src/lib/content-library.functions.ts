@@ -40,12 +40,17 @@ async function libraryRows(context: any, id?: string) {
     } else {
       const assets = (ar.data ?? []).filter((a: any) => a.project_id === p.id && ['image', 'video'].includes(a.asset_type));
       const videoAsset = assets.find((a: any) => a.asset_type === 'video');
-      if (pd.videoUrl || videoAsset) media = [{ url: videoAsset ? await sign('project-assets', videoAsset.filename ?? '', videoAsset.url) : pd.videoUrl, type: 'video' }];
+      if (pd.videoUrl || videoAsset) {
+        const match = typeof pd.videoUrl === 'string' ? pd.videoUrl.match(/\/project-assets\/([^?]+)/) : null;
+        const path = videoAsset?.filename ?? (match ? decodeURIComponent(match[1]) : '');
+        media = [{ url: await sign('project-assets', path, videoAsset?.url ?? pd.videoUrl), type: 'video', path }];
+      }
       else if (p.format === 'carousel' && Array.isArray(pd.slides)) {
         media = await Promise.all(pd.slides.filter((s: any) => s.imageUrl).map(async (s: any) => {
-          const a = assets.find((a: any) => a.url === s.imageUrl || Number(a.metadata?.slideIndex) === Number(s.index));
+          const a = assets.find((a: any) => a.url === s.imageUrl || Number(a.metadata?.slideIndex ?? a.metadata?.index) === Number(s.index));
           return { url: a ? await sign('project-assets', a.filename ?? '', a.url) : s.imageUrl, type: 'image' };
         }));
+        if (!media.length) media = await Promise.all(assets.slice().reverse().map(async (a: any) => ({ url: await sign('project-assets', a.filename ?? '', a.url), type: a.asset_type })));
       } else if (p.format === 'carousel') media = await Promise.all(assets.slice().reverse().map(async (a: any) => ({ url: await sign('project-assets', a.filename ?? '', a.url), type: a.asset_type })));
       else if (assets[0]) media = [{ url: await sign('project-assets', assets[0].filename ?? '', assets[0].url), type: assets[0].asset_type }];
       else if (pd.imageUrl) media = [{ url: pd.imageUrl, type: 'image' }];

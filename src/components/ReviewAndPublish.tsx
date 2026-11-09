@@ -23,6 +23,11 @@ export function ReviewAndPublish({ projectId, production }: { projectId: string;
   const [copies, setCopies] = useState<Record<string, PlatformCopy>>({}), [selected, setSelected] = useState<PublishingPlatform[]>([]), [link, setLink] = useState('');
   const [busy, setBusy] = useState(''), [progress, setProgress] = useState(''), [notice, setNotice] = useState(''), [date, setDate] = useState(''), [time, setTime] = useState(''), [timezone, setTimezone] = useState('');
   const [jobId, setJobId] = useState(''), [result, setResult] = useState<any>(null), [initialized, setInitialized] = useState('');
+  useEffect(() => {
+    const handler = () => { qc.invalidateQueries({ queryKey: ['library-content', projectId] }); qc.invalidateQueries({ queryKey: ['content-library'] }); };
+    window.addEventListener('content-generated', handler);
+    return () => window.removeEventListener('content-generated', handler);
+  }, [projectId, qc]);
   useEffect(() => { setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone); }, []);
   useEffect(() => {
     if (!data || initialized === projectId) return;

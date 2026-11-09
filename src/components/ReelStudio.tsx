@@ -349,8 +349,9 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         setQueuePos(s.queuePosition ?? null);
         if (s.status === "COMPLETED") {
           setVideoUrl(s.videoUrl);
-          if(projectId)await updateProjectFn({data:{id:projectId,patch:{project_data:{...(project.data?.project_data??{}),...(doc??{}),videoUrl:s.videoUrl,visualDirection:direction,stylePreset,audioPlan,mixProfile},status:'completed'}}});
-          toast.success("Video ready");
+          if(projectId)await updateProjectFn({data:{id:projectId,patch:{project_data:{...(project.data?.project_data??{}),...(doc??{}),videoUrl:s.videoUrl,visualDirection:direction,stylePreset,audioPlan,mixProfile},status:'complete'}}});
+          window.dispatchEvent(new Event('content-generated'));
+          toast.success("Video ready — saved to your content library", { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
           return;
         }
       }
