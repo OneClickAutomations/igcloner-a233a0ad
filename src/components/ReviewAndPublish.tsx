@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Calendar, Download, FolderOpen, Loader2, Send, Sparkles } from 'lucide-react';
+import { Calendar, Download, FolderOpen, Loader2, Send, Sparkles, Film, Globe, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
+import { ReviewCard } from './ReviewPostPrimitives';
 import { Checkbox } from './ui/checkbox';
 import { getLibraryContent, saveLibraryContent } from '@/lib/content-library.functions';
 import { generateCaptionPack, copyRequestProgress } from '@/lib/copy.functions';
@@ -15,8 +16,9 @@ import { CREDIT_BALANCE_KEY, ACTION_COSTS } from '@/lib/credits';
 import { compatiblePlatforms, PLATFORM_META, PLATFORM_CAPABILITY_MATRIX, resolvePublishingError, type ContentType, type PublishingPlatform } from '@/lib/upload-post/shared';
 import { finalCaption, publishingLimit, HASHTAG_GUIDANCE, tagList, type PlatformCopy } from '@/lib/content-library';
 
+function PublishPanel({ wizard, title, icon, trailing, children, tone }: React.ComponentProps<typeof ReviewCard> & {wizard:boolean}) { return wizard ? <ReviewCard title={title} icon={icon} trailing={trailing} tone={tone}>{children}</ReviewCard> : <section className="space-y-4 border-t border-border py-5"><h3 className="text-2xl font-semibold">{title}</h3>{children}</section>; }
 const blank = (): PlatformCopy => ({ caption: '', description: '', hashtags: '', title: '' });
-export function ReviewAndPublish({ projectId, production }: { projectId: string; production?: React.ReactNode }) {
+export function ReviewAndPublish({ projectId, production, wizard = false }: { projectId: string; production?: React.ReactNode; wizard?: boolean }) {
   const load = useServerFn(getLibraryContent), save = useServerFn(saveLibraryContent), pack = useServerFn(generateCaptionPack), publish = useServerFn(publishContent), poll = useServerFn(pollPublishingStatus), progressFn = useServerFn(copyRequestProgress);
   const qc = useQueryClient(), navigate = useNavigate();
   const { data, error } = useQuery({ queryKey: ['library-content', projectId], queryFn: () => load({ data: { id: projectId } }) });
@@ -101,39 +103,41 @@ export function ReviewAndPublish({ projectId, production }: { projectId: string;
     setNotice(scheduled ? 'Scheduled. You can find this in your library and publishing queue.' : 'Sent for publishing. Platform results appear below.');
   });
   const canPost = !!selected.length && selected.every(p => connected.some((a: any) => a.platform === p)) && item.media.length > 0 && item.finished;
+
   return <div className="space-y-8">
-    <section className="space-y-4" aria-label="Finished content">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-2xl font-semibold">{item.title}</h3><Link to="/library" search={{}} className="text-sm font-medium text-primary underline underline-offset-4">Saved in your content library</Link></div>
+    <PublishPanel wizard={wizard} title={item.title} icon={Film} tone="wizard-finished-preview">
+      <div className="flex flex-wrap items-center justify-between gap-3">{wizard && <span data-state={item.finished?'done':undefined} className="wizard-score">{item.finished ? 'Ready' : 'In progress'}</span>}<Link to="/library" search={{}} className="text-sm font-medium text-primary underline underline-offset-4">Saved in your content library</Link></div>
       {item.media.length ? <div className="flex snap-x gap-4 overflow-x-auto pb-2">{item.media.map((m: any, i: number) => <figure key={m.url} className="w-full max-w-md shrink-0 snap-start space-y-2">{m.type === 'video' ? <video controls preload="metadata" src={m.url} poster={item.thumbnail || undefined} className="max-h-[520px] w-full rounded-lg bg-muted object-contain"/> : <img src={m.url} alt={`${item.title}${item.media.length > 1 ? ` — slide ${i + 1}` : ''}`} className="max-h-[520px] w-full rounded-lg bg-muted object-contain"/>}<Button variant="outline" size="sm" asChild><a href={m.url} download target="_blank" rel="noreferrer"><Download className="size-4"/>Download{item.media.length > 1 ? ` slide ${i + 1}` : ''}</a></Button></figure>)}</div> : <p className="text-muted-foreground">Your finished preview will appear here. Finish making your content below.</p>}
       {!item.finished && <p className="text-muted-foreground">This is a scene preview. Put your film together below before posting.</p>}
       {production && <details open={!item.finished || !item.media.length} className="border-t border-border pt-4"><summary className="cursor-pointer font-medium">{item.finished && item.media.length ? 'Edit or download your content' : 'Finish making your content'}</summary><div className="mt-5">{production}</div></details>}
-    </section>
+    </PublishPanel>
     <section className="space-y-5 border-t border-border pt-7">
       <h3 className="text-2xl font-semibold">Where do you want to post?</h3>
       {connected.length ? <div className="flex flex-wrap gap-4">{connected.map((a: any) => <label key={a.id} className="flex items-center gap-2 text-base"><Checkbox checked={selected.includes(a.platform)} onCheckedChange={v => setSelected(s => v ? [...new Set([...s, a.platform])] : s.filter(p => p !== a.platform))}/>{PLATFORM_META[a.platform as PublishingPlatform]?.label} · {a.profile_display_name || 'Connected'}</label>)}</div> : <p className="text-muted-foreground">No connected accounts for this content yet. Prepare your captions now and save to the library, or connect an account to post.</p>}
       <Button variant="outline" onClick={async () => { await save({ data: { id: projectId, wrapup } }); await navigate({ to: '/settings', search: { section: 'social-accounts' } }); }}>Connect an account</Button>
       {!connected.length && <fieldset className="flex flex-wrap gap-4"><legend className="mb-3 font-medium">Prepare captions for</legend>{platforms.map(p => <label key={p} className="flex items-center gap-2"><Checkbox checked={shown.includes(p)} onCheckedChange={v => setSelected(s => v ? [...new Set([...shown, p])] : shown.filter(x => x !== p))}/>{PLATFORM_META[p].label}</label>)}</fieldset>}
-      <label className="block space-y-2 font-medium">Your link<Input aria-label="Your link" type="url" placeholder="https://your-website.com" value={link} onChange={e => setLink(e.target.value)}/></label>
-      <p className="text-sm text-muted-foreground">Links are added to descriptions on YouTube and Pinterest, and captions elsewhere. Instagram: this link will not appear in the caption; add it to your profile instead. First-comment posting is not supported here. TikTok caption links may not be clickable.</p>
       <Button variant="outline" disabled={!!busy || !shown.length} onClick={generate}>{busy === 'captions' ? <Loader2 className="size-4 animate-spin"/> : <Sparkles className="size-4"/>}{busy === 'captions' ? progress : `${Object.keys(copies).length ? 'Regenerate' : 'Generate'} caption pack (${ACTION_COSTS.captionPack} plan credit)`}</Button>
       <div className="space-y-6">{shown.map(p => {
         const c = copies[p] ?? blank(), description = p === 'youtube' || p === 'pinterest', limit = publishingLimit(p, contentType), length = finalCaption(p, c, link).length, caps = PLATFORM_CAPABILITY_MATRIX[p];
-        return <section key={p} className="space-y-3 border-l-2 border-border pl-4"><h4 className="text-lg font-semibold">{PLATFORM_META[p].label}</h4>
+        return <PublishPanel wizard={wizard} key={p} title={PLATFORM_META[p].label} icon={Globe} trailing={wizard ? <span className="wizard-score">{length}{limit ? ` / ${limit}` : ''} chars</span> : undefined}>
+          <div className="space-y-3">
           {description && <label className="block space-y-2 text-sm font-medium">Title<Input aria-label={`${PLATFORM_META[p].label} title`} value={c.title} onChange={e => patch(p, 'title', e.target.value)}/><span className="text-muted-foreground">{c.title.length} / {caps.maxTitleChars}</span></label>}
           <label className="block space-y-2 font-medium">{description ? 'Description' : 'Caption'}<Textarea aria-label={`${PLATFORM_META[p].label} ${description ? 'description' : 'caption'}`} className="min-h-32 text-base" value={description ? c.description : c.caption} onChange={e => patch(p, description ? 'description' : 'caption', e.target.value)}/></label>
           <p className="text-sm text-muted-foreground" role="status">{length}{limit ? ` / ${limit}` : ''} characters, including hashtags and link.{limit && length >= limit * .9 ? length > limit ? ' Over the limit — edit before posting. Nothing will be cut.' : ' Getting close to the limit.' : ''}</p>
           <label className="block space-y-2 text-sm font-medium">Hashtags<Input aria-label={`${PLATFORM_META[p].label} hashtags`} value={c.hashtags} onChange={e => patch(p, 'hashtags', e.target.value)}/></label>
           <p className="text-sm text-muted-foreground">{tagList(c.hashtags).length} hashtags · {HASHTAG_GUIDANCE[p] ? `${HASHTAG_GUIDANCE[p]} recommended` : caps.maxHashtags === 0 ? 'None recommended' : caps.maxHashtags ? `Up to ${caps.maxHashtags} recommended` : 'Use only relevant tags'}</p>
-        </section>;
+        </div></PublishPanel>;
       })}</div>
     </section>
-    <section className="space-y-4 border-t border-border pt-7"><h3 className="text-2xl font-semibold">Publish or save</h3>
+    <PublishPanel wizard={wizard} title="Publish or save" icon={Send}><div className="space-y-5">      <label className="block space-y-2 font-medium">Your link<Input aria-label="Your link" type="url" placeholder="https://your-website.com" value={link} onChange={e => setLink(e.target.value)}/></label>
+      <p className="text-sm text-muted-foreground">Links are added to descriptions on YouTube and Pinterest, and captions elsewhere. Instagram: this link will not appear in the caption; add it to your profile instead. First-comment posting is not supported here. TikTok caption links may not be clickable.</p>
+
       <div className="flex flex-wrap gap-3"><Button disabled={!!busy || !canPost} onClick={() => submit(false)}><Send className="size-4"/>Post now</Button><Button variant="outline" disabled={!!busy} onClick={saveToLibrary}><FolderOpen className="size-4"/>{busy === 'saving' ? 'Saving…' : 'Save to library'}</Button></div>
       {!canPost && <p className="text-sm text-muted-foreground">{!connected.length ? 'Connect an account to post or schedule. Save to library is available now.' : !item.finished || !item.media.length ? 'Finish making your content before posting or scheduling.' : 'Select an account to post or schedule.'}</p>}
       <div className="grid gap-3 sm:grid-cols-3"><label className="space-y-2 font-medium">Date<Input type="date" aria-label="Schedule date" value={date} onChange={e => setDate(e.target.value)}/></label><label className="space-y-2 font-medium">Time<Input type="time" aria-label="Schedule time" value={time} onChange={e => setTime(e.target.value)}/></label><div className="space-y-2"><p className="font-medium">Timezone</p><p className="pt-2 text-sm text-muted-foreground">{timezone} (your local time)</p></div></div>
       <Button variant="outline" disabled={!!busy || !canPost} onClick={() => submit(true)}><Calendar className="size-4"/>Schedule</Button>
       {notice && <p role="status" className="text-base text-muted-foreground">{notice} <Link to="/library" search={{}} className="text-primary underline">Open library</Link></p>}
       {result && <div role="status" className="space-y-2"><p className="font-semibold capitalize">{result.status.replaceAll('_', ' ')}</p>{(result.results ?? []).map((r: any) => <p key={r.platform} className="text-sm">{PLATFORM_META[r.platform as PublishingPlatform]?.label ?? r.platform}: {r.status}{r.error_message ? ` — ${r.error_message}` : ''}{r.post_url && <> · <a href={r.post_url} target="_blank" rel="noreferrer" className="text-primary underline">View post</a></>}</p>)}</div>}
-    </section>
+    </div></PublishPanel>
   </div>;
 }

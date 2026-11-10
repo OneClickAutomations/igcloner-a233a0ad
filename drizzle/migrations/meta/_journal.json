@@ -148,6 +148,13 @@
       "when": 1794158316098,
       "tag": "0020_creation_wizard_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794275192732,
+      "tag": "0021_scope_analysis_thumbnail_reads_to_owner",
+      "breakpoints": true
     }
   ]
 }
