@@ -128,7 +128,7 @@ export function CreateProjectWizard() {
   const sourceId = state.analysisId;
   const simpleVideo = state.format==='film' || state.production?.simpleVideo === true;
   const production = (stage: 'make'|'deliver') => state.projectId ? <Suspense fallback={<p className="flex items-center gap-2 py-10"><Loader2 className="size-4 animate-spin"/>Loading saved content…</p>}>
-    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} speechMode={state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
+    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} speechMode={(state.production?.speechMode as 'voiceover'|'silent'|undefined)??state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
       : state.copyProject ? <CopyStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='image' ? <ImageStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='carousel' ? <CarouselStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
