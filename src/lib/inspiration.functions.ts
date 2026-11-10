@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { ReferenceKind, SceneInput, StudioModel, STUDIO_MODELS, buildScenePrompts, referencedActionObjects, priceFromWorkspaceCost, splitCachedObservations, missingActionObjects, type ObjectCheck } from './inspiration';
 import { STUDIO_PRICING,monthlyCreditEquivalent,videoCreditsForWorkspace,videoBalanceQuote } from './studio-pricing';
 import { PLANS } from './credits';
+import { durationScenes } from './video-remake';
 
 const Id = z.string().uuid();
 export const getInspirationStudio = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -221,7 +222,7 @@ const WrittenBoard = z.object({ scenes: z.array(WrittenScene).min(1).max(8) });
 
 /** Claude writes the storyboard from the film's saved source analysis; plan credits, refunded on failure. */
 export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default(''), speechMode:z.enum(['voiceover','silent']).default('voiceover') }).parse(d))
+  .inputValidator((d: unknown) => z.object({ projectId: Id, brief: z.string().trim().max(600).default(''), speechMode:z.enum(['voiceover','silent']).default('voiceover'), remake:z.object({script:z.string().max(6000),duration:z.number().int().min(8).max(60),referenceIds:z.array(Id).max(5),background:z.string().max(80),mood:z.string().max(500)}).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase.from('video_inspiration_projects').select('id,title,analysis_id').eq('id', data.projectId).single();
@@ -239,20 +240,24 @@ export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).mid
       const ev = a.evidence as any; const dna = a.dna_analysis as any;
       const source = JSON.stringify({ format: a.post_type, blueprint: dna?.blueprint ?? null, shots: ev?.shots ?? ev?.shot_timeline ?? ev?.timeline ?? null, pacing: dna?.pacing ?? null, hook: dna?.hook ?? null, transcript: a.transcript?.slice(0, 2000) ?? null }).slice(0, 14000);
       const prompt = `Write a structure-only video storyboard for the film "${p.title}". ${data.brief ? `Owner brief: ${data.brief}.` : ''}
-Copy only the SOURCE's structure: same number of scenes as its shots (max 8) and the same pacing. Use a NEW setting, NEW subjects and NEW words; never a real person's likeness, names or the source's words.
+Copy only the SOURCE's structure: same number of scenes as its shots (max 8) and the same pacing. Use a NEW setting and NEW subjects; never a real person's likeness or names. Adapt the source's language, hook shape, vocabulary and rhythm into new sentences about the selected subject in the user's voice; do not copy full source sentences.
 Per scene: environment (new setting), action (ONE concrete physical action that starts immediately), endState (observable end state), camera (exactly one camera move), audio (specified sound), duration (4, 6 or 8 seconds, matching the source shot length), onScreenText (short on-screen text or empty), objects (EVERY object the action touches or needs — hands, product, cups, lids etc. — each with its initial visible state, so the opening still contains everything the motion needs).
 Physical realism: liquids pour downward, objects keep shape, colors and proportions; one continuous shot per scene.
 Output audio choice overrides the source: ${data.speechMode==='voiceover'?'Someone speaks. Write a real, natural spoken line in every scene.voiceover, around 2.5 words per second, even if the source has no speech.':'No talking. Every scene.voiceover is empty.'}
+${data.remake ? `USER-APPROVED SCRIPT: ${data.remake.script}. Preserve these spoken words verbatim across the scenes when speech is selected; otherwise use their message in on-screen text. Durations MUST be exactly ${durationScenes(data.remake.duration).join(', ')} seconds in order, total ${data.remake.duration}s. Write exactly that many scenes. Background: ${data.remake.background}, mood: ${data.remake.mood}. Use original instrumental only, no named artists or recognisable songs. Identity comes only from selected references, never source likeness or physical descriptions.` : ''}
 Return JSON {"scenes":[...]}.
 <SOURCE>${source}</SOURCE>`;
       const { value } = await copyJson(WrittenBoard, prompt, 'You are a senior short-form video director writing shot-by-shot storyboards.', 8000);
       const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-      const rows = value.scenes.map((sc, i) => {
+      const targetDurations = data.remake ? durationScenes(data.remake.duration) : null;
+      const board = targetDurations ? targetDurations.map((duration,i)=>({...value.scenes[Math.min(i,value.scenes.length-1)],duration, voiceover:data.speechMode==='silent'?'':data.remake?.script.split(/\s+/).slice(Math.floor(data.remake.script.split(/\s+/).length*targetDurations.slice(0,i).reduce((n,s)=>n+s,0)/data.remake.duration),Math.floor(data.remake.script.split(/\s+/).length*targetDurations.slice(0,i+1).reduce((n,s)=>n+s,0)/data.remake.duration)).join(' ')})) : value.scenes;
+      const rows = board.map((sc, i) => {
         const scene = { ...sc, objects: [...sc.objects] };
+        if(data.remake){ const words=scene.voiceover; scene.audio=`${data.speechMode==='voiceover'?`Clear audible natural narration: ${words}.`: 'No speech.'} ${data.remake.background==='none'?'No background music.':data.remake.background==='instrumental'?'Original instrumental, no vocals or recognisable song.':'Natural ambience.'} ${data.remake.mood}`.slice(0,300); }
         // Keep the rule: the still must contain every object the motion references.
         for (const name of referencedActionObjects(`${scene.action}`)) if (!scene.objects.some(o => `${o.name} ${o.state}`.toLowerCase().includes(name))) scene.objects.push({ name, state: 'clearly visible, ready for the action' });
         const parsed = SceneInput.parse(scene); const prompts = buildScenePrompts(parsed);
-        return { project_id: p.id, user_id: userId, scene_order: i, duration: parsed.duration, still_prompt: prompts.stillPrompt, motion_prompt: prompts.motionPrompt, action_objects: parsed.objects, scene_input: parsed, object_checks: [] };
+        return { project_id: p.id, user_id: userId, scene_order: i, duration: parsed.duration, still_prompt: prompts.stillPrompt, motion_prompt: prompts.motionPrompt, action_objects: parsed.objects, scene_input: { ...parsed, ...(data.remake ? { referenceIds: data.remake.referenceIds } : {}) }, object_checks: [] };
       });
       const { error } = await supabaseAdmin.from('storyboard_scenes').insert(rows);
       if (error) throw new Error(error.message);
