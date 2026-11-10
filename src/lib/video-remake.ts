@@ -10,7 +10,8 @@ export function referenceKinds(choice: ReferenceChoice): string[] {
 }
 export function sourceAudioProposal(source: any) {
   const video = source?.evidence?.video ?? source?.evidence?.partial?.video ?? {};
-  const dnaAudio = source?.dna_analysis?.reelDNA?.audio ?? source?.dna_analysis?.reelForensics?.audio ?? {};
+  const dna = source?.dna ?? source?.dna_analysis ?? {};
+  const dnaAudio = dna.reelDNA?.audio ?? dna.reelForensics?.audio ?? {};
   const audio = video.audio ?? {};
   const description = String(audio.description ?? dnaAudio.audioVisualSync ?? '');
   const kind = String(audio.kind ?? dnaAudio.musicType ?? 'unknown');

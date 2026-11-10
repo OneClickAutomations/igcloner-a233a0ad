@@ -1,4 +1,5 @@
 # Project architecture
+- New inspiration reels use the saved-analysis remake planner and existing film pipeline; selected reference IDs persist per scene so library defaults cannot override identity choices.
 - Owner-authorized film proofs are imported offline with server-only credentials and provenance; narration is restricted to server-written proof metadata, preserving normal unpriced-generation blocks.
 - Film narration targets summed saved-scene duration using a measured voice rate; MP3 frame duration and speech alignment must pass coverage before saving, with at most one timing regeneration to prevent silent gaps and clipped speech.
 - Video inspiration is a separate authenticated studio with server-written owner-readable tables, revision-bound still approvals and atomic attempt/debit claims; unset verified cost configuration blocks paid generation rather than inventing prices.
