@@ -1,4 +1,6 @@
 import { QualityNote } from "@/components/QualityNote";
+import { VideoChangeList } from './VideoChangeList';
+import { observedVideoChanges, videoChangeBrief } from '@/lib/video-changes';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -129,6 +131,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
   const [direction, setDirection] = useState<VisualDirection | null>(null);
   const [editingDir, setEditingDir] = useState(false);
   const [scriptNotice, setScriptNotice] = useState('');
+  const [videoChanges, setVideoChanges] = useState<Record<string,string>>({});
 
   const [stylePreset, setStylePreset] = useState<ReelStylePreset | undefined>(undefined);
   const [audioPlan, setAudioPlan] = useState<AudioPlan | undefined>(undefined);
@@ -165,6 +168,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         if (pd.stylePreset) setStylePreset(pd.stylePreset);
         if (pd.audioPlan) setAudioPlan(pd.audioPlan);
         if (pd.mixProfile) setMixProfile(pd.mixProfile);
+        if ((p.project_data as any).videoChanges) setVideoChanges((p.project_data as any).videoChanges);
       }
       if (!angle) {
         const prefs = p?.user_preferences ?? {};
@@ -265,7 +269,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       const r: any = await genFn({
         data: {
           projectId,
-          angle: angle.slice(0,500) || undefined,
+          angle: `${videoChangeBrief(observedVideoChanges({dna_analysis:project.data?.dna_analysis}),videoChanges)}\n${angle}`.slice(0,500) || undefined,
           settings: { format, duration, style, pace, speechMode },
           visualDirection: direction,
         },
@@ -619,13 +623,13 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
               />
             )}
             {step === "script" && (
-              <ScriptStep
+              <><VideoChangeList source={{dna_analysis:project.data?.dna_analysis}} values={videoChanges} onChange={setVideoChanges}/><ScriptStep
                 angle={angle} setAngle={setAngle}
                 format={format} setFormat={setFormat}
                 duration={duration} setDuration={setDuration}
                 style={style} setStyle={setStyle}
                 pace={pace} setPace={setPace}
-              />
+              /></>
             )}
             {step === "audio" && (
               <AudioEngine
