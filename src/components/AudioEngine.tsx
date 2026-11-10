@@ -145,7 +145,7 @@ export function AudioEngine({
   async function genVoice() {
     if (!confirmVoice) {
       const text = plan.script || angle || 'Your saved reel script';
-      update({ voiceId: plan.voiceId || 'iP95p4xoKVk53GoZ742B', script: text });
+      update({ voiceId: plan.voiceId || 'iP95p4xoKVk53GoZ742B', voiceCategory: 'conversational', script: text });
       setVoiceNotice('Chris is selected and your saved script is filled in. Review it below before generating audio.');
       setConfirmVoice(true);
       return;

@@ -424,7 +424,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
           };
         }
         return {
-          label: busy ? "Writing…" : "Generate script · no plan credit charge",
+          label: busy ? "Writing…" : !direction?.approved ? 'Write script — review visual proposal first' : "Generate script · no plan credit charge",
           icon: busy ? Loader2 : Sparkles, disabled: busy,
           onClick: handleGenerate, loading: busy,
         };

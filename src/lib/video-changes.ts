@@ -7,7 +7,7 @@ export function observedVideoChanges(source: any): VideoChange[] {
   const description = String(video.shots?.[0]?.onScreen ?? scenes[0]?.description ?? dna.videoVisualDNA?.subjectDescription ?? 'Not recorded');
   const extract = (pattern: RegExp, fallback: string) => description.match(pattern)?.[0] ?? fallback;
   const person = extract(/(?:a |an )?(?:woman|man|person|athlete|presenter)(?:[^.,]*?)(?= wearing| speaks| performs| flips| stands| walks|$)/i, scenes[0]?.subject || 'No person recorded');
-  const clothing = extract(/(?:wearing|dressed in) [^.,]+/i, 'Clothing not recorded');
+  const clothing = extract(/(?:wearing|dressed in) [^.,]+?(?= speaks| performs| flips| stands| walks|$)/i, 'Clothing not recorded');
   const setting = extract(/(?:indoors|outdoors|gym|garden|yard|studio|office|beach|kitchen)(?:[^.,]*?)(?=,|\.|$)/i, dna.videoVisualDNA?.backgroundDescription || 'Setting not recorded');
   const action = video.shots?.[0]?.action ?? extract(/(?:backflip|flips?|spins?|speaks|gestur\w*|toss\w*|catch\w*|demonstrat\w*)[^.,]*/i, description);
   const product = extract(/(?:bottle|knife|dagger|phone|cup|box|product)\b[^.,]*/i, 'None observed');
