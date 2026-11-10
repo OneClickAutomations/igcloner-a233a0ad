@@ -5,7 +5,7 @@ export const RemakeApproach = z.object({ id: z.string(), name: z.string(), summa
 export const RemakeSuggestions = z.object({ approaches: z.array(RemakeApproach).length(5) });
 export type RemakeChoice = z.infer<typeof RemakeApproach>;
 export type ReferenceChoice = 'person' | 'product' | 'both' | 'design-person' | 'design-both';
-export function referenceKinds(choice: ReferenceChoice) {
+export function referenceKinds(choice: ReferenceChoice): string[] {
   return { person: ['character_face', 'character_body', 'character_back'], product: ['product'], both: ['character_face', 'character_body', 'character_back', 'product'], 'design-person': ['product'], 'design-both': [] }[choice];
 }
 export function sourceAudioProposal(source: any) {
