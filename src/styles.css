@@ -586,6 +586,11 @@
 }
 .dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"] { display: block; }
 .dashboard-screen button[data-slot="button"] { color: var(--foreground); }
+.dashboard-screen .dash-card button { color: var(--foreground); background-color: transparent; background-image: none; }
+.dashboard-screen .dash-card button span { color: var(--foreground); }
+.dashboard-screen .dash-card button span.text-muted-foreground { color: var(--dash-muted); }
+.dashboard-screen .dash-card.group > div:last-child { background: var(--dash-panel); }
+.dashboard-screen .dash-card button[class*="text-status-error"] { color: var(--tone-rose); }
 .dashboard-screen button[data-slot="button"]:not([class*="border"]):not([class*="ghost"]) { background-image: none; }
 .dashboard-screen > .relative > div > div:first-child > button { background: var(--primary); color: var(--primary-foreground); animation: none; }
 @media (max-width: 639px) { .dashboard-help > [role="tooltip"] { left: -110px; right: auto; width: 200px; } }
