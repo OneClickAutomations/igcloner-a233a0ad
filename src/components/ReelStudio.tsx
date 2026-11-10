@@ -128,6 +128,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
 
   const [direction, setDirection] = useState<VisualDirection | null>(null);
   const [editingDir, setEditingDir] = useState(false);
+  const [scriptNotice, setScriptNotice] = useState('');
 
   const [stylePreset, setStylePreset] = useState<ReelStylePreset | undefined>(undefined);
   const [audioPlan, setAudioPlan] = useState<AudioPlan | undefined>(undefined);
@@ -250,23 +251,30 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
 
   const handleGenerate = async () => {
     if (!direction?.approved) {
-      toast.error("Approve the visual direction first");
+      setScriptNotice('Your source-based visual proposal is ready below. Review it and press Approve direction, then return to write the script.');
+      if (!direction) {
+        try { const proposal = await deriveFn({data:{projectId}}); setDirection(proposal.visualDirection); }
+        catch(e) { setScriptNotice((e as Error).message); }
+      }
       setStep("direction");
       return;
     }
     setBusy(true);
+    setScriptNotice('Writing your script from the saved source…');
     try {
       const r: any = await genFn({
         data: {
           projectId,
-          angle: angle || undefined,
+          angle: angle.slice(0,500) || undefined,
           settings: { format, duration, style, pace, speechMode },
           visualDirection: direction,
         },
       });
       setDoc(r.reel);
+      setScriptNotice('Script ready — your spoken words are saved below.');
       toast.success("Script ready");
     } catch (e: any) {
+      setScriptNotice(e?.message || 'Script writing failed. Try again.');
       toast.error(e?.message || "Generation failed");
     } finally {
       setBusy(false);
