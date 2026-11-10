@@ -21,7 +21,7 @@ export function VideoRemakePlanner({ analysis, projectId, value = {}, onChange, 
   const { data } = useQuery({ queryKey: ['remake-references', projectId], queryFn: () => load({ data: { projectId } }) });
   const audio = sourceAudioProposal(analysis);
   const patch = (next: Record<string, unknown>) => onChange({ ...value, ...next });
-  const blueprint = analysis?.dna_analysis?.blueprint ?? analysis?.blueprint;
+  const blueprint = analysis?.dna?.blueprint ?? analysis?.dna_analysis?.blueprint ?? analysis?.blueprint;
   const observed = analysis?.evidence?.video?.shots?.[0]?.onScreen ?? blueprint?.scenes?.[0]?.description ?? analysis?.source_caption ?? 'the source’s opening and payoff';
   const detail = String(observed).slice(0, 220);
   const starting = blueprint?.audio?.transcriptFull ?? analysis?.transcript ?? blueprint?.scenes?.map((s: any) => s.onScreenText).flat().join(' ') ?? analysis?.source_caption ?? detail;
