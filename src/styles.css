@@ -514,4 +514,8 @@
 .creation-wizard .wizard-production :is(button,select) { max-width: 100%; white-space: normal; height: auto; min-height: 36px; }
 .creation-wizard .wizard-production button { padding-top: 8px; padding-bottom: 8px; }
 .creation-wizard .wizard-copy button { white-space: normal; height: auto; min-height: 40px; }
+.creation-wizard .wizard-finished-preview video { aspect-ratio: 9 / 16; min-height: 280px; }
+.creation-wizard .wizard-finished-preview > .flex { margin-bottom: 20px; }
+.creation-wizard .wizard-score[data-state="done"] { color: var(--review-keep-ink); background: var(--review-keep-bg); }
+.creation-wizard .wizard-score[data-state="warning"] { color: var(--review-change-ink); background: var(--review-change-bg); }
 @media (max-width: 639px) { .creation-wizard .wizard-choice { min-height: 156px; } .creation-wizard .wizard-mode-choice { padding: 20px; } }
