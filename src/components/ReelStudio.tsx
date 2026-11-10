@@ -187,12 +187,12 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
   const lastSavedRef = useRef<string>("");
   useEffect(() => {
     if (!projectId) return;
-    const snapshot = JSON.stringify({ doc, direction });
+    const snapshot = JSON.stringify({ doc, direction, audioPlan, mixProfile, videoChanges });
     if (snapshot === lastSavedRef.current) return;
     const t = setTimeout(() => {
       lastSavedRef.current = snapshot;
       const patch: any = {};
-      const audioBits = { stylePreset, audioPlan, mixProfile };
+      const audioBits = { stylePreset, audioPlan, mixProfile, videoChanges };
       if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection, ...audioBits, videoUrl };
       else if (direction) patch.project_data = { visualDirection: direction, ...audioBits };
       if (!patch.project_data) return;
@@ -200,10 +200,10 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       updateProjectFn({ data: { id: projectId, patch } }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile, videoUrl]);
+  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile, videoUrl, videoChanges]);
   useEffect(()=>{
     if(!embeddedProjectId)return;
-    const handler=(event:Event)=>{if(!project.data)return;(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(project.data.project_data??{}),...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
+    const handler=(event:Event)=>{if(!project.data)return;(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(project.data.project_data??{}),...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,videoChanges,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
     window.addEventListener('creation-save',handler);
     return()=>window.removeEventListener('creation-save',handler);
   },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn,project.data]);
