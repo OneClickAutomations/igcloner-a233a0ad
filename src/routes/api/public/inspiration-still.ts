@@ -23,7 +23,11 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     const { data: scene } = await supabaseAdmin.from('storyboard_scenes').select('*').eq('id', input.data.sceneId).eq('user_id', auth.user.id).single();
     if (!scene || scene.revision !== input.data.revision) return Response.json({ message: 'Scene not found or changed.' }, { status: 409 });
-    const { data: refs } = await supabaseAdmin.from('reference_assets').select('*').eq('user_id', auth.user.id).eq('enabled', true).order('created_at').limit(5);
+    const referenceIds = (scene.scene_input as {referenceIds?:string[]})?.referenceIds;
+    let referenceQuery = supabaseAdmin.from('reference_assets').select('*').eq('user_id', auth.user.id);
+    if (Array.isArray(referenceIds)) referenceQuery = referenceQuery.in('id', referenceIds);
+    else referenceQuery = referenceQuery.eq('enabled', true);
+    const { data: refs } = await referenceQuery.order('created_at').limit(5);
     const { data: claimed, error } = await supabaseAdmin.rpc('claim_inspiration_attempt', { p_user: auth.user.id, p_scene: scene.id, p_request: input.data.requestKey, p_operation: 'still', p_model: 'openai/gpt-image-2.5-sunburst', p_billed: price ?? 0, p_workspace: cost, p_references: (refs ?? []).map(r => r.id) });
     if (error) return Response.json({ message: error.message }, { status: 409 });
     const claim = claimed as any;
