@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -33,11 +33,12 @@ import {
   type MusicGenre,
   DEFAULT_MIX,
   MUSIC_GENRES,
-  VOICE_CATEGORIES,
   CAPTION_STYLES,
   PLATFORM_OPTIONS,
 } from "@/lib/audio-types";
-import { VOICE_CATALOG, generateSceneVoiceover } from "@/lib/voiceover.functions";
+import { generateSceneVoiceover } from "@/lib/voiceover.functions";
+import { matchSourceVoice } from '@/lib/voice-match';
+import { AdvancedVoiceSettings } from './AdvancedVoiceSettings';
 import { generateMusicBed } from "@/lib/music.functions";
 import { generateSoundFx } from "@/lib/sfx.functions";
 import { planAudioStrategy } from "@/lib/audio-director.functions";
@@ -67,6 +68,7 @@ export function AudioEngine({
   stylePreset,
   initialPlan,
   initialMix,
+  source,
   onChange,
 }: {
   projectId: string;
@@ -75,10 +77,12 @@ export function AudioEngine({
   stylePreset?: string;
   initialPlan?: AudioPlan;
   initialMix?: AudioMixProfile;
+  source?: unknown;
   onChange: (plan: AudioPlan, mix: AudioMixProfile) => void;
 }) {
+  const recommendation = matchSourceVoice(source);
   const [plan, setPlan] = useState<AudioPlan>(
-    initialPlan ?? { mode: "auto", sfxIntensity: "subtle", captionStyle: "dynamic", platform: "instagram" },
+    { ...(initialPlan ?? { mode: "auto", sfxIntensity: "subtle", captionStyle: "dynamic", platform: "instagram" }), voiceId: initialPlan?.voiceId ?? recommendation.voice.id, script: initialPlan?.script || angle },
   );
   const [mix, setMix] = useState<AudioMixProfile>(initialMix ?? DEFAULT_MIX);
   const [busy, setBusy] = useState<null | "plan" | "voice" | "music" | "ambient" | "sfx">(null);
@@ -103,10 +107,7 @@ export function AudioEngine({
     onChange(plan, nm);
   };
 
-  const filteredVoices = useMemo(() => {
-    if (!plan.voiceCategory) return VOICE_CATALOG;
-    return VOICE_CATALOG.filter((v) => v.categories.includes(plan.voiceCategory as any));
-  }, [plan.voiceCategory]);
+  useEffect(() => { onChange(plan, mix); }, []);
 
   async function runDirector() {
     setBusy("plan");
@@ -145,8 +146,8 @@ export function AudioEngine({
   async function genVoice() {
     if (!confirmVoice) {
       const text = plan.script || angle || 'Your saved reel script';
-      update({ voiceId: plan.voiceId || 'iP95p4xoKVk53GoZ742B', voiceCategory: 'conversational', script: text });
-      setVoiceNotice('Chris is selected and your saved script is filled in. Review it below before generating audio.');
+      update({ voiceId: plan.voiceId || recommendation.voice.id, script: text });
+      setVoiceNotice('Your voice and saved script are ready. Review below before generating audio.');
       setConfirmVoice(true);
       return;
     }
@@ -317,30 +318,7 @@ export function AudioEngine({
             </Button>
           </div>
           {voiceNotice && <p role="status" className="mb-4 text-sm text-foreground">{voiceNotice}</p>}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs">Voice type</Label>
-              <Select value={plan.voiceCategory} onValueChange={(v) => update({ voiceCategory: v, voiceId: undefined })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pick a voice persona" /></SelectTrigger>
-                <SelectContent>
-                  {VOICE_CATEGORIES.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Voice</Label>
-              <Select value={plan.voiceId} onValueChange={(v) => update({ voiceId: v })}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Pick a voice" /></SelectTrigger>
-                <SelectContent>
-                  {filteredVoices.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>
-                      {v.name} — {v.accent}, {v.gender}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <AdvancedVoiceSettings voiceId={plan.voiceId ?? recommendation.voice.id} recommendation={recommendation} onChange={voiceId => update({ voiceId })}/>
           <div className="mt-3">
             <Label className="text-xs">Script</Label>
             <Textarea

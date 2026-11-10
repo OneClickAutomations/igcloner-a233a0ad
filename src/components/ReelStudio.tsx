@@ -634,6 +634,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
             {step === "audio" && (
               <AudioEngine
                 projectId={projectId}
+                source={{ dna_analysis: project.data?.dna_analysis }}
                 imageUrl={sourceThumb || undefined}
                 angle={doc?.scenes?.map(s=>s.voiceover).filter(Boolean).join(' ') || doc?.hook?.text || angle}
                 stylePreset={stylePreset}
