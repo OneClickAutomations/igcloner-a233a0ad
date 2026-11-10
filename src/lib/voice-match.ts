@@ -20,7 +20,7 @@ export function matchSourceVoice(source: unknown) {
   // Explicit audio speaker evidence takes priority over a visible person.
   const gender = (value: string) => /\bfemale\b|\bwoman\b|\bwomen\b|\blady\b|\bgirl\b|\bgrandmother\b/i.test(value) ? 'female' : /\bmale\b|\bman\b|\bmen\b|\bboy\b|\bgrandfather\b/i.test(value) ? 'male' : undefined;
   const speaker = gender(audio) ?? gender(visual);
-  const context = `${audio} ${visual}`;
+  const context = gender(audio) ? audio : `${audio} ${visual}`;
   const mature = /\bolder\b|\belderly\b|\bmature\b|\bsenior\b|grandmother|grandfather|\b60s\b|\b70s\b/i.test(context);
   const energetic = /energetic|upbeat|high.energy|excited|youthful|\byoung\b|\b20s\b/i.test(context);
   const calm = /calm|soothing|gentle|soft.spoken/i.test(audio);
