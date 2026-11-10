@@ -585,4 +585,8 @@
   box-shadow: var(--dash-shadow);
 }
 .dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"] { display: block; }
+.dashboard-screen button[data-slot="button"] { color: var(--foreground); }
+.dashboard-screen button[data-slot="button"]:not([class*="border"]):not([class*="ghost"]) { background-image: none; }
+.dashboard-screen > .relative > div > div:first-child > button { background: var(--primary); color: var(--primary-foreground); animation: none; }
+@media (max-width: 639px) { .dashboard-help > [role="tooltip"] { left: -110px; right: auto; width: 200px; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-screen * { animation: none !important; transition: none !important; } }
