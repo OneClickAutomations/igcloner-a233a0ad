@@ -1,0 +1,1 @@
+ALTER POLICY "analysis-thumbnails auth read" ON storage.objects TO authenticated USING (bucket_id = 'analysis-thumbnails' AND EXISTS (SELECT 1 FROM public.analyses a WHERE a.id::text || '.jpg' = storage.objects.name AND a.user_id = (SELECT auth.uid())));
