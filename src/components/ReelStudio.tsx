@@ -1,4 +1,6 @@
 import { QualityNote } from "@/components/QualityNote";
+import { VideoChangeList } from './VideoChangeList';
+import { observedVideoChanges, videoChangeBrief } from '@/lib/video-changes';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -128,6 +130,8 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
 
   const [direction, setDirection] = useState<VisualDirection | null>(null);
   const [editingDir, setEditingDir] = useState(false);
+  const [scriptNotice, setScriptNotice] = useState('');
+  const [videoChanges, setVideoChanges] = useState<Record<string,string>>({});
 
   const [stylePreset, setStylePreset] = useState<ReelStylePreset | undefined>(undefined);
   const [audioPlan, setAudioPlan] = useState<AudioPlan | undefined>(undefined);
@@ -164,6 +168,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         if (pd.stylePreset) setStylePreset(pd.stylePreset);
         if (pd.audioPlan) setAudioPlan(pd.audioPlan);
         if (pd.mixProfile) setMixProfile(pd.mixProfile);
+        if ((p.project_data as any).videoChanges) setVideoChanges((p.project_data as any).videoChanges);
       }
       if (!angle) {
         const prefs = p?.user_preferences ?? {};
@@ -182,12 +187,12 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
   const lastSavedRef = useRef<string>("");
   useEffect(() => {
     if (!projectId) return;
-    const snapshot = JSON.stringify({ doc, direction });
+    const snapshot = JSON.stringify({ doc, direction, audioPlan, mixProfile, videoChanges });
     if (snapshot === lastSavedRef.current) return;
     const t = setTimeout(() => {
       lastSavedRef.current = snapshot;
       const patch: any = {};
-      const audioBits = { stylePreset, audioPlan, mixProfile };
+      const audioBits = { stylePreset, audioPlan, mixProfile, videoChanges };
       if (doc) patch.project_data = { ...doc, visualDirection: direction ?? doc.visualDirection, ...audioBits, videoUrl };
       else if (direction) patch.project_data = { visualDirection: direction, ...audioBits };
       if (!patch.project_data) return;
@@ -195,10 +200,10 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       updateProjectFn({ data: { id: projectId, patch } }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile, videoUrl]);
+  }, [doc, direction, projectId, updateProjectFn, stylePreset, audioPlan, mixProfile, videoUrl, videoChanges]);
   useEffect(()=>{
     if(!embeddedProjectId)return;
-    const handler=(event:Event)=>{if(!project.data)return;(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(project.data.project_data??{}),...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
+    const handler=(event:Event)=>{if(!project.data)return;(event as CustomEvent<{tasks:Promise<unknown>[]}>).detail?.tasks.push(updateProjectFn({data:{id:embeddedProjectId,patch:{project_data:{...(project.data.project_data??{}),...(doc??{}),visualDirection:direction,stylePreset,audioPlan,mixProfile,videoChanges,wizardSettings:{angle,duration,format,style,pace,step},videoUrl},status:doc?.hook?'in_progress':'draft'}}}));};
     window.addEventListener('creation-save',handler);
     return()=>window.removeEventListener('creation-save',handler);
   },[embeddedProjectId,doc,direction,stylePreset,audioPlan,mixProfile,angle,duration,format,style,pace,step,videoUrl,updateProjectFn,project.data]);
@@ -250,23 +255,30 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
 
   const handleGenerate = async () => {
     if (!direction?.approved) {
-      toast.error("Approve the visual direction first");
+      setScriptNotice('Your source-based visual proposal is ready below. Review it and press Approve direction, then return to write the script.');
+      if (!direction) {
+        try { const proposal = await deriveFn({data:{projectId}}); setDirection(proposal.visualDirection); }
+        catch(e) { setScriptNotice((e as Error).message); }
+      }
       setStep("direction");
       return;
     }
     setBusy(true);
+    setScriptNotice('Writing your script from the saved source…');
     try {
       const r: any = await genFn({
         data: {
           projectId,
-          angle: angle || undefined,
+          angle: `${videoChangeBrief(observedVideoChanges({dna_analysis:project.data?.dna_analysis}),videoChanges)}\n${angle}`.slice(0,500) || undefined,
           settings: { format, duration, style, pace, speechMode },
           visualDirection: direction,
         },
       });
       setDoc(r.reel);
+      setScriptNotice('Script ready — your spoken words are saved below.');
       toast.success("Script ready");
     } catch (e: any) {
+      setScriptNotice(e?.message || 'Script writing failed. Try again.');
       toast.error(e?.message || "Generation failed");
     } finally {
       setBusy(false);
@@ -412,7 +424,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
           };
         }
         return {
-          label: busy ? "Writing…" : "Generate script · no plan credit charge",
+          label: busy ? "Writing…" : !direction?.approved ? 'Write script — review visual proposal first' : "Generate script · no plan credit charge",
           icon: busy ? Loader2 : Sparkles, disabled: busy,
           onClick: handleGenerate, loading: busy,
         };
@@ -579,6 +591,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         {/* CENTER — Focus */}
         <section className="min-w-0">
           <div className="min-h-[400px] rounded-2xl border border-border bg-card p-5 lg:p-6">
+            {scriptNotice && <p role="status" className="mb-4 text-sm text-foreground">{scriptNotice}</p>}
             {step === "direction" && !direction && <Button onClick={async () => { if (!projectId) return; setBusy(true); try { const d = await deriveFn({data:{projectId}}); setDirection(d.visualDirection); } catch(e) {toast.error((e as Error).message);} finally {setBusy(false);} }} disabled={busy}>Read visual direction · no plan credit charge</Button>}
             {step === "direction" && direction && (
               <DirectionStep
@@ -610,19 +623,19 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
               />
             )}
             {step === "script" && (
-              <ScriptStep
+              <><VideoChangeList source={{dna_analysis:project.data?.dna_analysis}} values={videoChanges} onChange={setVideoChanges}/><ScriptStep
                 angle={angle} setAngle={setAngle}
                 format={format} setFormat={setFormat}
                 duration={duration} setDuration={setDuration}
                 style={style} setStyle={setStyle}
                 pace={pace} setPace={setPace}
-              />
+              /></>
             )}
             {step === "audio" && (
               <AudioEngine
                 projectId={projectId}
                 imageUrl={sourceThumb || undefined}
-                angle={angle}
+                angle={doc?.scenes?.map(s=>s.voiceover).filter(Boolean).join(' ') || doc?.hook?.text || angle}
                 stylePreset={stylePreset}
                 initialPlan={audioPlan}
                 initialMix={mixProfile}

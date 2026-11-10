@@ -37,7 +37,7 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
     const next: Record<string, PlatformCopy> = saved?.copies ?? {};
     for (const p of data.item.project_data?.captionPack ?? []) if (!next[p.platform]) next[p.platform] = { caption: p.caption, description: p.description, title: p.title, hashtags: (p.hashtags ?? []).join(' ') };
     setCopies({ ...next }); setLink(saved?.link ?? '');
-    setSelected(saved?.selected ?? data.accounts.map((a: any) => a.platform));
+    setSelected(saved?.selected ?? []);
     setDate(saved?.date ?? ''); setTime(saved?.time ?? '');
     if (data.item.job) { setJobId(data.item.job.id); setResult({ status: data.item.job.status, results: data.item.job.publishing_results ?? [] }); }
     setInitialized(projectId);
@@ -62,7 +62,7 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
   const platforms = compatiblePlatforms(contentType);
   const connected = data.accounts.filter((a: any) => platforms.includes(a.platform));
   // With no accounts, prepare copy for a destination before connecting it.
-  const shown = selected.length ? selected.filter(p => platforms.includes(p)) : ['instagram', 'tiktok', 'x', 'linkedin'].filter(p => platforms.includes(p as PublishingPlatform)) as PublishingPlatform[];
+  const shown = selected.filter(p => platforms.includes(p));
   const patch = (p: string, key: keyof PlatformCopy, value: string) => setCopies(c => ({ ...c, [p]: { ...blank(), ...c[p], [key]: value } }));
   const run = async (name: string, fn: () => Promise<void>) => { setBusy(name); setNotice(''); try { await fn(); } catch (e) { setNotice(name === 'publishing' ? resolvePublishingError(e).message : (e as Error).message); } finally { setBusy(''); refresh(); qc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY }); } };
   const saveToLibrary = () => run('saving', async () => { await save({ data: { id: projectId, wrapup } }); toast.success('Saved to your content library'); setNotice('Saved to your content library.'); });
@@ -109,15 +109,15 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
       <div className="flex flex-wrap items-center justify-between gap-3">{wizard && <span data-state={item.finished?'done':undefined} className="wizard-score">{item.finished ? 'Ready' : 'In progress'}</span>}<Link to="/library" search={{}} className="text-sm font-medium text-primary underline underline-offset-4">Saved in your content library</Link></div>
       {item.media.length ? <div className="flex snap-x gap-4 overflow-x-auto pb-2">{item.media.map((m: any, i: number) => <figure key={m.url} className="w-full max-w-md shrink-0 snap-start space-y-2">{m.type === 'video' ? <video controls preload="metadata" src={m.url} poster={item.thumbnail || undefined} className="max-h-[520px] w-full rounded-lg bg-muted object-contain"/> : <img src={m.url} alt={`${item.title}${item.media.length > 1 ? ` — slide ${i + 1}` : ''}`} className="max-h-[520px] w-full rounded-lg bg-muted object-contain"/>}<Button variant="outline" size="sm" asChild><a href={m.url} download target="_blank" rel="noreferrer"><Download className="size-4"/>Download{item.media.length > 1 ? ` slide ${i + 1}` : ''}</a></Button></figure>)}</div> : <p className="text-muted-foreground">Your finished preview will appear here. Finish making your content below.</p>}
       {!item.finished && <p className="text-muted-foreground">This is a scene preview. Put your film together below before posting.</p>}
-      {production && <details open={!item.finished || !item.media.length} className="border-t border-border pt-4"><summary className="cursor-pointer font-medium">{item.finished && item.media.length ? 'Edit or download your content' : 'Finish making your content'}</summary><div className="mt-5">{production}</div></details>}
+      {production && <details className="border-t border-border pt-4"><summary className="cursor-pointer font-medium">{item.finished && item.media.length ? 'Edit or download your content' : 'Finish making your content'}</summary><div className="mt-5">{production}</div></details>}
     </PublishPanel>
     <section className="space-y-5 border-t border-border pt-7">
       <h3 className="text-2xl font-semibold">Where do you want to post?</h3>
-      {connected.length ? <div className="flex flex-wrap gap-4">{connected.map((a: any) => <label key={a.id} className="flex items-center gap-2 text-base"><Checkbox checked={selected.includes(a.platform)} onCheckedChange={v => setSelected(s => v ? [...new Set([...s, a.platform])] : s.filter(p => p !== a.platform))}/>{PLATFORM_META[a.platform as PublishingPlatform]?.label} · {a.profile_display_name || 'Connected'}</label>)}</div> : <p className="text-muted-foreground">No connected accounts for this content yet. Prepare your captions now and save to the library, or connect an account to post.</p>}
+      <div className="flex flex-wrap gap-3">{platforms.map(p=><Button key={p} variant={selected.includes(p)?'secondary':'outline'} aria-pressed={selected.includes(p)} aria-label={`Choose ${PLATFORM_META[p].label}`} onClick={()=>setSelected(s=>s.includes(p)?s.filter(x=>x!==p):[...s,p])}>{PLATFORM_META[p].label}</Button>)}</div>
+      {!shown.length && <p className="text-review-muted">Choose your platforms first. Then write their captions with one priced action.</p>}
       <Button variant="outline" onClick={async () => { await save({ data: { id: projectId, wrapup } }); await navigate({ to: '/settings', search: { section: 'social-accounts' } }); }}>Connect an account</Button>
-      {!connected.length && <fieldset className="flex flex-wrap gap-4"><legend className="mb-3 font-medium">Prepare captions for</legend>{platforms.map(p => <label key={p} className="flex items-center gap-2"><Checkbox checked={shown.includes(p)} onCheckedChange={v => setSelected(s => v ? [...new Set([...shown, p])] : shown.filter(x => x !== p))}/>{PLATFORM_META[p].label}</label>)}</fieldset>}
       <Button variant="outline" disabled={!!busy || !shown.length} onClick={generate}>{busy === 'captions' ? <Loader2 className="size-4 animate-spin"/> : <Sparkles className="size-4"/>}{busy === 'captions' ? progress : `${Object.keys(copies).length ? 'Regenerate' : 'Generate'} caption pack (${ACTION_COSTS.captionPack} plan credit)`}</Button>
-      <div className="space-y-6">{shown.map(p => {
+      <div className="space-y-6">{shown.filter(p=>Boolean(copies[p]?.caption || copies[p]?.description)).map(p => {
         const c = copies[p] ?? blank(), description = p === 'youtube' || p === 'pinterest', limit = publishingLimit(p, contentType), length = finalCaption(p, c, link).length, caps = PLATFORM_CAPABILITY_MATRIX[p];
         return <PublishPanel wizard={wizard} key={p} title={PLATFORM_META[p].label} icon={Globe} trailing={wizard ? <span className="wizard-score">{length}{limit ? ` / ${limit}` : ''} chars</span> : undefined}>
           <div className="space-y-3">

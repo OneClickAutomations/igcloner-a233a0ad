@@ -82,6 +82,8 @@ export function AudioEngine({
   );
   const [mix, setMix] = useState<AudioMixProfile>(initialMix ?? DEFAULT_MIX);
   const [busy, setBusy] = useState<null | "plan" | "voice" | "music" | "ambient" | "sfx">(null);
+  const [voiceNotice, setVoiceNotice] = useState('');
+  const [confirmVoice, setConfirmVoice] = useState(false);
 
   const planFn = useServerFn(planAudioStrategy);
   const voiceFn = useServerFn(generateSceneVoiceover);
@@ -141,6 +143,13 @@ export function AudioEngine({
   }
 
   async function genVoice() {
+    if (!confirmVoice) {
+      const text = plan.script || angle || 'Your saved reel script';
+      update({ voiceId: plan.voiceId || 'iP95p4xoKVk53GoZ742B', voiceCategory: 'conversational', script: text });
+      setVoiceNotice('Chris is selected and your saved script is filled in. Review it below before generating audio.');
+      setConfirmVoice(true);
+      return;
+    }
     if (!plan.voiceId) {
       toast.error("Pick a voice first");
       return;
@@ -304,9 +313,10 @@ export function AudioEngine({
             </div>
             <Button size="sm" variant="outline" onClick={genVoice} disabled={busy === "voice"}>
               {busy === "voice" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-              Generate
+              {confirmVoice ? 'Generate voiceover · 1 video credit' : 'Add voiceover — review voice and script'}
             </Button>
           </div>
+          {voiceNotice && <p role="status" className="mb-4 text-sm text-foreground">{voiceNotice}</p>}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label className="text-xs">Voice type</Label>
