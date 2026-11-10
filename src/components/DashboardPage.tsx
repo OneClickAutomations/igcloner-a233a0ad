@@ -21,6 +21,8 @@ import {
   Copy,
   FolderOpen,
   ChevronRight,
+  CircleHelp,
+  BarChart3,
 } from "lucide-react";
 import { getResearchDashboard } from "@/lib/research.functions";
 import { ensureAnalysisThumbnails } from "@/lib/analysis-thumbs.functions";
@@ -44,20 +46,6 @@ import {
 
 // Deterministic premium gradient per account handle so the fallback tile
 // feels branded and consistent, not random.
-const GRADIENTS = [
-  "from-[#F58529] via-[#DD2A7B] to-[#8134AF]",
-  "from-[#8134AF] via-[#515BD4] to-[#0F172A]",
-  "from-[#0EA5E9] via-[#6366F1] to-[#8B5CF6]",
-  "from-[#F472B6] via-[#EC4899] to-[#8B5CF6]",
-  "from-[#F59E0B] via-[#EF4444] to-[#DB2777]",
-  "from-[#10B981] via-[#0EA5E9] to-[#6366F1]",
-];
-function gradientFor(seed: string | null | undefined): string {
-  const s = String(seed ?? "").toLowerCase();
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return GRADIENTS[Math.abs(h) % GRADIENTS.length];
-}
 
 function AnalysisThumb({
   src,
@@ -70,12 +58,11 @@ function AnalysisThumb({
 }) {
   const [failed, setFailed] = useState(false);
   const initial = (account?.trim()?.[0] ?? "•").toUpperCase();
-  const grad = gradientFor(account);
+
   if (!src || failed) {
     return (
-      <div className={`relative flex h-full w-full items-center justify-center bg-gradient-to-br ${grad}`}>
-        <div className="absolute inset-0 opacity-[0.15]" style={{ backgroundImage: "radial-gradient(circle at 30% 20%, white 0, transparent 45%)" }} />
-        <span className="relative z-10 font-serif text-5xl font-semibold text-white drop-shadow-sm">
+      <div className="dashboard-thumb-fallback relative flex h-full w-full items-center justify-center">
+        <span className="relative z-10 font-serif text-5xl font-semibold text-foreground">
           {initial}
         </span>
       </div>
@@ -129,7 +116,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative h-12 w-12 shrink-0">
       <svg viewBox="0 0 44 44" className="h-12 w-12 -rotate-90">
-        <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+        <circle cx="22" cy="22" r={r} fill="none" stroke="var(--border)" strokeWidth="4" />
         <circle
           cx="22"
           cy="22"
@@ -144,7 +131,7 @@ function ScoreRing({ score }: { score: number }) {
         />
       </svg>
       <span
-        className={`absolute inset-0 flex items-center justify-center text-[11px] font-bold font-mono ${scoreColor(pct)}`}
+        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${scoreColor(pct)}`}
       >
         {pct}
       </span>
@@ -195,7 +182,7 @@ function DeltaPill({ delta }: { delta: MonthDelta }) {
         : { background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" };
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
       style={style}
     >
       {delta.kind === "up" && <TrendingUp className="h-3 w-3" />}
@@ -227,15 +214,19 @@ function StatTile({
   id: string;
 }) {
   return (
-    <div className="stat-card flex flex-col p-3 sm:p-4" style={toneStyle(tone)}>
+    <div className="stat-card flex flex-col p-5 sm:p-6" style={toneStyle(tone)}>
       <div className="flex items-center gap-2">
-        <span className="tone-icon flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-        <span className="min-w-0 text-[10px] font-semibold uppercase leading-tight tracking-wider text-muted-foreground sm:truncate sm:text-[11px]">{label}</span>
+        <span className="tone-icon flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
+        <span className="min-w-0 flex-1 text-xs font-semibold uppercase leading-relaxed tracking-wider text-muted-foreground">{label}</span>
+        <span className="dashboard-help relative shrink-0" tabIndex={0} aria-label={`About ${label}`}>
+          <CircleHelp className="h-4 w-4 text-muted-foreground" />
+          <span role="tooltip">{id === "analyses" ? "Completed post analyses. Open one below to decide what to recreate." : id === "clones" ? "Clones you have generated. Compare this with analyses to see how often research becomes content." : id === "saved" ? "Projects you have saved. Open Projects to continue your work." : "Days with a completed analysis in the last 30 days. Use this to track a consistent research habit."}</span>
+        </span>
       </div>
       {loading ? (
         <div className="mt-2 h-8 w-16 animate-pulse rounded-md bg-muted" />
       ) : (
-        <p className="mt-2 font-mono text-2xl font-extrabold leading-none tracking-tight tabular-nums sm:mt-3 sm:text-3xl">
+        <p className="mt-2 text-3xl font-semibold leading-none tabular-nums sm:mt-3 sm:text-4xl">
           {value.toLocaleString()}
         </p>
       )}
@@ -247,7 +238,7 @@ function StatTile({
         </div>
       </div>
       ) : (
-        <p className="mt-2 text-[11px] text-muted-foreground">All time</p>
+        <p className="mt-2 text-xs text-muted-foreground">All time</p>
       )}
     </div>
   );
@@ -280,9 +271,9 @@ function ResearchWidget({
 }) {
   return (
     <div className="dash-card p-5" style={toneStyle(tone)}>
-      <div className="mb-3 flex items-center gap-2.5">
+      <div className="mb-4 flex items-center gap-3 border-b border-border pb-4">
         <span className="tone-icon flex h-8 w-8 items-center justify-center rounded-lg">{icon}</span>
-        <h3 className="text-sm font-bold tracking-tight">{title}</h3>
+        <h3 className="text-lg font-bold">{title}</h3>
       </div>
       {items.length === 0 ? (
         <p className="px-1 py-2 text-xs leading-relaxed text-muted-foreground">{empty}</p>
@@ -292,9 +283,10 @@ function ResearchWidget({
             const c = accentItems ? formatTone(it.sub) : "var(--t1)";
             return (
               <li key={it.key}>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={it.onClick}
-                  className="group relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg py-2 pl-3.5 pr-2 text-left transition-colors hover:bg-muted/70"
+                  className="group relative flex w-full items-center gap-2.5 overflow-hidden h-auto rounded-lg py-3 pl-3.5 pr-2 text-left transition-colors hover:bg-muted/70"
                 >
                   {accentItems && (
                     <span
@@ -302,15 +294,15 @@ function ResearchWidget({
                       style={{ background: `linear-gradient(180deg, ${c}, var(--t2))` }}
                     />
                   )}
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c, boxShadow: `0 0 8px ${c}` }} />
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c,  }} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{it.label}</span>
                     {it.sub && (
-                      <span className="block truncate text-[11px] text-muted-foreground">{it.sub}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{it.sub}</span>
                     )}
                   </span>
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </button>
+                </Button>
               </li>
             );
           })}
@@ -455,20 +447,20 @@ function DashboardPageInner() {
   });
 
   return (
-    <div className="min-h-full">
+    <div className="dashboard-screen min-h-full">
       {/* Ambient colour clouds behind the whole dashboard (landing-page blob treatment) */}
-      <div className="dash-aurora" aria-hidden="true" />
+
       {/* Ambient gradient wash behind the header */}
       <div className="relative">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-72 gradient-glow" />
+
 
         <div className="relative mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:py-8">
           {/* ── Page header: CTA lives here, outside the banner ── */}
           <div className="mb-4 flex items-center justify-between gap-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Dashboard</h2>
+            <div className="flex items-center gap-3"><span className="dashboard-heading-icon"><BarChart3 className="h-6 w-6" /></span><h2 className="text-2xl font-bold">Dashboard</h2></div>
             <Button
               onClick={() => navigate({ to: "/app" })}
-              className="cta-glow gap-2 rounded-xl border-0 text-primary-foreground hover:opacity-95"
+              className="gap-2 rounded-lg border-0 text-primary-foreground hover:opacity-95"
             >
               <Sparkles className="h-4 w-4" /> Analyze a Post
             </Button>
@@ -477,10 +469,10 @@ function DashboardPageInner() {
           {/* ── Welcome banner: filled panel, character full height ── */}
           <header className="welcome-banner flex min-h-[176px] items-center overflow-hidden py-5 pl-5 pr-[112px] sm:px-8 sm:pr-[170px] lg:mt-6 lg:h-[176px] lg:overflow-visible lg:py-0 lg:pr-[260px]">
             <div className="relative z-10 min-w-0 flex-1">
-              <h1 className="text-xl leading-tight sm:truncate sm:text-3xl font-extrabold tracking-tight sm:text-3xl">
+              <h1 className="text-2xl leading-tight sm:text-3xl font-semibold">
                 Welcome back{firstName ? `, ${firstName}` : ""}
               </h1>
-              <p className="mt-1 text-xs sm:truncate sm:text-sm" style={{ color: "var(--wb-fg-soft)" }}>
+              <p className="mt-3 text-sm sm:text-base" style={{ color: "var(--wb-fg-soft)" }}>
                 Here's what's happening across your content studio.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -520,7 +512,7 @@ function DashboardPageInner() {
             />
             <StatTile
               icon={<FolderOpen className="h-5 w-5" />}
-              tone={{ t1: "blue", t2: "cyan" }} delta={savedDelta} series={spark.saved} id="saved"
+              tone={{ t1: "purple", t2: "violet" }} delta={savedDelta} series={spark.saved} id="saved"
               label="Saved Projects"
               value={stats.saved}
               loading={loading}
@@ -541,9 +533,9 @@ function DashboardPageInner() {
             {/* ── Analyses chart (last 30 days) ───────────────── */}
             <section className="dash-card p-5" style={toneStyle({ t1: "purple", t2: "pink" })}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-bold tracking-tight">Analyses — last 30 days</h2>
+                <div className="flex items-center gap-3"><span className="tone-icon flex h-9 w-9 items-center justify-center rounded-lg"><BarChart3 className="h-5 w-5" /></span><div><h2 className="text-lg font-bold">Analysis activity</h2><p className="text-sm text-muted-foreground">Your last 30 days</p></div></div>
                 {!loading && stats.posts > 0 && (
-                  <span className="text-[11px] font-medium text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {chartSeries.reduce((a, b) => a + b, 0)} in window
                   </span>
                 )}
@@ -575,13 +567,13 @@ function DashboardPageInner() {
                         axisLine={false}
                         interval="preserveStartEnd"
                         minTickGap={40}
-                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                        tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                       />
                       <YAxis
                         allowDecimals={false}
                         tickLine={false}
                         axisLine={false}
-                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                        tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
                       />
                       <Tooltip
                         cursor={{ stroke: "var(--tone-purple)", strokeOpacity: 0.3 }}
@@ -613,12 +605,13 @@ function DashboardPageInner() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold tracking-tight">Recent <span className="gradient-text-tone">Analyses</span></h2>
                 {analyses.length > 0 && (
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => navigate({ to: "/projects" })}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-accent-primary hover:underline"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-accent-primary"
                   >
                     View projects <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -638,7 +631,7 @@ function DashboardPageInner() {
               ) : analyses.length === 0 ? (
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/40 py-16 text-center">
                   <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl gradient-accent shadow-ig">
-                    <Sparkles className="h-6 w-6 text-white" />
+                    <Sparkles className="h-6 w-6 text-primary-foreground" />
                   </div>
                   <h3 className="text-base font-bold">No analyses yet</h3>
                   <p className="mt-1 max-w-xs text-sm text-muted-foreground">
@@ -647,7 +640,7 @@ function DashboardPageInner() {
                   </p>
                   <Button
                     onClick={() => navigate({ to: "/app" })}
-                    className="mt-5 gradient-accent gap-2 border-0 text-white"
+                    className="mt-5 gap-2 border-0 text-primary-foreground"
                   >
                     <Sparkles className="h-4 w-4" /> Analyze Now
                   </Button>
@@ -677,11 +670,11 @@ function DashboardPageInner() {
                               </div>
                             )}
                           </div>
-                          <div className="absolute inset-x-2 bottom-2 rounded-xl border border-border/40 bg-background/40 px-3 py-2 backdrop-blur-md">
+                          <div className="dashboard-account absolute inset-x-2 bottom-2 rounded-lg border border-border px-3 py-2">
                             <p className="truncate text-sm font-semibold text-foreground">
                               @{a.source_account || "unknown"}
                             </p>
-                            <p className="text-[11px] text-foreground/75">{timeAgo(a.created_at)}</p>
+                            <p className="text-xs text-foreground/75">{timeAgo(a.created_at)}</p>
                           </div>
                         </div>
 
@@ -718,7 +711,7 @@ function DashboardPageInner() {
             {/* Research intelligence rail */}
             <aside className="space-y-4">
               <div className="flex items-center gap-2">
-                <h2 className="relative pb-2 text-xl font-bold tracking-tight">Research <span className="gradient-text-tone">Intelligence</span><span className="absolute bottom-0 left-0 h-[3px] w-16 rounded-full cta-glow [animation:none]" /></h2>
+                <h2 className="text-xl font-bold">Research intelligence</h2>
               </div>
               <ResearchWidget
                 icon={<TrendingUp className="h-4 w-4" />}
@@ -737,7 +730,7 @@ function DashboardPageInner() {
               <ResearchWidget
                 icon={<Users className="h-4 w-4" />}
                 title="Competitor Watchlist"
-                tone={{ t1: "blue", t2: "cyan" }}
+                tone={{ t1: "purple", t2: "violet" }}
                 empty="Research a competitor to add them here."
                 items={research.watchlist.map((c) => ({
                   key: c.id,
@@ -752,7 +745,7 @@ function DashboardPageInner() {
               <ResearchWidget
                 icon={<Microscope className="h-4 w-4" />}
                 title="Recent Research"
-                tone={{ t1: "teal", t2: "green" }}
+                tone={{ t1: "green", t2: "green" }}
                 empty="No research reports yet."
                 items={research.recent.map((r) => ({
                   key: r.id,
