@@ -313,7 +313,7 @@ export function AudioEngine({
             </div>
             <Button size="sm" variant="outline" onClick={genVoice} disabled={busy === "voice"}>
               {busy === "voice" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-              {confirmVoice ? 'Generate voiceover · review cost below' : 'Add voiceover — review voice and script'}
+              {confirmVoice ? 'Generate voiceover · 1 video credit' : 'Add voiceover — review voice and script'}
             </Button>
           </div>
           {voiceNotice && <p role="status" className="mb-4 text-sm text-foreground">{voiceNotice}</p>}

@@ -587,6 +587,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         {/* CENTER — Focus */}
         <section className="min-w-0">
           <div className="min-h-[400px] rounded-2xl border border-border bg-card p-5 lg:p-6">
+            {scriptNotice && <p role="status" className="mb-4 text-sm text-foreground">{scriptNotice}</p>}
             {step === "direction" && !direction && <Button onClick={async () => { if (!projectId) return; setBusy(true); try { const d = await deriveFn({data:{projectId}}); setDirection(d.visualDirection); } catch(e) {toast.error((e as Error).message);} finally {setBusy(false);} }} disabled={busy}>Read visual direction · no plan credit charge</Button>}
             {step === "direction" && direction && (
               <DirectionStep
@@ -630,7 +631,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
               <AudioEngine
                 projectId={projectId}
                 imageUrl={sourceThumb || undefined}
-                angle={angle}
+                angle={doc?.scenes?.map(s=>s.voiceover).filter(Boolean).join(' ') || doc?.hook?.text || angle}
                 stylePreset={stylePreset}
                 initialPlan={audioPlan}
                 initialMix={mixProfile}
