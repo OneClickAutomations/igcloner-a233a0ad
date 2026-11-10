@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LandingPage } from "@/components/LandingPage";
-import homeShare from "@/assets/igcloner-home-share.jpg.asset.json";
+import homeShare from "@/assets/igcloner-home-share-gradient.jpg.asset.json";
 
 const homeShareUrl = `https://igcloner.com${homeShare.url}`;
 
