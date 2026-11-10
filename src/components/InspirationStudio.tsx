@@ -10,6 +10,7 @@ import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
+import { ReviewCard } from './ReviewPostPrimitives';
 import { AssemblyDelivery } from './AssemblyDelivery';
 import { StudioCostWorksheet } from './StudioCostWorksheet';
 import { supabase } from '@/integrations/supabase/client';
@@ -81,7 +82,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/zip' })); const link = document.createElement('a'); link.href = url; link.download = 'inspiration-clips.zip'; link.click(); URL.revokeObjectURL(url);
   };
   const completed = data.attempts.filter(a => a.operation === 'animate' && a.status === 'completed');
-  return <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8">
+  return <div className={wizardStage ? "wizard-production space-y-6" : "mx-auto max-w-7xl px-4 py-8 sm:px-8"}>
     {!wizardStage && <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Film className="size-4"/> Production / Structure-only inspiration</div><h1 className="text-3xl font-bold">Video Inspiration Studio</h1><p className="mt-2 text-sm text-muted-foreground">New subjects, settings and words. Never copy a real person’s likeness.</p></div>
       <Button onClick={() => navigate({to:'/app',search:{format:'film'}})}><Plus className="size-4"/> New film</Button>
@@ -92,6 +93,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     </div>}
     {!wizardStage && <div className="mb-6 flex flex-wrap gap-1 border-b border-border">{(['storyboard','references','observations','delivery'] as const).map(t => <Button key={t} variant={tab === t ? 'secondary' : 'ghost'} className="mb-2 capitalize" onClick={() => setTab(t)}>{t}</Button>)}</div>}
     {wizardStage==='words' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={tab==='storyboard'?'secondary':'outline'} onClick={()=>setTab('storyboard')}>Scene words</Button><Button variant={tab==='references'?'secondary':'outline'} onClick={()=>setTab('references')}>Your reference photos</Button></div>}
+    {wizardStage==='make' && <div className="grid gap-5 sm:grid-cols-3">{[{title:'Scene stills',icon:ImagePlus,done:data.scenes.filter(s=>s.preview).length},{title:'Still approval',icon:Check,done:data.scenes.filter(s=>s.approved_at).length},{title:'Animation',icon:Play,done:completed.length}].map(stage=><ReviewCard key={stage.title} title={stage.title} icon={stage.icon} trailing={<span className="wizard-score">{stage.done===data.scenes.length&&stage.done>0?'Done':busy?'In progress':stage.done>0?'In progress':'Not started'}</span>}><p className="text-3xl font-semibold">{stage.done}<span className="text-base text-review-muted"> / {data.scenes.length}</span></p><p className="mt-2 text-sm text-review-muted">{stage.title==='Scene stills'?'Make the pictures for your scenes.':stage.title==='Still approval'?'Check every object before animation.':'Turn approved stills into clips.'}</p></ReviewCard>)}</div>}
     {wizardStage==='make' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={makePart==='stills'?'secondary':'outline'} onClick={()=>setMakePart('stills')}>Make and approve stills</Button><Button variant={makePart==='animate'?'secondary':'outline'} onClick={()=>setMakePart('animate')}>Animate approved scenes</Button></div>}
     {data.videoBalance===0&&<div role="status" className="mb-5 flex flex-wrap items-center gap-4 border-b border-border pb-5"><div><p className="font-semibold">You need video credits to animate scenes, narrate and render.</p><p className="text-sm text-muted-foreground">Storyboards and stills use plan credits and still work. Everything you make stays saved; nothing is charged.</p></div><VideoPackAvailability/></div>}
     {data.selected?.pause_reason && <p role="alert" className="mb-5 text-destructive">Paused: {data.selected.pause_reason}</p>}
@@ -102,8 +104,8 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
       <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">{data.scenes.map(s => {
         const objects = s.action_objects as unknown as SceneDraft['objects']; const checked = checks[s.id] ?? s.object_checks as unknown as ObjectCheck[];
         const clip = data.attempts.find(a => a.scene_id === s.id && a.operation === 'animate'); const image = partial[s.id]?.url ?? s.preview;
-        return <article key={s.id} className="overflow-hidden rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3"><h3 className="font-semibold">Scene {s.scene_order+1}</h3><span className="text-xs text-muted-foreground">{s.duration}s · {s.status.replaceAll('_',' ')}</span></div>
+        return <article key={s.id} className={wizardStage ? "review-card wizard-scene" : "overflow-hidden rounded-lg border border-border bg-card"}>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3"><h3 className="flex items-center gap-2 text-xl font-bold"><Film className="size-5 text-review-accent"/>Scene {s.scene_order+1}</h3><span className="text-xs text-muted-foreground">{s.duration}s · {s.status.replaceAll('_',' ')}</span></div>
           {wizardStage!=='words' && <div className="mx-auto aspect-[9/16] w-full max-w-64 bg-muted">{clip?.status === 'completed' && clip.preview ? <video controls playsInline src={clip.preview} className="h-full w-full object-contain"/> : image ? <img src={image} alt={`Scene ${s.scene_order+1} still`} className={`h-full w-full object-contain ${partial[s.id] && !partial[s.id].final ? 'blur-2xl' : ''}`}/> : <div className="flex h-full items-center justify-center"><ImagePlus className="size-10 text-muted-foreground"/></div>}</div>}
           <div className="space-y-4 p-4">{wizardStage!=='words' && <div><p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">This still contains</p>{objects.map(o => {
             const value = checked.some(c => c.name === o.name && c.state === o.state && c.present);
