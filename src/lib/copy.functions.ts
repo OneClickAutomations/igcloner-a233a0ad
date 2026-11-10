@@ -16,8 +16,13 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   const {buildCopyContext,nativeCaptionPack}=await import("./copy-engine.server");
   const {meteredCopy}=await import("./copy-meter.server");
   const ctx=p.analysis_id ? await buildCopyContext(p.analysis_id,context.userId,undefined,p.user_preferences) : {source:{captionDNA:{},exactHook:"",caption:"",blueprint:null},voice:p.user_preferences,research:null};
+  const made = (p.project_data ?? {}) as any;
+  const artifact = { title:p.title, hook:made.hook, scenes:made.scenes, caption:made.caption, script:made.audioPlan?.script, changes:made.videoChanges };
+  const {data:film}=await context.supabase.from('video_inspiration_projects').select('id').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+  if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);}
+  const instruction = `${data.instruction ?? ''}\nWrite about the content ACTUALLY MADE, not the original subject. Ground captions in this artifact; preserve the source hook pattern and creator voice, not unrelated facts. Artifact data: ${JSON.stringify(artifact).slice(0,9000)}`;
   const platforms=[...new Set(data.platforms)].sort();
-  const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction:data.instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,data.instruction,progress));
+  const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,instruction,progress));
   const pd=(p.project_data ?? {}) as any;
   const {error:saveErr}=await context.supabase.from("projects").update({project_data:{...pd,captionPack:result.platforms,captionQuality:(result as any).qualityReport??null} as any}).eq("id",p.id).eq("user_id",context.userId);
   if(saveErr) throw new Error(saveErr.message);
