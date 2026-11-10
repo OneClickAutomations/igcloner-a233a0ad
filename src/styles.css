@@ -424,3 +424,68 @@
       radial-gradient(60% 50% at 50% 100%, color-mix(in oklab, var(--color-accent-primary) 12%, transparent), transparent 70%);
   }
 }
+
+/* Review-the-post tokens are scoped: other wizard steps and screens stay unchanged. */
+@theme inline {
+  --color-review-accent: var(--review-accent);
+  --color-review-muted: var(--review-muted);
+  --color-review-tint: var(--review-tint);
+  --color-review-border: var(--review-border);
+  --color-review-overlay: var(--review-overlay);
+  --color-review-on-overlay: var(--review-on-overlay);
+  --color-review-keep-ink: var(--review-keep-ink);
+  --color-review-change-ink: var(--review-change-ink);
+}
+.review-screen {
+  --review-page: oklch(0.97 0.006 310);
+  --review-panel: oklch(1 0 0);
+  --review-ink: oklch(0.24 0.012 310);
+  --review-muted: oklch(0.46 0.02 310);
+  --review-border: oklch(0.85 0.012 310);
+  --review-accent: oklch(0.45 0.19 310);
+  --review-tint: oklch(0.95 0.021 310);
+  --review-keep-bg: oklch(0.96 0.021 145);
+  --review-keep-ink: oklch(0.38 0.09 145);
+  --review-keep-border: oklch(0.82 0.055 145);
+  --review-change-bg: oklch(0.97 0.032 85);
+  --review-change-ink: oklch(0.42 0.085 70);
+  --review-change-border: oklch(0.83 0.07 85);
+  --review-overlay: oklch(0.18 0.01 310 / 0.88);
+  --review-on-overlay: oklch(0.99 0 0);
+  --review-gradient: linear-gradient(135deg, oklch(0.43 0.2 305), oklch(0.48 0.19 345));
+  --review-shadow: 0 3px 12px oklch(0.2 0.02 310 / 0.035);
+  --muted-foreground: var(--review-muted);
+  --foreground: var(--review-ink);
+  --border: var(--review-border);
+  background: var(--review-page);
+  color: var(--review-ink);
+  letter-spacing: 0;
+}
+.dark .review-screen {
+  --review-page: oklch(0.17 0.005 310);
+  --review-panel: oklch(0.225 0.008 310);
+  --review-ink: oklch(0.96 0.006 310);
+  --review-muted: oklch(0.76 0.018 310);
+  --review-border: oklch(0.34 0.014 310);
+  --review-accent: oklch(0.79 0.13 315);
+  --review-tint: oklch(0.29 0.042 310);
+  --review-keep-bg: oklch(0.235 0.024 145);
+  --review-keep-ink: oklch(0.83 0.11 145);
+  --review-keep-border: oklch(0.37 0.04 145);
+  --review-change-bg: oklch(0.25 0.024 80);
+  --review-change-ink: oklch(0.85 0.1 85);
+  --review-change-border: oklch(0.39 0.043 80);
+}
+.review-card { position: relative; overflow: hidden; min-width: 0; border: 1px solid var(--review-border); border-radius: 16px; padding: 24px; background: var(--review-panel); box-shadow: var(--review-shadow); }
+.review-metric { min-width: 0; padding: 10px; border-radius: 12px; }
+.review-highlight { background: var(--review-tint); }
+.review-keep { background: var(--review-keep-bg); border-color: var(--review-keep-border); }
+.review-change { background: var(--review-change-bg); border-color: var(--review-change-border); }
+.review-keep header svg { color: var(--review-keep-ink); }
+.review-change header svg { color: var(--review-change-ink); }
+.review-watermark { position: absolute; right: -20px; bottom: -25px; width: 180px; height: 180px; opacity: 0.035; pointer-events: none; }
+.review-gradient { background: var(--review-gradient); color: var(--review-on-overlay); }
+.review-screen .tracking-tight { letter-spacing: 0; }
+.review-screen .gradient-text { background: none; color: var(--review-accent); }
+.review-screen button[aria-label^="About"] { color: var(--review-muted); }
+@media (max-width: 639px) { .review-card { padding: 20px; } .review-metric { padding: 8px; } }

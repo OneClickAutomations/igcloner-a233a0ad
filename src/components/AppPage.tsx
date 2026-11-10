@@ -11,6 +11,7 @@ import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStat
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { CopyWorkbench } from "@/components/CopyWorkbench";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
+import { ReviewPostPanel } from "@/components/ReviewPostPanel";
 import { getCreditBalance } from "@/lib/credits.functions";
 import { ACTION_COSTS, CREDIT_BALANCE_KEY, parseInsufficientCredits, type InsufficientCreditsInfo } from "@/lib/credits";
 import { classifySourceUrl } from "@/lib/source-ingest";
@@ -266,7 +267,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
         </div>
       )}
 
-      <div className="mx-auto max-w-[1100px] px-4 py-8 lg:py-12">
+      <div className={embedded && sourceAnalysisId ? '' : 'mx-auto max-w-[1100px] px-4 py-8 lg:py-12'}>
         {phase === "input" && (
           <div className="flex flex-col items-center justify-center py-20">
             <h1 className="mb-2 text-center text-3xl font-bold tracking-tight sm:text-4xl">
@@ -341,6 +342,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
+            {embedded && sourceAnalysisId ? <ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always
@@ -356,8 +358,9 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
               transcript={observed.transcript}
               analysisConfidence={observed.analysisConfidence}
             />
+            </>}
 
-            {fallbackMode && (
+            {fallbackMode && !(embedded && sourceAnalysisId) && (
               <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 Limited data mode — analysis based on URL pattern.
