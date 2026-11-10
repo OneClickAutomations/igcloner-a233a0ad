@@ -13,14 +13,18 @@ import { quoteAssembly,startAssembly,recoverAssembly,uploadAssemblyMedia } from 
 import { VideoPackAvailability } from './VideoPackAvailability';
 import { STUDIO_PRICING } from '@/lib/studio-pricing';
 import type { getInspirationStudio } from '@/lib/inspiration.functions';
+import { AdvancedVoiceSettings } from './AdvancedVoiceSettings';
+import { VOICE_CATALOG } from '@/lib/voice-catalog';
 function DeliveryCard({wizard,title,icon,trailing,children}:React.ComponentProps<typeof ReviewCard>&{wizard:boolean}) {return wizard?<ReviewCard title={title} icon={icon} trailing={trailing}>{children}</ReviewCard>:<section className="border-b border-border pb-6"><h2 className="text-xl font-semibold">{title}</h2>{children}</section>;}
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
 export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraft,onWizardDraft,speechMode='voiceover',wizard=false}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>;wizardDraft?:Record<string,unknown>;onWizardDraft?:(draft:Record<string,unknown>)=>void;speechMode?:'voiceover'|'silent';wizard?:boolean}) {
   const quote=useServerFn(quoteAssembly),start=useServerFn(startAssembly),recover=useServerFn(recoverAssembly),upload=useServerFn(uploadAssemblyMedia),narrate=useServerFn(generateProofNarration);
   const initial=AssemblyOptions.safeParse(wizardDraft?.settings??{});
   const savedNarration=data.narration;
+  const [voiceId,setVoiceId]=useState(String(wizardDraft?.voiceId??savedNarration?.voice_id??data.voiceRecommendation.voice.id));
+  const voice=VOICE_CATALOG.find(v=>v.id===voiceId)??data.voiceRecommendation.voice;
   const [settings,setSettings]=useState<AssemblySettings>({...AssemblyOptions.parse(initial.success?initial.data:{}),...(speechMode==='voiceover'&&savedNarration?.result_path?{voiceoverPath:savedNarration.result_path,voiceoverDuration:Number(savedNarration.duration_seconds)}:{})}),[srt,setSrt]=useState(String(wizardDraft?.srt??(savedNarration?.captions?captionsToSrt(savedNarration.captions as {start:number;end:number;text:string}[],data.scenes.reduce((t,s)=>t+s.duration,0)):''))),[names,setNames]=useState<Record<string,string>>((wizardDraft?.names as Record<string,string>)??{});
-  useEffect(()=>{const next={settings,srt,names};if(onWizardDraft&&JSON.stringify(next)!==JSON.stringify(wizardDraft))onWizardDraft(next);},[settings,srt,names]);
+  useEffect(()=>{const next={settings,srt,names,voiceId};if(onWizardDraft&&JSON.stringify(next)!==JSON.stringify(wizardDraft))onWizardDraft(next);},[settings,srt,names,voiceId]);
   const [confirmation,setConfirmation]=useState<{result:Awaited<ReturnType<typeof quoteAssembly>>;options:AssemblySettings;requestKey:string}|null>(null);
   const project=data.selected;const jobs=data.assemblies;const active=jobs.some(j=>['claimed','submitting','queued','fetching','rendering','saving'].includes(j.status));
   useEffect(()=>{if(!project)return;recover({data:{projectId:project.id}}).then(refresh).catch(()=>{});},[project?.id]);
@@ -39,7 +43,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   const renderQuote=async()=>{
     let next=settings,nextSrt=srt;
     if(speechMode==='voiceover'&&!next.voiceoverPath){
-      const n=await narrate({data:{projectId:project.id,requestKey:crypto.randomUUID()}});
+      const n=await narrate({data:{projectId:project.id,requestKey:crypto.randomUUID(),voiceId}});
       next={...next,voiceoverPath:n.result_path??undefined,voiceoverDuration:Number(n.duration_seconds)};
       nextSrt=captionsToSrt(n.captions as {start:number;end:number;text:string}[],data.scenes.reduce((t,s)=>t+s.duration,0));
       setSettings(next);setSrt(nextSrt);
@@ -51,9 +55,11 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   return <>
     {jobs.some(j=>j.status==='completed')&&<p className="mb-5 text-base">Your finished film is saved to your content library. <Link to="/library" search={{projectId:project.id}} className="text-primary underline">Open film in library</Link></p>}
     <DeliveryCard wizard={wizard} title="Narration" icon={Mic} trailing={wizard?<span data-state={settings.voiceoverPath?'done':undefined} className="wizard-score">{busy?'In progress':settings.voiceoverPath?'Done':'Not started'}</span>:undefined}>
+      <AdvancedVoiceSettings voiceId={voiceId} recommendation={data.voiceRecommendation} onChange={setVoiceId}/>
+      {savedNarration&&savedNarration.voice_id!==voiceId&&<p role="status" className="mt-3 text-sm text-status-warning">Generate narration to apply {voice.name}; your existing audio stays unchanged until then.</p>}
       {savedNarration?.script&&speechMode==='voiceover'&&<div className="mt-4"><h3 className="font-medium">Spoken words</h3><p className="mt-2 whitespace-pre-wrap text-sm">{savedNarration.script}</p></div>}
       {!data.assemblyConfigured&&<p className="mt-3 text-sm text-status-warning">Shotstack key missing. No rendering charges.</p>}
-      {<Button className="mt-4" disabled={busy||active} onClick={()=>run(async()=>{const n=await narrate({data:{projectId:project.id,requestKey:crypto.randomUUID(),regenerate:true}});setSettings(s=>({...s,voiceoverPath:n.result_path??undefined,voiceoverDuration:Number(n.duration_seconds)}));setSrt(captionsToSrt(n.captions as {start:number;end:number;text:string}[],data.scenes.reduce((t,s)=>t+s.duration,0)));setNames(s=>({...s,voiceover:'Chris · ElevenLabs · speech-timed captions'}));await refresh();})}>{settings.voiceoverPath?'Regenerate':'Generate'} narration + captions · {STUDIO_PRICING.video.narrationCredits} video credit{STUDIO_PRICING.video.narrationCredits===1?'':'s'}</Button>}
+      {<Button className="mt-4" disabled={busy||active} onClick={()=>run(async()=>{const n=await narrate({data:{projectId:project.id,requestKey:crypto.randomUUID(),regenerate:true,voiceId}});setSettings(s=>({...s,voiceoverPath:n.result_path??undefined,voiceoverDuration:Number(n.duration_seconds)}));setSrt(captionsToSrt(n.captions as {start:number;end:number;text:string}[],data.scenes.reduce((t,s)=>t+s.duration,0)));setNames(s=>({...s,voiceover:`${voice.name} · ElevenLabs · speech-timed captions`}));await refresh();})}>{settings.voiceoverPath?'Regenerate':'Generate'} narration + captions · {STUDIO_PRICING.video.narrationCredits} video credit{STUDIO_PRICING.video.narrationCredits===1?'':'s'}</Button>}
     </DeliveryCard>
     <DeliveryCard wizard={wizard} title={data.assemblyConfigured?'Assemble film · Shotstack':'Assembly not configured yet'} icon={Film} trailing={wizard?<span data-state={jobs.some(j=>j.status==='completed')?'done':jobs.some(j=>j.failure_reason)?'warning':undefined} className="wizard-score">{active?'In progress':jobs.some(j=>j.status==='completed')?'Done':jobs.some(j=>j.failure_reason)?'Needs attention':'Not started'}</span>:undefined}>
       <div className="mt-5 grid gap-5 sm:grid-cols-3">{(['voiceover','music','logo'] as const).map(kind=><label key={kind} className="text-sm capitalize">{kind==='voiceover'?'Voiceover audio':kind==='music'?'Licensed background music':'Logo'}<Input type="file" className="mt-2" aria-label={`Assembly ${kind}`} accept={kind==='logo'?'image/png,image/jpeg,image/webp':'audio/mpeg,audio/wav,audio/mp4'} disabled={busy||active} onChange={e=>{const file=e.target.files?.[0];if(file)run(()=>uploadFile(file,kind));}}/>{names[kind]&&<span className="mt-2 block break-words text-xs text-muted-foreground">{names[kind]}</span>}{settings[`${kind}Path`]&&<Button size="sm" variant="ghost" onClick={()=>{setSettings(old=>({...old,[`${kind}Path`]:undefined,...(kind==='voiceover'?{voiceoverDuration:undefined}:{})}));setNames(old=>({...old,[kind]:''}));}}>Remove</Button>}</label>)}</div>

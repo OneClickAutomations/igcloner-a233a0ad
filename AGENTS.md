@@ -1,4 +1,5 @@
 # Project architecture
+- Reel and film voices use shared browser-safe source-evidence matching and a curated ElevenLabs catalog; manual overrides persist and the server validates selected IDs so matching never requires a paid call or clones source identity.
 - New inspiration reels use the saved-analysis remake planner and existing film pipeline; selected reference IDs persist per scene so library defaults cannot override identity choices.
 - Owner-authorized film proofs are imported offline with server-only credentials and provenance; narration is restricted to server-written proof metadata, preserving normal unpriced-generation blocks.
 - Film narration targets summed saved-scene duration using a measured voice rate; MP3 frame duration and speech alignment must pass coverage before saving, with at most one timing regeneration to prevent silent gaps and clipped speech.
