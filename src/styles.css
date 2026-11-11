@@ -745,6 +745,11 @@
 .workspace-screen .workspace-project-card { overflow: hidden; gap: 0; }
 .workspace-screen .dash-card.group:hover { border-color: var(--dash-accent); box-shadow: var(--workspace-card-shadow); transform: translateY(-2px); }
 .workspace-screen .dashboard-screen { background: transparent; }
+.workspace-screen .dashboard-screen { color: var(--foreground); }
+.workspace-screen .dashboard-screen .dashboard-detail,
+.workspace-screen .dashboard-screen button.text-accent-primary { color: var(--dash-accent) !important; }
+.workspace-screen .dashboard-screen .dash-card.group p:not(.text-muted-foreground) { color: var(--foreground); }
+.workspace-screen .dashboard-screen .dashboard-url input { background: transparent; color: var(--foreground); }
 @media (max-width: 639px) {
   .workspace-screen :is(button,a).gradient-accent,
   .workspace-screen :is(button,a)[class~="border-input"],
