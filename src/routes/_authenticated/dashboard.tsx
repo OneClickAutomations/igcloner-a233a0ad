@@ -3,6 +3,7 @@ import { DashboardPage } from "@/components/DashboardPage";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
+    links: [{ rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Archivo+Black&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" }],
     meta: [
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

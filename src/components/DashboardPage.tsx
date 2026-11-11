@@ -23,7 +23,13 @@ import {
   ChevronRight,
   CircleHelp,
   BarChart3,
+  Globe,
+  Instagram,
+  ArrowRight,
+  Loader2,
 } from "lucide-react";
+import { saveCreationDraft } from "@/lib/creation-drafts.functions";
+import { EMPTY_CREATION } from "@/lib/creation-draft";
 import { getResearchDashboard } from "@/lib/research.functions";
 import { ensureAnalysisThumbnails } from "@/lib/analysis-thumbs.functions";
 import {
@@ -102,39 +108,12 @@ function timeAgo(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function scoreColor(score: number) {
-  if (score >= 80) return "text-status-success";
-  if (score >= 60) return "text-status-warning";
-  return "text-status-error";
-}
-
 function ScoreRing({ score }: { score: number }) {
   const pct = Math.max(0, Math.min(100, score));
-  const r = 18;
-  const c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
+  const grade = pct >= 90 ? "A" : pct >= 80 ? "B" : pct >= 70 ? "C" : pct >= 60 ? "D" : "F";
   return (
-    <div className="relative h-12 w-12 shrink-0">
-      <svg viewBox="0 0 44 44" className="h-12 w-12 -rotate-90">
-        <circle cx="22" cy="22" r={r} fill="none" stroke="var(--border)" strokeWidth="4" />
-        <circle
-          cx="22"
-          cy="22"
-          r={r}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={offset}
-          className={scoreColor(pct)}
-        />
-      </svg>
-      <span
-        className={`absolute inset-0 flex items-center justify-center text-sm font-semibold ${scoreColor(pct)}`}
-      >
-        {pct}
-      </span>
+    <div className="dashboard-grade" aria-label={`Grade ${grade}, score ${pct} out of 100`} title={`Score: ${pct}/100`}>
+      <span>{grade}</span>
     </div>
   );
 }
@@ -203,6 +182,7 @@ function StatTile({
   delta,
   series,
   id,
+  onDetails,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -212,12 +192,13 @@ function StatTile({
   delta: MonthDelta;
   series: number[];
   id: string;
+  onDetails: () => void;
 }) {
   return (
     <div className="stat-card flex flex-col p-5 sm:p-6" style={toneStyle(tone)}>
       <div className="flex items-center gap-2">
         <span className="tone-icon flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-        <span className="min-w-0 flex-1 text-xs font-semibold uppercase leading-relaxed tracking-wider text-muted-foreground">{label}</span>
+        <span className="min-w-0 flex-1 text-sm font-bold leading-relaxed text-foreground">{label}</span>
         <span className="dashboard-help relative shrink-0" tabIndex={0} aria-label={`About ${label}`}>
           <CircleHelp className="h-4 w-4 text-muted-foreground" />
           <span role="tooltip">{id === "analyses" ? "Completed post analyses. Open one below to decide what to recreate." : id === "clones" ? "Clones you have generated. Compare this with analyses to see how often research becomes content." : id === "saved" ? "Projects you have saved. Open Projects to continue your work." : "Days with a completed analysis in the last 30 days. Use this to track a consistent research habit."}</span>
@@ -230,6 +211,7 @@ function StatTile({
           {value.toLocaleString()}
         </p>
       )}
+      <p className="mt-2 text-sm text-muted-foreground">{id === "analyses" ? "Your completed post intelligence." : id === "clones" ? "Original content from your research." : id === "saved" ? "Projects ready to pick up again." : "Your research habit over 30 days."}</p>
       {(delta.kind !== "none" || series.some((v) => v > 0)) ? (
       <div className="mt-3 flex items-center gap-3">
         <DeltaPill delta={delta} />
@@ -238,8 +220,9 @@ function StatTile({
         </div>
       </div>
       ) : (
-        <p className="mt-2 text-xs text-muted-foreground">All time</p>
+        <p className="mt-2 text-sm text-muted-foreground">All time</p>
       )}
+      <Button variant="link" onClick={onDetails} className="dashboard-detail mt-3 h-auto justify-start p-0">View details <ArrowRight className="h-4 w-4" /></Button>
     </div>
   );
 }
@@ -291,7 +274,7 @@ function ResearchWidget({
                   {accentItems && (
                     <span
                       className="absolute inset-y-1 left-0 w-[3px] rounded-full"
-                      style={{ background: `linear-gradient(180deg, ${c}, var(--t2))` }}
+                      style={{ background: c }}
                     />
                   )}
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c,  }} />
@@ -323,6 +306,9 @@ function DashboardPageInner() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [heroUrl, setHeroUrl] = useState("");
+  const [openingAnalysis, setOpeningAnalysis] = useState(false);
+  const saveDraftFn = useServerFn(saveCreationDraft);
   const [firstName, setFirstName] = useState<string>("");
   const [stats, setStats] = useState({ posts: 0, clones: 0, saved: 0 });
   // created_at dates per metric, used for real deltas and sparklines.
@@ -455,42 +441,38 @@ function DashboardPageInner() {
 
 
         <div className="relative mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:py-8">
-          {/* ── Page header: CTA lives here, outside the banner ── */}
-          <div className="mb-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3"><span className="dashboard-heading-icon"><BarChart3 className="h-6 w-6" /></span><h2 className="text-2xl font-bold">Dashboard</h2></div>
-            <Button
-              onClick={() => navigate({ to: "/app" })}
-              className="gap-2 rounded-lg border-0 text-primary-foreground hover:opacity-95"
-            >
-              <Sparkles className="h-4 w-4" /> Analyze a Post
-            </Button>
+          <div className="mb-5 flex items-center gap-3">
+            <span className="dashboard-heading-icon"><BarChart3 className="h-5 w-5" /></span>
+            <div><h2 className="text-xl font-bold">Dashboard</h2><p className="text-sm text-muted-foreground">Welcome back{firstName ? `, ${firstName}` : ""}</p></div>
           </div>
-
-          {/* ── Welcome banner: filled panel, character full height ── */}
-          <header className="welcome-banner flex min-h-[176px] items-center overflow-hidden py-5 pl-5 pr-[112px] sm:px-8 sm:pr-[170px] lg:mt-6 lg:h-[176px] lg:overflow-visible lg:py-0 lg:pr-[260px]">
-            <div className="relative z-10 min-w-0 flex-1">
-              <h1 className="text-2xl leading-tight sm:text-3xl font-semibold">
-                Welcome back{firstName ? `, ${firstName}` : ""}
-              </h1>
-              <p className="mt-3 text-sm sm:text-base" style={{ color: "var(--wb-fg-soft)" }}>
-                Here's what's happening across your content studio.
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium" style={{ background: "var(--wb-chip)", borderColor: "var(--wb-chip-border)" }}>
-                  <Search className="h-3.5 w-3.5" />
-                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.posts.toLocaleString()}</span>
-                  posts analyzed
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium" style={{ background: "var(--wb-chip)", borderColor: "var(--wb-chip-border)" }}>
-                  <Copy className="h-3.5 w-3.5" />
-                  <span className="font-mono font-bold tabular-nums">{loading ? "—" : stats.clones.toLocaleString()}</span>
-                  clones generated
-                </span>
-              </div>
+          <header className="dashboard-hero">
+            <div className="dashboard-hero-copy">
+              <h1><span>Steal the Strategy.</span><span>Not the Content.</span></h1>
+              <p className="dashboard-hero-subline">Turn any Instagram or Facebook URL into powerful content intelligence.</p>
+              <form className="dashboard-url" onSubmit={async (event) => {
+                event.preventDefault();
+                if (openingAnalysis) return;
+                if (!heroUrl.trim()) { navigate({ to: "/app" }); return; }
+                setOpeningAnalysis(true);
+                try {
+                  const id = crypto.randomUUID();
+                  await saveDraftFn({ data: { id, title: "Untitled project", step: 0, state: { ...EMPTY_CREATION, url: heroUrl.trim() } } });
+                  await navigate({ to: "/app", search: { draftId: id } });
+                } catch (error) { toast.error(error instanceof Error ? error.message : "Could not open your post. Please try again."); }
+                finally { setOpeningAnalysis(false); }
+              }}>
+                <Globe className="h-5 w-5 shrink-0" aria-hidden="true" />
+                <input aria-label="Instagram or Facebook URL" placeholder="Paste an Instagram or Facebook URL…" value={heroUrl} onChange={event => setHeroUrl(event.target.value)} />
+                <Button type="submit" className="dashboard-analyze" disabled={openingAnalysis}>
+                  {openingAnalysis ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Analyze <ArrowRight className="h-4 w-4" /></>}
+                </Button>
+              </form>
             </div>
-            {/* Mascot: bottom-aligned, taller than the panel so it stands in it */}
-            <div className="pointer-events-none absolute -bottom-3 -right-4 h-[130px] sm:right-4 sm:bottom-0 sm:h-[170px] lg:right-6 lg:h-[200px] xl:right-10">
-              <img src={mascotWelcome} alt="" className="h-full w-auto object-contain" />
+            <div className="dashboard-hero-art" aria-hidden="true">
+              <div className="dashboard-stage-light dashboard-stage-light-warm" />
+              <div className="dashboard-stage-light dashboard-stage-light-purple" />
+              <Instagram className="dashboard-camera" strokeWidth={1} />
+              <img src={mascotWelcome} alt="" />
             </div>
           </header>
 
@@ -498,28 +480,28 @@ function DashboardPageInner() {
           <section className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <StatTile
               icon={<Search className="h-5 w-5" />}
-              tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses"
+              tone={{ t1: "purple", t2: "indigo" }} delta={analysesDelta} series={spark.analyses} id="analyses" onDetails={() => navigate({ to: "/app" })}
               label="Posts Analyzed"
               value={stats.posts}
               loading={loading}
             />
             <StatTile
               icon={<Copy className="h-5 w-5" />}
-              tone={{ t1: "pink", t2: "rose" }} delta={clonesDelta} series={spark.clones} id="clones"
+              tone={{ t1: "pink", t2: "rose" }} delta={clonesDelta} series={spark.clones} id="clones" onDetails={() => navigate({ to: "/projects" })}
               label="Clones Generated"
               value={stats.clones}
               loading={loading}
             />
             <StatTile
               icon={<FolderOpen className="h-5 w-5" />}
-              tone={{ t1: "purple", t2: "violet" }} delta={savedDelta} series={spark.saved} id="saved"
+              tone={{ t1: "purple", t2: "violet" }} delta={savedDelta} series={spark.saved} id="saved" onDetails={() => navigate({ to: "/projects" })}
               label="Saved Projects"
               value={stats.saved}
               loading={loading}
             />
             <StatTile
               icon={<Flame className="h-5 w-5" />}
-              tone={{ t1: "amber", t2: "orange" }} delta={activeDelta} series={spark.analyses} id="active"
+              tone={{ t1: "amber", t2: "orange" }} delta={activeDelta} series={spark.analyses} id="active" onDetails={() => navigate({ to: "/app" })}
               label="Active Days · 30d"
               value={activeNow}
               loading={loading}
@@ -592,7 +574,7 @@ function DashboardPageInner() {
                         name="Analyses"
                         stroke="var(--tone-purple)"
                         strokeWidth={2.5}
-                        fill="url(#analysesFill)"
+                        fill="var(--dash-chart-fill)"
                         dot={false}
                         activeDot={{ r: 4, fill: "var(--tone-pink)", stroke: "var(--card)", strokeWidth: 2 }}
                       />
@@ -658,14 +640,14 @@ function DashboardPageInner() {
                       >
                         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
                           <AnalysisThumb src={t} postType={a.post_type} account={a.source_account} />
-                          <span className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground shadow-ig" style={{ background: TYPE_BADGE[(a.post_type || "post").toLowerCase()] ?? "var(--tone-pink)" }}>
+                          <span className="dashboard-type absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide" style={{ background: TYPE_BADGE[(a.post_type || "post").toLowerCase()] ?? "var(--tone-pink)" }}>
                             {a.post_type || "Post"}
                           </span>
                           <div className="absolute right-2 top-2">
                             {(a as any).analysis_status === "processing" ? (
-                              <span className="rounded-full bg-background/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-primary shadow-ig backdrop-blur">Analyzing…</span>
+                              <span className="dashboard-pending rounded-full px-2 py-1 text-xs font-bold">Analyzing…</span>
                             ) : (
-                              <div className="rounded-full bg-background/60 p-0.5 shadow-ig backdrop-blur">
+                              <div className="dashboard-score-wrap rounded-full p-0.5">
                                 <ScoreRing score={a.performance_score ?? 0} />
                               </div>
                             )}
