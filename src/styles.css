@@ -522,11 +522,11 @@
 
 /* Brand-kit dashboard tokens stay local to this screen. */
 .dashboard-screen {
-  --background: #FCFAFB;
+  --background: #F3F2F5;
   --foreground: #101116;
   --dash-panel: #FFFFFF;
   --dash-tint: #F7F4F8;
-  --dash-border: #EEE7F1;
+  --dash-border: #DCD7E2;
   --dash-muted: #655773;
   --dash-accent: #6B21A8;
   --dash-hero-accent: #C31E6A;
@@ -672,3 +672,87 @@
 
 @media (max-width: 380px) { .dashboard-url input::placeholder { font-size: 14px; } .dashboard-screen button.dashboard-analyze { padding: 0 12px; } }
 .dashboard-delta { white-space: nowrap; width: fit-content; }
+
+/* Signed-in content only; the public site and sidebar keep their own theme. */
+.workspace-screen {
+  --workspace-gradient: linear-gradient(105deg, #C84328, #B51D70);
+  --workspace-on-accent: #FFFFFF;
+  --workspace-card-shadow: 0 3px 12px rgba(16,17,22,.045);
+  --secondary: #E9E5ED;
+  --secondary-foreground: var(--foreground);
+  --accent: var(--dash-icon-tint);
+  --accent-foreground: var(--foreground);
+  --input: var(--dash-border);
+  --ring: var(--dash-accent);
+  --ig4: var(--dash-accent);
+  --chart-3: var(--dash-accent);
+  --tone-slate: var(--dash-muted);
+  --text-secondary: var(--dash-muted);
+  --text-muted: var(--dash-muted);
+  --primary-foreground: var(--workspace-on-accent);
+  --tone-blue: var(--tone-rose);
+  --tone-cyan: var(--tone-pink);
+  --tone-teal: var(--tone-green);
+}
+.dark .workspace-screen {
+  --secondary: #30243E;
+  --workspace-card-shadow: none;
+}
+.workspace-screen :is(.dash-card, .stat-card, .glass-surface, [data-slot="card"]) {
+  background: var(--dash-panel);
+  border: 1px solid var(--dash-border);
+  border-radius: 8px;
+  box-shadow: var(--workspace-card-shadow);
+  backdrop-filter: none;
+}
+.workspace-screen :is(.dash-card,.stat-card,.glass-surface)::before,
+.workspace-screen :is(.dash-card,.stat-card,.glass-surface)::after,
+.workspace-screen .dash-aurora,
+.workspace-screen .wizard-backdrop::before { display: none; }
+.workspace-screen :is(.gradient-card,.welcome-banner) { background: var(--dash-panel); color: var(--foreground); border: 1px solid var(--dash-border); box-shadow: none; }
+.workspace-screen .welcome-banner { --wb-fg: var(--foreground); --wb-fg-soft: var(--dash-muted); }
+.workspace-screen :is(.gradient-text,.gradient-text-tone) { background: none; color: var(--dash-accent); -webkit-text-fill-color: currentColor; }
+.workspace-screen :is(h1,h2,h3,.tracking-tight) { letter-spacing: 0; }
+.workspace-screen h1:not(.dashboard-hero h1) { font-family: "Archivo Black", sans-serif; font-weight: 400; line-height: 1.3; }
+.workspace-screen :is(section,article,[data-slot="card"]):not(.dashboard-hero) { min-width: 0; }
+.workspace-screen section + section { margin-top: 32px; }
+.workspace-screen :is(section,article,div)[class~="bg-card"] { background-color: var(--dash-panel); border-color: var(--dash-border); }
+.workspace-screen :is(.gradient-accent,.cta-glow) { background-image: var(--workspace-gradient); animation: none; box-shadow: none; }
+.workspace-screen :is(button,a).gradient-accent,
+.workspace-screen .dash-card button.workspace-card-action {
+  background: var(--workspace-gradient);
+  color: var(--workspace-on-accent) !important;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: none;
+  animation: none;
+}
+.workspace-screen .dash-card button.workspace-card-action svg { color: inherit; }
+.workspace-screen :is(button,a).gradient-accent:hover,
+.workspace-screen .workspace-card-action:hover { filter: brightness(1.08); }
+.workspace-screen :is(button,a)[class~="border-input"] {
+  background: var(--secondary);
+  border-color: var(--dash-border);
+  color: var(--foreground) !important;
+}
+.workspace-screen :is(input,textarea,select,[role="combobox"]) {
+  background-color: var(--dash-panel);
+  border-color: var(--dash-border);
+  color: var(--foreground);
+}
+.workspace-screen .workspace-filterbar { border-top: 1px solid var(--dash-border); border-bottom: 1px solid var(--dash-border); }
+.workspace-screen .workspace-page-heading { padding-bottom: 24px; border-bottom: 1px solid var(--dash-border); }
+.workspace-screen .workspace-project-card { overflow: hidden; gap: 0; }
+.workspace-screen .dash-card.group:hover { border-color: var(--dash-accent); box-shadow: var(--workspace-card-shadow); transform: translateY(-2px); }
+.workspace-screen .dashboard-screen { background: transparent; }
+@media (max-width: 639px) {
+  .workspace-screen :is(button,a).gradient-accent,
+  .workspace-screen :is(button,a)[class~="border-input"],
+  .workspace-screen .workspace-card-action { min-height: 44px; }
+  .workspace-screen button[class*="w-9"] { min-width: 44px; min-height: 44px; }
+  .workspace-screen :is(input,textarea,select) { font-size: 16px; }
+  .workspace-screen .workspace-page-heading { grid-template-columns: minmax(0,1fr); }
+  .workspace-screen .workspace-page-heading > button { justify-self: start; }
+  .workspace-screen .dashboard-url { height: auto; min-height: 56px; }
+}
+@media (prefers-reduced-motion: reduce) { .workspace-screen * { animation: none !important; transition: none !important; } }
