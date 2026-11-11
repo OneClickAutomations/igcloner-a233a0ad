@@ -143,7 +143,7 @@ function Sparkline({ data, id }: { data: number[]; id: string }) {
           <stop offset="100%" stopColor="var(--t1)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d={`${line} L${w},${h} L0,${h} Z`} fill={`url(#${gid})`} />
+      <path d={`${line} L${w},${h} L0,${h} Z`} fill="var(--t1)" fillOpacity="0.12" />
       <path d={line} fill="none" stroke="var(--t1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -153,16 +153,9 @@ function Sparkline({ data, id }: { data: number[]; id: string }) {
 // flat = neutral, new = "New" badge when the previous month was zero.
 function DeltaPill({ delta }: { delta: MonthDelta }) {
   if (delta.kind === "none") return null;
-  const style: React.CSSProperties =
-    delta.kind === "down"
-      ? { background: "color-mix(in oklab, var(--tone-rose) 14%, transparent)", color: "var(--tone-rose)" }
-      : delta.kind === "flat"
-        ? { background: "color-mix(in oklab, var(--tone-slate) 14%, transparent)", color: "var(--tone-slate)" }
-        : { background: "color-mix(in oklab, var(--t1) 14%, transparent)", color: "var(--t1)" };
   return (
     <span
-      className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
-      style={style}
+      className={`dashboard-delta dashboard-delta-${delta.kind} inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold`}
     >
       {delta.kind === "up" && <TrendingUp className="h-3 w-3" />}
       {delta.kind === "down" && <TrendingDown className="h-3 w-3" />}
@@ -195,7 +188,7 @@ function StatTile({
   onDetails: () => void;
 }) {
   return (
-    <div className="stat-card flex flex-col p-5 sm:p-6" style={toneStyle(tone)}>
+    <div className="stat-card min-w-0 flex flex-col p-5 sm:p-6" style={toneStyle(tone)}>
       <div className="flex items-center gap-2">
         <span className="tone-icon flex h-9 w-9 items-center justify-center rounded-lg [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
         <span className="min-w-0 flex-1 text-sm font-bold leading-relaxed text-foreground">{label}</span>
@@ -213,7 +206,7 @@ function StatTile({
       )}
       <p className="mt-2 text-sm text-muted-foreground">{id === "analyses" ? "Your completed post intelligence." : id === "clones" ? "Original content from your research." : id === "saved" ? "Projects ready to pick up again." : "Your research habit over 30 days."}</p>
       {(delta.kind !== "none" || series.some((v) => v > 0)) ? (
-      <div className="mt-3 flex items-center gap-3">
+      <div className="dashboard-stat-trend mt-3 flex items-center gap-3">
         <DeltaPill delta={delta} />
         <div className="min-w-0 flex-1">
           <Sparkline data={series} id={id} />
