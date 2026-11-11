@@ -297,7 +297,7 @@ export function ResearchPage() {
 
       <Card className="mb-10 p-5 lg:p-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
             <TabsTrigger value="niche" className="gap-2"><Hash className="h-4 w-4" />By Niche</TabsTrigger>
             <TabsTrigger value="competitor" className="gap-2"><Users className="h-4 w-4" />By Competitor</TabsTrigger>
             <TabsTrigger value="topic" className="gap-2"><Lightbulb className="h-4 w-4" />By Topic</TabsTrigger>
@@ -361,7 +361,7 @@ export function ResearchPage() {
             <button
               key={r.id}
               onClick={() => navigate({ to: "/research", search: { reportId: r.id } })}
-              className="group rounded-xl border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md"
+              className="group min-w-0 rounded-lg border border-border bg-card p-4 text-left transition hover:-translate-y-0.5 hover:border-accent-primary/40 hover:shadow-md"
             >
               <div className="mb-3 flex items-center justify-between">
                 <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">{r.mode}</Badge>
@@ -373,7 +373,7 @@ export function ResearchPage() {
                 )}
               </div>
               <p className="mb-1 truncate text-base font-semibold">{r.subject}</p>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <p className="flex items-start gap-1 break-words text-xs text-muted-foreground [&_svg]:shrink-0">
                 {r.status === "ready"
                   ? <><CheckCircle2 className="h-3 w-3 text-emerald-500" /> Ready to explore</>
                   : r.status === "failed"
