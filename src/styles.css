@@ -606,7 +606,8 @@
 .dashboard-url input { flex: 1; min-width: 0; width: 100%; outline: none; background: transparent; color: var(--foreground); font-size: 14px; }
 .dashboard-url input::placeholder { color: var(--dash-muted); opacity: 1; }
 .dashboard-url:focus-within { outline: 2px solid var(--dash-accent); outline-offset: 3px; }
-.dashboard-screen button.dashboard-analyze { height: 50px; border-radius: 999px; padding: 0 20px; flex-shrink: 0; background-image: linear-gradient(var(--dash-button-contrast),var(--dash-button-contrast)),linear-gradient(105deg, var(--dash-button-start), var(--dash-button-end)) !important; color: var(--dash-on-button); font-weight: 800; font-size: 16px; }
+.dashboard-screen button.dashboard-analyze { height: 50px; border-radius: 999px; padding: 0 20px; flex-shrink: 0; background-image: linear-gradient(105deg, #ED6648, #C72D85) !important; color: #FFFFFF; font-weight: 800; font-size: 16px; box-shadow: 0 8px 20px -10px rgba(199,45,133,.6); }
+.dashboard-screen button.dashboard-analyze:hover { filter: brightness(1.06); }
 .dashboard-hero-art { position: absolute; right: 0; bottom: 0; width: 36%; height: 100%; pointer-events: none; }
 .dashboard-hero-art img { position: absolute; right: -8px; bottom: -6px; height: 96%; max-width: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(var(--dash-mascot-shadow)); }
 .dashboard-camera { position: absolute; right: -18px; top: 30px; height: 340px; width: 340px; color: var(--dash-wash-deep); opacity: .1; transform: rotate(-12deg); }
@@ -631,7 +632,7 @@
 .dashboard-help > [role="tooltip"] { display: none; position: absolute; right: 0; top: 26px; width: 220px; z-index: 20; padding: 12px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-panel); color: var(--foreground); font-size: 14px; line-height: 1.6; }
 .dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"] { display: block; }
 .dashboard-screen button[data-slot="button"] { color: var(--foreground) !important; }
-.dashboard-screen button.dashboard-analyze { color: var(--dash-on-button) !important; }
+.dashboard-screen button.dashboard-analyze, .dashboard-screen button.dashboard-analyze svg { color: #FFFFFF !important; }
 .dashboard-screen button.dashboard-detail,.dashboard-screen button.text-accent-primary { color: var(--dash-accent) !important; }
 .dashboard-screen .dash-card button { color: var(--foreground) !important; background-color: transparent; background-image: none; }
 .dashboard-screen .dash-card button span { color: var(--foreground); }
@@ -654,12 +655,13 @@
  .dashboard-hero-copy { width: 100%; padding: 28px 20px 0; }
  .dashboard-hero h1 { font-size: 26px; line-height: 1.25; }
  .dashboard-hero-subline { margin-top: 18px; font-size: 18px; }
- .dashboard-url { width: calc(100% + 16px); margin-left: -8px; gap: 6px; padding-left: 10px; }
- .dashboard-url input { font-size: 14px; }
- .dashboard-url > svg { width: 16px; }
- .dashboard-screen button.dashboard-analyze { font-size: 14px; padding: 0 12px; }
+ .dashboard-url { width: 100%; margin-left: 0; height: 56px; gap: 8px; padding: 4px 4px 4px 14px; }
+ .dashboard-url input { font-size: 16px; }
+ .dashboard-url > svg { width: 18px; }
+ .dashboard-screen button.dashboard-analyze { height: 48px; min-width: 48px; font-size: 15px; padding: 0 16px; gap: 6px; }
+ .dashboard-delta { white-space: nowrap; font-size: 12px; padding: 3px 8px; }
  .dashboard-hero-art { position: relative; width: 100%; height: 310px; margin-top: 18px; }
- .dashboard-hero-art img { height: 310px; right: 50%; transform: translateX(50%); }
+ .dashboard-hero-art img { height: 300px; right: 50%; bottom: 0; transform: translateX(50%); }
  .dashboard-camera { width: 270px; height: 270px; top: 0; right: 15px; }
  .dashboard-stat-trend { flex-wrap: wrap; gap: 8px; }
  .dashboard-stat-trend > div { flex-basis: 100%; }
@@ -667,3 +669,6 @@
 }
 @media (max-width: 359px) { .dashboard-hero h1 { font-size: 22px; } }
 @media (prefers-reduced-motion: reduce) { .dashboard-screen * { animation: none !important; transition: none !important; } }
+
+@media (max-width: 380px) { .dashboard-url input::placeholder { font-size: 14px; } .dashboard-screen button.dashboard-analyze { padding: 0 12px; } }
+.dashboard-delta { white-space: nowrap; width: fit-content; }
