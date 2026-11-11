@@ -750,6 +750,8 @@
 .workspace-screen .dashboard-screen button.text-accent-primary { color: var(--dash-accent) !important; }
 .workspace-screen .dashboard-screen .dash-card.group p:not(.text-muted-foreground) { color: var(--foreground); }
 .workspace-screen .dashboard-screen .dashboard-url input { background: transparent; color: var(--foreground); }
+.dark .workspace-screen .dashboard-screen button.dashboard-detail,
+.dark .workspace-screen .dashboard-screen button.text-accent-primary { color: var(--dash-hero-soft) !important; -webkit-text-fill-color: var(--dash-hero-soft); }
 @media (max-width: 639px) {
   .workspace-screen :is(button,a).gradient-accent,
   .workspace-screen :is(button,a)[class~="border-input"],
