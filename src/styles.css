@@ -671,3 +671,4 @@
 @media (prefers-reduced-motion: reduce) { .dashboard-screen * { animation: none !important; transition: none !important; } }
 
 @media (max-width: 380px) { .dashboard-url input::placeholder { font-size: 14px; } .dashboard-screen button.dashboard-analyze { padding: 0 12px; } }
+.dashboard-delta { white-space: nowrap; width: fit-content; }
