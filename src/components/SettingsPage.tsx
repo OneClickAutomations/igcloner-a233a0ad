@@ -75,7 +75,7 @@ export function SettingsPage() {
 
         <LaunchChecklist />
 
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col gap-8 items-start lg:flex-row">
           {/* Left nav */}
           <aside className="hidden lg:block w-52 shrink-0">
             <nav className="space-y-0.5 sticky top-20">

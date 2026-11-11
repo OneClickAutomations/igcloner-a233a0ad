@@ -30,7 +30,7 @@ function AuthenticatedLayout() {
               <ThemeToggle />
             </div>
           </header>
-          <main className="flex-1 min-w-0">
+          <main className="dashboard-screen workspace-screen flex-1 min-w-0">
             <Outlet />
           </main>
         </div>

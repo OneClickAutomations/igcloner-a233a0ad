@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FilterX,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -176,8 +177,8 @@ export function ProjectsPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-10 lg:py-14">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <div>
+      <div className="workspace-page-heading mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0">
           <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           <p className="text-muted-foreground">Every content production session you've started.</p>
         </div>
@@ -204,7 +205,7 @@ export function ProjectsPage() {
       ) : (
         <>
           {/* Filter bar */}
-          <div className="dash-card mb-5 flex flex-col gap-3 p-3 sm:p-4 lg:flex-row lg:items-center">
+          <div className="workspace-filterbar mb-5 flex flex-col gap-3 py-4 lg:flex-row lg:items-center">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -283,36 +284,31 @@ export function ProjectsPage() {
                   const meta = FORMAT_META[p.format as ProjectFormat];
                   const Icon = meta?.Icon ?? Type;
                   return (
-                    <div key={p.id} className="dash-card group relative flex flex-col gap-3 p-4 transition-all hover:-translate-y-0.5 hover:shadow-ig-hover">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    <div key={p.id} className="dash-card workspace-project-card group relative flex flex-col overflow-hidden">
+                      <div className="relative grid aspect-video w-full place-items-center overflow-hidden bg-muted">
+                        <Icon className="h-12 w-12 text-accent-primary" aria-hidden="true" />
+                        {(p.latest_asset_url || p.source_thumbnail) && <img
+                          src={p.latest_asset_url ?? (proxiedImg(p.source_thumbnail) ?? p.source_thumbnail)}
+                          alt={p.title}
+                          className="absolute inset-0 h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />}
+                        <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">
                           <Icon className="h-3.5 w-3.5" />
                           {meta?.label ?? p.format}
                         </div>
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {p.status?.replace("_", " ")}
-                        </span>
                       </div>
-                      {(p.latest_asset_url || p.source_thumbnail) && (
-                        <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted">
-                          <img
-                            src={p.latest_asset_url ?? (proxiedImg(p.source_thumbnail) ?? p.source_thumbnail)}
-                            alt=""
-                            className="h-full w-full object-cover"
-                            referrerPolicy="no-referrer"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                          />
-                        </div>
-                      )}
-                      <div>
+                      <div className="min-w-0 px-5 pt-4">
+                        <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{p.status?.replaceAll("_", " ")}</p>
                         <h3 className="line-clamp-2 text-base font-semibold tracking-tight">{p.title}</h3>
                         {p.source_account && (
                           <p className="text-xs text-muted-foreground">From @{p.source_account}</p>
                         )}
                       </div>
-                      <div className="mt-auto grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 pt-2">
-                        <Button size="sm" onClick={() => open(p)} className="min-w-0">
-                          {p.status === "complete" || p.status === "exported" ? "Open" : "Continue"}
+                      <div className="mx-5 mb-4 mt-4 flex items-center justify-between gap-2 border-t border-border pt-3">
+                        <Button size="sm" onClick={() => open(p)} className="workspace-card-action min-w-0">
+                          {p.status === "complete" || p.status === "exported" ? "Open" : "Continue"}<ArrowRight className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
