@@ -631,7 +631,7 @@ function DashboardPageInner() {
                         style={toneStyle({ t1: "purple", t2: "pink" })}
                         className="dash-card group flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-ig-hover"
                       >
-                        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+                        <div className="relative aspect-video overflow-hidden bg-muted">
                           <AnalysisThumb src={t} postType={a.post_type} account={a.source_account} />
                           <span className="dashboard-type absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide" style={{ background: TYPE_BADGE[(a.post_type || "post").toLowerCase()] ?? "var(--tone-pink)" }}>
                             {a.post_type || "Post"}
@@ -645,20 +645,14 @@ function DashboardPageInner() {
                               </div>
                             )}
                           </div>
-                          <div className="dashboard-account absolute inset-x-2 bottom-2 rounded-lg border border-border px-3 py-2">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                              @{a.source_account || "unknown"}
-                            </p>
-                            <p className="text-xs text-foreground/75">{timeAgo(a.created_at)}</p>
-                          </div>
                         </div>
 
                         <div className="flex flex-1 flex-col gap-3 p-4">
-                          <div className="mt-auto flex gap-2">
+                          <div className="min-w-0"><p className="truncate text-base font-bold">@{a.source_account || "unknown"}</p><p className="text-sm text-muted-foreground">{timeAgo(a.created_at)}</p></div>
+                          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-3">
                             <Button
-                              variant="outline"
                               size="sm"
-                              className="flex-1 gap-1.5"
+                              className="workspace-card-action gap-1.5"
                               onClick={() => navigate({ to: "/app", search: { analysisId: a.id } })}
                             >
                               <ExternalLink className="h-3.5 w-3.5" />

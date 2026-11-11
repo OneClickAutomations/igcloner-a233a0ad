@@ -177,15 +177,15 @@ export function ConnectedAccountsTab({
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between gap-3">
-        <div>
+      <div className="mb-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
           <h2 className="text-lg font-bold tracking-tight">Connected Accounts</h2>
           <p className="text-sm text-muted-foreground">
             We never store your passwords or tokens — connections live securely with our publishing
             provider.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="ghost"
             size="sm"
