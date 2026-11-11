@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { proxiedImg } from "@/lib/img-proxy";
-import mascotWelcome from "@/assets/mascot-welcome.png";
+import mascotWelcome from "@/assets/igcloner-mascot.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
