@@ -267,17 +267,17 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
         </div>
       )}
 
-      <div className={embedded && sourceAnalysisId ? '' : 'mx-auto max-w-[1100px] px-4 py-8 lg:py-12'}>
+      <div className={embedded ? 'embedded-analysis' : 'mx-auto max-w-[1100px] px-4 py-8 lg:py-12'}>
         {phase === "input" && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <h1 className="mb-2 text-center text-3xl font-bold tracking-tight sm:text-4xl">
+          <div className={embedded ? 'flex flex-col items-start gap-4' : 'flex flex-col items-center justify-center py-20'}>
+            {!embedded && <><h1 className="mb-2 text-center text-3xl font-bold tracking-tight sm:text-4xl">
               Paste any Instagram or Facebook URL
             </h1>
             <p className="mb-8 text-center text-muted-foreground">
               Review the real post first. Writing and making content are separate choices.
-            </p>
+            </p></>}
             <div className="relative w-full max-w-xl">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2 shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
+              <div className="analysis-url-control flex items-center gap-2 rounded-lg border border-border bg-card p-2 shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
                 <Link2 className="ml-3 h-5 w-5 text-muted-foreground shrink-0" />
                 <Input
                   ref={inputRef}
@@ -316,7 +316,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
                 <div className="mt-2 text-sm text-status-error">Please enter a valid Instagram or Facebook URL</div>
               )}
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">Reel · Carousel · Post · Video — any public Instagram or Facebook content</p>
+            <p className={embedded ? 'text-sm text-muted-foreground' : 'mt-6 text-xs text-muted-foreground'}>Reel · Carousel · Post · Video — any public Instagram or Facebook content</p>
           </div>
         )}
 
