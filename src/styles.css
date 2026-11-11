@@ -786,15 +786,15 @@
   --review-accent: #F1A3D2;
   --review-tint: #352044;
 }
-.creation-wizard .review-card { border-radius: 8px; box-shadow: none; }
-.creation-wizard section > .min-h-64 > .grid > .review-card { border-top: 3px solid var(--review-accent); }
-.creation-wizard .review-card > header { margin-bottom: 18px; }
-.creation-wizard .analysis-url-control { background: var(--review-page); }
+.creation-wizard .review-card { border-radius: 16px; padding: 24px; box-shadow: var(--review-shadow); }
+.creation-wizard .review-card > header { margin-bottom: 24px; }
+.creation-wizard .review-card > header h3 > svg { box-sizing: content-box; padding: 10px; border-radius: 10px; background: var(--review-tint); }
+.creation-wizard .analysis-url-control { background: var(--review-panel); border-color: var(--review-border); }
 .creation-wizard .analysis-url-control input { min-width: 0; background: transparent; font-size: 16px; }
 .creation-wizard .wizard-progress > p { margin-bottom: 8px; font-size: 13px; }
-.creation-wizard .wizard-progress li > span:first-child { width: 28px; height: 28px; border-radius: 6px; box-shadow: none; }
-.creation-wizard .wizard-progress li[aria-current="step"] > span:first-child { background: var(--review-accent); color: var(--primary-foreground); }
-.creation-wizard .wizard-progress li { gap: 6px; }
+.creation-wizard .wizard-progress li > span:first-child { width: 36px; height: 36px; border-radius: 50%; box-shadow: none; }
+.creation-wizard .wizard-progress li[aria-current="step"] > span:first-child { background: var(--review-gradient); color: var(--primary-foreground); }
+.creation-wizard .wizard-progress li { gap: 10px; }
 .creation-wizard .wizard-progress ol { gap: 8px; }
 .creation-wizard .wizard-heading .ui-button { font-size: 13px; }
 .ui-button { border-radius: 8px; word-break: normal; overflow-wrap: anywhere; }
@@ -805,13 +805,16 @@
 .saved-post-option { min-height: 60px; max-width: var(--radix-select-trigger-width); padding-top: 10px; padding-bottom: 10px; border-radius: 5px; }
 @media (max-width: 639px) {
   .ui-button { min-height: 44px; }
-  .creation-wizard .wizard-container { padding: 16px 12px; }
-  .creation-wizard .wizard-heading h1 { font-size: 18px; }
+  .creation-wizard .wizard-container { padding: 20px 16px; }
+  .creation-wizard .wizard-heading { grid-template-columns: minmax(0,1fr); gap: 16px; margin-bottom: 20px; }
+  .creation-wizard .wizard-heading h1 { font-size: 28px; }
+  .creation-wizard .wizard-heading > .ui-button { justify-self: start; }
   .creation-wizard .wizard-heading .ui-button { padding: 9px 12px; }
   .creation-wizard .wizard-progress { margin-bottom: 16px; }
   .creation-wizard .wizard-step-heading { margin-bottom: 16px; }
   .creation-wizard .wizard-step-heading h2 { font-size: 22px; }
-  .creation-wizard .review-card { padding: 18px; }
+  .creation-wizard .review-card { padding: 20px; }
+  .creation-wizard .wizard-progress { padding: 16px 20px; }
   .creation-wizard .analysis-url-control { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 8px; padding: 10px; }
   .creation-wizard .analysis-url-control > svg { margin-left: 0; }
   .creation-wizard .analysis-url-control > .ui-button { grid-column: 1 / -1; width: 100%; }
