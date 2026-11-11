@@ -65,6 +65,7 @@
 
 :root {
   --radius: 0.625rem;
+  --action-gradient: linear-gradient(105deg, #C84328, #B51D70);
 
   /* Instagram gradient anchor colors */
   --ig1: #F58529;
@@ -177,7 +178,7 @@
 }
 
 @utility gradient-accent {
-  background: linear-gradient(135deg, #F58529 0%, #DD2A7B 35%, #8134AF 70%, #515BD4 100%);
+  background: var(--action-gradient);
 }
 
 @utility gradient-card {
@@ -675,7 +676,7 @@
 
 /* Signed-in content only; the public site and sidebar keep their own theme. */
 .workspace-screen {
-  --workspace-gradient: linear-gradient(105deg, #C84328, #B51D70);
+  --workspace-gradient: var(--action-gradient);
   --workspace-on-accent: #FFFFFF;
   --workspace-card-shadow: 0 3px 12px rgba(16,17,22,.045);
   --secondary: #E9E5ED;
@@ -723,7 +724,7 @@
   background: var(--workspace-gradient);
   color: var(--workspace-on-accent) !important;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   box-shadow: none;
   animation: none;
 }
@@ -763,3 +764,57 @@
   .workspace-screen .dashboard-url { height: auto; min-height: 56px; }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-screen * { animation: none !important; transition: none !important; } }
+
+/* Compact creation workspace: strong surfaces without decorative fills. */
+.creation-wizard {
+  --review-page: #F3F2F5;
+  --review-panel: #FFFFFF;
+  --review-ink: #101116;
+  --review-muted: #655773;
+  --review-border: #D8CFDF;
+  --review-accent: #6B21A8;
+  --review-tint: #F2E9F8;
+  --review-gradient: var(--action-gradient);
+  font-family: "Plus Jakarta Sans", sans-serif;
+}
+.dark .creation-wizard {
+  --review-page: #0A0A13;
+  --review-panel: #1E152B;
+  --review-ink: #F8FAFC;
+  --review-muted: #C9C3D3;
+  --review-border: #44334F;
+  --review-accent: #F1A3D2;
+  --review-tint: #352044;
+}
+.creation-wizard .review-card { border-radius: 8px; box-shadow: none; }
+.creation-wizard section > .min-h-64 > .grid > .review-card { border-top: 3px solid var(--review-accent); }
+.creation-wizard .review-card > header { margin-bottom: 18px; }
+.creation-wizard .analysis-url-control { background: var(--review-page); }
+.creation-wizard .analysis-url-control input { min-width: 0; background: transparent; font-size: 16px; }
+.creation-wizard .wizard-progress > p { margin-bottom: 8px; font-size: 13px; }
+.creation-wizard .wizard-progress li > span:first-child { width: 28px; height: 28px; border-radius: 6px; box-shadow: none; }
+.creation-wizard .wizard-progress li[aria-current="step"] > span:first-child { background: var(--review-accent); color: var(--primary-foreground); }
+.creation-wizard .wizard-progress li { gap: 6px; }
+.creation-wizard .wizard-progress ol { gap: 8px; }
+.creation-wizard .wizard-heading .ui-button { font-size: 13px; }
+.ui-button { border-radius: 8px; word-break: normal; overflow-wrap: anywhere; }
+.workspace-screen .ui-button.gradient-accent { border-radius: 8px; }
+.saved-post-trigger { border-radius: 8px; }
+.saved-post-menu { --accent: #F2E9F8; --accent-foreground: #6B21A8; --muted-foreground: #655773; border-color: var(--input); border-radius: 8px; max-width: calc(100vw - 32px); box-shadow: 0 12px 32px rgba(16,17,22,.14); }
+.dark .saved-post-menu { --popover: #1E152B; --accent: #352044; --accent-foreground: #F1A3D2; --muted-foreground: #C9C3D3; }
+.saved-post-option { min-height: 60px; max-width: var(--radix-select-trigger-width); padding-top: 10px; padding-bottom: 10px; border-radius: 5px; }
+@media (max-width: 639px) {
+  .ui-button { min-height: 44px; }
+  .creation-wizard .wizard-container { padding: 16px 12px; }
+  .creation-wizard .wizard-heading h1 { font-size: 18px; }
+  .creation-wizard .wizard-heading .ui-button { padding: 9px 12px; }
+  .creation-wizard .wizard-progress { margin-bottom: 16px; }
+  .creation-wizard .wizard-step-heading { margin-bottom: 16px; }
+  .creation-wizard .wizard-step-heading h2 { font-size: 22px; }
+  .creation-wizard .review-card { padding: 18px; }
+  .creation-wizard .analysis-url-control { display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 8px; padding: 10px; }
+  .creation-wizard .analysis-url-control > svg { margin-left: 0; }
+  .creation-wizard .analysis-url-control > .ui-button { grid-column: 1 / -1; width: 100%; }
+  .creation-wizard footer { gap: 8px; padding: 10px; }
+  .creation-wizard footer .ui-button { padding: 10px 16px; }
+}
