@@ -630,13 +630,14 @@
 .dashboard-thumb-fallback { background: var(--dash-tint); }
 .dashboard-help > [role="tooltip"] { display: none; position: absolute; right: 0; top: 26px; width: 220px; z-index: 20; padding: 12px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-panel); color: var(--foreground); font-size: 14px; line-height: 1.6; }
 .dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"] { display: block; }
-.dashboard-screen button[data-slot="button"] { color: var(--foreground); }
-.dashboard-screen button.dashboard-detail { color: var(--dash-accent); }
-.dashboard-screen .dash-card button { color: var(--foreground); background-color: transparent; background-image: none; }
+.dashboard-screen button[data-slot="button"] { color: var(--foreground) !important; }
+.dashboard-screen button.dashboard-analyze { color: var(--dash-on-button) !important; }
+.dashboard-screen button.dashboard-detail,.dashboard-screen button.text-accent-primary { color: var(--dash-accent) !important; }
+.dashboard-screen .dash-card button { color: var(--foreground) !important; background-color: transparent; background-image: none; }
 .dashboard-screen .dash-card button span { color: var(--foreground); }
 .dashboard-screen .dash-card button span.text-muted-foreground { color: var(--dash-muted); }
 .dashboard-screen .dash-card.group > div:last-child { background: var(--dash-panel); }
-.dashboard-screen .dash-card button[class*="text-status-error"] { color: var(--tone-rose); }
+.dashboard-screen .dash-card button[class*="text-status-error"] { color: var(--tone-rose) !important; }
 .dashboard-screen .dash-card button:hover { box-shadow: none; }
 .dashboard-screen .dash-card:has(.text-status-error):hover { box-shadow: none; }
 .dashboard-screen .text-xs { font-size: 14px; }
