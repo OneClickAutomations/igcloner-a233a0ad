@@ -120,7 +120,7 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
       {!shown.length && <p className="text-review-muted">Choose your platforms first. Then write their captions with one priced action.</p>}
       <Button variant="outline" onClick={async () => { await save({ data: { id: projectId, wrapup } }); await navigate({ to: '/settings', search: { section: 'social-accounts' } }); }}>Connect an account</Button>
       <Button variant="outline" disabled={!!busy || !shown.length} onClick={generate}><Sparkles className="size-4"/>{busy === 'captions' ? 'Writing your captions…' : `${Object.keys(copies).length ? 'Regenerate' : 'Generate'} caption pack (${ACTION_COSTS.captionPack} plan credit)`}</Button>{gen.ring('captions', false)}
-      <div className="space-y-6">{shown.filter(p=>Boolean(copies[p]?.caption || copies[p]?.description)).map(p => {
+      <div id="caption-cards" className="space-y-6">{shown.filter(p=>Boolean(copies[p]?.caption || copies[p]?.description)).map(p => {
         const c = copies[p] ?? blank(), description = p === 'youtube' || p === 'pinterest', limit = publishingLimit(p, contentType), length = finalCaption(p, c, link).length, caps = PLATFORM_CAPABILITY_MATRIX[p];
         return <PublishPanel wizard={wizard} key={p} title={PLATFORM_META[p].label} icon={Globe} trailing={wizard ? <span className="wizard-score">{length}{limit ? ` / ${limit}` : ''} chars</span> : undefined}>
           <div className="space-y-3">
