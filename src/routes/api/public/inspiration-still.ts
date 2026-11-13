@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
-const FRAME_MODEL = 'google/gemini-3-pro-image';
+// Gemini image blocked the athletic source frames (SAFETY) even with an outfit fallback; OpenAI image edits accept them.
+const FRAME_MODEL = 'openai/gpt-image-2.5-sunburst';
 
 export const Route = createFileRoute('/api/public/inspiration-still')({
   server: { handlers: { POST: async ({ request }) => {
@@ -59,7 +60,8 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
           const form = new FormData(); form.set('prompt', frameReferencedPrompt(sceneInput, frame, { fallbackOutfit, hasCharacterRef: chars.length > 0 }));
           form.append('image[]', new File([src], 'source-frame.jpg', { type: 'image/jpeg' }));
           for (const r of chars) { const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path); if (im) form.append('image[]', new File([im], r.filename, { type: im.type || 'image/png' })); }
-          return editImage({ ...config, model: FRAME_MODEL, format: 'gemini-chat' }, form);
+          form.set('size', '720x1280'); form.set('quality', 'low');
+          return editImage({ ...config, model: FRAME_MODEL }, form);
         };
         // Buffer the stream so an in-stream safety refusal can trigger one outfit fallback before the browser sees it.
         const attemptOnce = async (fb: boolean) => { const r = await send(fb); return { r, text: r.ok ? await r.text() : '' }; };
