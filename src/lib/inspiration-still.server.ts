@@ -29,7 +29,7 @@ export async function collectStillFromStream(admin: Admin, attemptId: string, bo
   const parser = createParser({ onEvent(ev) {
     try { const p = JSON.parse(ev.data); const t = ev.event || p?.type; if ((t === 'image_generation.completed' || t === 'image_edit.completed') && p?.b64_json) final = p.b64_json; } catch { /* ignore */ }
   } });
-  const reader = body.pipeThrough(new TextDecoderStream()).getReader();
+  const reader = body.pipeThrough(new TextDecoderStream() as unknown as ReadableWritablePair<string, Uint8Array>).getReader();
   while (true) { const c = await reader.read(); if (c.done) break; parser.feed(c.value); }
   if (!final) return;
   const { data: a } = await admin.from('scene_attempts').select('*').eq('id', attemptId).single();
