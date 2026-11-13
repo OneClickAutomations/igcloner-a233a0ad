@@ -52,7 +52,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences, onCre
 
   return (
     <div className={wizard ? "wizard-modes" : undefined}>
-      <h3 className="mt-1 text-lg font-bold">How much should change?</h3>
+      <h3 className="mt-1 text-lg font-bold">What do you want to make?</h3>
       {ctxError && <p className="mt-2 text-xs text-status-error">Couldn't check which modes this post supports: {(ctxError as Error).message}</p>}
       <div className={wizard ? "mt-5 grid gap-4 sm:grid-cols-2" : "mt-3 space-y-2"}>
         {CLONE_METHODS.map((m) => {
@@ -78,6 +78,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences, onCre
               <div className="flex-1">
                 <p className="flex items-center gap-2 text-sm font-semibold">
                   {m.title}
+                  {m.id === "A2" && <span className="rounded-full bg-accent-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-primary">Recommended</span>}
                   {requiresRights(m.id) && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"><Lock className="h-3 w-3" /> Needs permission</span>}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">{m.blurb}</p>
@@ -109,7 +110,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences, onCre
           </Button>
         </div>
       ) : (
-        <p className="mt-3 text-xs text-muted-foreground">This makes new media. Don't include other people's faces, logos or music you don't have rights to.</p>
+        <p className="mt-3 text-sm text-muted-foreground">We never copy a real person's face, logos or music you don't own.</p>
       )}
     </div>
   );
