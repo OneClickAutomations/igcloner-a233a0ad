@@ -41,7 +41,7 @@ export const generateRemixDirections = createServerFn({ method: 'POST' }).middle
 
 /** Free, explicitly clicked storyboard prefill, atomically inserted once without replacing edited scenes. */
 export const prefillRemixStoryboard = createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
-  .inputValidator((v:unknown)=>z.object({projectId:z.string().uuid(),direction:RemixDirection,instructions:z.string().max(2000).default(''),referenceIds:z.array(z.string().uuid()).max(5).default([]),speechMode:z.enum(['voiceover','silent']).default('voiceover')}).parse(v))
+  .inputValidator((v:unknown)=>z.object({projectId:z.string().uuid(),direction:RemixDirection,instructions:z.string().max(2000).default(''),referenceIds:z.array(z.string().uuid()).max(5).default([]),speechMode:z.enum(['voiceover','silent']).default('voiceover'),replace:z.boolean().default(false)}).parse(v))
   .handler(async({data,context})=>{
     const {data:project}=await context.supabase.from('video_inspiration_projects').select('id,analysis_id').eq('id',data.projectId).eq('user_id',context.userId).single();
     if(!project?.analysis_id)throw new Error('Choose a saved source analysis first.');
@@ -51,7 +51,7 @@ export const prefillRemixStoryboard = createServerFn({method:'POST'}).middleware
     const scenes=prefillRemixScenes(source,data.direction,data.instructions,data.referenceIds,data.speechMode);
     if(!scenes.length)throw new Error('No source shots were captured. You can add scenes in Advanced or run the priced verified analysis.');
     const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
-    const {data:count,error}=await supabaseAdmin.rpc('prefill_inspiration_storyboard',{p_user:context.userId,p_project:project.id,p_scenes:scenes.map((s,i)=>({duration:s.duration,still_prompt:s.stillPrompt,motion_prompt:s.motionPrompt,action_objects:s.objects,scene_input:{...s,sourceShotIndex:i,remixDirectionId:data.direction.id,ownerInstructions:data.instructions}})) as any});
+    const {data:count,error}=await supabaseAdmin.rpc(data.replace?'replace_inspiration_storyboard':'prefill_inspiration_storyboard',{p_user:context.userId,p_project:project.id,p_scenes:scenes.map((s,i)=>({duration:s.duration,still_prompt:s.stillPrompt,motion_prompt:s.motionPrompt,action_objects:s.objects,scene_input:{...s,sourceShotIndex:i,remixDirectionId:data.direction.id,ownerInstructions:data.instructions}})) as any});
     if(error)throw new Error(error.message);
     return {scenes:count,charged:0};
   });

@@ -27,7 +27,8 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model };
   const start = await loadInspirationImage(scene.still_path);
   let request: any;
-  const prompt = `${stripIdentity(attempt.prompt_snapshot ?? scene.motion_prompt)} ${PHYSICAL_REALISM}`;
+  const rawMotion = attempt.prompt_snapshot ?? scene.motion_prompt;
+  const prompt = `${(scene.scene_input as {faithful?:boolean})?.faithful === true ? rawMotion : stripIdentity(rawMotion)} ${PHYSICAL_REALISM}`;
   if (attempt.model === 'google/gemini-omni-1.1-flash') {
     request = { input: [{ type: 'text', text: `${prompt} <FIRST_FRAME> is the approved starting frame. No teleporting objects. No changing product shape, colors or opacity.` }, { type: 'image', data: start.bytesBase64Encoded, mime_type: start.mimeType }], response_format: { type: 'video', resolution: '720p', duration: `${scene.duration}s`, aspect_ratio: '9:16' } };
   } else {
