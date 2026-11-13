@@ -14,7 +14,7 @@ export type AssemblyClip = { sceneId: string; attemptId: string; path: string; d
 export const SHOTSTACK_USD_PER_MINUTE = STUDIO_PRICING.renderUsdPerMinute; // Official PAYG rate checked 2026-11-08.
 export const ASSEMBLY_STYLE = { foreground: '#ffffff', background: '#000000', font: 'Open Sans' };
 export function renderQuote(seconds: number, environment: 'v1'|'stage' = 'v1') {
-  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 240) throw new Error('Film must be between 0 and 240 seconds.');
+  if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 240) throw new Error('Video must be between 0 and 240 seconds.');
   const usd = environment === 'stage' ? 0 : Math.floor(seconds) / 60 * SHOTSTACK_USD_PER_MINUTE;
   return { seconds, rateUsdPerMinute: SHOTSTACK_USD_PER_MINUTE, renderUsd: usd, customerCredits: videoCreditsForUsd(usd), billingBalance:'video' as const, proposed:!STUDIO_PRICING.video.approved, environment };
 }
@@ -24,7 +24,7 @@ export function validateCaptions(captions: z.infer<typeof Caption>[], duration: 
   let previous = 0;
   for (const c of captions) {
     Caption.parse(c);
-    if (c.end <= c.start || c.end > duration || c.start < previous) throw new Error('Captions must be ordered, non-overlapping, and inside the film.');
+    if (c.end <= c.start || c.end > duration || c.start < previous) throw new Error('Captions must be ordered, non-overlapping, and inside the video.');
     previous = c.end;
   }
 }
@@ -51,7 +51,7 @@ export function buildAssemblyTimeline(clips: (AssemblyClip & { url: string })[],
   const voiceDuration = Math.min(settings.voiceoverDuration ?? duration,duration);
   const tracks: { clips: Record<string,unknown>[] }[] = [];
   if (media.captions) tracks.push({ clips:[{ asset:{ type:'rich-caption',src:media.captions,font:{ family:ASSEMBLY_STYLE.font,size:40,color:ASSEMBLY_STYLE.foreground },background:{color:ASSEMBLY_STYLE.background,opacity:0.65,wrap:true,padding:12}},start:0,length:duration,position:'bottom',offset:{x:0,y:0.12},scale:0.9 }] });
-  if (media.logo) { const end=settings.logoEnd ?? duration; if (end<=settings.logoStart || end>duration) throw new Error('Logo timing must be inside the film.'); tracks.push({clips:[{asset:{type:'image',src:media.logo},start:settings.logoStart,length:end-settings.logoStart,scale:0.16,position:'topRight',offset:{x:-0.04,y:-0.04}}]}); }
+  if (media.logo) { const end=settings.logoEnd ?? duration; if (end<=settings.logoStart || end>duration) throw new Error('Logo timing must be inside the video.'); tracks.push({clips:[{asset:{type:'image',src:media.logo},start:settings.logoStart,length:end-settings.logoStart,scale:0.16,position:'topRight',offset:{x:-0.04,y:-0.04}}]}); }
   if (media.voiceover) tracks.push({clips:[{asset:{type:'audio',src:media.voiceover,volume:1},start:0,length:voiceDuration}]});
   if (media.music) {
     // Known voiceover interval drives deterministic ducking; no unverified speech detector.

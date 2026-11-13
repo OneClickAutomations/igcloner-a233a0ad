@@ -6,7 +6,7 @@ export const Route = createFileRoute('/_authenticated/library')({
   validateSearch: z.object({ projectId: z.string().uuid().optional() }),
   head: () => ({ meta: [
     { title: 'Content library — IG-Cloner' },
-    { name: 'description', content: 'Find, edit, download, schedule and publish your saved images, carousels, reels and films.' },
+    { name: 'description', content: 'Find, edit, download, schedule and publish your saved images, carousels, reels and videos.' },
     { property: 'og:title', content: 'Content library — IG-Cloner' },
     { property: 'og:description', content: 'Your finished content and platform captions, saved together in IG-Cloner.' },
     { property: 'og:type', content: 'website' },

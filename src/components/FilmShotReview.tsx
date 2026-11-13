@@ -43,15 +43,15 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
           const a=latest.attempts.find(a=>a.id===started.attemptId);await refresh();
           if(a?.status==='completed')break;
           if(a?.status==='failed'||a?.status==='submission_unknown')throw new Error(a.failure_reason??'Shot stopped. Your previous versions are safe.');
-          if(Date.now()>deadline)throw new Error('Shot is still processing. Reopen this film to collect it; remaining shots were not charged.');
+          if(Date.now()>deadline)throw new Error('Shot is still processing. Reopen this video to collect it; remaining shots were not charged.');
         }
       }
-      setProgress('New shots saved. Re-assemble to update your film.');
-    }catch(e){setProgress('Stopped; previous versions are safe. Reopen this film to check the current shot.');throw e;}
+      setProgress('New shots saved. Re-assemble to update your video.');
+    }catch(e){setProgress('Stopped; previous versions are safe. Reopen this video to check the current shot.');throw e;}
   };
   const film=data.assemblies.find(j=>j.status==='completed'&&j.preview);
   return <section className="space-y-5 border-b border-border pb-6">
-    <h2 className="text-2xl font-bold">Review your film</h2>
+    <h2 className="text-2xl font-bold">Review your video</h2>
     {film?.preview?<video aria-label="Assembled film" controls playsInline src={film.preview} className="mx-auto aspect-[9/16] max-h-[640px] w-full bg-muted object-contain"/>:<p className="text-muted-foreground">Your assembled film will appear here. Your saved shots are below.</p>}
     <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Shot strip">{data.scenes.map(s=><Button key={s.id} variant="outline" aria-label={`Review shot ${s.scene_order+1}`} aria-pressed={s.id===selected} onClick={()=>setSelected(s.id)} className="h-auto w-24 shrink-0 flex-col gap-2 p-2">{s.preview?<img src={s.preview} alt={`Shot ${s.scene_order+1}`} className="aspect-[9/16] w-full object-cover"/>:<Film className="size-8"/>}<span>Shot {s.scene_order+1} · {s.duration}s</span></Button>)}</div>
     {scene&&<div className="space-y-4 border-t border-border pt-5">
