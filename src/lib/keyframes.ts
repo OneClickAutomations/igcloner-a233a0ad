@@ -27,7 +27,15 @@ export function consensusAppearance(reads: Partial<Appearance>[]): Appearance {
   const bands = ok.map(r => skinBand(r.skinTone)).filter(b => b >= 0);
   const counts = SKIN_BANDS.map((_, i) => bands.filter(b => b === i).length); const top = Math.max(0, ...counts);
   const band = bands.length ? counts.lastIndexOf(top) : -1;
-  const pick = (k: keyof Appearance) => mode(ok.map(r => useful(r[k] as string)).filter(Boolean)) ?? 'unclear';
+  // Medoid: the reading that agrees most with the others; "none" loses to a read that saw something.
+  const words = (t: string) => new Set(t.toLowerCase().match(/[a-z]+/g) ?? []);
+  const pick = (k: keyof Appearance) => {
+    let vals = ok.map(r => useful(r[k] as string)).filter(Boolean);
+    const seen = vals.filter(v => !/^none( visible)?$/i.test(v)); if (seen.length) vals = seen;
+    if (!vals.length) return 'unclear';
+    const score = (v: string) => vals.reduce((n, o) => n + [...words(v)].filter(w => words(o).has(w)).length, 0);
+    return [...vals].sort((a, b) => score(b) - score(a))[0];
+  };
   return Appearance.parse({ skinTone: band >= 0 ? `${SKIN_BANDS[band]} brown` .replace(/^(very light|light) brown$/, '$1') : pick('skinTone'), undertone: mode(ok.map(r => useful(r.undertone)?.toLowerCase()).filter(Boolean) as string[]) ?? 'unclear', build: pick('build'), hair: pick('hair'), outfit: pick('outfit'), coveredOutfit: pick('coveredOutfit'), accessories: pick('accessories'), footwear: pick('footwear'), vibe: pick('vibe') });
 }
 /** Leading, explicit skin and build lock for image prompts. */

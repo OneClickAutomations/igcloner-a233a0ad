@@ -9,3 +9,9 @@ describe('look accuracy', () => {
   it('lock says do not lighten', () => { expect(lookLock({ skinTone: 'deep brown', undertone: 'warm', build: 'muscular' })).toMatch(/deep brown skin with a warm undertone.*do not lighten/); });
   it('covered outfit keeps the source colour', () => { expect(coveredOutfit({ outfit: 'white two-piece', coveredOutfit: 'unclear' })).toMatch(/white sports bra.*white.*bike shorts/); });
 });
+describe('consensus fields', () => {
+  it('takes the hair most frames agree on and keeps glasses seen in any frame', () => {
+    const a = consensusAppearance([{ skinTone: 'deep', hair: 'dark, loose, falling forward', accessories: 'none visible' }, { skinTone: 'deep', hair: 'black, long, high ponytail', accessories: 'clear glasses' }, { skinTone: 'deep', hair: 'black, long, slicked high ponytail', accessories: 'clear-framed glasses' }]);
+    expect(a.hair).toMatch(/ponytail/); expect(a.accessories).toMatch(/glasses/);
+  });
+});
