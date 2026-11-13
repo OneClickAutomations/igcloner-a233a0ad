@@ -54,9 +54,10 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   useEffect(() => { if (wizardStage) setTab(wizardStage==='deliver'?'delivery':'storyboard'); }, [wizardStage]);
   useEffect(() => {
     if (!onWizardDraft) return;
-    const next = { ...wizardDraft, sceneDraft: draft, makePart, model, checks };
+    const clipsReady = data.attempts.filter(a => a.operation === 'animate' && a.status === 'completed').length;
+    const next = { ...wizardDraft, sceneDraft: draft, makePart, model, checks, clipsReady };
     if (JSON.stringify(next)!==JSON.stringify(wizardDraft)) onWizardDraft(next);
-  }, [draft, makePart, model, checks]);
+  }, [draft, makePart, model, checks, data.attempts]);
   const refresh = async () => { await qc.invalidateQueries({ queryKey: ['inspiration-studio'] }); await qc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY }); await qc.invalidateQueries({queryKey:VIDEO_BALANCE_KEY}); };
   const run = async (fn: () => Promise<unknown>) => { setBusy(true); try { await fn(); await refresh(); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); } };
   useEffect(() => {
@@ -123,7 +124,6 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   };
   const completed = data.attempts.filter(a => a.operation === 'animate' && a.status === 'completed');
   // Tell the wizard how many finished clips exist so Next can't skip to an empty review.
-  useEffect(() => { if (onWizardDraft && wizardDraft && wizardDraft.clipsReady !== completed.length) onWizardDraft({ ...wizardDraft, clipsReady: completed.length }); }, [completed.length]);
   // Announce animation completion (also after a refresh, since the job is remembered).
   const liveAnim = data.attempts.some(a => a.operation === 'animate' && ['claimed','queued','in_progress','collecting'].includes(a.status));
   useEffect(() => { if (!liveAnim && completed.length) finishJob(`animate-${projectId}`, true, { resultSelector: '#make-scenes' }); }, [liveAnim, completed.length]);
