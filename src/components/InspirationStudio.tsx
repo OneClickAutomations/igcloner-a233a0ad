@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { queryOptions, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { Film, Plus, Download, Check, ImagePlus, Play, Trash2, Save, Pencil, Loader2, AlertTriangle } from 'lucide-react';
+import { Film, Plus, Download, Check, ImagePlus, Play, Trash2, Save, Pencil, Loader2, AlertTriangle, Lock, Mic, ArrowLeft } from 'lucide-react';
+import { GenerationProgress } from './GenerationProgress';
+import { startJob, finishJob, slideTo, type JobItem } from '@/lib/generation-jobs';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -29,7 +31,7 @@ const blank: SceneDraft = { environment: 'The same setting as the source shot', 
 const LEGACY_FIXTURE = /pours water|open bottle|into the cup/i;
 const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }, { id: 'setting', label: 'Setting' }] as const;
 
-export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery }: { projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
+export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery, onBackToMake }: { onBackToMake?: () => void; projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
   const navigate = useNavigate(); const qc = useQueryClient();
   const saveCreation=useServerFn(saveCreationDraft);
@@ -68,20 +70,46 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     const base64 = await new Promise<string>((resolve,reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1]); r.onerror = reject; r.readAsDataURL(file); });
     await refs({ data: { action: 'upload', kind, filename: file.name, mime: file.type as 'image/png'|'image/jpeg'|'image/webp', base64 } });
   };
-  const confirm = async () => {
-    if (!confirmation || confirmation.q.customerCredits === null) return;
-    const c = confirmation; setConfirmation(null); const requestKey = crypto.randomUUID();
-    await run(async () => {
-      if (c.operation === 'animate') { await animate({ data: { sceneId: c.scene.id, model, requestKey, revision: c.q.revision, confirmedCredits: c.q.customerCredits ?? 0 } }); return; }
+  const makeStill = async (scene: Scene, q: Awaited<ReturnType<typeof inspirationQuote>>, frame: 'first'|'last', requestKey = crypto.randomUUID()) => {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) throw new Error('Sign in required.');
       const { streamImage } = await import('@/lib/inspiration-stream');
       let image = '';
       try {
-        await streamImage('/api/public/inspiration-still', { sceneId: c.scene.id, requestKey, revision: c.q.revision, confirmedCredits: c.q.customerCredits, frame: c.frame ?? 'first' }, (url, final) => { if (c.frame !== 'last') setPartial(p => ({ ...p, [c.scene.id]: { url, final } })); if (final) image = url.split(',')[1]; }, undefined, { Authorization: `Bearer ${session.session.access_token}` });
+        await streamImage('/api/public/inspiration-still', { sceneId: scene.id, requestKey, revision: q.revision, confirmedCredits: q.customerCredits, frame }, (url, final) => { if (frame !== 'last') setPartial(p => ({ ...p, [scene.id]: { url, final } })); if (final) image = url.split(',')[1]; }, undefined, { Authorization: `Bearer ${session.session.access_token}` });
         const done = await finish({ data: { requestKey, base64: image } });
         if (done?.outfitFallback) toast.info('The image service declined the source outfit, so this still uses fitted athletic wear in the same colours.');
       } catch(e) { await finish({ data: { requestKey, error: (e as Error).message } }).catch(() => {}); throw e; }
+  };
+  const [batch, setBatch] = useState<{ kind: 'stills'|'animate'; items: JobItem[]; startedAt: number; status: 'running'|'error'|'done'; error?: string; refunded?: boolean } | null>(null);
+  /** One click, cost shown on the button: draw every missing still in order, each with its own quote and refund-on-failure. */
+  const createStills = async () => {
+    const todo = data.scenes.filter(s => !s.preview); if (!todo.length) return;
+    const jobId = `stills-${projectId}`; const items: JobItem[] = todo.map(s => ({ label: `Scene ${s.scene_order+1}`, state: 'waiting' }));
+    setBatch({ kind: 'stills', items, startedAt: Date.now(), status: 'running' });
+    startJob({ id: jobId, kind: 'stills', title: 'Your stills', href: window.location.pathname + window.location.search, expectedSeconds: 40 * todo.length, doneLabel: todo.length > 1 ? 'Your stills are ready' : 'Your still is ready' });
+    setBusy(true);
+    for (let k = 0; k < todo.length; k++) {
+      items[k] = { ...items[k], state: 'running' }; setBatch(b => b && { ...b, items: [...items] });
+      try { const q = await quote({ data: { sceneId: todo[k].id, model, operation: 'still' } }); if (!q.available) throw new Error(q.reason ?? 'This still cannot be priced right now.'); await makeStill(todo[k], q, 'first'); items[k] = { ...items[k], state: 'done' }; await refresh(); }
+      catch (e) { items[k] = { ...items[k], state: 'failed' }; setBatch(b => b && { ...b, items: [...items], status: 'error', error: (e as Error).message, refunded: true }); finishJob(jobId, false, { error: (e as Error).message, refunded: true }); setBusy(false); await refresh(); return; }
+      setBatch(b => b && { ...b, items: [...items] });
+    }
+    setBusy(false); setBatch(b => b && { ...b, status: 'done' }); finishJob(jobId, true, { resultSelector: '#make-scenes' }); setTimeout(() => setBatch(null), 2500);
+  };
+  /** Submit animation for every approved scene without a clip; progress then follows the saved attempts (survives refresh). */
+  const animateApproved = async () => {
+    const todo = data.scenes.filter(s => s.approved_at && !data.attempts.some(a => a.scene_id === s.id && a.operation === 'animate' && ['completed','queued','in_progress','collecting','claimed'].includes(a.status)));
+    if (!todo.length) return;
+    startJob({ id: `animate-${projectId}`, kind: 'animate', title: 'Your video clips', href: window.location.pathname + window.location.search, expectedSeconds: 120, doneLabel: 'Your video clips are ready', long: true });
+    await run(async () => { for (const s of todo) { const q = await quote({ data: { sceneId: s.id, model, operation: 'animate' } }); if (!q.available) throw new Error(q.reason ?? 'Animation cannot be priced right now.'); await animate({ data: { sceneId: s.id, model, requestKey: crypto.randomUUID(), revision: q.revision, confirmedCredits: q.customerCredits ?? 0 } }); } });
+  };
+  const confirm = async () => {
+    if (!confirmation || confirmation.q.customerCredits === null) return;
+    const c = confirmation; setConfirmation(null); const requestKey = crypto.randomUUID();
+    await run(async () => {
+      if (c.operation === 'animate') { await animate({ data: { sceneId: c.scene.id, model, requestKey, revision: c.q.revision, confirmedCredits: c.q.customerCredits ?? 0 } }); return; }
+      await makeStill(c.scene, c.q, c.frame ?? 'first', requestKey);
     });
   };
   const downloadClips = async () => {
@@ -105,8 +133,26 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     </div>}
     {!wizardStage && <div className="mb-6 flex flex-wrap gap-1 border-b border-border">{(['storyboard','references','observations','delivery'] as const).map(t => <Button key={t} variant={tab === t ? 'secondary' : 'ghost'} className="mb-2 capitalize" onClick={() => setTab(t)}>{t}</Button>)}</div>}
     {wizardStage==='words' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={tab==='storyboard'?'secondary':'outline'} onClick={()=>setTab('storyboard')}>Scene words</Button><Button variant={tab==='references'?'secondary':'outline'} onClick={()=>setTab('references')}>Your reference photos</Button></div>}
-    {wizardStage==='make' && <div className="grid gap-5 sm:grid-cols-3">{[{title:'Scene stills',icon:ImagePlus,done:data.scenes.filter(s=>s.preview).length},{title:'Still approval',icon:Check,done:data.scenes.filter(s=>s.approved_at).length},{title:'Animation',icon:Play,done:completed.length}].map(stage=><ReviewCard key={stage.title} title={stage.title} icon={stage.icon} trailing={<span data-state={stage.done===data.scenes.length&&stage.done>0?'done':undefined} className="wizard-score">{stage.done===data.scenes.length&&stage.done>0?'Done':busy?'In progress':stage.done>0?'In progress':'Not started'}</span>}><p className="text-3xl font-semibold">{stage.done}<span className="text-base text-review-muted"> / {data.scenes.length}</span></p><p className="mt-2 text-sm text-review-muted">{stage.title==='Scene stills'?'Make the pictures for your scenes.':stage.title==='Still approval'?'Check every object before animation.':'Turn approved stills into clips.'}</p></ReviewCard>)}</div>}
-    {wizardStage==='make' && <div className="mb-6 flex flex-wrap gap-2"><Button variant={makePart==='stills'?'secondary':'outline'} onClick={()=>setMakePart('stills')}>Make and approve stills</Button><Button variant={makePart==='animate'?'secondary':'outline'} onClick={()=>setMakePart('animate')}>Animate approved scenes</Button></div>}
+    {wizardStage==='make' && (()=>{
+      const n=data.scenes.length, stills=data.scenes.filter(x=>x.preview).length, approved=data.scenes.filter(x=>x.approved_at).length, missing=n-stills;
+      const perStill=data.stillWorkspaceQuote===null?null:priceFromWorkspaceCost(data.stillWorkspaceQuote,data.usdPerWorkspaceCredit);
+      const toAnimate=data.scenes.filter(x=>x.approved_at&&!data.attempts.some(t=>t.scene_id===x.id&&t.operation==='animate'&&t.status!=='failed'&&t.status!=='refunded'));
+      const animCost=toAnimate.reduce((t,x)=>t+videoCreditsForWorkspace(x.duration*(STUDIO_PRICING.rates[model]??0)),0);
+      const cur=stills===0?1:approved===0?2:completed.length===0?3:4;
+      const steps=[
+        {n:1,title:'Create stills',body:missing?`Draw a picture for ${missing===n?'each':'the remaining'} scene${missing>1?'s':''}.`:'All scenes have a still.',lock:'',action:missing>0&&<Button size="lg" disabled={busy||!!batch&&batch.status==='running'} onClick={createStills}><ImagePlus className="size-5"/>Create {missing} still{missing>1?'s':''}{perStill!==null?` · ${perStill*missing} credit${perStill*missing===1?'':'s'}`:' · priced at the next step'}</Button>},
+        {n:2,title:'Approve stills',body:'Tick what you see in each picture, then press Approve on the scene card below.',lock:'Unlocks after your first still is made',action:cur===2&&<Button size="lg" onClick={()=>slideTo('#make-scenes')}><Check className="size-5"/>Go to my stills</Button>},
+        {n:3,title:'Animate',body:approved?`Turn ${toAnimate.length||approved} approved still${(toAnimate.length||approved)>1?'s':''} into moving clips.`:'',lock:'Unlocks after you approve at least one still',action:approved>0&&toAnimate.length>0&&<Button size="lg" disabled={busy||data.videoBalance===0} onClick={animateApproved}><Play className="size-5"/>Animate {toAnimate.length} scene{toAnimate.length>1?'s':''} · {animCost} video credits</Button>},
+        {n:4,title:'Add voice & music (optional)',body:'Press Next to add a voiceover or music and put your video together.',lock:'Unlocks after your first clip is finished',action:null},
+      ];
+      return <ol className="grid gap-3" aria-label="Make your video in four steps">{steps.map(st=>{const state=st.n<cur||(st.n===1&&missing===0)?'done':st.n===cur?'current':st.n===4&&cur>=4?'current':st.n>cur?'locked':'done';return <li key={st.n} className="make-step" data-state={state} aria-current={state==='current'?'step':undefined}>
+        <span className="make-step-num">{state==='done'?<Check className="size-4"/>:state==='locked'?<Lock className="size-4"/>:st.n}</span>
+        <div className="min-w-0 flex-1"><p className="text-lg font-bold">{st.title}{state==='done'&&<span className="ml-2 text-sm font-medium text-status-success">Done</span>}</p>
+        <p className="text-sm">{state==='locked'?st.lock:st.body}</p>
+        {state!=='locked'&&st.action&&<div className="mt-3">{st.action}</div>}</div></li>;})}</ol>;
+    })()}
+    {wizardStage==='make' && batch && <GenerationProgress status={batch.status} stage={batch.status==='error'?'':(()=>{const k=batch.items.findIndex(i=>i.state==='running');return k<0?'Finishing…':`Drawing scene ${k+1} of ${batch.items.length}…`;})()} startedAt={batch.startedAt} expectedSeconds={40*batch.items.length} items={batch.items} error={batch.error} refunded={batch.refunded} onRetry={()=>{setBatch(null);createStills();}}/>}
+    {wizardStage==='make' && (()=>{const live=data.attempts.filter(t=>t.operation==='animate'&&['claimed','queued','in_progress','collecting'].includes(t.status));if(!live.length)return null;const started=Math.min(...live.map(t=>new Date(t.created_at).getTime()));const items=data.scenes.filter(x=>data.attempts.some(t=>t.scene_id===x.id&&t.operation==='animate')).map(x=>{const t=data.attempts.find(t=>t.scene_id===x.id&&t.operation==='animate');return {label:`Scene ${x.scene_order+1}`,state:(t?.status==='completed'?'done':t?.status==='failed'||t?.status==='refunded'?'failed':'running') as JobItem['state']};});const k=items.findIndex(i=>i.state==='running');return <GenerationProgress stage={`Animating scene ${k+1}…`} startedAt={started} expectedSeconds={120} items={items} note="You can leave this page — we’ll tell you when it’s done"/>;})()}
     {data.videoBalance===0&&<div role="status" className="mb-5 flex flex-wrap items-center gap-4 border-b border-border pb-5"><div><p className="font-semibold">You need video credits to animate scenes, narrate and render.</p><p className="text-sm text-muted-foreground">Storyboards and stills use plan credits and still work. Everything you make stays saved; nothing is charged.</p></div><VideoPackAvailability/></div>}
     {data.selected?.pause_reason && <p role="alert" className="mb-5 text-destructive">Paused: {data.selected.pause_reason}</p>}
     {!data.selected && tab !== 'references' ? <div className="py-16 text-center"><Film className="mx-auto mb-5 size-12 text-muted-foreground"/><h2 className="text-xl font-semibold">Your first video</h2><Button className="mt-5" onClick={() => navigate({to:'/app',search:{format:'film'}})}><Plus className="size-4"/> Create video</Button></div> : null}
