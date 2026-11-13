@@ -26,7 +26,7 @@ export function CharacterStep({ projectId, hasOwnReferences, instructions, saved
   const sheet = data?.sheet, image = preview || sheet?.preview;
   useEffect(() => { if (!brief && data?.brief) setBrief(data.brief); }, [data?.brief]);
   useEffect(() => {
-    if (sheet?.status === 'completed') { setBrief(data?.brief); finishJob(`character-${projectId}`, true, { resultSelector: '#character-preview' }); }
+    if (sheet?.status === 'completed') { setBrief(data?.brief); if(data?.brief) onBrief(data.brief); finishJob(`character-${projectId}`, true, { resultSelector: '#character-preview' }); }
     if (sheet?.status === 'failed') setError(sheet.failure_reason ?? 'Character generation failed.');
   }, [sheet?.status]);
   const generate = async () => {
@@ -62,7 +62,7 @@ export function CharacterStep({ projectId, hasOwnReferences, instructions, saved
   if (hasOwnReferences && sheet?.status !== 'approved') return <p role="status" className="text-sm text-review-muted">Your selected character references will be used for every scene.</p>;
   return <ReviewCard title="Your original character" icon={ImagePlus}>
     {loadError && <p role="status" className="mb-3 text-sm text-status-warning">Saved character details could not be loaded. You can still edit the brief below. <Button variant="ghost" size="sm" onClick={()=>qc.invalidateQueries({queryKey:['character-sheet',projectId]})}>Try again</Button></p>}
-    <div className="grid gap-3 sm:grid-cols-2">{brief && LOOK_FIELDS.map(k => <label key={k} className="min-w-0 text-sm font-medium">{labels[k]}<Input aria-label={`Character ${labels[k].toLowerCase()}`} className="mt-1" value={brief[k]} onChange={e => { const next = { ...brief, [k]: e.target.value }; setBrief(next); onBrief(next); }}/></label>)}</div>
+    <div className="character-look-fields grid gap-3 sm:grid-cols-2">{brief && LOOK_FIELDS.map(k => <label key={k} className="min-w-0 text-sm font-medium">{labels[k]}<Textarea aria-label={`Character ${labels[k].toLowerCase()}`} className="mt-1 min-h-20" value={brief[k]} onChange={e => { const next = { ...brief, [k]: e.target.value }; setBrief(next); onBrief(next); }}/></label>)}</div>
     <label className="mt-4 block text-sm font-medium">Extra character instructions (optional)<Textarea aria-label="Extra character instructions" className="mt-2" value={extra} onChange={e => setExtra(e.target.value)}/></label>
     <p className="mt-3 text-sm text-review-muted">{instructions ? `Your changes: ${instructions}` : 'New original facial features; the written look stays consistent.'}</p>
     {(busy || ['claimed','in_progress'].includes(sheet?.status ?? '') || error) && <div className="mt-4"><GenerationProgress status={error ? 'error' : 'running'} startedAt={started || new Date(sheet?.created_at ?? Date.now()).getTime()} expectedSeconds={70} stage="Creating your character’s three views…" error={error} refunded={!!error} onRetry={generate}/></div>}

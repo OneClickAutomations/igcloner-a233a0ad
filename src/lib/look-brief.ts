@@ -18,7 +18,7 @@ export function sourceLookBrief(source: any, shotIndex = 0): LookBrief {
   const shot = video?.shots?.[shotIndex];
   const brief = shot?.lookBriefs?.[0] ?? video?.lookBriefs?.[0];
   const old = ev.remakeRefs?.appearance ?? {};
-  const value = LookBrief.parse(brief ?? { skinTone: [old.skinTone, old.undertone && `${old.undertone} undertone`].filter(Boolean).join(', ') || 'unclear', hair: old.hair ?? 'unclear', build: old.build ?? 'unclear', outfit: old.outfit ?? 'unclear', accessories: old.accessories ?? 'unclear', openingPose: shot?.openingPose ?? 'unclear', environment: shot?.setting ?? 'unclear' });
+  const value = LookBrief.parse(brief ?? { skinTone: [old.skinTone, old.undertone && `${old.undertone} undertone`].filter(Boolean).join(', ') || 'unclear', pigmentation: old.pigmentation ?? 'unclear', hair: old.hair ?? 'unclear', build: old.build ?? 'unclear', outfit: old.outfit ?? 'unclear', accessories: old.accessories ?? 'unclear', openingPose: shot?.openingPose ?? 'unclear', environment: shot?.setting ?? 'unclear' });
   return Object.fromEntries(LOOK_FIELDS.map(k => [k, safeLookText(value[k]) || 'unclear'])) as LookBrief;
 }
 export function writtenLook(brief: LookBrief): string {

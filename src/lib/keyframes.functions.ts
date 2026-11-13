@@ -31,7 +31,7 @@ function driftsFrom(requested: Partial<Appearance>, got: z.infer<typeof LookChec
   return drifts;
 }
 
-/** Included, no charge: cheap vision check of the latest still against the source style fields. Warns only. */
+/** Included, no charge: vision check against the written brief, never source pixels. Warns only. */
 export const checkStillLook = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ sceneId: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {

@@ -25,6 +25,7 @@ export async function collectCharacterSheet(admin: any, id: string, body: Readab
 export async function failCharacterSheet(admin: any, id: string, reason: string) {
   const { data: attempt } = await admin.from('studio_character_sheets').update({ status: 'failed', failure_reason: reason }).eq('id', id).in('status', ['claimed','in_progress']).select('*').maybeSingle();
   if (!attempt) return;
+  if (!attempt.billed) return;
   const { refundCredits } = await import('./credits.server');
   await refundCredits(attempt.user_id, attempt.billed, 'character_sheet', attempt.project_id, attempt.id);
 }
