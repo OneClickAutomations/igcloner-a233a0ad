@@ -200,7 +200,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const res: any = await gen.run({ slot: "carousel", title: "Your carousel", stage: `Writing ${slideCount} slides…`, expectedSeconds: 40, doneLabel: "Your carousel is ready", paid: true }, () => generateFn({ data: { projectId, slideCount, angle: angle || undefined } }));
+      const res: any = await gen.run({ slot: "carousel", title: "Your carousel", stage: `Writing ${slideCount} slides…`, expectedSeconds: 40, doneLabel: "Your carousel is ready" }, () => generateFn({ data: { projectId, slideCount, angle: angle || undefined } }));
       setDoc(res.carousel as CarouselDoc);
       setActiveIdx(1);
 
