@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ReviewCard } from './ReviewPostPrimitives';
 import { GenerationProgress } from './GenerationProgress';
