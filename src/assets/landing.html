@@ -350,7 +350,7 @@ img { max-width: 100%; display: block }
 }
 .url-platform-badge {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 0.76rem; color: var(--text-3);
+  font-size: 1rem; line-height: 1.5; font-weight: 500; color: var(--text-1);
   font-family: var(--font-b);
 }
 .hero-trust {
@@ -358,9 +358,21 @@ img { max-width: 100%; display: block }
   padding: 12px 20px; border-radius: 100px;
   background: var(--glass-bg); border: 1px solid var(--glass-border);
 }
-.trust-ava-row { display: flex }
-.trust-ava { border-radius: 50%; width: 30px; height: 30px }
-.trust-text { font-size: 0.8rem; color: var(--text-2) }
+.trust-ava-row { display: flex; flex-shrink: 0; padding-left: 0 }
+.trust-ava { border-radius: 50%; width: 48px; height: 48px; object-fit: cover; border: 3px solid var(--surface); display: block }
+.trust-ava + .trust-ava { margin-left: -12px }
+.trust-text { font-size: 0.9375rem; line-height: 1.6; color: var(--text-1) }
+.url-platform-badge { gap: 10px }
+.url-platform-badge svg { width: 26px; height: 26px; flex-shrink: 0; color: var(--ig-rose) }
+.url-platform-badge:last-child svg { color: var(--ig-violet) }
+.hero-trust { background: var(--surface); border-color: var(--divider); gap: 20px; padding: 16px 24px; max-width: 100%; box-sizing: border-box }
+@media (max-width: 600px) {
+  .url-platforms { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; width: 100%; justify-items: center }
+  .url-platforms > span:not(.url-platform-badge) { display: none }
+  .url-platform-badge { font-size: 0.9375rem; min-width: 0 }
+  .hero-trust { flex-direction: column; gap: 12px; border-radius: 20px; padding: 18px 20px; text-align: center; width: 100% }
+  .trust-text { font-size: 0.9375rem; max-width: 30ch }
+}
 .trust-text strong { color: var(--text-1) }
 
 /* ══════════════════════════════════════
@@ -881,7 +893,7 @@ img { max-width: 100%; display: block }
 }
 .footer-copy { font-size: 0.76rem; color: var(--text-3) }
 .footer-links { display: flex; gap: 18px }
-.footer-links a { font-size: 0.76rem; color: var(--text-3); transition: color 0.2s }
+.footer-links a { font-size: 1rem; line-height: 1.5; font-weight: 500; color: var(--text-1); transition: color 0.2s }
 .footer-links a:hover { color: var(--text-1) }
 
 /* ══════════════════════════════════════
@@ -1160,68 +1172,22 @@ img { max-width: 100%; display: block }
 
       <div class="url-platforms">
         <span class="url-platform-badge">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="3" stroke="#E1306C" stroke-width="1.2" fill="none"/><circle cx="6.5" cy="6.5" r="2" stroke="#E1306C" stroke-width="1.2" fill="none"/><circle cx="9.5" cy="3.5" r=".8" fill="#E1306C"/></svg>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="3" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="6.5" cy="6.5" r="2" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="9.5" cy="3.5" r=".8" fill="currentColor"/></svg>
           Instagram posts, Reels &amp; Carousels
         </span>
         <span style="color:var(--divider)">·</span>
         <span class="url-platform-badge">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="2.5" fill="#1877F2" opacity=".2"/><path d="M7.5 11V7h1.3l.2-1.5H7.5V4.8c0-.4.2-.7.8-.7h.7V2.8S8.4 2.7 7.8 2.7c-1.2 0-2 .7-2 2v.8H4.5V7h1.3v4" fill="#1877F2"/></svg>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="1.5" width="10" height="10" rx="2.5" fill="currentColor" opacity=".2"/><path d="M7.5 11V7h1.3l.2-1.5H7.5V4.8c0-.4.2-.7.8-.7h.7V2.8S8.4 2.7 7.8 2.7c-1.2 0-2 .7-2 2v.8H4.5V7h1.3v4" fill="currentColor"/></svg>
           Facebook posts &amp; videos
         </span>
       </div>
 
       <div class="hero-trust">
         <div class="trust-ava-row">
-          <!-- Creator 1: warm brown skin, dark hair -->
-          <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg)">
-            <defs><clipPath id="c1"><circle cx="15" cy="15" r="13"/></clipPath></defs>
-            <circle cx="15" cy="15" r="13" fill="#C68642"/>
-            <ellipse cx="15" cy="7" rx="8" ry="6.5" fill="#1A0E05"/>
-            <rect x="7" y="8" width="16" height="5" fill="#1A0E05"/>
-            <ellipse cx="15" cy="16" rx="6" ry="7" fill="#C68642"/>
-            <circle cx="12.5" cy="14.5" r="1.1" fill="#1A0E05"/>
-            <circle cx="17.5" cy="14.5" r="1.1" fill="#1A0E05"/>
-            <path d="M12.5 18 Q15 20 17.5 18" stroke="#8B5C2A" stroke-width="1" fill="none" stroke-linecap="round"/>
-            <ellipse cx="15" cy="28" rx="10" ry="5" fill="#F77737" clip-path="url(#c1)"/>
-          </svg>
-          <!-- Creator 2: light skin, blonde hair -->
-          <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
-            <defs><clipPath id="c2"><circle cx="15" cy="15" r="13"/></clipPath></defs>
-            <circle cx="15" cy="15" r="13" fill="#FDDBB4"/>
-            <ellipse cx="15" cy="7" rx="8" ry="6" fill="#D4A017"/>
-            <rect x="7" y="8" width="16" height="4" fill="#D4A017"/>
-            <ellipse cx="8" cy="14" rx="2" ry="5" fill="#D4A017"/>
-            <ellipse cx="22" cy="14" rx="2" ry="5" fill="#D4A017"/>
-            <ellipse cx="15" cy="16" rx="6" ry="7" fill="#FDDBB4"/>
-            <circle cx="12.5" cy="14" r="1.1" fill="#4A3728"/>
-            <circle cx="17.5" cy="14" r="1.1" fill="#4A3728"/>
-            <path d="M12.5 17.5 Q15 19.5 17.5 17.5" stroke="#C08070" stroke-width="1" fill="none" stroke-linecap="round"/>
-            <ellipse cx="15" cy="28" rx="10" ry="5" fill="#E1306C" clip-path="url(#c2)"/>
-          </svg>
-          <!-- Creator 3: medium brown skin, short dark hair -->
-          <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
-            <defs><clipPath id="c3"><circle cx="15" cy="15" r="13"/></clipPath></defs>
-            <circle cx="15" cy="15" r="13" fill="#8D5524"/>
-            <ellipse cx="15" cy="8" rx="7" ry="5.5" fill="#2D1A0A"/>
-            <rect x="8" y="9" width="14" height="4" fill="#2D1A0A"/>
-            <ellipse cx="15" cy="16" rx="5.5" ry="6.5" fill="#8D5524"/>
-            <circle cx="12.5" cy="14.5" r="1" fill="#1A0A00"/>
-            <circle cx="17.5" cy="14.5" r="1" fill="#1A0A00"/>
-            <path d="M12.8 17.8 Q15 19.5 17.2 17.8" stroke="#6B3D14" stroke-width="1" fill="none" stroke-linecap="round"/>
-            <ellipse cx="15" cy="28" rx="10" ry="5" fill="#25D366" clip-path="url(#c3)"/>
-          </svg>
-          <!-- Creator 4: East Asian skin tone, black hair -->
-          <svg class="trust-ava" width="30" height="30" viewBox="0 0 30 30" style="border:2px solid var(--bg);margin-left:-8px">
-            <defs><clipPath id="c4"><circle cx="15" cy="15" r="13"/></clipPath></defs>
-            <circle cx="15" cy="15" r="13" fill="#F5CBA7"/>
-            <ellipse cx="15" cy="7" rx="7.5" ry="5.5" fill="#0D0D0D"/>
-            <rect x="7.5" y="8" width="15" height="5" fill="#0D0D0D"/>
-            <ellipse cx="15" cy="16" rx="5.8" ry="7" fill="#F5CBA7"/>
-            <path d="M11.5 14 Q12.5 13.2 13.5 14" stroke="#0D0D0D" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-            <path d="M16.5 14 Q17.5 13.2 18.5 14" stroke="#0D0D0D" stroke-width="1.4" fill="none" stroke-linecap="round"/>
-            <path d="M12.5 17.5 Q15 19.5 17.5 17.5" stroke="#C08070" stroke-width="1" fill="none" stroke-linecap="round"/>
-            <ellipse cx="15" cy="28" rx="10" ry="5" fill="#C13584" clip-path="url(#c4)"/>
-          </svg>
+          <img class="trust-ava" src="__CREATOR_PORTRAIT_0__" alt="" width="48" height="48" title="Illustrative creator portrait (stock photo)">
+          <img class="trust-ava" src="__CREATOR_PORTRAIT_1__" alt="" width="48" height="48" title="Illustrative creator portrait (stock photo)">
+          <img class="trust-ava" src="__CREATOR_PORTRAIT_2__" alt="" width="48" height="48" title="Illustrative creator portrait (stock photo)">
+          <img class="trust-ava" src="__CREATOR_PORTRAIT_3__" alt="" width="48" height="48" title="Illustrative creator portrait (stock photo)">
         </div>
         <div class="trust-text">Trusted by <strong>8,400+</strong> creators · <strong>20K</strong> posts analyzed</div>
       </div>
