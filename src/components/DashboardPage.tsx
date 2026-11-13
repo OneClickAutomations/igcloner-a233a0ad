@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { proxiedImg } from "@/lib/img-proxy";
 import mascotWelcome from "@/assets/igcloner-mascot.png";
@@ -298,6 +299,8 @@ const TYPE_BADGE: Record<string, string> = {
 function DashboardPageInner() {
   const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<AnalysisItem[]>([]);
+  const queryClient = useQueryClient();
+  const { user } = getRouteApi("/_authenticated").useRouteContext();
   const [loading, setLoading] = useState(true);
   const [heroUrl, setHeroUrl] = useState("");
   const [openingAnalysis, setOpeningAnalysis] = useState(false);
@@ -322,36 +325,48 @@ function DashboardPageInner() {
 
   useEffect(() => {
     loadAnalyses();
-    dashFn().then(setResearch).catch(() => {});
+    queryClient.fetchQuery({ queryKey: ["dashboard-research", user.id], queryFn: () => dashFn(), staleTime: 30_000 }).then(setResearch).catch(() => {});
   }, []);
 
   async function loadAnalyses() {
     setLoading(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setLoading(false);
-      return;
-    }
-    const uid = userData.user.id;
+    const uid = user.id;
 
-    const meta: any = userData.user.user_metadata ?? {};
+    const meta: any = user.user_metadata ?? {};
     const rawName: string =
-      meta.full_name || meta.name || userData.user.email?.split("@")[0] || "";
+      meta.full_name || meta.name || user.email?.split("@")[0] || "";
     if (rawName) setFirstName(rawName.split(" ")[0].replace(/^\w/, (c) => c.toUpperCase()));
 
-    const { data, error } = await supabase
+    let result;
+    try {
+      result = await queryClient.fetchQuery({
+        queryKey: ["dashboard-analyses", uid],
+        staleTime: 30_000,
+        queryFn: async () => {
+          const [analysisRes, clonesRes, savedRes] = await Promise.all([
+            supabase
       .from("analyses")
       .select("id, instagram_url, post_type, source_account, performance_score, created_at, scraped_data, analysis_status")
       .eq("user_id", uid)
       // Failed runs are hidden; in-progress runs show with an "Analyzing" chip.
       .neq("analysis_status", "failed")
-      .order("created_at", { ascending: false });
-
-    if (error) {
+      .order("created_at", { ascending: false }),
+            supabase.from("clones").select("created_at").eq("user_id", uid),
+            supabase.from("saved_projects").select("created_at").eq("user_id", uid),
+          ]);
+          if (analysisRes.error) throw analysisRes.error;
+          if (clonesRes.error) throw clonesRes.error;
+          if (savedRes.error) throw savedRes.error;
+          return { data: analysisRes.data, clonesRes, savedRes };
+        },
+      });
+    } catch {
       toast.error("Failed to load analyses");
       setLoading(false);
       return;
     }
+    const { data, clonesRes, savedRes } = result;
+
 
     setAnalyses(data || []);
 
@@ -365,10 +380,6 @@ function DashboardPageInner() {
     }
 
     // Select created_at (not head-only counts) so deltas and sparklines are real.
-    const [clonesRes, savedRes] = await Promise.all([
-      supabase.from("clones").select("created_at").eq("user_id", uid),
-      supabase.from("saved_projects").select("created_at").eq("user_id", uid),
-    ]);
 
     const readyRows = (data ?? []).filter((a: any) => a.analysis_status === "ready");
     const analysisDates = readyRows.map((a) => a.created_at).filter(Boolean) as string[];
@@ -390,6 +401,7 @@ function DashboardPageInner() {
     if (error) toast.error("Failed to delete");
     else {
       toast.success("Deleted");
+      await queryClient.invalidateQueries({ queryKey: ["dashboard-analyses", user.id] });
       loadAnalyses();
     }
   }

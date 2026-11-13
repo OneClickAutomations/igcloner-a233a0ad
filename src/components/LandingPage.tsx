@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import landingHtml from "@/assets/landing.html?raw";
 import creator0 from "@/assets/creator-portrait-0.jpg.asset.json";
@@ -43,13 +43,16 @@ const srcDoc = /<\/body>/i.test(landingWithPortraits)
 export function LandingPage() {
   const navigate = useNavigate();
   const ref = useRef<HTMLIFrameElement>(null);
+  const [showLanding, setShowLanding] = useState(false);
 
   useEffect(() => {
+    let active = true;
     supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
       if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate({ to: "/dashboard", replace: true });
+      else setShowLanding(true);
+    }).catch(() => {
+      if (active) setShowLanding(true);
     });
     const onMsg = (ev: MessageEvent) => {
       const data = ev.data as
@@ -74,9 +77,11 @@ export function LandingPage() {
     window.addEventListener("message", onMsg);
     return () => {
       window.removeEventListener("message", onMsg);
-      sub.subscription.unsubscribe();
+      active = false;
     };
   }, [navigate]);
+
+  if (!showLanding) return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground" role="status">Opening IG-Cloner…</div>;
 
   return (
     <iframe
