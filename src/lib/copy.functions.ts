@@ -29,6 +29,22 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   if(saveErr) throw new Error(saveErr.message);
   return result;
 });
+export const rewritePublishCard=createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
+  .inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),platform:z.enum(PUBLISHING_PLATFORMS),field:z.enum(['title','description','caption','hashtags']),text:z.string().max(20000),instruction:z.string().max(2000),requestId:z.string().uuid()}).parse(d))
+  .handler(async({data,context})=>{
+    const {data:p,error}=await context.supabase.from('projects').select('*').eq('id',data.projectId).eq('user_id',context.userId).maybeSingle();
+    if(error||!p)throw new Error('Project not found');
+    const {buildCopyContext,copyJson,contextPrompt}=await import('./copy-engine.server');
+    const {meteredCopy}=await import('./copy-meter.server');
+    const ctx=p.analysis_id?await buildCopyContext(p.analysis_id,context.userId,data.platform,p.user_preferences):{voice:p.user_preferences,source:{}};
+    const {data:film}=await context.supabase.from('video_inspiration_projects').select('review_settings,observation_notes').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+    return meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:'caption',key:{card:data,context:ctx},cost:ACTION_COSTS.captionPack,reason:'debit_caption',requestId:data.requestId},async progress=>{
+      await progress('Rewriting your selected card…');
+      const r=await copyJson(z.object({text:z.string()}),`${contextPrompt(ctx)}\nRewrite ONLY the ${data.field} card for ${data.platform}. Limit: ${cardLimit(data.platform,data.field)??'concise relevant copy'}. Hashtags: space separated tags only. Ground in the newly made artifact, direction and script, not the original subject. Return JSON {"text":"..."}.\nArtifact data: ${JSON.stringify({project:p.project_data,film}).slice(0,12000)}\nCurrent card data: ${JSON.stringify(data.text)}\nUser editing instruction: ${data.instruction}`,undefined,2200);
+      return {text:fitCard(data.platform,data.field,r.value.text),usage:r.usage};
+    });
+  });
+
 export const listCopyHistory=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const {data:rows,error}=await context.supabase.from("copy_runs").select("id,action,status,output,error_message,created_at,project_id").eq("user_id",context.userId).eq("analysis_id",data.analysisId).order("created_at",{ascending:false}).limit(30);
   if(error) throw new Error(error.message);return {runs:rows??[]};
