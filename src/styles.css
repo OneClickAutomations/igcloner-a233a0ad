@@ -821,3 +821,24 @@
   .creation-wizard footer { gap: 8px; padding: 10px; }
   .creation-wizard footer .ui-button { padding: 10px 16px; }
 }
+
+/* Shared AI generation progress */
+.gen-progress { display:flex; align-items:center; gap:1.25rem; padding:1.25rem; border-radius:1rem; border:1px solid var(--color-border); background:var(--color-card); }
+.gen-progress[data-status="error"] { border-color: color-mix(in oklab, var(--color-status-error) 50%, transparent); }
+.gen-progress-compact { padding:.875rem; gap:.875rem; }
+@media (max-width: 480px) { .gen-progress:not(.gen-progress-compact) { flex-direction:column; text-align:center; } }
+.gen-result-highlight { outline: 3px solid var(--color-accent-primary); outline-offset: 4px; border-radius: 1rem; transition: outline-color 2s ease; }
+/* Locked future step: muted, clearly not clickable */
+.make-step { display:flex; gap:.875rem; align-items:flex-start; padding:1rem; border-radius:1rem; border:1px solid var(--color-border); background:var(--color-card); }
+.make-step[data-state="locked"] { background:var(--color-muted); color:var(--color-muted-foreground); }
+.make-step[data-state="current"] { border-color: var(--color-accent-primary); box-shadow: 0 10px 30px -18px color-mix(in oklab, var(--color-accent-primary) 60%, transparent); }
+.make-step-num { display:grid; place-items:center; width:2rem; height:2rem; border-radius:999px; font-weight:700; flex-shrink:0; border:2px solid currentColor; }
+.make-step[data-state="current"] .make-step-num { background: linear-gradient(135deg,#ED6648,#C72D85); color:#fff; border-color:transparent; }
+.make-step[data-state="done"] .make-step-num { background: var(--color-status-success); color:#fff; border-color:transparent; }
+/* Disabled buttons read as locked, never as a faint clickable button. Busy (spinner) buttons skip the lock. */
+.ui-button:disabled:not(:has(.animate-spin))::before { content:""; width:.875rem; height:.875rem; flex-shrink:0; background:currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E") center/contain no-repeat; }
+.ui-button[aria-pressed]:disabled::before, .ui-button[role="tab"]:disabled::before { display:none; }
+.ui-button:disabled { background-image: none !important; background-color: var(--color-muted) !important; color: var(--color-muted-foreground) !important; box-shadow: none !important; filter: none !important; }
+.ui-button[aria-pressed]:disabled { background-color: var(--color-card) !important; }

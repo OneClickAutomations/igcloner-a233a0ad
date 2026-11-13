@@ -2,10 +2,10 @@
 export type CloneMethod = "A0" | "A1" | "A2" | "A3";
 
 export const CLONE_LABEL: Record<CloneMethod, string> = {
-  A0: "Exact copy",
-  A1: "Same look, new words",
-  A2: "New look, same idea",
-  A3: "Remix the message",
+  A0: "Repost the original",
+  A1: "Same post, your words",
+  A2: "Remake it",
+  A3: "New idea from it",
 };
 
 export const CLONE_SUMMARY: Record<CloneMethod, string> = {
@@ -17,10 +17,10 @@ export const CLONE_SUMMARY: Record<CloneMethod, string> = {
 
 // Mode-picker card text: what you get + what it costs.
 export const CLONE_BLURB: Record<CloneMethod, string> = {
-  A0: "You get the original photos or video and the original caption, byte-for-byte. Free — no AI is used.",
-  A1: "You get the same picture with the original text removed and your new text in its place, plus a new caption. 1 credit per slide that has text; slides without text are free.",
-  A2: "You get new images or video made in the same style, with new words. You can mix up to 3 reference images. 1 credit per image; video 15–25 credits.",
-  A3: "You get the same message turned into a new format or angle, with new media and words. 1 credit per image; video 15–25 credits.",
+  A0: "Download the video and caption exactly as posted. Only for your own posts or ones you have permission to share. Free.",
+  A1: "Keep the original visuals. We remove the on-screen text and caption and put yours in. 1 credit per slide with text.",
+  A2: "We recreate the video shot by shot with a new person — same setting, same action, same timing. Change the outfit, look or words if you want. Images 1 credit each · video 15–25 credits.",
+  A3: "Keep what made it work — the hook, pacing and structure — and turn it into something new for your niche. Images 1 credit each · video 15–25 credits.",
 };
 
 // Display order: A0 → A1 → A2 → A3.

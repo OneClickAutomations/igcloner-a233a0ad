@@ -309,7 +309,7 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
 
 const CLAIM_MS = 4 * 60 * 1000;
 
-/** Re-analyse an owned saved video without scraping; one billed attempt covers both watches and the breakdown. */
+/** Re-analyze an owned saved video without scraping; one billed attempt covers both watches and the breakdown. */
 export const verifySavedVideo = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ analysisId: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
@@ -317,7 +317,7 @@ export const verifySavedVideo = createServerFn({ method: "POST" }).middleware([r
     const { data: source } = await supabase.from("analyses").select("*").eq("id", data.analysisId).eq("user_id", userId).single();
     if (!source) throw new Error("Saved analysis not found.");
     const scraped = source.scraped_data as any;
-    if (!(scraped?.storedMedia ?? []).some((m: any) => m.kind === "video")) throw new Error("No saved video is available. Use the saved breakdown or analyse the post link again.");
+    if (!(scraped?.storedMedia ?? []).some((m: any) => m.kind === "video")) throw new Error("No saved video is available. Use the saved breakdown or analyze the post link again.");
     const id = crypto.randomUUID(), attempt = crypto.randomUUID();
     const state = { ...initialState(scraped), slidesDone: true };
     const { error } = await supabase.from("analyses").insert({ id, user_id: userId, instagram_url: source.instagram_url, post_type: source.post_type, source_account: source.source_account, source_caption: source.source_caption, scraped_data: { ...scraped, attemptId: attempt }, evidence: { partial: state, sourceAnalysisId: source.id }, analysis_status: "processing", analysis_stage: "watching_video", last_progress_at: new Date().toISOString() } as any);

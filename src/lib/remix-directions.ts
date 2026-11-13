@@ -25,7 +25,7 @@ export function supportedShotDuration(seconds: number): 4 | 6 | 8 {
 /** First and default option: the same verified shots with a new original person. */
 export function faithfulDirection(source: any): Direction {
   const first = sourceShots(source)[0];
-  return { id: FAITHFUL_ID, faithful: true, title: 'Faithful remake — same video, new person', pitch: 'Keeps every shot exactly as the source: action, setting, props, lighting, camera, timing and audio feel. Only the person changes.',
+  return { id: FAITHFUL_ID, faithful: true, title: 'Remake — same video, new person', pitch: 'Keeps every shot exactly as the source: action, setting, props, lighting, camera, timing and audio feel. Only the person changes.',
     changes: { subject: 'A new original person, or your character reference', setting: 'Unchanged', angle: 'Unchanged', message: 'Unchanged unless you add words' },
     stays: `Action, setting, props, lighting, framing, pacing and timing of all ${sourceShots(source).length || 1} shot(s)${first?.setting ? ` — ${String(first.setting).slice(0,100)}` : ''}.` };
 }
@@ -40,13 +40,13 @@ export function startingDirections(source: any): Direction[] {
   const hook = dna.hookBreakdown?.mechanism ?? 'opening reveal';
   const first = sourceShots(source)[0];
   const beat = stripIdentity(String(first?.action ?? first?.onScreen ?? first?.description ?? 'a clear demonstration')).slice(0, 140);
-  const stays = `Keep the ${hook}, shot order and relative pacing. Opening beat: ${beat}.`;
+  void hook; void beat;
   return [
     faithfulDirection(source),
-    { id:'practical', title:'A practical new demonstration', pitch:`Adapt the observed demonstration to a new everyday subject.`, changes:{subject:'An original creative coach',setting:'A bright workshop',angle:'Useful step-by-step demonstration',message:'Build a small creative habit'},stays },
-    { id:'product', title:'Put your product to work', pitch:'Use the same demonstration rhythm to show a different tool in use.',changes:{subject:'Your reference-defined product demonstrator',setting:'A clean tabletop studio',angle:'Show a practical tool solving a problem',message:'Choose a tool that makes daily practice easier'},stays },
-    { id:'challenge', title:'Make it a playful challenge',pitch:'Turn the observed action and payoff into a new practice challenge.',changes:{subject:'An original challenge host',setting:'An outdoor practice space',angle:'A playful skill challenge',message:'Try one small challenge today'},stays },
-    { id:'lesson',title:'Teach the principle behind it',pitch:'Use the source’s opening and beats to explain a new lesson.',changes:{subject:'An original educator',setting:'A quiet teaching studio',angle:'Explain the lesson, not the source subject',message:'Consistent small steps make learning easier'},stays },
+    { id:'practical', title:'A practical new demonstration', pitch:`Adapt the observed demonstration to a new everyday subject.`, changes:{subject:'An original creative coach',setting:'A bright workshop',angle:'Useful step-by-step demonstration',message:'Build a small creative habit'},stays:"Keeps the original's quick opening, step-by-step order and pacing." },
+    { id:'product', title:'Put your product to work', pitch:'Use the same demonstration rhythm to show a different tool in use.',changes:{subject:'Your reference-defined product demonstrator',setting:'A clean tabletop studio',angle:'Show a practical tool solving a problem',message:'Choose a tool that makes daily practice easier'},stays:"Keeps the original's demo rhythm and timing, now showing your product." },
+    { id:'challenge', title:'Make it a playful challenge',pitch:'Turn the observed action and payoff into a new practice challenge.',changes:{subject:'An original challenge host',setting:'An outdoor practice space',angle:'A playful skill challenge',message:'Try one small challenge today'},stays:"Keeps the original's build-up and payoff, turned into a challenge." },
+    { id:'lesson',title:'Teach the principle behind it',pitch:'Use the source’s opening and beats to explain a new lesson.',changes:{subject:'An original educator',setting:'A quiet teaching studio',angle:'Explain the lesson, not the source subject',message:'Consistent small steps make learning easier'},stays:"Keeps the original's hook and beat order to teach one clear lesson." },
   ];
 }
 /** One editable scene per saved shot; preserve source timing separately from provider-supported clip timing. */
@@ -89,12 +89,29 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
   });
 }
 /** Resumed drafts land on the faithful remake unless the owner clicked another card in the current flow. */
-export function pickActiveDirection(directions: Direction[], value: Record<string, unknown>): Direction | undefined {
+export function pickActiveDirection(directions: Direction[], value: Record<string, unknown>, mode?: string): Direction | undefined {
   const saved = directions.find(d => d.id === value.remixDirectionId);
-  return saved && (saved.faithful || value.remixDirectionPicked === true) ? saved : directions[0];
+  if (saved && (saved.faithful || value.remixDirectionPicked === true)) return saved;
+  // "New idea from it" (A3) starts on the first bigger-change direction; everything else on the faithful remake.
+  return mode === 'A3' ? (directions.find(d => !d.faithful) ?? directions[0]) : directions[0];
 }
 /** A saved storyboard from another direction, or a faithful one missing source keyframes, is replaced (history kept). */
 export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[], hasKeyframes = false): boolean {
   if (!active || !scenes.length) return false;
   return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && hasKeyframes && !i.keyframes?.first); });
+}
+
+/** One short human "Keeps" sentence; never echo source subjects/objects on a card whose setting replaced them. */
+export function keepsLine(d: Direction): string {
+  if (d.faithful) return 'Everything: the action, setting, props, lighting, camera and timing.';
+  const t = String(d.stays ?? '').trim();
+  const machine = !/^keeps the original/i.test(t) || /opening beat:|\.\.|[:;]/i.test(t) || t.length > 110;
+  return !t || machine ? "Keeps the original's hook, shot order and pacing." : t;
+}
+
+/** Plain "Changes" line for a direction card. */
+export function changesLine(d: Direction): string {
+  if (d.faithful) return 'Only the person — plus anything you set below.';
+  const c = d.changes;
+  return [c.subject && `New person: ${c.subject}`, c.setting && `New setting: ${c.setting}`].filter(Boolean).join(' · ');
 }

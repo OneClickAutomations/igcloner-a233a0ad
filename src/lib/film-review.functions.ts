@@ -20,7 +20,7 @@ export const saveFilmReviewSettings = createServerFn({method:'POST'}).middleware
   .handler(async({data,context})=>{
     if(JSON.stringify(data.settings).length>60000)throw new Error('Review notes are too long.');
     const {data:p}=await context.supabase.from('video_inspiration_projects').select('id').eq('id',data.projectId).eq('user_id',context.userId).single();
-    if(!p)throw new Error('Film not found.');
+    if(!p)throw new Error('Video not found.');
     const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
     const {error}=await db.from('video_inspiration_projects').update({review_settings:data.settings as any}).eq('id',p.id).eq('user_id',context.userId);
     if(error)throw new Error(error.message);
@@ -31,7 +31,7 @@ export const writeReviewNarration = createServerFn({method:'POST'}).middleware([
   .inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),instructions:z.string().max(1500).default(''),direction:z.unknown().optional(),requestId:z.string().uuid()}).parse(d))
   .handler(async({data,context})=>{
     const {data:p}=await context.supabase.from('video_inspiration_projects').select('*').eq('id',data.projectId).eq('user_id',context.userId).single();
-    if(!p)throw new Error('Film not found.');
+    if(!p)throw new Error('Video not found.');
     const {data:scenes}=await context.supabase.from('storyboard_scenes').select('duration,scene_input').eq('project_id',p.id).order('scene_order');
     const {data:source}=p.analysis_id?await context.supabase.from('analyses').select('evidence,dna_analysis').eq('id',p.analysis_id).eq('user_id',context.userId).maybeSingle():{data:null};
     const {meteredCopy}=await import('./copy-meter.server');

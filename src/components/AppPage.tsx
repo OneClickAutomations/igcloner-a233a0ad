@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { startJob, finishJob } from "@/lib/generation-jobs";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -68,6 +69,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const [stepLabel, setStepLabel] = useState("");
   const [lastProgressAt, setLastProgressAt] = useState<string | null>(null);
   const [dna, setDna] = useState<any>(null);
+  const [analyzedAt, setAnalyzedAt] = useState<string | null>(null);
   const [scraped, setScraped] = useState<any>(null);
   const [instagramUrl, setInstagramUrl] = useState("");
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -108,6 +110,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
 
   const showPayload = (p: any) => {
     setDna(p.dna ?? null);
+    setAnalyzedAt(p.createdAt ?? null);
     setScraped(p.scraped ?? null);
     setInstagramUrl(p.instagramUrl ?? "");
     setAnalysisId(p.analysisId ?? null);
@@ -120,12 +123,13 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   };
 
   const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 60, verifying_video: 75, building_blueprint: 90 };
-  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'First pass: watching each shot', verifying_video: 'Second pass: checking the video again', transcribing: 'Listening to what is said', building_blueprint: 'Writing your verified breakdown' };
+  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'Watching your reel', verifying_video: 'Checking the shot list', transcribing: 'Listening to what’s said', building_blueprint: 'Writing your breakdown' };
 
   /** Drive the job one stage per request. Work already done is saved server-side, so this can resume after a reload. */
   const runJob = async (id: string) => {
     jobRef.current = id;
     setPhase("analyzing");
+    startJob({ id: `analysis-${id}`, kind: 'analysis', title: 'Your analysis', href: window.location.pathname + window.location.search, expectedSeconds: 90, doneLabel: 'Your analysis is ready' });
     // A stage request can take a while (the scrape especially) — show the live stage meanwhile.
     const poll = setInterval(async () => {
       try {
@@ -151,13 +155,14 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
       if (res.status === "ready") {
         setProgress(100);
         showPayload(res.data);
+        finishJob(`analysis-${id}`, true, { resultSelector: '.review-card' });
         toast.success(res.data?.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
         refreshCredits();
         return;
       }
       if (res.status === "failed") {
-        setScrapeError(res.error || "Analysis failed.");
-        toast.error(res.error || "Analysis failed.");
+        setScrapeError(`${res.error || "Analysis failed."} Credits refunded.`);
+        finishJob(`analysis-${id}`, false, { error: res.error || "Analysis failed.", refunded: true });
         setPhase("input");
         refreshCredits();
         navigate({ to: "/app", search: {} });
@@ -348,7 +353,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
-            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><h2 className="text-xl font-bold">Verified video analysis</h2><p className="mt-2 text-review-muted">{dna?.videoVerification ? 'Two separate video passes checked the final shot list; the plain-English breakdown uses the corrected observations.' : 'This saved analysis predates the two-pass check. You can keep using it, or check the saved video without scraping again.'}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <Button disabled={verificationStarting} className="mt-4 h-auto min-h-11 whitespace-normal" onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}><Sparkles className="size-4 shrink-0"/>{verificationStarting?'Starting saved-video check…':`Analyse and verify saved video · ${ACTION_COSTS.analysis} plan credits`}</Button>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
+            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><p className="flex flex-wrap items-center gap-2 text-base font-semibold"><span className="grid size-6 place-items-center rounded-full bg-status-success text-primary-foreground" aria-hidden>✓</span>Analyzed{analyzedAt ? ` ${new Date(analyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{!dna?.videoVerification && ['Reel','Video'].includes(dna?.postType??scraped?.type) && <span className="text-sm font-normal text-review-muted">· before our two-pass video check</span>}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <div className="mt-3"><Button variant="link" className="h-auto min-h-0 p-0 text-base" disabled={verificationStarting} onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}>{verificationStarting?<Loader2 className="size-4 animate-spin"/>:null}{verificationStarting?'Starting…':`Re-analyze for fresh metrics · ${ACTION_COSTS.analysis} credits`}</Button><p className="mt-1 text-sm text-review-muted">Use this if the post is older and you want updated views, likes and comments.</p></div>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always

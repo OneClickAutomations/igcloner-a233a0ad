@@ -239,12 +239,12 @@ export const writeInspirationStoryboard = createServerFn({ method: 'POST' }).mid
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: p } = await supabase.from('video_inspiration_projects').select('id,title,analysis_id').eq('id', data.projectId).single();
-    if (!p) throw new Error('Film not found.');
-    if (!p.analysis_id) throw new Error('This film has no source analysis. Create a film from a saved analysis to use AI storyboard writing.');
+    if (!p) throw new Error('Video not found.');
+    if (!p.analysis_id) throw new Error('This video has no source analysis. Create a video from a saved analysis to use AI storyboard writing.');
     const { data: a } = await supabase.from('analyses').select('id,dna_analysis,evidence,transcript,source_caption,post_type').eq('id', p.analysis_id).eq('user_id', userId).single();
     if (!a) throw new Error('Source analysis not found.');
     const { count } = await supabase.from('storyboard_scenes').select('id', { count: 'exact', head: true }).eq('project_id', p.id);
-    if (count) throw new Error('This film already has scenes. Edit them, or start a new film for a fresh AI storyboard.');
+    if (count) throw new Error('This video already has scenes. Edit them, or start a new video for a fresh AI storyboard.');
     const { debitCredits, refundCredits } = await import('./credits.server');
     const cost = STUDIO_PRICING.storyboardPlanCredits; const attempt = crypto.randomUUID();
     await debitCredits(userId, cost, 'debit_storyboard' as any, 'video_inspiration_project', p.id, attempt);

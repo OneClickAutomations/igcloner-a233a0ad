@@ -6,7 +6,7 @@ import { VOICE_CATALOG } from './voice-catalog';
 import { matchSourceVoice } from './voice-match';
 export const generateProofNarration=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),requestKey:z.string().uuid(),regenerate:z.boolean().optional(),script:z.string().trim().min(1).max(5000).optional(),voiceId:z.string().refine(id=>VOICE_CATALOG.some(v=>v.id===id),'Choose an available ElevenLabs voice').optional()}).parse(d)).handler(async({data,context})=>{
   const {data:p}=await context.supabase.from('video_inspiration_projects').select('id,observation_notes,analysis_id,visual_observations,audio_observations').eq('id',data.projectId).eq('user_id',context.userId).single();
-  if(!p)throw new Error('Film not found.');
+  if(!p)throw new Error('Video not found.');
   const isProof=(p.observation_notes as string[]).includes('owner-authorized-phase1-proof-16s');
   const {data:source}=p.analysis_id?await context.supabase.from('analyses').select('dna_analysis,evidence').eq('id',p.analysis_id).eq('user_id',context.userId).maybeSingle():{data:null};
   const voice=VOICE_CATALOG.find(v=>v.id===data.voiceId)??matchSourceVoice(source??p).voice;
@@ -16,7 +16,7 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
   const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');
   const {data:existing}=await context.supabase.from('film_narration_attempts').select('*').eq('project_id',p.id).eq('status','completed').order('created_at',{ascending:false}).limit(1);
   const {data:scenes,error:sceneError}=await context.supabase.from('storyboard_scenes').select('duration,scene_input,scene_order').eq('project_id',p.id).order('scene_order');
-  if(sceneError||!scenes?.length)throw new Error('Film scenes could not be read.');
+  if(sceneError||!scenes?.length)throw new Error('Video scenes could not be read.');
   const filmSeconds=scenes.reduce((sum,s)=>sum+Number(s.duration),0);
   const previous=existing?.[0];
   const previousUsage=previous?.usage&&typeof previous.usage==='object'&&!Array.isArray(previous.usage)?previous.usage:{};
@@ -51,6 +51,6 @@ export const generateProofNarration=createServerFn({method:'POST'}).middleware([
       feedback=`Previous delivery was ${duration.toFixed(2)} seconds (${speechEnd.toFixed(2)} seconds speech); film is ${filmSeconds} seconds. Adjust wording to fill 95% at the same voice speed.`;
     }
     await db.from('film_narration_attempts').update({usage:{timingVersion:NARRATION_TIMING_VERSION,filmSeconds,measuredRate,speed,rounds}}).eq('id',c.attempt.id);
-    throw new Error('Narration did not fill 90–100% of the film after one regeneration. No assembly input saved.');
+    throw new Error('Narration did not fill 90–100% of the video after one regeneration. No assembly input saved.');
   }catch(e){await db.rpc('fail_film_narration',{p_attempt:c.attempt.id,p_reason:(e as Error).message});throw e;}
 });
