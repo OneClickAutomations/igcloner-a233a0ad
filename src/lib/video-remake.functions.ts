@@ -28,7 +28,7 @@ export const generateRemixDirections = createServerFn({ method: 'POST' }).middle
     const { data: source, error } = await context.supabase.from('analyses').select('id,dna_analysis,evidence,blueprint,transcript,source_caption').eq('id',data.analysisId).eq('user_id',context.userId).single();
     if (error || !source) throw new Error('Saved source not found.');
     const { meteredCopy } = await import('./copy-meter.server');
-    return meteredCopy({userId:context.userId,analysisId:source.id,action:'caption_pack',key:{feature:'remix-directions-v1',analysis:source.id,verified:(source.evidence as any)?.videoVerification??null,instructions:data.instructions,request:data.requestId},cost:REMIX_IDEAS_COST,reason:'debit_caption_pack'}, async () => {
+    return meteredCopy({userId:context.userId,analysisId:source.id,action:'remix_directions',key:{feature:'remix-directions-v1',analysis:source.id,verified:(source.evidence as any)?.videoVerification??null,instructions:data.instructions,request:data.requestId},cost:REMIX_IDEAS_COST,reason:'debit_caption'}, async () => {
       const { copyJson } = await import('./copy-engine.server');
       const { wrapData, DATA_RULE } = await import('./analysis-evidence');
       const shots = sourceShots(source);
