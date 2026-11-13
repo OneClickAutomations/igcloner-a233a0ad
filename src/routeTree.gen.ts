@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as ProgressDemoRouteImport } from './routes/progress-demo'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -61,11 +60,6 @@ const CookiesRoute = CookiesRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProgressDemoRoute = ProgressDemoRouteImport.update({
-  id: '/progress-demo',
-  path: '/progress-demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -198,7 +192,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cookies': typeof CookiesRoute
   '/privacy': typeof PrivacyRoute
-  '/progress-demo': typeof ProgressDemoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -228,7 +221,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cookies': typeof CookiesRoute
   '/privacy': typeof PrivacyRoute
-  '/progress-demo': typeof ProgressDemoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRoute
@@ -260,7 +252,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cookies': typeof CookiesRoute
   '/privacy': typeof PrivacyRoute
-  '/progress-demo': typeof ProgressDemoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
@@ -292,7 +283,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cookies'
     | '/privacy'
-    | '/progress-demo'
     | '/sitemap.xml'
     | '/terms'
     | '/admin'
@@ -322,7 +312,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cookies'
     | '/privacy'
-    | '/progress-demo'
     | '/sitemap.xml'
     | '/terms'
     | '/admin'
@@ -353,7 +342,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cookies'
     | '/privacy'
-    | '/progress-demo'
     | '/sitemap.xml'
     | '/terms'
     | '/_authenticated/admin'
@@ -385,7 +373,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CookiesRoute: typeof CookiesRoute
   PrivacyRoute: typeof PrivacyRoute
-  ProgressDemoRoute: typeof ProgressDemoRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiPublicAssemblyCallbackRoute: typeof ApiPublicAssemblyCallbackRoute
@@ -430,13 +417,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/progress-demo': {
-      id: '/progress-demo'
-      path: '/progress-demo'
-      fullPath: '/progress-demo'
-      preLoaderRoute: typeof ProgressDemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -651,7 +631,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CookiesRoute: CookiesRoute,
   PrivacyRoute: PrivacyRoute,
-  ProgressDemoRoute: ProgressDemoRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiPublicAssemblyCallbackRoute: ApiPublicAssemblyCallbackRoute,
