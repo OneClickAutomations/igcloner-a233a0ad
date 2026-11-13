@@ -30,11 +30,11 @@ export function startJob(job: Omit<GenJob, 'startedAt'>) {
 }
 
 /** Success: toast + slide to result when on the same page; persistent "View" toast and optional notification when elsewhere. */
-export function finishJob(id: string, ok: boolean, opts: { error?: string; refunded?: boolean; resultSelector?: string } = {}) {
+export function finishJob(id: string, ok: boolean, opts: { error?: string; refunded?: boolean; resultSelector?: string; silent?: boolean } = {}) {
   const job = read().find(j => j.id === id); write(read().filter(j => j.id !== id));
   if (!job) return;
   const here = !job.href || job.href === window.location.pathname + window.location.search || job.href.split('?')[0] === window.location.pathname;
-  if (!ok) { toast.error(`${job.title} failed`, { description: `${opts.error ?? 'Something went wrong.'}${opts.refunded ? ' Credits refunded.' : ''}` }); return; }
+  if (!ok) { if (opts.silent && here) return; toast.error(`${job.title} failed`, { description: `${opts.error ?? 'Something went wrong.'}${opts.refunded ? ' Credits refunded.' : ''}` }); return; }
   if (here) { toast.success(job.doneLabel); if (opts.resultSelector) slideTo(opts.resultSelector); }
   else toast.success(job.doneLabel, { duration: Infinity, action: { label: 'View', onClick: () => { window.location.href = job.href!; } } });
   if (job.long && typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden) new Notification(job.doneLabel, { body: 'Open IGCloner to see it.' });
