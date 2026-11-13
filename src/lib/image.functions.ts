@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { fetchVisionImage, buildSourceContextBlock, extractSourceText } from "@/lib/source-context";
 import { CLONE_LABEL } from "@/lib/clone-modes";
 import { enforceRights } from "@/lib/clone-copy.functions";
+const RIGHTS_ROLLOUT_MS = 1793951578118;
 
 const StyleEnum = z.enum([
   "photorealistic",
@@ -163,7 +164,10 @@ export const generateProjectImage = createServerFn({ method: "POST" })
     if (pErr) throw new Error(pErr.message);
     if (!project) throw new Error("Project not found");
     const projIntent = String((project.user_preferences as any)?.intent ?? (project.user_preferences as any)?.cloneMethod ?? "");
-    await enforceRights(supabase, userId, project.analysis_id, projIntent);
+    // Projects made before the rights rollout used "A1" for the old AI-generation
+    // default ("Steal the Frame"), not the new same-look mode; don't strand them.
+    const legacyA1 = projIntent === "A1" && new Date(project.created_at).getTime() < RIGHTS_ROLLOUT_MS;
+    if (!legacyA1) await enforceRights(supabase, userId, project.analysis_id, projIntent);
 
     // Pull the original source post (caption, OCR, image) so the model
     // generates something that visually echoes the viral reference.
