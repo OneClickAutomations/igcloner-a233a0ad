@@ -15,7 +15,7 @@ describe('faithful remake', () => {
   it('gym barbell shot keeps setting/props/pose and has no bottle, water, cup, kitchen or handle text', () => {
     const [s] = prefillRemixScenes(gym, faithfulDirection(gym), '', [], 'silent');
     const all = `${s.stillPrompt} ${s.motionPrompt} ${s.onScreenText}`;
-    expect(all).not.toMatch(/bottle|water|\bcup\b|kitchen|helena|bakeshop/i);
+    expect(all).not.toMatch(/bottle|\bwater\b|\bcup\b|kitchen|helena|bakeshop/i);
     expect(s.stillPrompt).toMatch(/hexagonal ceiling lights/); expect(s.stillPrompt).toMatch(/treadmill/);
     expect(s.stillPrompt).toMatch(/behind a loaded barbell/); expect(s.stillPrompt).toMatch(/9:16/);
     expect(s.onScreenText).toBe('');

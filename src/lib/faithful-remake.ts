@@ -1,3 +1,4 @@
+import { stripIdentity } from './inspiration';
 /** Browser-safe faithful remake: same verified shot, new original person; owner edits override only what they name. */
 export type RemakeEdits = { person?: string; outfit?: string; setting?: string; words?: string };
 export const FAITHFUL_ID = 'faithful';
@@ -35,9 +36,9 @@ function props(onScreen: unknown): string[] {
 export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharacterRef: boolean; duration: 4 | 6 | 8; pacing?: string; audio?: string; speech: 'voiceover' | 'silent' }) {
   const e = opts.edits ?? {};
   const subject = shot?.subjects?.[0] ?? {};
-  const action = String(subject.action ?? shot?.action ?? 'performs the same action').trim();
-  const setting = String(shot?.setting ?? 'the same setting').trim();
-  const propList = props(shot?.onScreen);
+  const action = stripIdentity(String(subject.action ?? shot?.action ?? 'performs the same action'));
+  const setting = stripIdentity(String(shot?.setting ?? 'the same setting'));
+  const propList = props(shot?.onScreen).map(stripIdentity).filter(p => !/reference subject|subject/i.test(p));
   const framing = [shot?.framing ?? shot?.shotType, shot?.camera, 'eye level'].filter(Boolean).join(', ');
   const position = subject.position ?? 'center';
   const person = e.person?.trim() || (opts.hasCharacterRef ? 'the person from the supplied character reference image' : 'a new original adult athlete (not the source person)');
