@@ -85,7 +85,7 @@ export function FilmPublishScreen({ projectId, draftId, onSaveDraft }: {projectI
   if(!data||!initialized)return <p className="flex gap-2"><Loader2 className="size-5 animate-spin"/>Loading your publishing draft…</p>;
   const accounts=data.accounts;
   const accountFor=(p:PublishingPlatform)=>accounts.find((a:any)=>a.platform===p);
-  const handle=(p:PublishingPlatform)=>{const a=accountFor(p);return a?.account_handle??a?.account_name??a?.username??a?.display_name??'Connected account';};
+  const handle=(p:PublishingPlatform)=>{const a=accountFor(p);return a?.profile_display_name??'Connected account';};
   const checked=selected.filter(p=>accountFor(p));
   const canSubmit=checked.length===selected.length&&checked.length>0&&data.item.finished&&data.item.media.length>0;
   const validSchedule=date&&time&&new Date(`${date}T${time}`).getTime()>Date.now();
