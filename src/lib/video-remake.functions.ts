@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
+import { LookBrief } from './look-brief';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { RemakeSuggestions } from './video-remake';
 import { RemixDirections, RemixDirection, REMIX_IDEAS_COST, prefillRemixScenes, sourceShots, needsStoryboardReplace } from './remix-directions';
@@ -41,13 +42,14 @@ export const generateRemixDirections = createServerFn({ method: 'POST' }).middle
 
 /** Free, explicitly clicked storyboard prefill, atomically inserted once without replacing edited scenes. */
 export const prefillRemixStoryboard = createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
-  .inputValidator((v:unknown)=>z.object({projectId:z.string().uuid(),direction:RemixDirection,instructions:z.string().max(2000).default(''),referenceIds:z.array(z.string().uuid()).max(5).default([]),speechMode:z.enum(['voiceover','silent']).default('voiceover'),replace:z.boolean().default(false)}).parse(v))
+  .inputValidator((v:unknown)=>z.object({projectId:z.string().uuid(),direction:RemixDirection,instructions:z.string().max(2000).default(''),referenceIds:z.array(z.string().uuid()).max(5).default([]),lookBrief:LookBrief.optional(),speechMode:z.enum(['voiceover','silent']).default('voiceover'),replace:z.boolean().default(false)}).parse(v))
   .handler(async({data,context})=>{
     const {data:project}=await context.supabase.from('video_inspiration_projects').select('id,analysis_id').eq('id',data.projectId).eq('user_id',context.userId).single();
     if(!project?.analysis_id)throw new Error('Choose a saved source analysis first.');
     const {data:source}=await context.supabase.from('analyses').select('evidence,blueprint,dna_analysis').eq('id',project.analysis_id).eq('user_id',context.userId).single();
     if(!source)throw new Error('Saved analysis not found.');
     if(data.referenceIds.length){const {data:refs}=await context.supabase.from('reference_assets').select('id').in('id',data.referenceIds).eq('user_id',context.userId);if(refs?.length!==data.referenceIds.length)throw new Error('A reference is unavailable. Choose it again.');}
+    if(data.lookBrief){ const evidence=(source.evidence??{}) as any; const video=evidence.video??{}; source.evidence={...evidence,video:{...video,shots:(video.shots??[]).map((shot:any)=>({...shot,lookBriefs:[data.lookBrief]}))}}; }
     const scenes=prefillRemixScenes(source,data.direction,data.instructions,data.referenceIds,data.speechMode);
     if(!scenes.length)throw new Error('No source shots were captured. You can add scenes in Advanced or run the priced verified analysis.');
     const { data: existing } = await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id', project.id).eq('user_id', context.userId);

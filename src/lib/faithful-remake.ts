@@ -1,5 +1,6 @@
 import { stripIdentity } from './inspiration';
 import { personFromAppearance, outfitFromAppearance, type Appearance, type KeyframeRef } from './keyframes';
+import { LookBrief } from './look-brief';
 /** Browser-safe faithful remake: same verified shot, new original person; owner edits override only what they name. */
 export type RemakeEdits = { person?: string; outfit?: string; setting?: string; words?: string };
 export const FAITHFUL_ID = 'faithful';
@@ -42,9 +43,11 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   const propList = props(shot?.onScreen).map(stripIdentity).filter(p => !/reference subject|subject/i.test(p));
   const framing = [shot?.framing ?? shot?.shotType, shot?.camera, 'eye level'].filter(Boolean).join(', ');
   const position = subject.position ?? 'center';
-  const styled = personFromAppearance(opts.appearance);
+  const opening = shot?.openingPose && shot.openingPose !== 'unclear' ? String(shot.openingPose) : `in the described opening position for ${action}; do not substitute a generic lifting pose`;
+  const brief = shot?.lookBriefs?.[0] ? LookBrief.parse(shot.lookBriefs[0]) : null;
+  const styled = brief ? `${brief.skinTone} skin, ${brief.pigmentation}, ${brief.hair}, ${brief.build}, ${brief.accessories}` : personFromAppearance(opts.appearance);
   const person = e.person?.trim() || (opts.hasCharacterRef ? 'the person from the supplied character reference image' : styled ? `a new original adult with ${styled} (a different face from the source person)` : 'a new original adult athlete (not the source person)');
-  const outfit = e.outfit?.trim() || outfitFromAppearance(opts.appearance) || DEFAULT_OUTFIT;
+  const outfit = e.outfit?.trim() || (brief?.outfit !== 'unclear' ? brief?.outfit : undefined) || outfitFromAppearance(opts.appearance) || DEFAULT_OUTFIT;
   const frames = Object.fromEntries((opts.keyframes ?? []).map(k => [k.pos, k.path])) as Partial<Record<'first'|'mid'|'last', string>>;
   const words = cleanOnScreenText(e.words ?? '');
   const settingLine = `${setting}${propList.length ? `, with ${propList.join(', ')} visible` : ''}`;
@@ -53,7 +56,7 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
     `Photoreal vertical 9:16 photograph, top-tier commercial quality, natural skin texture, sharp focus.`,
     `Setting: ${settingLine}. Match the source lighting, walls and floor described here exactly.${tweak}`,
     `Camera: ${framing}; whole body in frame.`,
-    `Subject: ${person}, wearing ${outfit}, positioned ${position} of frame, ${startPose(action)}.`,
+    `Subject: ${person}, wearing ${outfit}, positioned ${position} of frame, ${opening}.`,
     words ? `On-screen text: "${words}".` : 'No on-screen text, captions, usernames, logos or watermarks.',
     `A new original person; never the source person's likeness.`,
   ].join(' ');
@@ -68,9 +71,9 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   return {
     environment: settingLine.slice(0, 500), action: `${person} ${action}`.slice(0, 800), endState: 'Same final position as the source shot'.slice(0, 300),
     camera: framing.slice(0, 160), audio: (opts.audio ?? 'Natural room ambience').slice(0, 300), duration: opts.duration,
-    objects: [{ name: 'person', state: startPose(action).slice(0, 160) }, ...propList.slice(0, 11).map(p => ({ name: p.slice(0, 80), state: 'visible in the scene as in the source' }))],
+    objects: [{ name: 'person', state: opening.slice(0, 160) }, ...propList.slice(0, 11).map(p => ({ name: p.slice(0, 80), state: 'visible in the scene as in the source' }))],
     onScreenText: words.slice(0, 200), stillPrompt: stillPrompt.slice(0, 5000), motionPrompt: motionPrompt.slice(0, 5000), faithful: true as const,
-    keyframes: frames, remakePerson: person.slice(0, 400), remakeOutfit: outfit.slice(0, 300), settingTweak: (e.setting ?? '').trim().slice(0, 300), remakeAction: action.slice(0, 400),
+    keyframes: frames, openingPose: opening, remakePerson: person.slice(0, 400), remakeOutfit: outfit.slice(0, 300), settingTweak: (e.setting ?? '').trim().slice(0, 300), remakeAction: action.slice(0, 400),
   };
 }
 

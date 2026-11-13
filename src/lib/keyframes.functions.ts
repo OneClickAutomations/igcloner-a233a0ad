@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
+import { sourceLookBrief, writtenLook, LookBrief } from './look-brief';
 import { sourceShots } from './remix-directions';
 import { keyframePlan, Appearance, consensusAppearance, skinBand, SKIN_BANDS, type KeyframeRef } from './keyframes';
 
@@ -14,7 +15,7 @@ const STYLE_PROMPT = `Describe the visual STYLE of the main person in this video
 - accessories (e.g. "clear-frame glasses"), footwear ("barefoot" if so), vibe (overall energy).
 NEVER include names, identity guesses, facial features or face shape, age guesses, or distinctive personal marks (birthmarks, scars, tattoos, skin-condition patterns, unique piercings). Write "unclear" when not visible. Return JSON only: {"skinTone":"","undertone":"","build":"","hair":"","outfit":"","coveredOutfit":"","accessories":"","footwear":"","vibe":""}`;
 
-const LookCheck = z.object({ skinTone: z.string().catch('unclear'), undertone: z.string().catch('unclear'), buildMatches: z.boolean().catch(true), buildNote: z.string().catch(''), hairMatches: z.boolean().catch(true), hairNote: z.string().catch(''), outfitColourMatches: z.boolean().catch(true), outfitNote: z.string().catch('') });
+const LookCheck = z.object({ skinTone: z.string().catch('unclear'), undertone: z.string().catch('unclear'), buildMatches: z.boolean().catch(true), buildNote: z.string().catch(''), hairMatches: z.boolean().catch(true), hairNote: z.string().catch(''), outfitColourMatches: z.boolean().catch(true), outfitNote: z.string().catch(''), poseMatches: z.boolean().catch(true), poseNote: z.string().catch(''), environmentMatches: z.boolean().catch(true), environmentNote: z.string().catch(''), pigmentationMatches: z.boolean().catch(true), pigmentationNote: z.string().catch('') });
 
 /** Plain-English drift list from a look check against the requested style fields. Browser-safe logic kept here for the server fn. */
 function driftsFrom(requested: Partial<Appearance>, got: z.infer<typeof LookCheck>, outfitFallback: boolean) {
@@ -24,27 +25,32 @@ function driftsFrom(requested: Partial<Appearance>, got: z.infer<typeof LookChec
   if (!got.buildMatches) drifts.push(`Build doesn't match${got.buildNote ? `: ${got.buildNote}` : '.'}`);
   if (!got.hairMatches) drifts.push(`Hair doesn't match${got.hairNote ? `: ${got.hairNote}` : '.'}`);
   if (!got.outfitColourMatches && !outfitFallback) drifts.push(`Outfit colour doesn't match${got.outfitNote ? `: ${got.outfitNote}` : '.'}`);
+  if (!got.poseMatches) drifts.push(`Opening pose differs: ${got.poseNote}`);
+  if (!got.environmentMatches) drifts.push(`Environment type differs: ${got.environmentNote}`);
+  if (!got.pigmentationMatches) drifts.push(`Visible pigmentation differs: ${got.pigmentationNote}`);
   return drifts;
 }
 
-/** Included, no charge: cheap vision check of the latest still against the source style fields. Warns only. */
+/** Included, no charge: vision check against the written brief, never source pixels. Warns only. */
 export const checkStillLook = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) => z.object({ sceneId: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }) => {
-    const { data: s } = await context.supabase.from('storyboard_scenes').select('id,project_id,still_path,user_id').eq('id', data.sceneId).eq('user_id', context.userId).single();
+    const { data: s } = await context.supabase.from('storyboard_scenes').select('id,project_id,still_path,user_id,scene_input,look_check').eq('id', data.sceneId).eq('user_id', context.userId).single();
     if (!s?.still_path) throw new Error('This scene has no still yet.');
     const { data: p } = await context.supabase.from('video_inspiration_projects').select('analysis_id').eq('id', s.project_id).single();
     const { data: a } = p?.analysis_id ? await context.supabase.from('analyses').select('evidence').eq('id', p.analysis_id).maybeSingle() : { data: null };
-    const requested = ((a?.evidence as any)?.remakeRefs?.appearance ?? null) as Partial<Appearance> | null;
-    if (!requested) return { checked: false, drifts: [] as string[] };
+    if ((s.look_check as any)?.stillPath === s.still_path && (s.look_check as any)?.checked) return s.look_check as any;
+    const { data: sheet } = await context.supabase.from('studio_character_sheets').select('brief,instructions').eq('project_id', s.project_id).eq('status','approved').order('created_at',{ascending:false}).limit(1).maybeSingle();
+    const input = (s.scene_input ?? {}) as any;
+    const brief = LookBrief.parse(sheet?.brief ?? input.lookBrief ?? sourceLookBrief(a, input.sourceShotIndex ?? 0));
+    const requested = { ...brief, undertone: 'unclear' };
     const key = process.env['LOVABLE_API_KEY']; if (!key) throw new Error('AI connection is not configured.');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(s.still_path);
     if (!im) throw new Error('Still file missing.');
     const { toBase64, VIDEO_OBSERVATION_MODEL } = await import('./analysis-ai.server');
     const { data: last } = await supabaseAdmin.from('scene_attempts').select('outfit_fallback').eq('scene_id', s.id).eq('operation', 'still').eq('status', 'completed').order('created_at', { ascending: false }).limit(1).maybeSingle();
-    const prompt = `Compare the person in this image with the requested style. Requested: skin ${requested.skinTone} (${requested.undertone ?? 'unclear'} undertone); build ${requested.build}; hair ${requested.hair}; outfit ${requested.outfit}.
-Report skinTone as exactly one of ${SKIN_BANDS.map(b => `"${b}"`).join(', ')} judged from the image only, and undertone. For build, hair and outfit colour say whether they match, with a short note if not. Do not describe the face or identity. JSON only: {"skinTone":"","undertone":"","buildMatches":true,"buildNote":"","hairMatches":true,"hairNote":"","outfitColourMatches":true,"outfitNote":""}`;
+    const prompt = `Compare this GENERATED still ONLY with the WRITTEN look brief: ${writtenLook(brief)}. Owner styling overrides: ${sheet?.instructions ?? input.ownerInstructions ?? ''}; person ${input.remakePerson ?? ''}; outfit ${input.remakeOutfit ?? ''}. Do not compare with any source image. Judge skin shade, visible pigmentation, build, hair, outfit colour/cut, opening pose and environment TYPE. No face descriptions or demographic inference. Ignore minor variations; flag only clear mismatches. Report skinTone using ${SKIN_BANDS.join(', ')}. JSON only: {"skinTone":"","undertone":"","buildMatches":true,"buildNote":"","hairMatches":true,"hairNote":"","outfitColourMatches":true,"outfitNote":"","poseMatches":true,"poseNote":"","environmentMatches":true,"environmentNote":"","pigmentationMatches":true,"pigmentationNote":""}`;
     const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'X-Lovable-AIG-SDK': 'fetch' },
       body: JSON.stringify({ model: VIDEO_OBSERVATION_MODEL, messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: `data:${im.type || 'image/png'};base64,${toBase64(new Uint8Array(await im.arrayBuffer()))}` } }] }] }) });
     const body = await res.json().catch(() => null) as any;

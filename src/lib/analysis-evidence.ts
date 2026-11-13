@@ -2,6 +2,7 @@
 // (slide evidence → video shot list → Claude synthesis → blueprint).
 // No network, no secrets — every function here is unit-tested.
 import { z } from "zod";
+import { LookBrief } from './look-brief';
 
 // ---------- Prompt-injection hygiene ----------
 /**
@@ -67,6 +68,8 @@ export const ShotSchema = z.object({
   action: z.string().optional(),
   audioSummary: z.string().optional(),
   uncertainty: z.array(z.string()).optional(),
+  openingPose: z.string().optional(),
+  lookBriefs: z.array(LookBrief).max(8).optional(),
 });
 export const VideoEvidenceSchema = z.object({
   durationSec: z.number().nullable().catch(null),

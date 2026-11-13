@@ -20,6 +20,7 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
   const { data: scene, error } = await supabaseAdmin.from('storyboard_scenes').select('*').eq('id', attempt.scene_id).eq('user_id', attempt.user_id).single();
   if (error || !scene?.still_path || scene.revision !== attempt.scene_revision || scene.approved_revision !== scene.revision) throw new Error('Scene approval changed; animation was not submitted.');
+  if (!scene.still_path.startsWith(`${attempt.user_id}/${attempt.project_id}/stills/`)) throw new Error('Use a generated Studio still for animation. Source media is never sent to the video generator.');
   const { data: project } = await supabaseAdmin.from('video_inspiration_projects').select('pause_reason').eq('id', attempt.project_id).single();
   if (project?.pause_reason) throw new Error(project.pause_reason);
   const { data: won } = await supabaseAdmin.from('scene_attempts').update({ status: 'submitting', updated_at: new Date().toISOString() }).eq('id', attempt.id).eq('status', 'claimed').select('id').maybeSingle();
@@ -35,7 +36,7 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
     // Veo rejects ingredient references beside a starting-frame image. Approval mode
     // must animate the approved frame; references are already used in that frame.
     const endPath = (scene as any).end_still_path as string | null;
-    const end = endPath && attempt.model !== 'google/veo-3.1-lite' ? await loadInspirationImage(endPath) : null;
+    const end = endPath?.startsWith(`${attempt.user_id}/${attempt.project_id}/stills/`) && attempt.model !== 'google/veo-3.1-lite' ? await loadInspirationImage(endPath) : null;
     request = { instances: [{ prompt, image: start, ...(end ? { lastFrame: end } : {}) }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: PHYSICAL_NEGATIVES } };
   }
   let job;

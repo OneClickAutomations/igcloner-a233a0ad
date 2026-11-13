@@ -33,6 +33,7 @@ import { Route as AuthenticatedStudioInspirationRouteImport } from './routes/_au
 import { Route as AuthenticatedStudioReelRouteImport } from './routes/_authenticated/studio.reel'
 import { Route as AuthenticatedStudioVoiceoverRouteImport } from './routes/_authenticated/studio.voiceover'
 import { Route as ApiPublicAssemblyCallbackRouteImport } from './routes/api/public/assembly-callback'
+import { Route as ApiPublicCharacterSheetRouteImport } from './routes/api/public/character-sheet'
 import { Route as ApiPublicImgRouteImport } from './routes/api/public/img'
 import { Route as ApiPublicInspirationCollectRouteImport } from './routes/api/public/inspiration-collect'
 import { Route as ApiPublicInspirationStillRouteImport } from './routes/api/public/inspiration-still'
@@ -163,6 +164,11 @@ const ApiPublicAssemblyCallbackRoute =
     path: '/api/public/assembly-callback',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCharacterSheetRoute = ApiPublicCharacterSheetRouteImport.update({
+  id: '/api/public/character-sheet',
+  path: '/api/public/character-sheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicImgRoute = ApiPublicImgRouteImport.update({
   id: '/api/public/img',
   path: '/api/public/img',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
+  '/api/public/character-sheet': typeof ApiPublicCharacterSheetRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/studio/reel': typeof AuthenticatedStudioReelRoute
   '/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
+  '/api/public/character-sheet': typeof ApiPublicCharacterSheetRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated/studio/reel': typeof AuthenticatedStudioReelRoute
   '/_authenticated/studio/voiceover': typeof AuthenticatedStudioVoiceoverRoute
   '/api/public/assembly-callback': typeof ApiPublicAssemblyCallbackRoute
+  '/api/public/character-sheet': typeof ApiPublicCharacterSheetRoute
   '/api/public/img': typeof ApiPublicImgRoute
   '/api/public/inspiration-collect': typeof ApiPublicInspirationCollectRoute
   '/api/public/inspiration-still': typeof ApiPublicInspirationStillRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/assembly-callback'
+    | '/api/public/character-sheet'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/studio/reel'
     | '/studio/voiceover'
     | '/api/public/assembly-callback'
+    | '/api/public/character-sheet'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio/reel'
     | '/_authenticated/studio/voiceover'
     | '/api/public/assembly-callback'
+    | '/api/public/character-sheet'
     | '/api/public/img'
     | '/api/public/inspiration-collect'
     | '/api/public/inspiration-still'
@@ -376,6 +388,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   ApiPublicAssemblyCallbackRoute: typeof ApiPublicAssemblyCallbackRoute
+  ApiPublicCharacterSheetRoute: typeof ApiPublicCharacterSheetRoute
   ApiPublicImgRoute: typeof ApiPublicImgRoute
   ApiPublicInspirationCollectRoute: typeof ApiPublicInspirationCollectRoute
   ApiPublicInspirationStillRoute: typeof ApiPublicInspirationStillRoute
@@ -552,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicAssemblyCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/character-sheet': {
+      id: '/api/public/character-sheet'
+      path: '/api/public/character-sheet'
+      fullPath: '/api/public/character-sheet'
+      preLoaderRoute: typeof ApiPublicCharacterSheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/img': {
       id: '/api/public/img'
       path: '/api/public/img'
@@ -634,6 +654,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   ApiPublicAssemblyCallbackRoute: ApiPublicAssemblyCallbackRoute,
+  ApiPublicCharacterSheetRoute: ApiPublicCharacterSheetRoute,
   ApiPublicImgRoute: ApiPublicImgRoute,
   ApiPublicInspirationCollectRoute: ApiPublicInspirationCollectRoute,
   ApiPublicInspirationStillRoute: ApiPublicInspirationStillRoute,
