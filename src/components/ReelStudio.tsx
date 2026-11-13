@@ -1,3 +1,4 @@
+import { GenerationProgress } from "./GenerationProgress";
 import { useGenJob } from "./useGenJob";
 import { QualityNote } from "@/components/QualityNote";
 import { VideoChangeList } from './VideoChangeList';
@@ -791,11 +792,10 @@ function DirectionStep({
   editingDir: boolean;
   setEditingDir: (v: boolean | ((p: boolean) => boolean)) => void;
 }) {
+  const [t0] = useState(() => Date.now());
   if (!direction) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Reading source visual DNA…
-      </div>
+      <div className="py-12"><GenerationProgress stage="Reading the source's look…" startedAt={t0} expectedSeconds={20}/></div>
     );
   }
   return (
