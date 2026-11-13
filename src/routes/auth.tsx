@@ -5,8 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/auth")({
   ssr: false,
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/dashboard" });
+    // This public page only chooses the destination; the protected layout
+    // and every private server function still validate the user remotely.
+    const { data } = await supabase.auth.getSession();
+    if (data.session) throw redirect({ to: "/dashboard", replace: true });
   },
   head: () => ({
     meta: [

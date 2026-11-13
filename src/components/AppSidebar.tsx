@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, LayoutDashboard, Calendar as CalendarIcon, Settings as SettingsIcon, LogOut, FolderOpen, Send, Search, Coins, Film } from "lucide-react";
 import { getCreditBalance } from "@/lib/credits.functions";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CREDIT_BALANCE_KEY } from "@/lib/credits";
 import { VIDEO_BALANCE_KEY } from '@/lib/studio-pricing';
 import { getVideoCreditBalance } from '@/lib/video-credits.functions';
@@ -37,6 +37,7 @@ const items = [
 export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const collapsed = state === "collapsed";
   const currentPath = useRouterState({ select: (r) => r.location.pathname });
   const isActive = (p: string) => currentPath === p || currentPath.startsWith(p + "/");
@@ -126,8 +127,10 @@ export function AppSidebar() {
           className="justify-start gap-2 text-text-secondary hover:bg-destructive/10 hover:text-destructive"
           onClick={async () => {
             closeMobile();
+            await queryClient.cancelQueries();
+            queryClient.clear();
             await supabase.auth.signOut();
-            navigate({ to: "/" });
+            navigate({ to: "/auth", replace: true });
           }}
         >
           <LogOut className="h-4 w-4" />

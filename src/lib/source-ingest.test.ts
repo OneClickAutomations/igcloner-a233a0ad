@@ -57,6 +57,16 @@ describe("classifySourceUrl", () => {
 });
 
 describe("stripTrackingParams", () => {
+  it("canonicalizes the exact reported Instagram reel", () => {
+    expect(stripTrackingParams("https://www.instagram.com/reel/DfNangbBYRX/?srtk=M2gzdDdkcml2NWRh")).toBe("https://www.instagram.com/reel/DfNangbBYRX/");
+  });
+  it.each(["reel", "reels", "tv", "p"])("normalizes %s with every tracking variant", (path) => {
+    expect(stripTrackingParams(`https://instagram.com/${path}/DfNangbBYRX?igsh=a&srtk=b&utm_source=c&img_index=2#x`)).toBe(`https://www.instagram.com/${path === "p" ? "p" : "reel"}/DfNangbBYRX/`);
+  });
+  it("normalizes Facebook hosts and retains post identifiers", () => {
+    expect(stripTrackingParams("https://m.facebook.com/watch?v=123&srtk=x")).toBe("https://www.facebook.com/watch/?v=123");
+    expect(stripTrackingParams("https://m.facebook.com/story.php?story_fbid=123&id=456&fbclid=x")).toBe("https://www.facebook.com/story.php?story_fbid=123&id=456");
+  });
   it("removes tracking params but keeps identifying ones", () => {
     const out = stripTrackingParams(
       "https://www.facebook.com/watch/?v=123&utm_source=share&fbclid=abc&igsh=xyz&mibextid=q1",
@@ -93,6 +103,12 @@ describe("resolveCanonicalUrl", () => {
     const res = await resolveCanonicalUrl("https://www.instagram.com/p/ABC/", ok as any);
     expect(res.hops).toBe(0);
     expect(res.canonicalUrl).toBe("https://www.instagram.com/p/ABC/");
+  });
+  it("never fetches a direct post or follows its login redirect", async () => {
+    let calls = 0;
+    const res = await resolveCanonicalUrl("https://www.instagram.com/reel/DfNangbBYRX/?srtk=x", async () => { calls++; return { status: 302, headers: { get: () => "https://www.instagram.com/accounts/login/" } }; });
+    expect(calls).toBe(0);
+    expect(res.canonicalUrl).toBe("https://www.instagram.com/reel/DfNangbBYRX/");
   });
 
   it("survives fetch failures and keeps the current URL", async () => {
@@ -296,6 +312,11 @@ describe("finalKindFromData", () => {
 });
 
 describe("scrapeFailure", () => {
+  it("identifies invalid credentials and provides recovery", () => {
+    const error = scrapeFailure({ status: 401, platform: "instagram" });
+    expect(error.code).toBe("credentials");
+    expect(error.message).toContain("Settings → API Keys");
+  });
   it("maps failures to specific human messages", () => {
     expect(scrapeFailure({ status: 504, platform: "instagram" }).code).toBe("timeout");
     expect(scrapeFailure({ itemError: "private_content", platform: "instagram" }).code).toBe("private");

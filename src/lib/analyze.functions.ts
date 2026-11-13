@@ -19,7 +19,7 @@ import {
   type ClassifiedUrl,
   type ScrapedPost,
 } from "@/lib/source-ingest";
-import { resolveApifyToken, apifyRun } from "@/lib/apify.server";
+import { resolveApifyToken, checkApifyToken, apifyRun } from "@/lib/apify.server";
 import { persistSourceMedia } from "@/lib/source-media.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
@@ -278,6 +278,15 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
       }
     }
 
+    // A bad platform/user key must not start a paid attempt that cannot scrape.
+    try {
+      const token = await resolveApifyToken(supabase, userId);
+      if (!token) return { ok: false, limitReached: false, status: "failed", error: "Add an Apify scraper key in Settings → API Keys, then try again. No credits were taken.", data: null };
+      const status = await checkApifyToken(token);
+      if (status >= 400) return { ok: false, limitReached: false, status: "failed", error: `${scrapeFailure({ status, platform: classified.platform }).message} No credits were taken.`, data: null };
+    } catch {
+      return { ok: false, limitReached: false, status: "failed", error: "The scraper connection was slow — Retry. No credits were taken.", data: null };
+    }
     const analysisId = data.analysisId ?? crypto.randomUUID();
     const { error: insErr } = await supabase.from("analyses").insert({
       id: analysisId, user_id: userId, instagram_url: canonicalUrl, post_type: classified.kind,

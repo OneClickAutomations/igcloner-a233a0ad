@@ -89,12 +89,23 @@ export function classifySourceUrl(rawUrl: string): ClassifiedUrl | null {
 
 const TRACKING_PARAMS = new Set([
   "fbclid", "gclid", "dclid", "igsh", "igshid", "mibextid", "ref", "ref_src",
-  "s", "fs", "m", "rdid", "share_url", "si", "feature", "kw",
+  "s", "fs", "m", "rdid", "share_url", "si", "feature", "kw", "srtk", "img_index",
 ]);
 
 export function stripTrackingParams(rawUrl: string): string {
   try {
     const u = new URL(rawUrl);
+    u.hash = "";
+    if (IG_HOST.test(u.hostname)) {
+      const post = u.pathname.match(/^\/(p|reel|reels|tv)\/([\w-]+)\/?$/i);
+      if (post) return `https://www.instagram.com/${post[1].toLowerCase() === "p" ? "p" : "reel"}/${post[2]}/`;
+    }
+    if (FB_HOST.test(u.hostname) && !u.hostname.endsWith("fb.watch")) {
+      u.protocol = "https:";
+      u.hostname = "www.facebook.com";
+      u.pathname = u.pathname.replace(/^\/reels\//i, "/reel/");
+      if (!u.pathname.endsWith("/") && !/\.php$/i.test(u.pathname)) u.pathname += "/";
+    }
     for (const key of [...u.searchParams.keys()]) {
       if (TRACKING_PARAMS.has(key.toLowerCase()) || key.toLowerCase().startsWith("utm_")) {
         u.searchParams.delete(key);
@@ -126,8 +137,10 @@ export async function resolveCanonicalUrl(
   fetchImpl: FetchLike = fetch as unknown as FetchLike,
   maxHops = 5,
 ): Promise<ResolvedUrl> {
-  let current = rawUrl;
+  let current = stripTrackingParams(rawUrl);
   let hops = 0;
+  // Direct posts need no HTTP lookup (which can redirect to a login wall).
+  if (!classifySourceUrl(current)?.shareLink) return { canonicalUrl: current, originalUrl: rawUrl, hops };
   while (hops < maxHops) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5000);
@@ -151,7 +164,9 @@ export async function resolveCanonicalUrl(
     }
     const location = res.headers.get("location");
     if (res.status >= 300 && res.status < 400 && location) {
-      current = new URL(location, current).toString();
+      const target = new URL(location, current).toString();
+      if (!isSupportedSocialUrl(target)) break;
+      current = target;
       hops++;
       continue;
     }
@@ -600,7 +615,7 @@ export function verifyPostMatch(raw: any, requestedUrl: string): boolean {
 export class ScrapeError extends Error {
   constructor(
     message: string,
-    readonly code: "private" | "deleted" | "region_blocked" | "unsupported" | "timeout" | "wrong_post" | "empty" | "upstream",
+    readonly code: "private" | "deleted" | "region_blocked" | "unsupported" | "timeout" | "wrong_post" | "empty" | "upstream" | "credentials" | "credits",
   ) {
     super(message);
     this.name = "ScrapeError";
@@ -616,19 +631,22 @@ export function scrapeFailure(reason: {
 }): ScrapeError {
   const err = `${reason.itemError ?? ""} ${reason.itemErrorDescription ?? ""}`.toLowerCase();
   const name = reason.platform === "instagram" ? "Instagram" : "Facebook";
+  if (reason.status === 401) return new ScrapeError("The Apify scraper key is invalid or expired. Update it in Settings → API Keys, then try again.", "credentials");
+  if (reason.status === 402 || reason.status === 403) return new ScrapeError("Apify could not authorize this scrape. Check your key, account access and Apify balance in Settings → API Keys, then try again.", "credits");
+  if (reason.status === 400) return new ScrapeError("That doesn't look like a reel/post link. Copy the public post link and try again.", "unsupported");
   if (reason.status === 408 || reason.status === 504) {
-    return new ScrapeError(`The ${name} scraper timed out. Try again in a moment.`, "timeout");
+    return new ScrapeError(`${name} was slow — Retry in a moment.`, "timeout");
   }
   // The actors conflate "private" and "not found" ("no_items: Empty or
   // private data"), so check that first with a message covering both.
   if (/no_items|not found|deleted|removed|empty/.test(err)) {
-    return new ScrapeError(`This ${name} post couldn't be captured — it may be private, deleted, or the link is wrong.`, "deleted");
+    return new ScrapeError(`This ${name} post isn't publicly available — it may be private or deleted. Try another link.`, "deleted");
   }
-  if (/private|not authorized|login|permission/.test(err)) {
-    return new ScrapeError(`This ${name} content is private or requires login, so it can't be captured.`, "private");
+  if (/private|not authorized|login|permission|age.restrict/.test(err)) {
+    return new ScrapeError(`This ${name} post isn't public or requires age verification — try another link.`, "private");
   }
   if (/region|geo|blocked|country/.test(err)) {
-    return new ScrapeError(`This ${name} content is region-blocked and can't be reached.`, "region_blocked");
+    return new ScrapeError(`This ${name} post is unavailable in the scraper's region — try another link.`, "region_blocked");
   }
   if (reason.status && reason.status >= 400) {
     return new ScrapeError(`The ${name} scraper failed (HTTP ${reason.status}). Try again shortly.`, "upstream");

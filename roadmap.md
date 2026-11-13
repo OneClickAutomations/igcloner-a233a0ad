@@ -112,3 +112,8 @@
 - [x] Resume after closing the tab (stage-per-request)
 - [x] Large videos: SD copy for Facebook, else transcript + cover with a labelled limitation
 - [x] Instagram reel with speech verified once
+
+## Current sign-in and reported reel bug
+- [x] Remove OAuth homepage detour and duplicate dashboard reads; signed-in navigation and dashboard tests checked
+- [x] Diagnose DfNangbBYRX failure: published Apify 401 and read-only platform credential probe confirm invalid token; normalize URLs, test cases, prevent debit on invalid keys, and verify signed-in recovery button
+- [ ] Capture the reported reel cover/caption/metrics — blocked by invalid platform APIFY_TOKEN and no owner Apify key; requires a valid key in Settings → API Keys
