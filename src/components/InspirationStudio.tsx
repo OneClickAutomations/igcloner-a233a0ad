@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { queryOptions, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { Film, Plus, Download, Check, ImagePlus, Play, Trash2, Save, Pencil, Loader2, AlertTriangle, Lock, Mic, ArrowLeft } from 'lucide-react';
 import { GenerationProgress } from './GenerationProgress';
 import { startJob, finishJob, slideTo, type JobItem } from '@/lib/generation-jobs';
+import { readPending, savePending, clearPending } from '@/lib/pending-stills';
 import { toast } from 'sonner';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -76,13 +77,42 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
       if (!session.session) throw new Error('Sign in required.');
       const { streamImage } = await import('@/lib/inspiration-stream');
       let image = '';
+      savePending(pid, { requestKey, sceneId: scene.id, label: `Scene ${scene.scene_order+1}`, startedAt: Date.now() });
       try {
         await streamImage('/api/public/inspiration-still', { sceneId: scene.id, requestKey, revision: q.revision, confirmedCredits: q.customerCredits, frame }, (url, final) => { if (frame !== 'last') setPartial(p => ({ ...p, [scene.id]: { url, final } })); if (final) image = url.split(',')[1]; }, undefined, { Authorization: `Bearer ${session.session.access_token}` });
         const done = await finish({ data: { requestKey, base64: image } });
         if (done?.outfitFallback) toast.info('The image service declined the source outfit, so this still uses fitted athletic wear in the same colours.');
-      } catch(e) { await finish({ data: { requestKey, error: (e as Error).message } }).catch(() => {}); throw e; }
+        clearPending(pid, requestKey);
+      } catch(e) {
+        // Leaving or refreshing the page aborts the stream; the server keeps collecting the still, so don't fail it.
+        if (leaving.current) throw e;
+        clearPending(pid, requestKey);
+        await finish({ data: { requestKey, error: (e as Error).message } }).catch(() => {}); throw e;
+      }
   };
   const [batch, setBatch] = useState<{ kind: 'stills'|'animate'; items: JobItem[]; startedAt: number; status: 'running'|'error'|'done'; error?: string; refunded?: boolean } | null>(null);
+  const pid = data.selected?.id ?? projectId ?? '';
+  const leaving = useRef(false);
+  useEffect(() => { const h = () => { leaving.current = true; }; window.addEventListener('pagehide', h); window.addEventListener('beforeunload', h); return () => { window.removeEventListener('pagehide', h); window.removeEventListener('beforeunload', h); }; }, []);
+  /** Re-attach the ring to stills that were being drawn before a refresh, and collect them when the server saves them. */
+  useEffect(() => {
+    const pending = readPending(pid); if (!pending.length || batch) return;
+    const statusOf = (k: string) => data.attempts.find(a => (a as any).request_key === k)?.status;
+    const items: JobItem[] = pending.map(p => ({ label: p.label, state: statusOf(p.requestKey) === 'completed' ? 'done' : statusOf(p.requestKey) === 'failed' ? 'failed' : 'running' }));
+    setBatch({ kind: 'stills', items, startedAt: Math.min(...pending.map(p => p.startedAt)), status: 'running' });
+  }, [projectId]);
+  useEffect(() => {
+    const pending = readPending(pid); if (!pending.length) return;
+    const statusOf = (k: string) => data.attempts.find(a => (a as any).request_key === k)?.status;
+    const items: JobItem[] = pending.map(p => { const st = statusOf(p.requestKey); return { label: p.label, state: st === 'completed' ? 'done' : st === 'failed' ? 'failed' : 'running' }; });
+    const settled = items.every(i => i.state !== 'running');
+    if (!settled) { const t = setTimeout(() => { refresh(); }, 4000); setBatch(b => b && { ...b, items }); return () => clearTimeout(t); }
+    pending.forEach(p => clearPending(pid, p.requestKey));
+    const failed = items.some(i => i.state === 'failed');
+    setBatch(b => b && { ...b, items, status: failed ? 'error' : 'done', error: failed ? 'A still could not be finished while you were away.' : undefined, refunded: failed });
+    finishJob(`stills-${pid}`, !failed, { resultSelector: '#make-scenes', error: 'A still could not be finished while you were away.', refunded: true });
+    if (!failed) setTimeout(() => setBatch(null), 2500);
+  }, [data.attempts, projectId]);
   /** One click, cost shown on the button: draw every missing still in order, each with its own quote and refund-on-failure. */
   const createStills = async () => {
     const todo = data.scenes.filter(s => !s.preview); if (!todo.length) return;

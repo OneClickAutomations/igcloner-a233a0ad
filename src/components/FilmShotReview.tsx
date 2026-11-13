@@ -1,3 +1,4 @@
+import { useGenJob } from './useGenJob';
 import {useState} from 'react';
 import {useServerFn} from '@tanstack/react-start';
 import {Film,RefreshCw,Save} from 'lucide-react';
@@ -11,6 +12,7 @@ import {STUDIO_PRICING,videoCreditsForWorkspace} from '@/lib/studio-pricing';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
 export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}:{data:Data;busy:boolean;run:(f:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;value:Record<string,unknown>;onChange:(v:Record<string,unknown>)=>void;onAssemble:()=>void}){
   const save=useServerFn(saveFilmShotReview),quote=useServerFn(inspirationQuote),animate=useServerFn(animateInspirationScene),recover=useServerFn(recoverInspirationClips),load=useServerFn(getInspirationStudio);
+  const gen=useGenJob();
   const [selected,setSelected]=useState(data.scenes[0]?.id??'');
   const [confirmation,setConfirmation]=useState<{items:{scene:Data['scenes'][number];q:Awaited<ReturnType<typeof inspirationQuote>>;instruction:string}[]}|null>(null);
   const [progress,setProgress]=useState('');
@@ -31,9 +33,11 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
   };
   const execute=async()=>{
     const batch=confirmation;if(!batch)return;setConfirmation(null);
+    const items=batch.items.map(i=>({label:`Shot ${i.scene.scene_order+1}`,state:'waiting' as 'waiting'|'running'|'done'|'failed'}));setProgress('');
     try{
+      await gen.run({slot:'shots',title:batch.items.length>1?'Your regenerated shots':'Your regenerated shot',stage:'Sending your shot to the animator…',expectedSeconds:120*batch.items.length,doneLabel:batch.items.length>1?'Your new shots are ready':'Your new shot is ready',paid:true,long:true,items,resultSelector:'[aria-label="Selected shot version"]',jobId:`shots-${batch.items[0]?.scene.project_id}`},async ctx=>{
       for(let i=0;i<batch.items.length;i++){
-        const item=batch.items[i];setProgress(`Regenerating shot ${item.scene.scene_order+1} · ${i+1} of ${batch.items.length}`);
+        const item=batch.items[i];items[i].state='running';ctx.setItems([...items]);ctx.setStage(`Animating shot ${item.scene.scene_order+1} · ${i+1} of ${batch.items.length}…`);
         const started=await animate({data:{sceneId:item.scene.id,model,requestKey:crypto.randomUUID(),revision:item.q.revision,confirmedCredits:item.q.customerCredits??0}});
         // One explicitly confirmed batch, sequential provider submissions; never retry a lost or failed job.
         const deadline=Date.now()+15*60*1000;
@@ -41,11 +45,13 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
           await new Promise(resolve=>setTimeout(resolve,8000));await recover();
           const latest=await load({data:{projectId:item.scene.project_id}});
           const a=latest.attempts.find(a=>a.id===started.attemptId);await refresh();
-          if(a?.status==='completed')break;
+          if(a?.status==='completed'){items[i].state='done';ctx.setItems([...items]);break;}
+          if(a?.status==='failed'||a?.status==='submission_unknown'){items[i].state='failed';ctx.setItems([...items]);}
           if(a?.status==='failed'||a?.status==='submission_unknown')throw new Error(a.failure_reason??'Shot stopped. Your previous versions are safe.');
           if(Date.now()>deadline)throw new Error('Shot is still processing. Reopen this video to collect it; remaining shots were not charged.');
         }
       }
+      });
       setProgress('New shots saved. Re-assemble to update your video.');
     }catch(e){setProgress('Stopped; previous versions are safe. Reopen this video to check the current shot.');throw e;}
   };
@@ -65,7 +71,7 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
     </div>}
     <label className="block text-sm font-medium">Changes for the whole video (optional)<Textarea aria-label="Whole video regeneration instructions" className="mt-2" value={whole} onChange={e=>onChange({...value,wholeInstruction:e.target.value})}/></label>
     <div className="flex flex-wrap gap-3"><Button disabled={busy||!data.scenes.length} onClick={()=>run(()=>prepare(true))}><RefreshCw className="size-4"/>Regenerate whole video · {data.scenes.reduce((n,s)=>n+cost(s.duration),0)} video credits</Button><Button variant="outline" disabled={busy} onClick={onAssemble}><Film className="size-4"/>Re-assemble · view video-credit quote</Button></div>
-    {progress&&<p role="status" className="text-sm text-muted-foreground">{progress}</p>}
+    {gen.ring('shots',false)}{progress&&<p role="status" className="text-sm text-muted-foreground">{progress}</p>}
     <Dialog open={!!confirmation} onOpenChange={open=>{if(!open)setConfirmation(null);}}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Confirm shot regeneration</DialogTitle></DialogHeader><p>{confirmation?.items.length} shot(s) · {confirmation?.items.reduce((n,i)=>n+(i.q.customerCredits??0),0)} video credits. Re-assembly is quoted separately. No plan credits.</p>{confirmation?.items.map(i=><div key={i.scene.id} className="space-y-2 border-t border-border pt-3"><p>Shot {i.scene.scene_order+1}: {i.q.customerCredits} video credits</p>{i.instruction&&<p className="whitespace-pre-wrap text-sm">{i.instruction}</p>}{i.q.reason&&<p className="text-sm text-status-warning">{i.q.reason}</p>}</div>)}{confirmation?.items.some(i=>!i.scene.approved_at)?<><p className="text-sm text-status-warning">Approve the saved stills before regenerating. Your instructions are already saved; no credits were charged.</p><Button onClick={()=>setConfirmation(null)}>Return to saved shots</Button></>:<Button disabled={busy||!!confirmation&&confirmation.items.reduce((n,i)=>n+(i.q.customerCredits??0),0)>data.videoBalance} onClick={()=>run(execute)}>Confirm regeneration</Button>}<p className="text-sm text-muted-foreground">Previously paid versions stay available. Failed attempts are refunded; unstarted shots are not charged.</p></DialogContent></Dialog>
   </section>;
 }

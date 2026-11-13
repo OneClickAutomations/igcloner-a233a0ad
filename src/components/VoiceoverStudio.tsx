@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -127,6 +128,7 @@ export function VoiceoverStudio() {
   const listFn = useServerFn(listSceneVoiceovers);
   const previewFn = useServerFn(previewVoice);
   const genFn = useServerFn(generateSceneVoiceover);
+  const gen = useGenJob();
   const delFn = useServerFn(deleteVoiceover);
 
   const projectQ = useQuery({
@@ -260,7 +262,7 @@ export function VoiceoverStudio() {
     }
     try {
       setGenerating(sceneIndex);
-      await genFn({
+      await gen.run({ slot: `scene-${sceneIndex}`, title: `Scene ${sceneIndex} voiceover`, stage: `Recording scene ${sceneIndex}…`, expectedSeconds: 20, doneLabel: `Scene ${sceneIndex} voiceover is ready`, paid: true, resultSelector: `#vo-scene-${sceneIndex}` }, () => genFn({
         data: {
           projectId,
           sceneIndex,
@@ -268,8 +270,7 @@ export function VoiceoverStudio() {
           voiceId: selectedVoiceId,
           settings,
         },
-      });
-      toast.success(`Scene ${sceneIndex} voiceover ready`);
+      }));
       await assetsQ.refetch();
     } catch (e: any) {
       toast.error(e?.message ?? "Generation failed");
@@ -282,9 +283,13 @@ export function VoiceoverStudio() {
     if (!projectId) return;
     try {
       setGeneratingAll(true);
-      for (const s of scenes) {
-        const text = (sceneText[s.index] ?? "").trim();
-        if (!text) continue;
+      const todo = scenes.filter((s) => (sceneText[s.index] ?? "").trim());
+      const items = todo.map((s) => ({ label: `Scene ${s.index}`, state: "waiting" as const }));
+      await gen.run({ slot: "all", title: "Your voiceovers", stage: "Recording your voiceovers…", expectedSeconds: 20 * Math.max(1, todo.length), doneLabel: "Your voiceovers are ready", paid: true, items, resultSelector: "#vo-scenes" }, async (ctx) => {
+      for (let k = 0; k < todo.length; k++) {
+        const s = todo[k]; const text = (sceneText[s.index] ?? "").trim();
+        ctx.setItems(items.map((it, i) => ({ ...it, state: i < k ? "done" : i === k ? "running" : "waiting" })));
+        ctx.setStage(`Recording scene ${s.index} of ${todo.length}…`);
         await genFn({
           data: {
             projectId,
@@ -295,7 +300,7 @@ export function VoiceoverStudio() {
           },
         });
       }
-      toast.success("All voiceovers generated");
+      });
       await assetsQ.refetch();
     } catch (e: any) {
       toast.error(e?.message ?? "Batch generation failed");
@@ -363,14 +368,11 @@ export function VoiceoverStudio() {
           disabled={generatingAll || !scenes.length}
           className="gradient-accent text-white"
         >
-          {generatingAll ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
+          <Sparkles className="h-4 w-4" />
           Generate all
         </Button>
       </div>
+      {gen.ring("all", false)}
 
       <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
         {/* ---------- Voice catalog + settings ---------- */}
@@ -464,7 +466,7 @@ export function VoiceoverStudio() {
         </aside>
 
         {/* ---------- Scenes ---------- */}
-        <section className="space-y-3">
+        <section id="vo-scenes" className="space-y-3">
           {scenes.length === 0 ? (
             <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
               This project doesn't have a reel script yet. Generate the reel
@@ -539,14 +541,11 @@ export function VoiceoverStudio() {
                       onClick={() => handleGenerateScene(s.index)}
                       disabled={generating === s.index}
                     >
-                      {generating === s.index ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Wand2 className="h-3.5 w-3.5" />
-                      )}
+                      <Wand2 className="h-3.5 w-3.5" />
                       {asset ? "Regenerate" : "Generate"}
                     </Button>
                   </div>
+                  {gen.ring(`scene-${s.index}`)}
                 </div>
               );
             })

@@ -1,3 +1,5 @@
+import { GenerationProgress } from "./GenerationProgress";
+import { useGenJob } from "./useGenJob";
 import { QualityNote } from "@/components/QualityNote";
 import { VideoChangeList } from './VideoChangeList';
 import { observedVideoChanges, videoChangeBrief } from '@/lib/video-changes';
@@ -113,6 +115,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
   const saveDirFn = useServerFn(saveVisualDirection);
   const submitVideoFn = useServerFn(submitVideoJob);
   const pollVideoFn = useServerFn(pollVideoJob);
+  const gen = useGenJob();
   const creditsQc = useQueryClient();
 
   const [angle, setAngle] = useState("");
@@ -264,22 +267,20 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       return;
     }
     setBusy(true);
-    setScriptNotice('Writing your script from the saved source…');
+    setScriptNotice('');
     try {
-      const r: any = await genFn({
+      const r: any = await gen.run({ slot: "script", title: "Your script", stage: "Writing your script from the saved source…", expectedSeconds: 35, doneLabel: "Your script is ready", paid: true }, () => genFn({
         data: {
           projectId,
           angle: `${videoChangeBrief(observedVideoChanges({dna_analysis:project.data?.dna_analysis}),videoChanges)}\n${angle}`.slice(0,500) || undefined,
           settings: { format, duration, style, pace, speechMode },
           visualDirection: direction,
         },
-      });
+      }));
       setDoc(r.reel);
       setScriptNotice('Script ready — your spoken words are saved below.');
-      toast.success("Script ready");
     } catch (e: any) {
-      setScriptNotice(e?.message || 'Script writing failed. Try again.');
-      toast.error(e?.message || "Generation failed");
+
     } finally {
       setBusy(false);
     }
@@ -317,9 +318,9 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
   const handleVeoRegen = async () => {
     setVeoBusy(true);
     try {
-      const r: any = await veoFn({ data: { projectId, instruction: veoInstruction || undefined } });
+      const r: any = await gen.run({ slot: "veo", title: "Your video prompt", stage: "Rewriting your video prompt…", expectedSeconds: 15, doneLabel: "Your video prompt is updated" }, () => veoFn({ data: { projectId, instruction: veoInstruction || undefined } }));
       setDoc((d) => (d ? { ...d, veoPrompt: r.veoPrompt } : d));
-      toast.success("VEO 3 prompt updated");
+
     } catch (e: any) {
       toast.error(e?.message || "Regeneration failed");
     } finally {
@@ -333,6 +334,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
     setVideoError(null);
     setQueuePos(null);
     try {
+      await gen.run({ slot: "video", title: "Your video clip", stage: "Sending your scene to the animator…", expectedSeconds: 90, doneLabel: "Your video is ready — saved to your content library", paid: true, long: true, resultSelector: "#reel-video" }, async (ctx) => {
       const speaks=(speechMode??project.data?.user_preferences?.speechMode??'voiceover')!=='silent';
       const lines=doc?.scenes?.map(s=>s.voiceover).filter(Boolean).join(' ') || doc?.hook?.text || angle;
       const spoken=lines?.split(/\s+/).slice(0,Math.floor(videoDuration*2.5)).join(' ');
@@ -352,27 +354,26 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
       });
       creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
       creditsQc.invalidateQueries({ queryKey: ["video-credit-balance"] });
-      toast.success(imageUrl ? "Animating your source image — ~30-90s." : "Video job queued. ~30-90s.");
+      ctx.setStage(imageUrl ? "Animating your source image…" : "Animating your scene…");
       const started = Date.now();
       while (Date.now() - started < 5 * 60 * 1000) {
         await new Promise((r) => setTimeout(r, 4000));
         const s: any = await pollVideoFn({ data: { attemptId, requestId, modelSlug, statusUrl, responseUrl } });
         setVideoStatus(s.status);
         setQueuePos(s.queuePosition ?? null);
+        if (s.status === "IN_QUEUE") ctx.setStage(`Waiting in line${s.queuePosition != null ? ` (#${s.queuePosition})` : ""}…`); else if (s.status === "IN_PROGRESS") ctx.setStage("Animating your scene…");
+        if (s.status === "FAILED") throw new Error(s.error || "The video service could not make this clip.");
         if (s.status === "COMPLETED") {
           setVideoUrl(s.videoUrl);
           if(projectId)await updateProjectFn({data:{id:projectId,patch:{project_data:{...(project.data?.project_data??{}),...(doc??{}),videoUrl:s.videoUrl,visualDirection:direction,stylePreset,audioPlan,mixProfile},status:'complete'}}});
           window.dispatchEvent(new Event('content-generated'));
-          toast.success("Video ready — saved to your content library", { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
           return;
         }
       }
-      setVideoStatus("FAILED");
-      setVideoError("Timed out waiting for the video. Try again.");
+      throw new Error("Timed out waiting for the video. Try again.");
+      });
     } catch (e: any) {
       setVideoStatus("FAILED");
-      setVideoError(e?.message || "Generation failed");
-      toast.error(e?.message || "Generation failed");
       creditsQc.invalidateQueries({ queryKey: CREDIT_BALANCE_KEY });
     }
   }
@@ -592,6 +593,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         <section className="min-w-0">
           <div className="min-h-[400px] rounded-2xl border border-border bg-card p-5 lg:p-6">
             {scriptNotice && <p role="status" className="mb-4 text-sm text-foreground">{scriptNotice}</p>}
+            {gen.ring("script", false)}
             {step === "direction" && !direction && <Button onClick={async () => { if (!projectId) return; setBusy(true); try { const d = await deriveFn({data:{projectId}}); setDirection(d.visualDirection); } catch(e) {toast.error((e as Error).message);} finally {setBusy(false);} }} disabled={busy}>Read visual direction · no plan credit charge</Button>}
             {step === "direction" && direction && (
               <DirectionStep
@@ -653,7 +655,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
                 useSourceImage={useSourceImage} setUseSourceImage={setUseSourceImage}
                 sourceThumb={sourceThumb}
                 veoInstruction={veoInstruction} setVeoInstruction={setVeoInstruction}
-                veoBusy={veoBusy} onVeoRegen={handleVeoRegen}
+                veoBusy={veoBusy} onVeoRegen={handleVeoRegen} veoRing={gen.ring("veo")} videoRing={gen.ring("video", false)}
                 onGenerate={handleGenerateVideo}
                 videoStatus={videoStatus} videoUrl={videoUrl} videoError={videoError}
                 onPost={() => setPostOpen(true)}
@@ -790,11 +792,10 @@ function DirectionStep({
   editingDir: boolean;
   setEditingDir: (v: boolean | ((p: boolean) => boolean)) => void;
 }) {
+  const [t0] = useState(() => Date.now());
   if (!direction) {
     return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Reading source visual DNA…
-      </div>
+      <div className="py-12"><GenerationProgress stage="Reading the source's look…" startedAt={t0} expectedSeconds={20}/></div>
     );
   }
   return (
@@ -977,7 +978,7 @@ function VideoStep({
   format, setFormat, videoAudio, setVideoAudio,
   useSourceImage, setUseSourceImage, sourceThumb,
   veoInstruction, setVeoInstruction, veoBusy, onVeoRegen,
-  onGenerate, videoStatus, videoUrl, videoError, onPost,
+  onGenerate, videoStatus, videoUrl, videoError, onPost, veoRing, videoRing,
 }: any) {
   if (!doc?.veoPrompt) {
     return (
@@ -1090,16 +1091,13 @@ function VideoStep({
           className="mt-1"
         />
         <Button size="sm" variant="outline" className="mt-2" onClick={onVeoRegen} disabled={veoBusy}>
-          {veoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+          <Wand2 className="h-4 w-4" />
           Rewrite prompt · no plan credit charge
         </Button>
+        {veoRing}
       </div>
 
-      {videoError && (
-        <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-          {videoError}
-        </div>
-      )}
+      {videoRing}
 
       {videoUrl && (
         <div className="space-y-2 border-t border-border pt-4">

@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
@@ -20,6 +21,7 @@ function PublishPanel({ wizard, title, icon, trailing, children, tone }: React.C
 const blank = (): PlatformCopy => ({ caption: '', description: '', hashtags: '', title: '' });
 export function ReviewAndPublish({ projectId, production, wizard = false }: { projectId: string; production?: React.ReactNode; wizard?: boolean }) {
   const load = useServerFn(getLibraryContent), save = useServerFn(saveLibraryContent), pack = useServerFn(generateCaptionPack), publish = useServerFn(publishContent), poll = useServerFn(pollPublishingStatus), progressFn = useServerFn(copyRequestProgress);
+  const gen = useGenJob();
   const qc = useQueryClient(), navigate = useNavigate();
   const { data, error } = useQuery({ queryKey: ['library-content', projectId], queryFn: () => load({ data: { id: projectId } }) });
   const [copies, setCopies] = useState<Record<string, PlatformCopy>>({}), [selected, setSelected] = useState<PublishingPlatform[]>([]), [link, setLink] = useState('');
@@ -69,14 +71,15 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
   const generate = () => run('captions', async () => {
     await save({ data: { id: projectId, wrapup } });
     const requestId = crypto.randomUUID(); setProgress('Writing your captions…');
-    const timer = setInterval(() => { progressFn({ data: { requestId } }).then(r => setProgress(r.stage)).catch(() => {}); }, 2000);
+    let setStage: (x: string) => void = () => {};
+    const timer = setInterval(() => { progressFn({ data: { requestId } }).then(r => { setProgress(r.stage); setStage(r.stage); }).catch(() => {}); }, 2000);
     try {
-      const r: any = await pack({ data: { projectId, platforms: shown, requestId } });
+      const r: any = await gen.run({ slot: 'captions', title: 'Your captions', stage: 'Writing your captions…', expectedSeconds: 30, doneLabel: 'Your platform captions are ready', paid: true, items: shown.map(p => ({ label: String(p), state: 'running' as const })), resultSelector: '#caption-cards' }, (ctx) => { setStage = ctx.setStage; return pack({ data: { projectId, platforms: shown, requestId } }); });
       const next = { ...copies };
       for (const p of r.platforms) next[p.platform] = { caption: p.caption, description: p.description, title: p.title, hashtags: (p.hashtags ?? []).join(' ') };
       setCopies(next);
       await save({ data: { id: projectId, wrapup: { ...wrapup, copies: next } } });
-      toast.success(r.cached ? 'Saved captions loaded — no charge' : 'Your platform captions are ready');
+      if (r.cached) toast.info('Saved captions loaded — no charge');
     } finally { clearInterval(timer); }
   });
   const submit = (scheduled: boolean) => run('publishing', async () => {
@@ -116,8 +119,8 @@ export function ReviewAndPublish({ projectId, production, wizard = false }: { pr
       <div className="flex flex-wrap gap-3">{platforms.map(p=><Button key={p} variant={selected.includes(p)?'secondary':'outline'} aria-pressed={selected.includes(p)} aria-label={`Choose ${PLATFORM_META[p].label}`} onClick={()=>setSelected(s=>s.includes(p)?s.filter(x=>x!==p):[...s,p])}>{PLATFORM_META[p].label}</Button>)}</div>
       {!shown.length && <p className="text-review-muted">Choose your platforms first. Then write their captions with one priced action.</p>}
       <Button variant="outline" onClick={async () => { await save({ data: { id: projectId, wrapup } }); await navigate({ to: '/settings', search: { section: 'social-accounts' } }); }}>Connect an account</Button>
-      <Button variant="outline" disabled={!!busy || !shown.length} onClick={generate}>{busy === 'captions' ? <Loader2 className="size-4 animate-spin"/> : <Sparkles className="size-4"/>}{busy === 'captions' ? progress : `${Object.keys(copies).length ? 'Regenerate' : 'Generate'} caption pack (${ACTION_COSTS.captionPack} plan credit)`}</Button>
-      <div className="space-y-6">{shown.filter(p=>Boolean(copies[p]?.caption || copies[p]?.description)).map(p => {
+      <Button variant="outline" disabled={!!busy || !shown.length} onClick={generate}><Sparkles className="size-4"/>{busy === 'captions' ? 'Writing your captions…' : `${Object.keys(copies).length ? 'Regenerate' : 'Generate'} caption pack (${ACTION_COSTS.captionPack} plan credit)`}</Button>{gen.ring('captions', false)}
+      <div id="caption-cards" className="space-y-6">{shown.filter(p=>Boolean(copies[p]?.caption || copies[p]?.description)).map(p => {
         const c = copies[p] ?? blank(), description = p === 'youtube' || p === 'pinterest', limit = publishingLimit(p, contentType), length = finalCaption(p, c, link).length, caps = PLATFORM_CAPABILITY_MATRIX[p];
         return <PublishPanel wizard={wizard} key={p} title={PLATFORM_META[p].label} icon={Globe} trailing={wizard ? <span className="wizard-score">{length}{limit ? ` / ${limit}` : ''} chars</span> : undefined}>
           <div className="space-y-3">

@@ -90,7 +90,16 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
         throw await safeGatewayError(upstream);
       }
       await supabaseAdmin.from('scene_attempts').update({ status: 'in_progress' }).eq('id', claim.attempt.id);
-      return new Response(upstream.body, { status: upstream.status, headers: { 'Content-Type': upstream.headers.get('Content-Type') ?? 'text/event-stream', 'Cache-Control': 'no-store', 'X-Studio-Attempt': claim.attempt.id, 'X-Outfit-Fallback': fallback ? '1' : '0', 'Access-Control-Expose-Headers': 'X-Outfit-Fallback' } });
+      // Tee the stream: the browser gets live previews while the server saves the final still itself, so a
+      // refresh mid-generation is collected rather than failed and refunded.
+      let body = upstream.body;
+      if (body) {
+        const [toClient, toServer] = body.tee(); body = toClient;
+        const { collectStillFromStream } = await import('@/lib/inspiration-still.server');
+        const job = collectStillFromStream(supabaseAdmin, claim.attempt.id, toServer).catch(() => {});
+        try { const cf: any = await import(/* @vite-ignore */ 'cloudflare:workers'); cf?.waitUntil?.(job); } catch { /* dev server: the promise still runs */ }
+      }
+      return new Response(body, { status: upstream.status, headers: { 'Content-Type': upstream.headers.get('Content-Type') ?? 'text/event-stream', 'Cache-Control': 'no-store', 'X-Studio-Attempt': claim.attempt.id, 'X-Outfit-Fallback': fallback ? '1' : '0', 'Access-Control-Expose-Headers': 'X-Outfit-Fallback' } });
     } catch (e) {
       await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: claim.attempt.id, p_reason: (e as Error).message });
       const status = (e as any).status ?? 500;

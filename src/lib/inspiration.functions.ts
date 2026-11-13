@@ -209,21 +209,10 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     if (data.error || !data.base64) { await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: a.id, p_reason: data.error ?? 'Still generation incomplete.' }); return { ok: false }; }
     const bytes = Uint8Array.from(atob(data.base64), c => c.charCodeAt(0));
-    const { imageSize } = await import('./clone-rules'); const dims = imageSize(bytes);
-    if (!dims || dims.width >= dims.height || bytes.length > 10 * 1024 * 1024) {
-      await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: a.id, p_reason: 'Still must be a portrait image under 10MB.' }); throw new Error('Still was not a valid portrait image. Credits refunded.');
-    }
-    const path = `${context.userId}/${a.project_id}/stills/${a.id}.png`;
-    const { error: up } = await supabaseAdmin.storage.from('video-inspiration').upload(path, bytes, { contentType: 'image/png', upsert: true }); if (up) throw new Error(up.message);
-    await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null }).eq('id', a.id);
-    if ((a as any).frame === 'last') {
-      const { error } = await supabaseAdmin.from('storyboard_scenes').update({ end_still_path: path }).eq('id', a.scene_id);
-      if (error) throw new Error(error.message);
-      return { ok: true, outfitFallback: (a as any).outfit_fallback === true };
-    }
-    const { error } = await supabaseAdmin.from('storyboard_scenes').update({ still_path: path, object_checks: [], approved_at: null, approved_revision: null, status: 'still_ready' }).eq('id', a.scene_id).eq('revision', a.scene_revision);
-    if (error) throw new Error(error.message);
-    return { ok: true, outfitFallback: (a as any).outfit_fallback === true };
+    const { saveInspirationStill } = await import('./inspiration-still.server');
+    const r = await saveInspirationStill(supabaseAdmin, a, bytes);
+    if (!r.ok) throw new Error(r.error ?? 'Still could not be saved.');
+    return { ok: true, outfitFallback: r.outfitFallback };
   });
 const WrittenScene = z.object({
   environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),

@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -23,6 +24,7 @@ export function EnhanceButton({
   label = "AI Magic",
 }: Props) {
   const enhanceFn = useServerFn(enhancePrompt);
+  const gen = useGenJob();
   const [busy, setBusy] = useState(false);
   const [suggestion, setSuggestion] = useState<string | null>(null);
 
@@ -30,11 +32,11 @@ export function EnhanceButton({
     setBusy(true);
     setSuggestion(null);
     try {
-      const res: any = await enhanceFn({ data: { prompt: value, kind, context } });
+      const res: any = await gen.run({ slot: "enhance", title: "AI Magic", stage: "Rewriting with AI Magic…", expectedSeconds: 10, doneLabel: "Your rewrite is ready" }, () => enhanceFn({ data: { prompt: value, kind, context } }));
       if (!res?.enhanced) throw new Error("No suggestion returned");
       setSuggestion(res.enhanced);
     } catch (e: any) {
-      toast.error(e?.message || "Couldn't enhance prompt");
+      
     } finally {
       setBusy(false);
     }
@@ -57,14 +59,11 @@ export function EnhanceButton({
         title="Enhance this prompt 10x with AI"
         className="border-accent-primary/40 bg-accent-primary/5 text-accent-primary hover:bg-accent-primary/10"
       >
-        {busy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Wand2 className="h-3.5 w-3.5" />
-        )}
+        <Wand2 className="h-3.5 w-3.5" />
         {size !== "icon" && <span className="ml-1">{label}</span>}
       </Button>
 
+      {gen.ring("enhance")}
       {suggestion && (
         <div className="mt-2 rounded-lg border border-accent-primary/40 bg-accent-primary/5 p-3">
           <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-accent-primary">
