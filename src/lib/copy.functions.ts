@@ -21,6 +21,9 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   const artifact = { title:p.title, hook:made.hook, scenes:made.scenes, caption:made.caption, script:made.audioPlan?.script, changes:made.videoChanges };
   const {data:film}=await context.supabase.from('video_inspiration_projects').select('id,review_settings,observation_notes').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
   if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);Object.assign(artifact,{direction:film.observation_notes,review:film.review_settings});}
+  const {data:draft}=await context.supabase.from('creation_drafts').select('state').eq('user_id',context.userId).contains('state',{projectId:p.id}).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+  const production=(draft?.state as any)?.production;
+  if(production)Object.assign(artifact,{direction:production.remixDirection,instructions:production.remixInstructions,script:production.assembly?.script??artifact.script});
   const instruction = `${data.instruction ?? ''}\nWrite about the content ACTUALLY MADE, not the original subject. Ground captions in this artifact; preserve the source hook pattern and creator voice, not unrelated facts. Artifact data: ${JSON.stringify(artifact).slice(0,9000)}`;
   const platforms=[...new Set(data.platforms)].sort();
   const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,instruction,progress));
@@ -38,9 +41,11 @@ export const rewritePublishCard=createServerFn({method:'POST'}).middleware([requ
     const {meteredCopy}=await import('./copy-meter.server');
     const ctx=p.analysis_id?await buildCopyContext(p.analysis_id,context.userId,data.platform,p.user_preferences):{voice:p.user_preferences,source:{}};
     const {data:film}=await context.supabase.from('video_inspiration_projects').select('review_settings,observation_notes').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+    const {data:draft}=await context.supabase.from('creation_drafts').select('state').eq('user_id',context.userId).contains('state',{projectId:p.id}).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+    const production=(draft?.state as any)?.production;
     return meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:'caption',key:{card:data,context:ctx},cost:ACTION_COSTS.captionPack,reason:'debit_caption',requestId:data.requestId},async progress=>{
       await progress('Rewriting your selected card…');
-      const r=await copyJson(z.object({text:z.string()}),`${contextPrompt(ctx)}\nRewrite ONLY the ${data.field} card for ${data.platform}. Limit: ${cardLimit(data.platform,data.field)??'concise relevant copy'}. Hashtags: space separated tags only. Ground in the newly made artifact, direction and script, not the original subject. Return JSON {"text":"..."}.\nArtifact data: ${JSON.stringify({project:p.project_data,film}).slice(0,12000)}\nCurrent card data: ${JSON.stringify(data.text)}\nUser editing instruction: ${data.instruction}`,undefined,2200);
+      const r=await copyJson(z.object({text:z.string()}),`${contextPrompt(ctx)}\nRewrite ONLY the ${data.field} card for ${data.platform}. Limit: ${cardLimit(data.platform,data.field)??'concise relevant copy'}. Hashtags: space separated tags only. Ground in the newly made artifact, direction and script, not the original subject. Return JSON {"text":"..."}.\nArtifact data: ${JSON.stringify({project:p.project_data,film,direction:production?.remixDirection,instructions:production?.remixInstructions,script:production?.assembly?.script}).slice(0,12000)}\nCurrent card data: ${JSON.stringify(data.text)}\nUser editing instruction: ${data.instruction}`,undefined,2200);
       return {text:fitCard(data.platform,data.field,r.value.text),usage:r.usage};
     });
   });
