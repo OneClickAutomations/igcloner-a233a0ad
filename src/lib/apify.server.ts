@@ -24,6 +24,15 @@ export async function resolveApifyToken(
   return process.env.APIFY_TOKEN ?? null;
 }
 
+/** Cheap, read-only credential check before taking analysis credits. */
+export async function checkApifyToken(token: string): Promise<number> {
+  const res = await fetch("https://api.apify.com/v2/users/me", {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(15_000),
+  });
+  return res.status;
+}
+
 /** Run an actor synchronously and return its dataset items. */
 export async function apifyRun(actor: string, input: unknown, token: string): Promise<any[]> {
   if (!token) throw new Error("APIFY_TOKEN not configured");
