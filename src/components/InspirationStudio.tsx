@@ -23,6 +23,7 @@ import { CREDIT_BALANCE_KEY } from '@/lib/credits';
 import { STUDIO_MODELS, type SceneDraft, type ObjectCheck, priceFromWorkspaceCost } from '@/lib/inspiration';
 import { getInspirationStudio, createInspirationProject, saveInspirationScene, manageInspirationReference, approveInspirationStill, inspirationQuote, animateInspirationScene, recoverInspirationClips, finishInspirationStill, writeInspirationStoryboard } from '@/lib/inspiration.functions';
 import { saveCreationDraft } from '@/lib/creation-drafts.functions';
+import { checkStillLook, setLookCorrection } from '@/lib/keyframes.functions';
 import { EMPTY_CREATION } from '@/lib/creation-draft';
 
 export const inspirationQuery = (projectId?: string) => queryOptions({ queryKey: ['inspiration-studio', projectId], queryFn: () => getInspirationStudio({ data: { projectId } }) });
@@ -36,6 +37,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
   const navigate = useNavigate(); const qc = useQueryClient();
   const saveCreation=useServerFn(saveCreationDraft);
+  const lookCheck=useServerFn(checkStillLook), correct=useServerFn(setLookCorrection);
   const reviewAction=async(publish:boolean)=>{
     if(!data.selected)return;
     const tasks:Promise<unknown>[]=[];window.dispatchEvent(new CustomEvent('creation-save',{detail:{tasks}}));await Promise.all(tasks);
@@ -81,7 +83,8 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
       try {
         await streamImage('/api/public/inspiration-still', { sceneId: scene.id, requestKey, revision: q.revision, confirmedCredits: q.customerCredits, frame }, (url, final) => { if (frame !== 'last') setPartial(p => ({ ...p, [scene.id]: { url, final } })); if (final) image = url.split(',')[1]; }, undefined, { Authorization: `Bearer ${session.session.access_token}` });
         const done = await finish({ data: { requestKey, base64: image } });
-        if (done?.outfitFallback) toast.info('The image service declined the source outfit, so this still uses fitted athletic wear in the same colours.');
+        if (done?.outfitFallback) toast.info(`The image service declined the source outfit, so this still uses ${done.outfitUsed || 'fitted athletic wear in the same colours'}.`);
+        if (frame !== 'last') lookCheck({ data: { sceneId: scene.id } }).then(r => { if (r.drifts.length) toast.warning(r.drifts[0]); return refresh(); }).catch(() => {});
         clearPending(pid, requestKey);
       } catch(e) {
         // Leaving or refreshing the page aborts the stream; the server keeps collecting the still, so don't fail it.
@@ -215,6 +218,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
           {(s.scene_input as any)?.keyframes?.last && (!wizardStage || wizardStage==='make') && <Button size="sm" variant="outline" disabled={busy} onClick={() => run(async () => setConfirmation({ scene: s, operation: 'still', frame: 'last', q: await quote({ data: { sceneId: s.id, model, operation: 'still' } }) }))}><ImagePlus className="size-3"/> {(s as any).endPreview ? 'Redo end frame' : 'Recreate end frame'}{wizardStage ? ` · ${data.stillWorkspaceQuote===null?'view quote':priceFromWorkspaceCost(data.stillWorkspaceQuote,data.usdPerWorkspaceCredit)} plan credits` : ''}</Button>}
           {!s.approved_at && s.preview && (!wizardStage || wizardStage==='make') && <Button size="sm" disabled={busy} onClick={() => run(() => approve({ data: { sceneId: s.id, checks: checked.map(c => ({ ...c, present: c.present === true })) } }))}><Check className="size-3"/> Approve still</Button>}
           {s.approved_at && (!wizardStage || wizardStage==='make') && <Button size="sm" variant={wizardStage?'outline':'default'} disabled={busy} onClick={() => run(async () => setConfirmation({ scene: s, operation: 'animate', q: await quote({ data: { sceneId: s.id, model, operation: 'animate' } }) }))}><Play className="size-3"/> Quote animation{wizardStage ? ` · ${videoCreditsForWorkspace(s.duration*(STUDIO_PRICING.rates[model]??0))} video credits` : ''}</Button>}</div>
+          {(()=>{const lc=(s as any).look_check;if(!lc?.checked||!lc.drifts?.length||lc.stillPath!==s.still_path||(!wizardStage||wizardStage==='make')===false)return null;return <div role="status" className="rounded-md border border-status-warning/40 bg-status-warning/10 p-3 text-sm"><p className="flex gap-2 font-semibold"><AlertTriangle className="size-4 shrink-0 text-status-warning"/>Look check: the still drifted from the source style</p><ul className="mt-1 list-disc pl-6 text-xs">{lc.drifts.map((d:string)=><li key={d}>{d}</li>)}</ul><Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={()=>run(async()=>{await correct({data:{sceneId:s.id,correction:`${lc.drifts.join(' ')} Fix this: follow the requested skin depth, undertone, build, hair and outfit colour exactly.`}});setConfirmation({scene:s,operation:'still',q:await quote({data:{sceneId:s.id,model,operation:'still'}})});})}><ImagePlus className="size-3"/>Redo with correction · {data.stillWorkspaceQuote===null?'view quote':priceFromWorkspaceCost(data.stillWorkspaceQuote,data.usdPerWorkspaceCredit)} plan credits</Button><p className="mt-1 text-xs text-muted-foreground">You can still approve this still as it is.</p></div>;})()}
           {clip?.failure_reason && <p className="break-words text-xs text-destructive">{clip.failure_reason}</p>}</div>
         </article>;
       })}</div>
