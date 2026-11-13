@@ -43,7 +43,7 @@ function detectPostType(url: string): string | null {
   return c.kind;
 }
 
-export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, onUrlChange, onAnalysisReady }: { embedded?: boolean; initialUrl?: string; sourceAnalysisId?: string; onUrlChange?: (url: string) => void; onAnalysisReady?: (id: string) => void } = {}) {
+export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, onUrlChange, onAnalysisReady, onAnalysisStarted }: { embedded?: boolean; initialUrl?: string; sourceAnalysisId?: string; onUrlChange?: (url: string) => void; onAnalysisReady?: (id: string) => void; onAnalysisStarted?: (id:string)=>Promise<void> } = {}) {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
@@ -78,6 +78,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const [savedBadge, setSavedBadge] = useState<string | null>(null);
 
   const [insufficient, setInsufficient] = useState<InsufficientCreditsInfo | null>(null);
+  const [verificationStarting, setVerificationStarting] = useState(false);
 
   const [dnaOpen, setDnaOpen] = useState(false);
   const [analysisProjects, setAnalysisProjects] = useState<any[]>([]);
@@ -343,7 +344,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
-            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><h2 className="text-xl font-bold">Verified video analysis</h2><p className="mt-2 text-review-muted">{dna?.videoVerification ? 'Two separate video passes checked the final shot list; the plain-English breakdown uses the corrected observations.' : 'This saved analysis predates the two-pass check. You can keep using it, or check the saved video without scraping again.'}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <Button className="mt-4 h-auto min-h-11 whitespace-normal" onClick={async()=>{try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}}}><Sparkles className="size-4 shrink-0"/>Analyse and verify saved video · {ACTION_COSTS.analysis} plan credits</Button>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
+            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><h2 className="text-xl font-bold">Verified video analysis</h2><p className="mt-2 text-review-muted">{dna?.videoVerification ? 'Two separate video passes checked the final shot list; the plain-English breakdown uses the corrected observations.' : 'This saved analysis predates the two-pass check. You can keep using it, or check the saved video without scraping again.'}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <Button disabled={verificationStarting} className="mt-4 h-auto min-h-11 whitespace-normal" onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}><Sparkles className="size-4 shrink-0"/>{verificationStarting?'Starting saved-video check…':`Analyse and verify saved video · ${ACTION_COSTS.analysis} plan credits`}</Button>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always
