@@ -372,6 +372,7 @@ export function VoiceoverStudio() {
           Generate all
         </Button>
       </div>
+      {gen.ring("all", false)}
 
       <div className="grid gap-6 lg:grid-cols-[360px,1fr]">
         {/* ---------- Voice catalog + settings ---------- */}
@@ -465,7 +466,7 @@ export function VoiceoverStudio() {
         </aside>
 
         {/* ---------- Scenes ---------- */}
-        <section className="space-y-3">
+        <section id="vo-scenes" className="space-y-3">
           {scenes.length === 0 ? (
             <div className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
               This project doesn't have a reel script yet. Generate the reel
