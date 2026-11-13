@@ -198,10 +198,10 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      const res: any = await generateFn({ data: { projectId, slideCount, angle: angle || undefined } });
+      const res: any = await gen.run({ slot: "carousel", title: "Your carousel", stage: `Writing ${slideCount} slides…`, expectedSeconds: 40, doneLabel: "Your carousel is ready", paid: true }, () => generateFn({ data: { projectId, slideCount, angle: angle || undefined } }));
       setDoc(res.carousel as CarouselDoc);
       setActiveIdx(1);
-      toast.success("Carousel generated");
+
     } catch (e: any) {
       toast.error(e?.message || "Generation failed");
     } finally {
@@ -213,13 +213,13 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     if (!active) return;
     setRegenBusy(active.index);
     try {
-      const res: any = await regenFn({
+      const res: any = await gen.run({ slot: "slide-copy", title: `Slide ${active.index}`, stage: `Rewriting slide ${active.index}…`, expectedSeconds: 15, doneLabel: `Slide ${active.index} updated`, paid: true }, () => regenFn({
         data: { projectId, slideIndex: active.index, instruction: regenInstr || undefined },
-      });
+      }));
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
       if (updated) setDoc(updated);
       setRegenInstr("");
-      toast.success(`Slide ${active.index} updated`);
+
     } catch (e: any) {
       toast.error(e?.message || "Regenerate failed");
     } finally {
@@ -232,11 +232,11 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     setImgBusy(active.index);
     try {
       if(doc) await saveFn({data:{projectId,carousel:doc}});
-      const res: any = await generateVerifiedImage(active.index);
+      const res: any = await gen.run({ slot: "slide-image", title: `Slide ${active.index} image`, stage: `Designing slide ${active.index}…`, expectedSeconds: 45, doneLabel: `Slide ${active.index} saved to your content library`, paid: true, resultSelector: "#slide-image" }, () => generateVerifiedImage(active.index));
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
       if (updated) setDoc(updated);
       if(res.needsLook)toast.warning(`Slide ${active.index} needs a look — credit refunded`);
-      else toast.success(`Slide ${active.index} saved to your content library`, { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
+
       window.dispatchEvent(new Event('content-generated'));
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
@@ -261,7 +261,10 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     await saveFn({data:{projectId,carousel:doc}});
     setBatchProgress({ done: 0, total: targets.length });
     let failures = 0;
+    const items = targets.map((t) => ({ label: `Slide ${t.index}`, state: "waiting" as "waiting" | "running" | "done" | "failed" }));
+    await gen.run({ slot: "batch", title: "Your slide images", stage: "Designing your slides…", expectedSeconds: 45 * targets.length, doneLabel: `Your slide images are ready`, paid: true, items, long: true }, async (ctx) => {
     for (let i = 0; i < targets.length; i++) {
+      items[i].state = "running"; ctx.setItems([...items]); ctx.setStage(`Designing slide ${i + 1} of ${targets.length}…`);
       const slide = targets[i];
       setImgBusy(slide.index);
       setActiveIdx(slide.index);
@@ -269,20 +272,22 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
         const res: any = await generateVerifiedImage(slide.index);
         const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
         if (updated) setDoc(updated);
-        if(res.needsLook){failures++;toast.warning(`Slide ${slide.index} text needs a look — credit refunded`);}
+        if(res.needsLook){failures++;items[i].state="failed";toast.warning(`Slide ${slide.index} text needs a look — credit refunded`);} else items[i].state="done";
       } catch (e: any) {
-        failures++;
+        failures++; items[i].state = "failed";
         toast.error(`Slide ${slide.index}: ${e?.message || "failed"}`);
       } finally {
         setBatchProgress({ done: i + 1, total: targets.length });
         creditQueryClient.invalidateQueries({queryKey:CREDIT_BALANCE_KEY});
+        ctx.setItems([...items]);
       }
     }
+    if (failures === targets.length) throw new Error("No slide images could be made.");
+    }).catch(() => {});
     setImgBusy(null);
     setBatchBusy(false);
     window.dispatchEvent(new Event('content-generated'));
-    if (failures === 0) toast.success(`All ${targets.length} slides saved to your content library`, { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
-    else toast.warning(`${targets.length - failures}/${targets.length} slides generated. Retry the failed ones.`);
+    if (failures > 0) toast.warning(`${targets.length - failures}/${targets.length} slides generated. Retry the failed ones.`);
     setTimeout(() => setBatchProgress(null), 4000);
   };
 
@@ -441,9 +446,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
             </div>
             <Button onClick={handleGenerate} disabled={generating} className="w-full" size="lg">
               {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Generating…
-                </>
+                <>Generating…</>
               ) : (
                 <>
                   <Wand2 className="h-4 w-4" /> Generate carousel · no plan credit charge
@@ -480,7 +483,6 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
             >
               {batchBusy ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   {batchProgress ? `Generating ${batchProgress.done}/${batchProgress.total}…` : "Generating…"}
                 </>
               ) : (
@@ -490,14 +492,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                 </>
               )}
             </Button>
-            {batchProgress && (
-              <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full bg-accent-primary transition-all"
-                  style={{ width: `${(batchProgress.done / batchProgress.total) * 100}%` }}
-                />
-              </div>
-            )}
+            {gen.ring("batch")}
             <QualityNote report={(doc as any).quality}/>
             <div className="space-y-2">
               {doc.slides.map((s) => (
@@ -642,11 +637,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       context={`Slide ${active.index} — ${active.headline}\n${active.body}`}
                     />
                     <Button onClick={handleRegen} disabled={regenBusy === active.index}>
-                      {regenBusy === active.index ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Wand2 className="h-3.5 w-3.5" />
-                      )}
+                      <Wand2 className="h-3.5 w-3.5" />
                       Regenerate · no plan credit charge
                     </Button>
                   </div>
@@ -689,11 +680,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       disabled={imgBusy === active.index}
                       className="gradient-accent text-white border-0 hover:opacity-95"
                     >
-                      {imgBusy === active.index ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <ImageIcon className="h-3.5 w-3.5" />
-                      )}
+                      <ImageIcon className="h-3.5 w-3.5" />
                       {active.imageUrl ? "Regenerate image" : "Generate slide image"} · 1 plan credit
                     </Button>
                   </div>
@@ -798,7 +785,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
         <div className={wizardStage ? 'mt-6 border-t border-border py-3' : 'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80'}>
           <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              <Save className="h-3.5 w-3.5" />
               Save
             </Button>
             <Button variant="outline" size="sm" onClick={() => copy(designBriefText(doc), "Brief copied")}>
