@@ -64,7 +64,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   };
   const completed=data.attempts.filter(a=>a.operation==='animate'&&a.status==='completed');
   const renderQuote=async()=>{
-    const options=AssemblyOptions.parse({...settings,...(!addVoice?{voiceoverPath:undefined,voiceoverDuration:undefined}:{}),...(!addMusic?{musicPath:undefined}:{}),captions:addVoice&&srt.trim()?parseSrt(srt):[]});
+    const options=AssemblyOptions.parse({...settings,...(!addVoice?{voiceoverPath:undefined,voiceoverDuration:undefined}:{}),...(!addMusic?{musicPath:undefined}:{}),captions:srt.trim()?parseSrt(srt):[]});
     const result=await quote({data:{projectId:project.id,options}});setConfirmation({result,options,requestKey:crypto.randomUUID()});
   };
 

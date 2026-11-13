@@ -117,7 +117,7 @@ export function CreateProjectWizard() {
   const close = async (completed = false) => {
     closing.current = true;
     setBusy(true);
-    try { const tasks: Promise<unknown>[]=[]; window.dispatchEvent(new CustomEvent('creation-save',{detail:{tasks}})); await Promise.all(tasks); await persist(step, current.current.state, completed);
+    try { const tasks: Promise<unknown>[]=[]; window.dispatchEvent(new CustomEvent('creation-save',{detail:{tasks}})); await Promise.all(tasks); const snapshot=current.current.state;const saveState=!completed&&(snapshot.format==='film'||snapshot.production?.simpleVideo)?{...snapshot,production:{...snapshot.production,publishPlaceholder:false}}:snapshot;await persist(step, saveState, completed);
       const s=current.current.state;
       if(completed&&s.projectId){
         const to=(s.format==='film'||s.production?.simpleVideo)?'/studio/inspiration':s.copyProject?'/studio/copy':s.format==='image'?'/studio/image':s.format==='carousel'?'/studio/carousel':'/studio/reel';
