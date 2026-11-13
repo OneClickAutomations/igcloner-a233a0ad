@@ -20,7 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { VIDEO_BALANCE_KEY,STUDIO_PRICING,videoCreditsForWorkspace,videoBalanceQuote } from '@/lib/studio-pricing';
 import { VideoPackAvailability } from './VideoPackAvailability';
 import { CREDIT_BALANCE_KEY } from '@/lib/credits';
-import { STUDIO_MODELS, type SceneDraft, type ObjectCheck, priceFromWorkspaceCost } from '@/lib/inspiration';
+import { STUDIO_MODELS, type SceneDraft, type ObjectCheck, priceFromWorkspaceCost, makeStage } from '@/lib/inspiration';
 import { getInspirationStudio, createInspirationProject, saveInspirationScene, manageInspirationReference, approveInspirationStill, inspirationQuote, animateInspirationScene, recoverInspirationClips, finishInspirationStill, writeInspirationStoryboard } from '@/lib/inspiration.functions';
 import { saveCreationDraft } from '@/lib/creation-drafts.functions';
 import { checkStillLook, setLookCorrection } from '@/lib/keyframes.functions';
@@ -33,7 +33,7 @@ const blank: SceneDraft = { environment: 'The same setting as the source shot', 
 const LEGACY_FIXTURE = /pours water|open bottle|into the cup/i;
 const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }, { id: 'setting', label: 'Setting' }] as const;
 
-export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery, onBackToMake }: { onBackToMake?: () => void; projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
+export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery, onBackToMake, onPrepareScenes }: { onPrepareScenes?: () => void; onBackToMake?: () => void; projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
   const navigate = useNavigate(); const qc = useQueryClient();
   const saveCreation=useServerFn(saveCreationDraft);
@@ -181,7 +181,8 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
       const perStill=data.stillWorkspaceQuote===null?null:priceFromWorkspaceCost(data.stillWorkspaceQuote,data.usdPerWorkspaceCredit);
       const toAnimate=data.scenes.filter(x=>x.approved_at&&!data.attempts.some(t=>t.scene_id===x.id&&t.operation==='animate'&&t.status!=='failed'&&t.status!=='refunded'));
       const animCost=toAnimate.reduce((t,x)=>t+videoCreditsForWorkspace(x.duration*(STUDIO_PRICING.rates[model]??0)),0);
-      const cur=stills===0?1:approved===0?2:completed.length===0?3:4;
+      const cur=makeStage(n,stills,approved,completed.length);
+      if(cur===0)return <div role="status" className="review-card space-y-4"><h2 className="text-xl font-bold">Prepare your scenes first</h2><p className="text-review-muted">No scenes have been saved yet. Go back to Step 4 and choose “Use this direction in my storyboard · 0 credits”. Then return here to create and approve your stills.</p>{onPrepareScenes&&<Button size="lg" onClick={onPrepareScenes}><ArrowLeft className="size-5"/>Prepare scenes · 0 credits</Button>}</div>;
       const steps=[
         {n:1,title:'Create stills',body:missing?`Draw a picture for ${missing===n?'each':'the remaining'} scene${missing>1?'s':''}.`:'All scenes have a still.',lock:'',action:missing>0&&<Button size="lg" disabled={busy||!!batch&&batch.status==='running'} onClick={createStills}><ImagePlus className="size-5"/>Create {missing} still{missing>1?'s':''}{perStill!==null?` · ${perStill*missing} credit${perStill*missing===1?'':'s'}`:' · priced at the next step'}</Button>},
         {n:2,title:'Approve stills',body:'Tick what you see in each picture, then press Approve on the scene card below.',lock:'Unlocks after your first still is made',action:cur===2&&<Button size="lg" onClick={()=>slideTo('#make-scenes')}><Check className="size-5"/>Go to my stills</Button>},

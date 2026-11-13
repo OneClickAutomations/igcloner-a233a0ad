@@ -135,7 +135,7 @@ export function CreateProjectWizard() {
   const publishing=simpleVideo&&state.production?.publishPlaceholder===true;
   const changePublish=async(open:boolean)=>{const next={...current.current.state,production:{...current.current.state.production,publishPlaceholder:open}};setState(next);await persist(5,next);window.scrollTo({top:0,behavior:'instant'});};
   const production = (stage: 'make'|'deliver') => state.projectId ? <Suspense fallback={<p className="flex items-center gap-2 py-10"><Loader2 className="size-4 animate-spin"/>Loading saved content…</p>}>
-    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} onBackToMake={()=>move(4)} speechMode={(state.production?.speechMode as 'voiceover'|'silent'|undefined)??state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
+    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} onBackToMake={()=>move(4)} onPrepareScenes={()=>move(3)} speechMode={(state.production?.speechMode as 'voiceover'|'silent'|undefined)??state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
       : state.copyProject ? <CopyStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='image' ? <ImageStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='carousel' ? <CarouselStudio embeddedProjectId={state.projectId} wizardStage={stage}/>

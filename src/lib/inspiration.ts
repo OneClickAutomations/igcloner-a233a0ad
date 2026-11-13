@@ -18,6 +18,13 @@ export const SceneInput = z.object({
 });
 export type SceneDraft = z.infer<typeof SceneInput>;
 
+export function makeStage(sceneCount: number, stillCount: number, approvedCount: number, clipCount: number) {
+  if (sceneCount === 0) return 0;
+  if (stillCount === 0) return 1;
+  if (approvedCount === 0) return 2;
+  return clipCount === 0 ? 3 : 4;
+}
+
 /** Remove text-based physical identity; identity anchors are reference pixels only. */
 export function stripIdentity(text: string): string {
   return text
