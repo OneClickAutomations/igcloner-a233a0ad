@@ -3,6 +3,16 @@ import { AlertTriangle, Check, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { estimatePercent, remainingLabel, type JobItem } from '@/lib/generation-jobs';
 
+/** Plain-English failure text: drops status codes and raw JSON wrappers. */
+export function plainError(msg?: string): string {
+  if (!msg) return 'Something went wrong.';
+  const json = msg.match(/\{.*\}/s)?.[0];
+  let inner = '';
+  if (json) { try { const o = JSON.parse(json); inner = o.error ?? o.message ?? ''; } catch { /* keep original */ } }
+  const text = (inner || msg).replace(/^[A-Za-z ]*failed:\s*/,'').replace(/\b[45]\d\d\b\s*/,'').trim();
+  return text || 'Something went wrong.';
+}
+
 /** Shared progress display for every AI generation: ring, plain-words stage, time left, per-item status, error + retry. */
 export function GenerationProgress({ status = 'running', stage, startedAt, expectedSeconds, percent, items, error, refunded, onRetry, compact, note }: {
   status?: 'running' | 'done' | 'error'; stage: string; startedAt: number; expectedSeconds: number; percent?: number;
@@ -28,7 +38,7 @@ export function GenerationProgress({ status = 'running', stage, startedAt, expec
       <div className="min-w-0 flex-1">
         <p className={`${compact ? 'text-base' : 'text-lg'} font-semibold`}>{status === 'error' ? 'That didn’t work' : stage}</p>
         {status === 'running' && <p className="text-sm text-muted-foreground">{remainingLabel(elapsed, expectedSeconds)}{note ? ` · ${note}` : ''}</p>}
-        {status === 'error' && <><p className="text-sm text-foreground">{error ?? 'Something went wrong.'}</p>{refunded && <p className="flex items-center gap-1 text-sm font-semibold text-foreground"><Check className="size-4 text-status-success"/>Credits refunded</p>}{onRetry && <Button size="sm" variant="outline" className="mt-2" onClick={onRetry}><RotateCcw className="size-4"/> Retry</Button>}</>}
+        {status === 'error' && <><p className="text-sm text-foreground">{plainError(error)}</p>{refunded && <p className="flex items-center gap-1 text-sm font-semibold text-foreground"><Check className="size-4 text-status-success"/>Credits refunded</p>}{onRetry && <Button size="sm" variant="outline" className="mt-2" onClick={onRetry}><RotateCcw className="size-4"/> Retry</Button>}</>}
         {items && items.length > 1 && <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">{items.map(i => <li key={i.label} className="flex items-center gap-1.5">
           {i.state === 'done' ? <Check className="size-4 text-status-success"/> : i.state === 'running' ? <Loader2 className="size-4 animate-spin text-accent-primary"/> : i.state === 'failed' ? <AlertTriangle className="size-4 text-status-error"/> : <span className="size-4 rounded-full border-2 border-border"/>}
           <span>{i.label}</span><span className="text-muted-foreground">{i.state === 'done' ? '' : i.state === 'running' ? 'working…' : i.state === 'failed' ? 'failed' : 'waiting'}</span></li>)}</ul>}
