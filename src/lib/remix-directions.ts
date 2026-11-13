@@ -105,6 +105,13 @@ export function needsStoryboardReplace(active: Direction | undefined, scenes: { 
 export function keepsLine(d: Direction): string {
   if (d.faithful) return 'Everything: the action, setting, props, lighting, camera and timing.';
   const t = String(d.stays ?? '').trim();
-  const machine = /^keep the |opening beat:|\.\.|[:;]/i.test(t) || t.length > 110;
+  const machine = !/^keeps the original/i.test(t) || /opening beat:|\.\.|[:;]/i.test(t) || t.length > 110;
   return !t || machine ? "Keeps the original's hook, shot order and pacing." : t;
+}
+
+/** Plain "Changes" line for a direction card. */
+export function changesLine(d: Direction): string {
+  if (d.faithful) return 'Only the person — plus anything you set below.';
+  const c = d.changes;
+  return [c.subject && `New person: ${c.subject}`, c.setting && `New setting: ${c.setting}`].filter(Boolean).join(' · ');
 }

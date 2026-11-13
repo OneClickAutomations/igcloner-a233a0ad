@@ -19,3 +19,15 @@ describe('verified analysis and remix handoff',()=>{
   });
   it('shows a one-plan-credit ideas cost independently from free prefill',()=>expect(REMIX_IDEAS_COST).toBe(1));
 });
+import { keepsLine, pickActiveDirection, startingDirections as sd2 } from './remix-directions';
+describe('direction card copy and routing', () => {
+  it('"New idea from it" (A3) starts on a bigger-change direction; Remake (A2) on the faithful remake', () => {
+    const d = sd2({});
+    expect(pickActiveDirection(d, {}, 'A3')?.faithful).not.toBe(true);
+    expect(pickActiveDirection(d, {}, 'A2')?.faithful).toBe(true);
+  });
+  it('machine "Keeps" text is replaced by one human sentence', () => {
+    const d = { ...sd2({})[1], stays: 'Keep the Opens with a direct question, shot order. Opening beat: barbell..' };
+    expect(keepsLine(d)).toBe("Keeps the original's hook, shot order and pacing.");
+  });
+});
