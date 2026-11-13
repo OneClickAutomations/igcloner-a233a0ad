@@ -28,9 +28,7 @@ export function motionBeats(action: string, seconds: number): string {
 export function liftPhysics(action: string) {
   return LIFT.test(action) ? 'The barbell is one rigid straight bar that stays level; the weight plates stay fixed on the sleeves and never change size or count; feet stay planted; joints bend naturally.' : '';
 }
-function props(onScreen: unknown, text: unknown): string[] {
-  const textWords = new Set(cleanOnScreenText('').split(' '));
-  void textWords; void text;
+function props(onScreen: unknown): string[] {
   return String(onScreen ?? '').split(/[,;]/).map(s => s.trim()).filter(Boolean).filter(p => !/@|_|\d{2,}/.test(p));
 }
 
@@ -39,7 +37,7 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   const subject = shot?.subjects?.[0] ?? {};
   const action = String(subject.action ?? shot?.action ?? 'performs the same action').trim();
   const setting = String(shot?.setting ?? 'the same setting').trim();
-  const propList = props(shot?.onScreen, shot?.onScreenText);
+  const propList = props(shot?.onScreen);
   const framing = [shot?.framing ?? shot?.shotType, shot?.camera, 'eye level'].filter(Boolean).join(', ');
   const position = subject.position ?? 'center';
   const person = e.person?.trim() || (opts.hasCharacterRef ? 'the person from the supplied character reference image' : 'a new original adult athlete (not the source person)');

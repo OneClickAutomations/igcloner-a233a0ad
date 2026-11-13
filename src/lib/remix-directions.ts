@@ -1,12 +1,15 @@
 import { z } from 'zod';
 import { SceneInput, buildScenePrompts, referencedActionObjects, stripIdentity, type SceneDraft } from './inspiration';
 import { ACTION_COSTS } from './credits';
+import { FAITHFUL_ID, cleanOnScreenText, faithfulScene } from './faithful-remake';
 
 export const REMIX_IDEAS_COST = ACTION_COSTS.captionPack;
 export const RemixDirection = z.object({
   id: z.string().max(80), title: z.string().max(100), pitch: z.string().max(300),
   changes: z.object({ subject: z.string().max(250), setting: z.string().max(500), angle: z.string().max(250), message: z.string().max(500) }),
   stays: z.string().max(500), scenes: z.array(SceneInput).max(100).optional(),
+  faithful: z.boolean().optional(),
+  edits: z.object({ person: z.string().max(300).optional(), outfit: z.string().max(300).optional(), setting: z.string().max(300).optional(), words: z.string().max(200).optional() }).optional(),
 });
 export const RemixDirections = z.object({ directions: z.array(RemixDirection).min(3).max(4) });
 export type Direction = z.infer<typeof RemixDirection>;
@@ -19,6 +22,18 @@ export function sourceShots(source: any): any[] {
 export function supportedShotDuration(seconds: number): 4 | 6 | 8 {
   return seconds <= 5 ? 4 : seconds <= 7 ? 6 : 8;
 }
+/** First and default option: the same verified shots with a new original person. */
+export function faithfulDirection(source: any): Direction {
+  const first = sourceShots(source)[0];
+  return { id: FAITHFUL_ID, faithful: true, title: 'Faithful remake — same video, new person', pitch: 'Keeps every shot exactly as the source: action, setting, props, lighting, camera, timing and audio feel. Only the person changes.',
+    changes: { subject: 'A new original person, or your character reference', setting: 'Unchanged', angle: 'Unchanged', message: 'Unchanged unless you add words' },
+    stays: `Action, setting, props, lighting, framing, pacing and timing of all ${sourceShots(source).length || 1} shot(s)${first?.setting ? ` — ${String(first.setting).slice(0,100)}` : ''}.` };
+}
+/** Faithful remake always leads; creative re-themes follow. */
+export function withFaithfulFirst(source: any, list: Direction[]): Direction[] {
+  const saved = list.find(d => d.id === FAITHFUL_ID);
+  return [{ ...faithfulDirection(source), edits: saved?.edits }, ...list.filter(d => d.id !== FAITHFUL_ID)];
+}
 /** Explicitly labelled editable starting directions, not newly generated AI output. */
 export function startingDirections(source: any): Direction[] {
   const dna = source?.dna ?? source?.dna_analysis ?? {};
@@ -27,6 +42,7 @@ export function startingDirections(source: any): Direction[] {
   const beat = stripIdentity(String(first?.action ?? first?.onScreen ?? first?.description ?? 'a clear demonstration')).slice(0, 140);
   const stays = `Keep the ${hook}, shot order and relative pacing. Opening beat: ${beat}.`;
   return [
+    faithfulDirection(source),
     { id:'practical', title:'A practical new demonstration', pitch:`Adapt the observed demonstration to a new everyday subject.`, changes:{subject:'An original creative coach',setting:'A bright workshop',angle:'Useful step-by-step demonstration',message:'Build a small creative habit'},stays },
     { id:'product', title:'Put your product to work', pitch:'Use the same demonstration rhythm to show a different tool in use.',changes:{subject:'Your reference-defined product demonstrator',setting:'A clean tabletop studio',angle:'Show a practical tool solving a problem',message:'Choose a tool that makes daily practice easier'},stays },
     { id:'challenge', title:'Make it a playful challenge',pitch:'Turn the observed action and payoff into a new practice challenge.',changes:{subject:'An original challenge host',setting:'An outdoor practice space',angle:'A playful skill challenge',message:'Try one small challenge today'},stays },
@@ -38,6 +54,15 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
   const shots = sourceShots(source);
   const customSetting = instructions.match(/\b(?:in|at|use)\s+(?:a |an |the )?([^.;\n]*?\b(?:workshop|studio|garden|gym|kitchen|office|beach|park|classroom|store))\b/i)?.[1];
   const customObject = instructions.match(/\band\s+(?:a |an |the )?([^,;.\n]+?)(?=;|,|\.|$)/i)?.[1];
+  if (direction.faithful || direction.id === FAITHFUL_ID) {
+    const dna = source?.dna ?? source?.dna_analysis ?? {}; const video = source?.evidence?.video ?? dna.verifiedVideo ?? {};
+    return shots.map((shot, i) => {
+      const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8), duration = supportedShotDuration(end - start);
+      const scene = faithfulScene(shot, { edits: { ...direction.edits, ...(instructions.trim() && !direction.edits?.setting ? {} : {}) }, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
+      return { ...scene, referenceIds, voiceover: speech === 'silent' ? '' : '', sourceStart: start, sourceEnd: end,
+        sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
+    });
+  }
   return shots.map((shot, i) => {
     const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8);
     const planned = direction.scenes?.[i];
@@ -54,7 +79,7 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
       audio: planned?.audio ?? (speech==='voiceover' ? 'Clear original spoken explanation; no source recording or song' : 'Natural ambience; no source recording or song'),
       duration, objects, referenceIds,
       voiceover: speech==='silent' ? '' : planned?.voiceover ?? message,
-      onScreenText: planned?.onScreenText ?? message.slice(0,200),
+      onScreenText: cleanOnScreenText(planned?.onScreenText ?? '').slice(0,200),
     });
     const prompts = buildScenePrompts({ ...base, stillPrompt: undefined, motionPrompt: undefined });
     const notes = instructions.trim() ? `\nAdditional owner direction (create original content; never source likeness): ${stripIdentity(instructions)}` : '';
