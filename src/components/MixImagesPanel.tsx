@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ export function MixImagesPanel({ projectId, onCreated }: { projectId: string; on
   const qc = useQueryClient();
   const slidesFn = useServerFn(listSourceSlides);
   const mixFn = useServerFn(mixImages);
+  const gen = useGenJob();
   const uploadFn = useServerFn(uploadReferenceImage);
   const [open, setOpen] = useState(false);
   const [refs, setRefs] = useState<Ref[]>([]);
@@ -44,10 +46,9 @@ export function MixImagesPanel({ projectId, onCreated }: { projectId: string; on
     if (refs.some((r) => r.role.trim().length < 2)) { toast.error("Say what to take from each image"); return; }
     setBusy(true);
     try {
-      const r = await mixFn({ data: { projectId, refs: refs.map(({ kind, slideIndex, path, role }) => ({ kind, slideIndex, path, role })), instruction: instruction || "Combine the roles into one cohesive image.", text: text || undefined } });
+      const r = await gen.run({ slot: "mix", title: "Your mixed image", stage: `Blending ${refs.length} images…`, expectedSeconds: 40, doneLabel: "Your mixed image is ready", paid: true, resultSelector: "#mix-result" }, () => mixFn({ data: { projectId, refs: refs.map(({ kind, slideIndex, path, role }) => ({ kind, slideIndex, path, role })), instruction: instruction || "Combine the roles into one cohesive image.", text: text || undefined } }));
       setResult(r.url);
       onCreated(r.asset);
-      toast.success("Mixed image ready");
     } catch (e: any) {
       const ic = parseInsufficientCredits(e);
       toast.error(ic ? `You need ${ic.required} credit — you have ${ic.available}.` : e?.message ?? "Mix failed");
@@ -86,7 +87,7 @@ export function MixImagesPanel({ projectId, onCreated }: { projectId: string; on
           ))}
           <Textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={2} className="text-xs" placeholder='How to combine, e.g. "subject from #1, background style from #2, palette from #3"' />
           <Input value={text} onChange={(e) => setText(e.target.value)} className="h-8 text-xs" placeholder="Optional text on the image" />
-          <Button onClick={run} disabled={busy || refs.length < 2} className="w-full gap-1.5">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />} Mix ({refs.length}/3)</Button>
+          <Button onClick={run} disabled={busy || refs.length < 2} className="w-full gap-1.5"><Layers className="h-4 w-4" /> Mix ({refs.length}/3)</Button>{gen.ring("mix")}
           {result && (
             <div className="grid grid-cols-2 gap-2">
               <div><p className="text-[10px] text-muted-foreground">Before</p><div className="grid grid-cols-3 gap-1">{refs.map((r, i) => <img key={i} src={r.preview} alt={`Before ${i + 1}`} className="aspect-square w-full rounded object-cover" />)}</div></div>
