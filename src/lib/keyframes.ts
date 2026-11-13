@@ -36,7 +36,7 @@ export function consensusAppearance(reads: Partial<Appearance>[]): Appearance {
     const score = (v: string) => vals.reduce((n, o) => n + [...words(v)].filter(w => words(o).has(w)).length, 0);
     return [...vals].sort((a, b) => score(b) - score(a))[0];
   };
-  return Appearance.parse({ skinTone: band >= 0 ? `${SKIN_BANDS[band]} brown` .replace(/^(very light|light) brown$/, '$1') : pick('skinTone'), undertone: mode(ok.map(r => useful(r.undertone)?.toLowerCase()).filter(Boolean) as string[]) ?? 'unclear', build: pick('build'), hair: pick('hair'), outfit: pick('outfit'), coveredOutfit: pick('coveredOutfit'), accessories: pick('accessories'), footwear: pick('footwear'), vibe: pick('vibe') });
+  return Appearance.parse({ skinTone: band >= 0 ? `${SKIN_BANDS[band]} brown` .replace(/^(very light|light) brown$/, '$1') : pick('skinTone'), undertone: mode(ok.map(r => useful(r.undertone)?.toLowerCase()).filter(Boolean) as string[]) ?? 'unclear', build: pick('build'), hair: pick('hair'), outfit: pick('outfit'), coveredOutfit: (() => { const o = pick('outfit'); return useful(ok.find(r => useful(r.outfit) === o)?.coveredOutfit) || 'unclear'; })(), accessories: pick('accessories'), footwear: pick('footwear'), vibe: pick('vibe') });
 }
 /** Leading, explicit skin and build lock for image prompts. */
 export function lookLock(a?: Partial<Appearance> | null): string {
