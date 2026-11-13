@@ -23,9 +23,11 @@ describe('inspiration scene rules', () => {
   it('rejects a motion referencing a cup not in the initial still objects', () => {
     expect(() => buildScenePrompts({ ...draft, objects: [draft.objects[1]] })).toThrow('cup');
   });
-  it('strips physical identity and named likeness from edited prompts', () => {
-    const s = stripIdentity('A blonde woman with blue eyes and fair skin, looks like Mel Robbins. Pour water.');
-    expect(s).not.toMatch(/blonde|blue eyes|fair skin|Mel Robbins|woman/i);
+  it('keeps appearance wording but strips named likeness from edited prompts', () => {
+    const s = stripIdentity('A blonde woman with fair skin and muscular build. Looks like Mel Robbins. Pour water.');
+    expect(s).not.toMatch(/Mel Robbins/i);
+    expect(s).toContain('fair skin');
+    expect(s).toContain('blonde');
     expect(s).toContain('Pour water');
   });
   it('invalidates approval after an edit', () => {
