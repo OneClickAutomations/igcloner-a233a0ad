@@ -27,10 +27,10 @@ export async function resolveApifyToken(
 /** Run an actor synchronously and return its dataset items. */
 export async function apifyRun(actor: string, input: unknown, token: string): Promise<any[]> {
   if (!token) throw new Error("APIFY_TOKEN not configured");
-  const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${token}`;
+  const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(input),
   });
   if (!res.ok) {
