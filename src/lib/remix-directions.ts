@@ -94,7 +94,7 @@ export function pickActiveDirection(directions: Direction[], value: Record<strin
   return saved && (saved.faithful || value.remixDirectionPicked === true) ? saved : directions[0];
 }
 /** A saved storyboard from another direction, or a faithful one missing source keyframes, is replaced (history kept). */
-export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[]): boolean {
+export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[], hasKeyframes = false): boolean {
   if (!active || !scenes.length) return false;
-  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && !i.keyframes?.first); });
+  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && hasKeyframes && !i.keyframes?.first); });
 }

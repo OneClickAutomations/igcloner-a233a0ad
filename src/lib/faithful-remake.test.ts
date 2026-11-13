@@ -33,3 +33,25 @@ describe('faithful remake', () => {
     expect(cleanOnScreenText('bakeshop_daily')).toBe('');
   });
 });
+
+import { pickActiveDirection, needsStoryboardReplace, startingDirections } from './remix-directions';
+import { keyframePlan } from './keyframes';
+import { frameReferencedPrompt } from './faithful-remake';
+describe('frame-referenced remakes', () => {
+  const dirs = startingDirections({ evidence: { video: { shots: [{ start: 0, end: 9.8 }] } } });
+  it('resumed draft saved on a re-theme still opens the faithful remake', () => {
+    expect(pickActiveDirection(dirs, { remixDirectionId: 'practical' })?.id).toBe('faithful');
+    expect(pickActiveDirection(dirs, { remixDirectionId: 'practical', remixDirectionPicked: true })?.id).toBe('practical');
+  });
+  it('replaces a saved re-theme storyboard when faithful is active', () => {
+    expect(needsStoryboardReplace(dirs[0], [{ scene_input: { remixDirectionId: 'practical' } }])).toBe(true);
+    expect(needsStoryboardReplace(dirs[0], [{ scene_input: { remixDirectionId: 'faithful', keyframes: { first: 'x' } } }], true)).toBe(false);
+  });
+  it('plans first, mid and last frames for a 9.8s shot', () => {
+    expect(keyframePlan([{ start: 0, end: 9.8 }]).map(k => k.pos)).toEqual(['first', 'mid', 'last']);
+    expect(keyframePlan([{ start: 0, end: 4 }]).map(k => k.pos)).toEqual(['first', 'last']);
+  });
+  it('frame prompt forbids resembling the source face', () => {
+    expect(frameReferencedPrompt({ remakePerson: 'a new woman' }, 'first')).toMatch(/must NOT resemble the person in Image 1/);
+  });
+});
