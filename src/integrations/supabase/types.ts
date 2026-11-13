@@ -1330,6 +1330,7 @@ export type Database = {
       }
       reference_assets: {
         Row: {
+          character_sheet_id: string | null
           created_at: string
           enabled: boolean
           filename: string
@@ -1340,6 +1341,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          character_sheet_id?: string | null
           created_at?: string
           enabled?: boolean
           filename: string
@@ -1350,6 +1352,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          character_sheet_id?: string | null
           created_at?: string
           enabled?: boolean
           filename?: string
@@ -1360,6 +1363,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "reference_assets_character_sheet_id_fkey"
+            columns: ["character_sheet_id"]
+            isOneToOne: false
+            referencedRelation: "studio_character_sheets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reference_assets_project_id_fkey"
             columns: ["project_id"]
@@ -1760,6 +1770,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "storyboard_scenes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "video_inspiration_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      studio_character_sheets: {
+        Row: {
+          billed: number
+          brief: Json
+          created_at: string
+          failure_reason: string | null
+          id: string
+          instructions: string
+          project_id: string
+          reference_ids: string[]
+          result_path: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          billed?: number
+          brief: Json
+          created_at?: string
+          failure_reason?: string | null
+          id: string
+          instructions?: string
+          project_id: string
+          reference_ids?: string[]
+          result_path?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          billed?: number
+          brief?: Json
+          created_at?: string
+          failure_reason?: string | null
+          id?: string
+          instructions?: string
+          project_id?: string
+          reference_ids?: string[]
+          result_path?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "studio_character_sheets_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "video_inspiration_projects"
