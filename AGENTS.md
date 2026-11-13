@@ -1,4 +1,5 @@
 # Project architecture
+- Film publishing reuses the shared Upload-Post engine and metered copy, with publish choices persisted in project wrapup and the existing wizard draft retaining its publish position; connection returns are restricted to the current app origin.
 - Reel and film voices use shared browser-safe source-evidence matching and a curated ElevenLabs catalog; manual overrides persist and the server validates selected IDs so matching never requires a paid call or clones source identity.
 - Film review preserves completed shot attempts with owner-validated revision-compatible selection, saves instructions as history and submission snapshots, and stores audio choices in private project settings plus existing wizard drafts so switching versions never generates paid media.
 - Inspiration reels and films use saved owner-private remix directions/instructions with atomic, free per-shot storyboard prefill; selected character/product/setting reference IDs persist per scene so library defaults cannot override identity choices.
