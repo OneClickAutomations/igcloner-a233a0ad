@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { buildMotionPrompt } from './video-motion';
 import { STUDIO_PRICING } from './studio-pricing';
+import { safeLookText } from './look-brief';
 
 export const ReferenceKind = z.enum(['character_face', 'character_body', 'character_back', 'product', 'logo', 'setting']);
 export const StudioModel = z.enum(['google/veo-3.1-fast', 'google/veo-3.1-lite', 'google/gemini-omni-1.1-flash']);
@@ -25,21 +26,16 @@ export function makeStage(sceneCount: number, stillCount: number, approvedCount:
   return clipCount === 0 ? 3 : 4;
 }
 
-/** Remove text-based physical identity; identity anchors are reference pixels only. */
+/** Keep casting style, remove identifying likeness and demographic labels. */
 export function stripIdentity(text: string): string {
-  return text
-    .replace(/\b(?:looks? like|resembling|identical to|likeness of|face of|identity of|named|called)\b[^.;\n]*/gi, 'the reference subject')
-    .replace(/\b(?:[\w-]+\s+){0,3}(?:hair|eyes|skin|complexion|ethnicity|race|nationality|facial features|face shape)\b/gi, 'reference-defined appearance')
-    .replace(/\b\d{1,3}[ -](?:year[ -]old|years old)\b/gi, 'adult')
-    .replace(/\b(?:Asian|African|Caucasian|Latino|Latina|Hispanic|European|blonde|brunette|redhead|male|female|man|woman|boy|girl)\b/gi, 'subject')
-    .replace(/\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/g, 'the reference subject').trim();
+  return safeLookText(text).replace(/\b\d{1,3}[ -](?:year[ -]old|years old)\b/gi, 'adult');
 }
 export function buildScenePrompts(scene: SceneDraft) {
   const referenced = referencedActionObjects(`${scene.action} ${scene.motionPrompt ?? ''}`);
   const missing = referenced.filter(name => !scene.objects.some(o => `${o.name} ${o.state}`.toLowerCase().includes(name)));
   if (missing.length) throw new Error(`Motion references objects missing from the still checklist: ${missing.join(', ')}.`);
   const objects = scene.objects.map(o => `${stripIdentity(o.name)}: ${stripIdentity(o.state)}`).join('; ');
-  const still = stripIdentity(scene.stillPrompt ?? `Portrait 9:16 photograph. New setting: ${scene.environment}. Every required action object is clearly visible in its initial state: ${objects}. Subject identity only from supplied references. Before the action begins; hands positioned to perform: ${scene.action}. Preserve referenced product shape, colors and proportions. No source-person likeness, source words or unreferenced logos.`);
+  const still = stripIdentity(scene.stillPrompt ?? `Portrait 9:16 photograph. Same type of environment: ${scene.environment}; no invented props outside the brief. Every required action object is clearly visible in its initial state: ${objects}. Character follows the written look brief and approved references. Before the action begins; hands positioned to perform: ${scene.action}. Preserve referenced product shape, colors and proportions. No source-person likeness, source words or unreferenced logos.`);
   // Even custom still instructions must include the prerequisites.
   const stillPrompt = `${still}\nRequired initial objects and states: ${objects}.`;
   const motionPrompt = stripIdentity(scene.motionPrompt ?? buildMotionPrompt({ action: scene.action, endState: scene.endState, camera: scene.camera, speed: 'normal speed', audio: scene.audio, durationSeconds: scene.duration }));
