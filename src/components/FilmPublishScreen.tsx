@@ -37,7 +37,7 @@ export function FilmPublishScreen({ projectId, draftId, onSaveDraft }: {projectI
   const wrapup={selected,copies,date,time,timezone,publishStage:stage};
   const snapshot=useRef(wrapup);snapshot.current=wrapup;
   const persist=(value=snapshot.current)=>{
-    const task=pending.current.catch(()=>{}).then(()=>save({data:{id:projectId,wrapup:value}}));pending.current=task;return task;
+    const task=pending.current.catch(()=>{}).then(async()=>{const saved=await save({data:{id:projectId,wrapup:value}});qc.setQueryData(['library-content',projectId],(old:Awaited<ReturnType<typeof getLibraryContent>>|undefined)=>old?{...old,item:{...old.item,project_data:{...old.item.project_data,wrapup:value}}}:old);return saved;});pending.current=task;return task;
   };
   useEffect(()=>{setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);},[]);
   useEffect(()=>{
