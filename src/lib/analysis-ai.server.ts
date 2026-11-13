@@ -90,7 +90,8 @@ export async function geminiVideoCall(prompt: string, videoB64: string, mime: st
     const err = (await res.json().catch(() => ({}))) as any;
     throw new Error(err.message ?? err.error?.message ?? `Video analysis failed (${res.status}).`);
   }
-  const reader = res.body!.getReader();
+  if (!res.body) throw new Error("Video analysis returned an empty response.");
+  const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "", text = "", inTok = 0, outTok = 0;
   while (true) {
