@@ -20,12 +20,15 @@ const labels = { skinTone: 'Skin shade', pigmentation: 'Visible pigmentation', h
 const views = ['character_face','character_body','character_back'] as const;
 export function CharacterStep({ projectId, hasOwnReferences, instructions, savedBrief, onBrief, onApproved }: { projectId: string; hasOwnReferences: boolean; instructions: string; savedBrief?: LookBrief; onBrief: (brief: LookBrief) => void; onApproved: (ids: string[]) => void }) {
   const load = useServerFn(getCharacterSheet), approve = useServerFn(approveCharacterSheet), qc = useQueryClient();
-  const { data } = useQuery({ queryKey: ['character-sheet', projectId], queryFn: () => load({ data: { projectId } }), refetchInterval: q => ['claimed','in_progress'].includes(q.state.data?.sheet?.status ?? '') ? 4000 : false });
+  const { data, error: loadError } = useQuery({ queryKey: ['character-sheet', projectId], queryFn: () => load({ data: { projectId } }), refetchInterval: q => ['claimed','in_progress'].includes(q.state.data?.sheet?.status ?? '') ? 4000 : false });
   const [brief, setBrief] = useState<LookBrief | undefined>(savedBrief), [extra, setExtra] = useState(''), [preview, setPreview] = useState(''), [busy, setBusy] = useState(false), [error, setError] = useState(''), [started, setStarted] = useState(0);
   const cost = priceFromWorkspaceCost(STUDIO_PRICING.stillWorkspaceCredits ?? 1, STUDIO_PRICING.workspaceCreditUsd) ?? 6;
   const sheet = data?.sheet, image = preview || sheet?.preview;
   useEffect(() => { if (!brief && data?.brief) setBrief(data.brief); }, [data?.brief]);
-  useEffect(() => { if (sheet?.status === 'completed') finishJob(`character-${projectId}`, true, { resultSelector: '#character-preview' }); }, [sheet?.status]);
+  useEffect(() => {
+    if (sheet?.status === 'completed') { setBrief(data?.brief); finishJob(`character-${projectId}`, true, { resultSelector: '#character-preview' }); }
+    if (sheet?.status === 'failed') setError(sheet.failure_reason ?? 'Character generation failed.');
+  }, [sheet?.status]);
   const generate = async () => {
     if (!brief) return;
     setBusy(true); setError(''); setPreview(''); setStarted(Date.now());
@@ -58,6 +61,7 @@ export function CharacterStep({ projectId, hasOwnReferences, instructions, saved
   };
   if (hasOwnReferences && sheet?.status !== 'approved') return <p role="status" className="text-sm text-review-muted">Your selected character references will be used for every scene.</p>;
   return <ReviewCard title="Your original character" icon={ImagePlus}>
+    {loadError && <p role="status" className="mb-3 text-sm text-status-warning">Saved character details could not be loaded. You can still edit the brief below. <Button variant="ghost" size="sm" onClick={()=>qc.invalidateQueries({queryKey:['character-sheet',projectId]})}>Try again</Button></p>}
     <div className="grid gap-3 sm:grid-cols-2">{brief && LOOK_FIELDS.map(k => <label key={k} className="min-w-0 text-sm font-medium">{labels[k]}<Input aria-label={`Character ${labels[k].toLowerCase()}`} className="mt-1" value={brief[k]} onChange={e => { const next = { ...brief, [k]: e.target.value }; setBrief(next); onBrief(next); }}/></label>)}</div>
     <label className="mt-4 block text-sm font-medium">Extra character instructions (optional)<Textarea aria-label="Extra character instructions" className="mt-2" value={extra} onChange={e => setExtra(e.target.value)}/></label>
     <p className="mt-3 text-sm text-review-muted">{instructions ? `Your changes: ${instructions}` : 'New original facial features; the written look stays consistent.'}</p>

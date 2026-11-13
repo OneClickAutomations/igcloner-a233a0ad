@@ -11,7 +11,7 @@ import { Textarea } from './ui/textarea';
 import { ReviewCard } from './ReviewPostPrimitives';
 import { InspirationStudio } from './InspirationStudio';
 import { CharacterStep } from './CharacterStep';
-import { type LookBrief } from '@/lib/look-brief';
+import { sourceLookBrief, type LookBrief } from '@/lib/look-brief';
 import { getInspirationStudio, manageInspirationReference } from '@/lib/inspiration.functions';
 import { generateRemixDirections, prefillRemixStoryboard } from '@/lib/video-remake.functions';
 import { REMIX_IDEAS_COST, keepsLine, changesLine, pickActiveDirection, needsStoryboardReplace, startingDirections, withFaithfulFirst, sourceShots, prefillRemixScenes, type Direction } from '@/lib/remix-directions';
@@ -53,7 +53,7 @@ export function RemixDirectionsPanel({analysis,projectId,value={},onChange,onSpe
       <p className="mt-3 text-sm text-review-muted">Use your own references. Identity comes from these images, never the source person’s likeness.</p>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">{data?.references.filter(r=>['character_face','character_body','character_back','product','setting'].includes(r.kind)).map(r=><Button key={r.id} variant="outline" aria-pressed={ids.includes(r.id)} className={`wizard-choice min-w-0 ${ids.includes(r.id)?'wizard-selected':''}`} onClick={()=>patch({referenceIds:ids.includes(r.id)?ids.filter(id=>id!==r.id):[...ids,r.id].slice(0,5)})}><img src={r.preview??''} alt={r.filename} className="aspect-square w-full object-contain"/><span className="block w-full truncate">{r.filename}</span></Button>)}</div>
     </ReviewCard>
-    <CharacterStep projectId={projectId} savedBrief={value.lookBrief as LookBrief | undefined} hasOwnReferences={!!data?.references.some(r=>r.enabled && r.kind.startsWith('character_') && (ids.includes(r.id) || (!ids.length && !r.character_sheet_id)))} instructions={`${instructions}
+    <CharacterStep projectId={projectId} savedBrief={(value.lookBrief as LookBrief | undefined) ?? sourceLookBrief(analysis)} hasOwnReferences={!!data?.references.some(r=>r.enabled && r.kind.startsWith('character_') && (ids.includes(r.id) || (!ids.length && !r.character_sheet_id)))} instructions={`${instructions}
 ${edits.person ? `Person: ${edits.person}` : ''}
 ${edits.outfit ? `Outfit: ${edits.outfit}` : ''}`} onBrief={lookBrief=>patch({lookBrief})} onApproved={characterIds=>patch({referenceIds:[...characterIds,...ids.filter(id=>!data?.references.find(r=>r.id===id)?.kind.startsWith('character_'))].slice(0,5)})}/>
     <ReviewCard title="Your storyboard proposal" icon={Film}>

@@ -1,5 +1,6 @@
 import { stripIdentity } from './inspiration';
 import { personFromAppearance, outfitFromAppearance, type Appearance, type KeyframeRef } from './keyframes';
+import { LookBrief } from './look-brief';
 /** Browser-safe faithful remake: same verified shot, new original person; owner edits override only what they name. */
 export type RemakeEdits = { person?: string; outfit?: string; setting?: string; words?: string };
 export const FAITHFUL_ID = 'faithful';
@@ -43,9 +44,10 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   const framing = [shot?.framing ?? shot?.shotType, shot?.camera, 'eye level'].filter(Boolean).join(', ');
   const position = subject.position ?? 'center';
   const opening = shot?.openingPose && shot.openingPose !== 'unclear' ? String(shot.openingPose) : `in the described opening position for ${action}; do not substitute a generic lifting pose`;
-  const styled = personFromAppearance(opts.appearance);
+  const brief = shot?.lookBriefs?.[0] ? LookBrief.parse(shot.lookBriefs[0]) : null;
+  const styled = brief ? `${brief.skinTone} skin, ${brief.pigmentation}, ${brief.hair}, ${brief.build}, ${brief.accessories}` : personFromAppearance(opts.appearance);
   const person = e.person?.trim() || (opts.hasCharacterRef ? 'the person from the supplied character reference image' : styled ? `a new original adult with ${styled} (a different face from the source person)` : 'a new original adult athlete (not the source person)');
-  const outfit = e.outfit?.trim() || outfitFromAppearance(opts.appearance) || DEFAULT_OUTFIT;
+  const outfit = e.outfit?.trim() || (brief?.outfit !== 'unclear' ? brief?.outfit : undefined) || outfitFromAppearance(opts.appearance) || DEFAULT_OUTFIT;
   const frames = Object.fromEntries((opts.keyframes ?? []).map(k => [k.pos, k.path])) as Partial<Record<'first'|'mid'|'last', string>>;
   const words = cleanOnScreenText(e.words ?? '');
   const settingLine = `${setting}${propList.length ? `, with ${propList.join(', ')} visible` : ''}`;
