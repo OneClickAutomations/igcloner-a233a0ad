@@ -2183,6 +2183,10 @@ export type Database = {
         }
         Returns: Json
       }
+      replace_inspiration_storyboard: {
+        Args: { p_project: string; p_scenes: Json; p_user: string }
+        Returns: number
+      }
       save_film_shot_review: {
         Args: {
           p_attempt?: string

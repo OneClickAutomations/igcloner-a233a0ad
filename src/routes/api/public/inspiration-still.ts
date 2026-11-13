@@ -36,7 +36,9 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       const { generateImage, editImage } = await import('@/lib/inspiration-image-gateway.server');
       const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: 'openai/gpt-image-2.5-sunburst', format: 'openai' as const };
       const roles = (refs ?? []).map((r,i)=>`Reference image ${i+1}: ${r.kind==='setting'?'owner-supplied setting; use its environment, not its people':r.kind==='product'?'owner-supplied product identity':r.kind==='logo'?'owner-supplied logo':'owner-supplied character identity'}`).join('. ');
-      const prompt = `${stripIdentity(scene.still_prompt)}. Compose a portrait 9:16 image, 720 by 1280 framing. ${roles}. Identity comes only from selected reference images. Use an owner-selected setting reference when supplied; otherwise create the new setting described. Never reproduce the source person's likeness.`;
+      const faithful = (scene.scene_input as {faithful?:boolean})?.faithful === true;
+      // Faithful prompts are built only from verified non-identity shot fields plus owner-written person text.
+      const prompt = `${faithful ? scene.still_prompt : stripIdentity(scene.still_prompt)}. Compose a portrait 9:16 image, 720 by 1280 framing. ${roles}. Identity comes only from selected reference images. Use an owner-selected setting reference when supplied; otherwise create the new setting described. Never reproduce the source person's likeness.`;
       let upstream: Response;
       if (refs?.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'low');

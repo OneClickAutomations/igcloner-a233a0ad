@@ -27,7 +27,7 @@ describe('inspiration scene rules', () => {
   });
   it('enforces the standing physical constraints', () => {
     const p = buildMotionPrompt({ action: draft.action, endState: draft.endState, camera: draft.camera, audio: draft.audio, speed: 'normal speed', durationSeconds: 8 });
-    expect(p).toContain('Water flows only from the bottle opening'); expect(p).toContain('Opaque objects stay opaque'); expect(PHYSICAL_NEGATIVES).toContain('teleporting');
+    expect(p).toContain('opaque objects stay opaque'); expect(PHYSICAL_NEGATIVES).toContain('teleporting');
   });
   it('keeps final pricing unset without verified conversion', () => expect(priceFromWorkspaceCost(3.2, null)).toBeNull());
   it('uses 0.145 dollars per credit and a 35 percent ceiling', () => {

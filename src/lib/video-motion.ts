@@ -16,8 +16,8 @@ export const VIDEO_MOTION_CANDIDATE = {
   productionApproved: false,
 } as const;
 
-export const PHYSICAL_REALISM = 'Water flows only from the bottle opening. The cap stays where the approved still shows it. Opaque objects stay opaque. All objects remain physically continuous and in the scene.';
-export const PHYSICAL_NEGATIVES = 'water from caps or bottle sides, transparent opaque bottles, teleporting objects, appearing objects, disappearing props, changing product shape, changing product colors, changing proportions, scene cuts';
+export const PHYSICAL_REALISM = 'Rigid objects stay rigid, opaque objects stay opaque, and every object remains physically continuous and in the scene.';
+export const PHYSICAL_NEGATIVES = 'teleporting objects, appearing objects, disappearing props, changing product shape, changing product colors, changing proportions, scene cuts';
 
 /** Best tested pattern, not a guarantee of physical correctness or action completion. */
 export function buildMotionPrompt(input: MotionPromptInput): string {
@@ -36,12 +36,3 @@ export function buildMotionPrompt(input: MotionPromptInput): string {
     `Audio: ${input.audio.trim()}.`,
   ].filter(Boolean).join(' ');
 }
-
-export const POUR_MOTION_FIXTURE: MotionPromptInput = {
-  action: 'A hand grips the product, removes its cap, then tilts the open bottle downward over a cup placed beside it. Water visibly streams from the bottle into the cup, filling the cup halfway by the end.',
-  endState: 'the bottle is upright beside the half-filled cup',
-  camera: 'slow push-in',
-  speed: 'normal speed',
-  audio: 'water pouring and outdoor ambience',
-  durationSeconds: 8,
-};
