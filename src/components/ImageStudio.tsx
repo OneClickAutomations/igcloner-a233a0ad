@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -78,6 +79,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
   const listFn = useServerFn(listProjectImages);
   const genPlatformFn = useServerFn(generatePlatformCopy);
   const regenPlatformFn = useServerFn(regeneratePlatformCopy);
+  const gen = useGenJob();
 
   const [project, setProject] = useState<any>(null);
   const [concept, setConcept] = useState("");
@@ -201,13 +203,13 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
       const mergedExtra = extraOverride
         ? [extra, extraOverride].filter(Boolean).join(" — ")
         : extra;
-      const res: any = await genFn({
+      const res: any = await gen.run({ slot: "image", title: "Your image", stage: "Drawing your image…", expectedSeconds: 35, doneLabel: "Your image is ready — saved to your content library", paid: true, resultSelector: "#image-result" }, () => genFn({
         data: { projectId, concept, style: style as any, aspect, textOverlay, brandColor, extra: mergedExtra },
-      });
+      }));
       setActiveUrl(res.signedUrl);
       setImages((prev) => [res.asset, ...prev]);
       window.dispatchEvent(new Event('content-generated'));
-      toast.success("Image ready — saved to your content library", { action: { label: 'Open library', onClick: () => navigate({ to: '/library', search: { projectId } }) } });
+
     } catch (e: any) {
       toast.error(e?.message || "Image generation failed");
     } finally {
@@ -219,7 +221,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
     if (!projectId || !concept) return;
     setCaptionLoading(true);
     try {
-      const res: any = await capFn({ data: { projectId, concept } });
+      const res: any = await gen.run({ slot: "caption", title: "Your caption", stage: "Writing your caption and hashtags…", expectedSeconds: 15, doneLabel: "Your caption is ready" }, () => capFn({ data: { projectId, concept } }));
       setCaption(res.caption);
       setHashtags(res.hashtags);
     } catch (e: any) {
@@ -306,7 +308,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
     selectedPlatforms.forEach((p) => (next[p] = true));
     setPlatformLoading(next);
     try {
-      const res: any = await genPlatformFn({
+      const res: any = await gen.run({ slot: "platforms", title: "Platform copy", stage: `Writing copy for ${selectedPlatforms.length} platform${selectedPlatforms.length>1?"s":""}…`, expectedSeconds: 20, doneLabel: "Your platform copy is ready", items: selectedPlatforms.map((p) => ({ label: String(p), state: "running" as const })) }, () => genPlatformFn({
         data: {
           platforms: selectedPlatforms,
           goal,
@@ -316,7 +318,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
           angleConcept: concept,
           baseCaption: caption,
         },
-      });
+      }));
       const map: Record<string, PlatformCopyResult> = { ...platformCopy };
       for (const r of res.platforms as PlatformCopyResult[]) {
         map[r.platform] = r;
@@ -324,7 +326,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
       setPlatformCopy(map);
       setActivePlatform(selectedPlatforms[0]);
       setShowPlatformPicker(false);
-      toast.success("Platform copy ready");
+
     } catch (e: any) {
       toast.error(e?.message || "Couldn't generate platform copy");
     } finally {
@@ -336,7 +338,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
     if (!goal) return;
     setPlatformLoading((s) => ({ ...s, [p]: true }));
     try {
-      const res: any = await regenPlatformFn({
+      const res: any = await gen.run({ slot: "platforms", title: `${p} copy`, stage: `Rewriting ${p} copy…`, expectedSeconds: 15, doneLabel: `Your ${p} copy is ready` }, () => regenPlatformFn({
         data: {
           platform: p,
           goal,
@@ -346,7 +348,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
           angleConcept: concept,
           baseCaption: caption,
         },
-      });
+      }));
       setPlatformCopy((m) => ({ ...m, [p]: res as PlatformCopyResult }));
       toast.success(`${PLATFORM_VOICE_PROFILES[p].platform} copy regenerated`);
     } catch (e: any) {
@@ -513,9 +515,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
             size="lg"
           >
             {generating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Generating…
-              </>
+              <>Generating…</>
             ) : (
               <>
                 <Wand2 className="h-4 w-4" /> Generate Image · 1 plan credit
@@ -599,11 +599,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                     }
                     onClick={generateAllPlatformCopy}
                   >
-                    {Object.values(platformLoading).some(Boolean) ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3 w-3" />
-                    )}
+                    <Sparkles className="h-3 w-3" />
                     Generate copy · no plan credit charge
                   </Button>
                 </div>
@@ -671,10 +667,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                   )}
                 </>
               ) : generating ? (
-                <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <p className="text-sm">Crafting your image…</p>
-                </div>
+                <div className="flex h-full w-full items-center justify-center p-4">{gen.ring("image", false)}</div>
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
                   <ImageIcon className="h-8 w-8" />
@@ -686,11 +679,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
             {activeUrl && (
               <div className="mt-3 flex flex-wrap justify-center gap-2">
                 <Button size="sm" variant="outline" onClick={downloadActive} disabled={downloading}>
-                  {downloading ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Download className="h-3.5 w-3.5" />
-                  )}
+                  <Download className="h-3.5 w-3.5" />
                   Download
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setRegenOpen((o) => !o)} disabled={generating}>
@@ -734,11 +723,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                     }}
                     disabled={generating}
                   >
-                    {generating ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="h-3.5 w-3.5" />
-                    )}
+                    <RefreshCw className="h-3.5 w-3.5" />
                     Regenerate now · 1 plan credit
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setRegenOpen(false)}>
@@ -802,11 +787,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                   onClick={generateAllPlatformCopy}
                   disabled={!goal || Object.values(platformLoading).some(Boolean)}
                 >
-                  {Object.values(platformLoading).some(Boolean) ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3 w-3" />
-                  )}
+                  <Sparkles className="h-3 w-3" />
                   Generate all · no plan credit charge
                 </Button>
               </div>
@@ -817,9 +798,8 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                 const loading = !!platformLoading[activePlatform];
                 if (loading) {
                   return (
-                    <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Generating {profile.platform}{" "}
-                      copy…
+                    <div className="py-4">{gen.ring("platforms")}<span className="sr-only">Generating {profile.platform}{" "}
+                      copy…</span>
                     </div>
                   );
                 }
@@ -934,14 +914,11 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                 <Sparkles className="h-4 w-4 text-accent-primary" /> Caption + hashtags
               </h3>
               <Button size="sm" variant="outline" onClick={regenerateCaption} disabled={captionLoading || !concept}>
-                {captionLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3.5 w-3.5" />
-                )}
+                <RefreshCw className="h-3.5 w-3.5" />
                 {caption ? "Regenerate" : "Generate"} · no plan credit charge
               </Button>
             </div>
+            {gen.ring("caption")}
             <Textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
