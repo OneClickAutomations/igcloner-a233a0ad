@@ -12,7 +12,6 @@ import { ReviewCard } from './ReviewPostPrimitives';
 import { InspirationStudio } from './InspirationStudio';
 import { CharacterStep } from './CharacterStep';
 import { type LookBrief } from '@/lib/look-brief';
-import { getSourceKeyframes } from '@/lib/keyframes.functions';
 import { getInspirationStudio, manageInspirationReference } from '@/lib/inspiration.functions';
 import { generateRemixDirections, prefillRemixStoryboard } from '@/lib/video-remake.functions';
 import { REMIX_IDEAS_COST, keepsLine, changesLine, pickActiveDirection, needsStoryboardReplace, startingDirections, withFaithfulFirst, sourceShots, prefillRemixScenes, type Direction } from '@/lib/remix-directions';
@@ -20,10 +19,9 @@ import { sourceAudioProposal } from '@/lib/video-remake';
 import { CREDIT_BALANCE_KEY } from '@/lib/credits';
 
 export function RemixDirectionsPanel({analysis,projectId,value={},onChange,onSpeech,mode}:{mode?:string;analysis:any;projectId:string;value?:Record<string,unknown>;onChange:(v:Record<string,unknown>)=>void;onSpeech:(v:'voiceover'|'silent')=>void}) {
-  const qc=useQueryClient(), generate=useServerFn(generateRemixDirections), prepare=useServerFn(prefillRemixStoryboard), load=useServerFn(getInspirationStudio), manage=useServerFn(manageInspirationReference), loadKf=useServerFn(getSourceKeyframes);
+  const qc=useQueryClient(), generate=useServerFn(generateRemixDirections), prepare=useServerFn(prefillRemixStoryboard), load=useServerFn(getInspirationStudio), manage=useServerFn(manageInspirationReference);
   const [busy,setBusy]=useState(false),[status,setStatus]=useState(''),[ideasAt,setIdeasAt]=useState<number|null>(null),[ideasErr,setIdeasErr]=useState('');
   const {data}=useQuery({queryKey:['remix-references',projectId],queryFn:()=>load({data:{projectId}})});
-  const {data:kf}=useQuery({queryKey:['source-keyframes',analysis.analysisId??analysis.id],queryFn:()=>loadKf({data:{analysisId:analysis.analysisId??analysis.id}})});
   const patch=(p:Record<string,unknown>)=>onChange({...value,...p});
   const edits=(value.remakeEdits as Record<string,string>|undefined)??{};
   const directions=withFaithfulFirst(analysis,(value.remixDirections as Direction[]|undefined)??startingDirections(analysis)).map(d=>d.faithful?{...d,edits}:d);

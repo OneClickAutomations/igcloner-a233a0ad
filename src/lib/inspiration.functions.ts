@@ -167,7 +167,10 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     if (price !== data.confirmedCredits) throw new Error('The price changed. Confirm a new quote.');
     const key = process.env['LOVABLE_API_KEY']; if (!key) throw new Error('AI connection is not configured.');
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
-    const { data: refs } = await context.supabase.from('reference_assets').select('id').eq('enabled', true);
+    const referenceIds = (s.scene_input as {referenceIds?:string[]})?.referenceIds;
+    let referenceQuery = context.supabase.from('reference_assets').select('id').eq('user_id', context.userId);
+    referenceQuery = Array.isArray(referenceIds) ? referenceQuery.in('id', referenceIds) : referenceQuery.eq('enabled', true);
+    const { data: refs } = await referenceQuery;
     const { data: claim, error } = await supabaseAdmin.rpc('claim_inspiration_attempt', { p_user: context.userId, p_scene: s.id, p_request: data.requestKey, p_operation: 'animate', p_model: data.model, p_billed: price, p_workspace: (rate ?? 0) * s.duration, p_references: (refs ?? []).map(r => r.id) });
     if (error) throw new Error(error.message);
     const c = claim as any;
