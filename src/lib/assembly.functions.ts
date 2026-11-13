@@ -8,7 +8,7 @@ async function ownedClips(context:any,projectId:string):Promise<AssemblyClip[]> 
   const {data:p}=await context.supabase.from('video_inspiration_projects').select('id').eq('id',projectId).eq('user_id',context.userId).single();if(!p)throw new Error('Project not found.');
   const {data:scenes,error}=await context.supabase.from('storyboard_scenes').select('*').eq('project_id',projectId).order('scene_order');if(error)throw new Error(error.message);
   const {data:attempts}=await context.supabase.from('scene_attempts').select('*').eq('project_id',projectId).eq('operation','animate').eq('status','completed').order('created_at',{ascending:false});
-  return (scenes??[]).map((s:any)=>{const a=attempts?.find((a:any)=>a.scene_id===s.id&&a.scene_revision===s.revision&&a.result_url);if(!a||!s.approved_at||s.approved_revision!==s.revision)throw new Error('Every scene needs an approved, completed clip.');return {sceneId:s.id,attemptId:a.id,path:a.result_url,duration:s.duration,revision:s.revision};});
+  return (scenes??[]).map((s:any)=>{const valid=attempts?.filter((a:any)=>a.scene_id===s.id&&a.scene_revision===s.revision&&a.result_url);const a=valid?.find((a:any)=>a.id===s.selected_attempt_id)??valid?.[0];if(!a||!s.approved_at||s.approved_revision!==s.revision)throw new Error('Every scene needs an approved, completed clip.');return {sceneId:s.id,attemptId:a.id,path:a.result_url,duration:s.duration,revision:s.revision};});
 }
 export const quoteAssembly=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>Input.parse(d)).handler(async({data,context})=>{
   const {rendererConfig}=await import('./assembly.server');const config=rendererConfig();

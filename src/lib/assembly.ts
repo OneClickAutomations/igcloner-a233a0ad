@@ -7,6 +7,7 @@ export const AssemblyOptions = z.object({
   captions: z.array(Caption).max(200).default([]), musicPath: z.string().max(500).optional(),
   logoPath: z.string().max(500).optional(), logoStart: z.number().nonnegative().default(0), logoEnd: z.number().positive().optional(),
   transition: z.enum(['none', 'fade']).default('none'),
+  musicVolume:z.number().min(0).max(1).default(0.35),
 });
 export type AssemblySettings = z.infer<typeof AssemblyOptions>;
 export type AssemblyClip = { sceneId: string; attemptId: string; path: string; duration: number; revision: number };
@@ -54,7 +55,8 @@ export function buildAssemblyTimeline(clips: (AssemblyClip & { url: string })[],
   if (media.voiceover) tracks.push({clips:[{asset:{type:'audio',src:media.voiceover,volume:1},start:0,length:voiceDuration}]});
   if (media.music) {
     // Known voiceover interval drives deterministic ducking; no unverified speech detector.
-    const volume = media.voiceover ? [{from:0.12,to:0.12,start:0,length:voiceDuration},...(voiceDuration<duration?[{from:0.12,to:0.35,start:voiceDuration,length:Math.min(0.3,duration-voiceDuration)}]:[])] : 0.35;
+    const level=settings.musicVolume,duck=Math.min(0.12,level*0.12/0.35);
+    const volume = media.voiceover ? [{from:duck,to:duck,start:0,length:voiceDuration},...(voiceDuration<duration?[{from:duck,to:level,start:voiceDuration,length:Math.min(0.3,duration-voiceDuration)}]:[])] : level;
     tracks.push({clips:[{asset:{type:'audio',src:media.music,volume,effect:'fadeInFadeOut'},start:0,length:duration}]});
   }
   let start=0;
