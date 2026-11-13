@@ -3,6 +3,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { startJob, finishJob } from "@/lib/generation-jobs";
 import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -122,12 +123,13 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   };
 
   const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 60, verifying_video: 75, building_blueprint: 90 };
-  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'First pass: watching each shot', verifying_video: 'Second pass: checking the video again', transcribing: 'Listening to what is said', building_blueprint: 'Writing your verified breakdown' };
+  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'Watching your reel', verifying_video: 'Checking the shot list', transcribing: 'Listening to what’s said', building_blueprint: 'Writing your breakdown' };
 
   /** Drive the job one stage per request. Work already done is saved server-side, so this can resume after a reload. */
   const runJob = async (id: string) => {
     jobRef.current = id;
     setPhase("analyzing");
+    startJob({ id: `analysis-${id}`, kind: 'analysis', title: 'Your analysis', href: window.location.pathname + window.location.search, expectedSeconds: 90, doneLabel: 'Your analysis is ready' });
     // A stage request can take a while (the scrape especially) — show the live stage meanwhile.
     const poll = setInterval(async () => {
       try {
@@ -153,13 +155,14 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
       if (res.status === "ready") {
         setProgress(100);
         showPayload(res.data);
+        finishJob(`analysis-${id}`, true, { resultSelector: '.review-card' });
         toast.success(res.data?.cacheHit ? "Loaded your recent analysis of this post — no credits used" : "Saved to your dashboard");
         refreshCredits();
         return;
       }
       if (res.status === "failed") {
-        setScrapeError(res.error || "Analysis failed.");
-        toast.error(res.error || "Analysis failed.");
+        setScrapeError(`${res.error || "Analysis failed."} Credits refunded.`);
+        finishJob(`analysis-${id}`, false, { error: res.error || "Analysis failed.", refunded: true });
         setPhase("input");
         refreshCredits();
         navigate({ to: "/app", search: {} });
