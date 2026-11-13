@@ -61,8 +61,8 @@ export function personFromAppearance(a?: Partial<Appearance> | null): string {
 }
 export function outfitFromAppearance(a?: Partial<Appearance> | null): string { return useful(a?.outfit); }
 /** Closest more-covered version of the source outfit in the same colour, for one provider-refusal retry. */
-export function coveredOutfit(a?: Partial<Appearance> | null): string {
-  const c = useful(a?.coveredOutfit); if (c) return c;
-  const colour = useful(a?.outfit).match(/\b(white|black|grey|gray|beige|cream|red|pink|navy|green|olive|brown|tan|purple|yellow|orange)\b/i)?.[1];
+export function coveredOutfit(a?: Partial<Appearance> | null, requestedOutfit?: string): string {
+  const c = useful(a?.coveredOutfit); if (c && !requestedOutfit?.trim()) return c;
+  const colour = useful(requestedOutfit || a?.outfit).match(/\b(white|black|grey|gray|beige|cream|red|pink|navy|green|olive|brown|tan|purple|yellow|orange)\b/i)?.[1];
   return colour ? `a ${colour} sports bra with a ${colour} fitted crop top over it and ${colour} mid-thigh bike shorts` : '';
 }

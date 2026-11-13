@@ -60,7 +60,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
         const { data: proj } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).single();
         const { data: an } = proj?.analysis_id ? await supabaseAdmin.from('analyses').select('evidence').eq('id', proj.analysis_id).maybeSingle() : { data: null };
         const look = ((an?.evidence as any)?.remakeRefs?.appearance ?? null);
-        const covered = coveredOutfit(look);
+        const covered = coveredOutfit(look, sceneInput.remakeOutfit);
         const correction = (scene as any).look_correction ?? '';
         const send = async (tier: 'source' | 'covered' | 'generic') => {
           const form = new FormData(); form.set('prompt', frameReferencedPrompt(sceneInput, frame, { fallbackOutfit: tier === 'generic', outfitOverride: tier === 'covered' ? covered : undefined, hasCharacterRef: chars.length > 0, lookLock: lookLock(look), correction }));

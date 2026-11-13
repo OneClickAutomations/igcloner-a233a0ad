@@ -8,6 +8,10 @@ describe('look accuracy', () => {
   });
   it('lock says do not lighten', () => { expect(lookLock({ skinTone: 'deep brown', undertone: 'warm', build: 'muscular' })).toMatch(/deep brown skin with a warm undertone.*do not lighten/); });
   it('covered outfit keeps the source colour', () => { expect(coveredOutfit({ outfit: 'white two-piece', coveredOutfit: 'unclear' })).toMatch(/white sports bra.*white.*bike shorts/); });
+  it('outfit refusal keeps the requested red instead of the source white', () => {
+    const covered = coveredOutfit({ outfit: 'white bikini', coveredOutfit: 'white crop tee and shorts' }, 'red bikini');
+    expect(covered).toContain('red'); expect(covered).not.toContain('white');
+  });
 });
 describe('consensus fields', () => {
   it('takes the hair most frames agree on and keeps glasses seen in any frame', () => {
