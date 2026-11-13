@@ -7,7 +7,7 @@ import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp,
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnalysisProgress } from "./AnalysisProgress";
-import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus, verifySavedVideo } from "@/lib/analyze.functions";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { CopyWorkbench } from "@/components/CopyWorkbench";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
@@ -47,6 +47,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
+  const verifyFn = useServerFn(verifySavedVideo);
   const loadFn = useServerFn(getAnalysisById);
   const advanceFn = useServerFn(advanceAnalysis);
   const statusFn = useServerFn(getAnalysisStatus);
@@ -116,8 +117,8 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
     if (p.analysisId) onAnalysisReady?.(p.analysisId);
   };
 
-  const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 70, building_blueprint: 85 };
-  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'Watching the video', transcribing: 'Listening to what is said', building_blueprint: 'Working out the structure' };
+  const stagePct: Record<string, number> = { fetching_post: 10, saving_media: 25, reading_slides: 40, watching_video: 55, transcribing: 60, verifying_video: 75, building_blueprint: 90 };
+  const stageWords: Record<string, string> = { fetching_post: 'Fetching the post', saving_media: 'Saving a private copy of the media', reading_slides: 'Reading the text on each slide', watching_video: 'First pass: watching each shot', verifying_video: 'Second pass: checking the video again', transcribing: 'Listening to what is said', building_blueprint: 'Writing your verified breakdown' };
 
   /** Drive the job one stage per request. Work already done is saved server-side, so this can resume after a reload. */
   const runJob = async (id: string) => {
