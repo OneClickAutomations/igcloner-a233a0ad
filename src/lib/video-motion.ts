@@ -36,12 +36,3 @@ export function buildMotionPrompt(input: MotionPromptInput): string {
     `Audio: ${input.audio.trim()}.`,
   ].filter(Boolean).join(' ');
 }
-
-export const POUR_MOTION_FIXTURE: MotionPromptInput = {
-  action: 'A hand grips the product, removes its cap, then tilts the open bottle downward over a cup placed beside it. Water visibly streams from the bottle into the cup, filling the cup halfway by the end.',
-  endState: 'the bottle is upright beside the half-filled cup',
-  camera: 'slow push-in',
-  speed: 'normal speed',
-  audio: 'water pouring and outdoor ambience',
-  durationSeconds: 8,
-};
