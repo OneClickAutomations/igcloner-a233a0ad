@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { RemakeSuggestions } from './video-remake';
-import { RemixDirections, RemixDirection, REMIX_IDEAS_COST, prefillRemixScenes, sourceShots } from './remix-directions';
+import { RemixDirections, RemixDirection, REMIX_IDEAS_COST, prefillRemixScenes, sourceShots, needsStoryboardReplace } from './remix-directions';
 
 /** An explicit, uncharged direction proposal; existing paid storyboard/clip actions remain separate. */
 export const suggestVideoRemakes = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -50,8 +50,10 @@ export const prefillRemixStoryboard = createServerFn({method:'POST'}).middleware
     if(data.referenceIds.length){const {data:refs}=await context.supabase.from('reference_assets').select('id').in('id',data.referenceIds).eq('user_id',context.userId);if(refs?.length!==data.referenceIds.length)throw new Error('A reference is unavailable. Choose it again.');}
     const scenes=prefillRemixScenes(source,data.direction,data.instructions,data.referenceIds,data.speechMode);
     if(!scenes.length)throw new Error('No source shots were captured. You can add scenes in Advanced or run the priced verified analysis.');
+    const { data: existing } = await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id', project.id).eq('user_id', context.userId);
+    const replace = data.replace || needsStoryboardReplace(data.direction, existing ?? [], !!(source.evidence as any)?.remakeRefs?.keyframes?.length);
     const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
-    const {data:count,error}=await supabaseAdmin.rpc(data.replace?'replace_inspiration_storyboard':'prefill_inspiration_storyboard',{p_user:context.userId,p_project:project.id,p_scenes:scenes.map((s,i)=>({duration:s.duration,still_prompt:s.stillPrompt,motion_prompt:s.motionPrompt,action_objects:s.objects,scene_input:{...s,sourceShotIndex:i,remixDirectionId:data.direction.id,ownerInstructions:data.instructions}})) as any});
+    const {data:count,error}=await supabaseAdmin.rpc(replace?'replace_inspiration_storyboard':'prefill_inspiration_storyboard',{p_user:context.userId,p_project:project.id,p_scenes:scenes.map((s,i)=>({duration:s.duration,still_prompt:s.stillPrompt,motion_prompt:s.motionPrompt,action_objects:s.objects,scene_input:{...s,sourceShotIndex:i,remixDirectionId:data.direction.id,ownerInstructions:data.instructions}})) as any});
     if(error)throw new Error(error.message);
     return {scenes:count,charged:0};
   });

@@ -54,4 +54,12 @@ describe('frame-referenced remakes', () => {
   it('frame prompt forbids resembling the source face', () => {
     expect(frameReferencedPrompt({ remakePerson: 'a new woman' }, 'first')).toMatch(/must NOT resemble the person in Image 1/);
   });
+  it('refreshes saved faithful scenes when red bikini and blond dreadlock edits change', () => {
+    const active = { ...dirs[0], edits: { person: 'an original adult female athlete with stylish blond dreadlocks', outfit: 'red bikini' } };
+    expect(needsStoryboardReplace(active, [{ scene_input: { remixDirectionId: 'faithful', remakeEdits: {} } }])).toBe(true);
+    expect(needsStoryboardReplace(active, [{ scene_input: { remixDirectionId: 'faithful', remakeEdits: active.edits } }])).toBe(false);
+    const prompt = frameReferencedPrompt({ remakePerson: active.edits.person, remakeOutfit: active.edits.outfit, ownerInstructions: 'Original vitiligo pattern' }, 'first');
+    expect(prompt).toContain('red bikini'); expect(prompt).toContain('blond dreadlocks'); expect(prompt).toContain('Original vitiligo pattern');
+    expect(frameReferencedPrompt({ remakeOutfit: 'red bikini' }, 'first', { fallbackOutfit: true })).toContain('fitted athletic wear in red');
+  });
 });

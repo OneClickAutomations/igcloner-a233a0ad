@@ -62,7 +62,7 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
       const scene = faithfulScene(shot, { appearance: refs.appearance, keyframes: (refs.keyframes ?? []).filter((k: any) => k.shot === i), edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
       const notes = instructions.trim() ? `\nOwner notes (new original person, never source likeness): ${cleanOnScreenText(instructions) && instructions.trim()}` : '';
       return { ...scene, stillPrompt: `${scene.stillPrompt}${notes}`.slice(0, 5000), motionPrompt: `${scene.motionPrompt}${notes}`.slice(0, 5000), referenceIds, voiceover: '', sourceStart: start, sourceEnd: end,
-        sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
+        remakeEdits: direction.edits ?? {}, sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
     });
   }
   return shots.map((shot, i) => {
@@ -98,7 +98,7 @@ export function pickActiveDirection(directions: Direction[], value: Record<strin
 /** A saved storyboard from another direction, or a faithful one missing source keyframes, is replaced (history kept). */
 export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[], hasKeyframes = false): boolean {
   if (!active || !scenes.length) return false;
-  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && hasKeyframes && !i.keyframes?.first); });
+  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && (hasKeyframes && !i.keyframes?.first || ['person','outfit','setting','words'].some(k => String(i.remakeEdits?.[k] ?? '').trim() !== String((active.edits as Record<string,string> | undefined)?.[k] ?? '').trim()))); });
 }
 
 /** One short human "Keeps" sentence; never echo source subjects/objects on a card whose setting replaced them. */
