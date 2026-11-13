@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { buildMotionPrompt } from './video-motion';
 import { STUDIO_PRICING } from './studio-pricing';
 
-export const ReferenceKind = z.enum(['character_face', 'character_body', 'character_back', 'product', 'logo']);
+export const ReferenceKind = z.enum(['character_face', 'character_body', 'character_back', 'product', 'logo', 'setting']);
 export const StudioModel = z.enum(['google/veo-3.1-fast', 'google/veo-3.1-lite', 'google/gemini-omni-1.1-flash']);
 export const STUDIO_MODELS = [
   { id: 'google/veo-3.1-fast', label: 'Veo 3.1 Fast', note: 'Product / action · default', rate: STUDIO_PRICING.rates['google/veo-3.1-fast'] },

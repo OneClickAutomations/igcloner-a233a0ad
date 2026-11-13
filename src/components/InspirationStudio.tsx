@@ -24,7 +24,7 @@ export const inspirationQuery = (projectId?: string) => queryOptions({ queryKey:
 type StudioData = Awaited<ReturnType<typeof getInspirationStudio>>;
 type Scene = StudioData['scenes'][number];
 const blank: SceneDraft = { environment: 'A new sunlit garden table', action: 'A hand pours water from the open bottle into the cup', endState: 'The cup is half full and the bottle rests upright', camera: 'One slow push-in', audio: 'Water pouring and outdoor ambience', duration: 8, objects: [{ name: 'cup', state: 'empty, beside the bottle' }, { name: 'open bottle', state: 'open, hand gripping it; cap resting on the table' }] };
-const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }] as const;
+const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }, { id: 'setting', label: 'Setting' }] as const;
 
 export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery }: { projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
