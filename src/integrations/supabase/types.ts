@@ -1525,6 +1525,7 @@ export type Database = {
           model: string
           operation: string
           project_id: string
+          prompt_snapshot: string | null
           reference_ids: string[]
           refunded_at: string | null
           request_key: string
@@ -1550,6 +1551,7 @@ export type Database = {
           model: string
           operation: string
           project_id: string
+          prompt_snapshot?: string | null
           reference_ids?: string[]
           refunded_at?: string | null
           request_key: string
@@ -1575,6 +1577,7 @@ export type Database = {
           model?: string
           operation?: string
           project_id?: string
+          prompt_snapshot?: string | null
           reference_ids?: string[]
           refunded_at?: string | null
           request_key?: string
@@ -1683,9 +1686,11 @@ export type Database = {
           motion_prompt: string
           object_checks: Json
           project_id: string
+          review_history: Json
           revision: number
           scene_input: Json
           scene_order: number
+          selected_attempt_id: string | null
           status: string
           still_path: string | null
           still_prompt: string
@@ -1702,9 +1707,11 @@ export type Database = {
           motion_prompt: string
           object_checks?: Json
           project_id: string
+          review_history?: Json
           revision?: number
           scene_input?: Json
           scene_order: number
+          selected_attempt_id?: string | null
           status?: string
           still_path?: string | null
           still_prompt: string
@@ -1721,9 +1728,11 @@ export type Database = {
           motion_prompt?: string
           object_checks?: Json
           project_id?: string
+          review_history?: Json
           revision?: number
           scene_input?: Json
           scene_order?: number
+          selected_attempt_id?: string | null
           status?: string
           still_path?: string | null
           still_prompt?: string
@@ -1930,6 +1939,7 @@ export type Database = {
           id: string
           observation_notes: Json
           pause_reason: string | null
+          review_settings: Json
           status: string
           title: string
           updated_at: string
@@ -1944,6 +1954,7 @@ export type Database = {
           id?: string
           observation_notes?: Json
           pause_reason?: string | null
+          review_settings?: Json
           status?: string
           title?: string
           updated_at?: string
@@ -1958,6 +1969,7 @@ export type Database = {
           id?: string
           observation_notes?: Json
           pause_reason?: string | null
+          review_settings?: Json
           status?: string
           title?: string
           updated_at?: string
@@ -2170,6 +2182,15 @@ export type Database = {
           p_user: string
         }
         Returns: Json
+      }
+      save_film_shot_review: {
+        Args: {
+          p_attempt?: string
+          p_instruction?: string
+          p_scene: string
+          p_user: string
+        }
+        Returns: undefined
       }
       sweep_inspiration_stills: { Args: { p_user: string }; Returns: number }
       sweep_stale_analyses: { Args: { p_user_id?: string }; Returns: Json }
