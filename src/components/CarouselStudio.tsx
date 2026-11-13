@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { QualityNote } from "@/components/QualityNote";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -105,6 +106,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
   const regenFn = useServerFn(regenerateSlide);
   const saveFn = useServerFn(saveCarousel);
   const slideImageFn = useServerFn(generateCarouselSlideImage);
+  const gen = useGenJob();
   const finalizeOverlayFn=useServerFn(finalizeCarouselOverlay);
   const generateVerifiedImage=async(slideIndex:number)=>{
     const res:any=await slideImageFn({data:{projectId:projectId??"",slideIndex,extraDirection:imgDirection||undefined}});
@@ -213,7 +215,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
     if (!active) return;
     setRegenBusy(active.index);
     try {
-      const res: any = await gen.run({ slot: "slide-copy", title: `Slide ${active.index}`, stage: `Rewriting slide ${active.index}…`, expectedSeconds: 15, doneLabel: `Slide ${active.index} updated`, paid: true }, () => regenFn({
+      const res: any = await gen.run({ slot: "slide-copy", title: `Slide ${active.index}`, stage: `Rewriting slide ${active.index}…`, expectedSeconds: 15, doneLabel: `Slide ${active.index} updated` }, () => regenFn({
         data: { projectId, slideIndex: active.index, instruction: regenInstr || undefined },
       }));
       const updated = (res.project?.project_data ?? null) as CarouselDoc | null;
@@ -453,6 +455,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                 </>
               )}
             </Button>
+            {gen.ring("carousel", false)}
           </div>
         </div>
       ) : viewMode === "editor" ? (
@@ -526,7 +529,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       className="group/thumb relative h-10 w-10 shrink-0 overflow-hidden rounded-md"
                     >
                       {s.imageUrl ? (
-                        <img
+                        <img id="slide-image"
                           src={s.imageUrl}
                           alt={`Slide ${s.index}`}
                           className="h-full w-full object-cover"
@@ -641,6 +644,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       Regenerate · no plan credit charge
                     </Button>
                   </div>
+                  {gen.ring("slide-copy")}
                 </div>
                 <div className="mt-4 border-t border-border pt-4">
                   <div className="mb-2 flex items-center justify-between">
@@ -684,6 +688,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
                       {active.imageUrl ? "Regenerate image" : "Generate slide image"} · 1 plan credit
                     </Button>
                   </div>
+                  {gen.ring("slide-image")}
                 </div>
               </div>
             )}
