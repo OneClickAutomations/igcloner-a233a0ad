@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useEffect, useState } from "react";
 import { useSearch, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +25,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
   const saveFn = useServerFn(saveCopyDraft);
   const publishFn = useServerFn(publishContent);
   const voFn = useServerFn(buildSameLookVoiceover);
+  const gen = useGenJob();
   const { data, refetch } = useQuery({ queryKey: ["copy-project", projectId], queryFn: () => getFn({ data: { projectId } }) });
 
   const project: any = data?.project;
@@ -81,7 +83,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
   const rewrite = async (what: "slides" | "caption" | "both") => {
     setBusy(`rewrite-${what}`);
     try {
-      const r = await rewriteFn({ data: { projectId, what } });
+      const r = await gen.run({ slot: `rewrite-${what}`, title: what === "caption" ? "Your caption" : "Your slide text", stage: what === "caption" ? "Rewriting your caption…" : "Rewriting your slide text…", expectedSeconds: 15, doneLabel: what === "caption" ? "Your caption is rewritten" : "Your slide text is rewritten" }, () => rewriteFn({ data: { projectId, what } }));
       if (r.texts) setNewText((t) => ({ ...t, ...r.texts }));
       if (r.caption) { setCaption(r.caption); setTags((r.hashtags ?? []).map((h) => `#${h}`).join(" ")); }
     } catch (e: any) { toast.error(e?.message ?? "Rewrite failed"); } finally { setBusy(null); }
@@ -92,10 +94,9 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
     if (!text) { toast.error("Type the new text first"); return; }
     setBusy(`slide-${index}`);
     try {
-      const r = await slideFn({ data: { projectId, slideIndex: index, newText: text } });
+      const r = await gen.run({ slot: `slide-${index}`, title: `Slide ${index + 1}`, stage: `Redrawing slide ${index + 1} and checking the text…`, expectedSeconds: 50, doneLabel: `Slide ${index + 1} is ready`, paid: true, resultSelector: `#copy-slide-${index}` }, () => slideFn({ data: { projectId, slideIndex: index, newText: text } }));
       setResults((x) => ({ ...x, [index]: r as SlideResult }));
-      if (r.passed) toast.success(`Slide ${index + 1} ready (${r.attempts} attempt${r.attempts > 1 ? "s" : ""})`);
-      else toast.warning(`Slide ${index + 1} needs a look — credit refunded`);
+      if (!r.passed) toast.warning(`Slide ${index + 1} needs a look — credit refunded`);
       await save();
     } catch (e: any) {
       const ic = parseInsufficientCredits(e);
@@ -120,9 +121,9 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
   const makeVoiceover = async () => {
     setBusy("vo");
     try {
-      const r = await voFn({ data: { projectId, voiceId: voice, script: vo?.script || undefined } });
+      const r = await gen.run({ slot: "vo", title: "Your voiceover video", stage: "Writing the script and recording your voiceover…", expectedSeconds: 60, doneLabel: "Your video with the new voiceover is ready", paid: true, long: true, resultSelector: "#copy-vo" }, () => voFn({ data: { projectId, voiceId: voice, script: vo?.script || undefined } }));
       setVo(r);
-      if (r.muxError) toast.warning(r.muxError); else toast.success("Video with new voiceover ready");
+      if (r.muxError) toast.warning(r.muxError);
       refetch();
     } catch (e: any) { toast.error(e?.message ?? "Voiceover failed"); } finally { setBusy(null); }
   };
@@ -150,9 +151,10 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold">Slides</h2>
             <Button size="sm" variant="outline" onClick={() => rewrite("slides")} disabled={!!busy} className="gap-1.5">
-              {busy === "rewrite-slides" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite all for me · no plan credit charge
+              <Wand2 className="h-3.5 w-3.5" /> Rewrite all for me · no plan credit charge
             </Button>
           </div>
+          {gen.ring("rewrite-slides")}
           {slides.map((s: any) => {
             const r = results[s.index];
             const prev = latestBySlide.get(s.index);
@@ -160,7 +162,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
             const needsLook = r ? !r.passed : prev ? prev.metadata?.passed === false : false;
             const problems = r?.problems ?? prev?.metadata?.problems ?? [];
             return (
-              <div key={s.index} className="grid gap-3 rounded-xl border border-border bg-card p-3 md:grid-cols-[1fr_1fr]">
+              <div key={s.index} id={`copy-slide-${s.index}`} className="grid gap-3 rounded-xl border border-border bg-card p-3 md:grid-cols-[1fr_1fr]">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground">Slide {s.index + 1}{s.role ? ` · ${s.role}` : ""}</p>
                   <div className="grid grid-cols-2 gap-2">
@@ -177,6 +179,7 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
                       <Button size="sm" onClick={() => genSlide(s.index)} disabled={!!busy} className="w-full gap-1.5">
                         {busy === `slide-${s.index}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />} {outUrl ? "Regenerate" : "Generate"} (1 credit)
                       </Button>
+                      {gen.ring(`slide-${s.index}`)}
                       {outUrl && !needsLook && <p className="flex items-center gap-1 text-xs text-status-success"><CheckCircle2 className="h-3.5 w-3.5" /> Text checked: matches exactly, original text gone.</p>}
                       {needsLook && <div className="rounded-md border border-status-warning/40 bg-status-warning/10 p-2 text-xs"><p className="font-semibold">Needs a look — credit refunded</p>{problems.map((p: string) => <p key={p} className="text-muted-foreground">{p}</p>)}</div>}
                     </>
@@ -196,8 +199,9 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
             {VOICE_CATALOG.map((v) => <option key={v.id} value={v.id}>{v.name} — {v.description}</option>)}
           </select>
           {vo && <Textarea value={vo.script} onChange={(e) => setVo({ ...vo, script: e.target.value })} rows={5} className="text-sm" />}
-          <Button onClick={makeVoiceover} disabled={!!busy} className="gap-1.5">{busy === "vo" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{vo ? "Re-record with this script" : "Write script + record voiceover"}</Button>
-          {vo?.audioUrl && <audio controls src={vo.audioUrl} className="w-full" />}
+          <Button onClick={makeVoiceover} disabled={!!busy} className="gap-1.5"><Sparkles className="h-4 w-4" />{vo ? "Re-record with this script" : "Write script + record voiceover"}</Button>
+          {gen.ring("vo")}
+          {vo?.audioUrl && <audio id="copy-vo" controls src={vo.audioUrl} className="w-full" />}
           {vo?.muxError && <p className="text-xs text-status-error">{vo.muxError}</p>}
         </section>
       )}
@@ -213,15 +217,16 @@ export function CopyStudio({ embeddedProjectId, wizardStage }: { embeddedProject
       {wizardStage!=='make' && <section className="space-y-2 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Caption</h2>
-          {mode === "A1" && <Button size="sm" variant="outline" onClick={() => rewrite("caption")} disabled={!!busy} className="gap-1.5">{busy === "rewrite-caption" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />} Rewrite like the original</Button>}
+          {mode === "A1" && <Button size="sm" variant="outline" onClick={() => rewrite("caption")} disabled={!!busy} className="gap-1.5"><Wand2 className="h-3.5 w-3.5" /> Rewrite like the original</Button>}
         </div>
+        {gen.ring("rewrite-caption")}
         <Textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={8} className="text-sm" />
         <Textarea value={tags} onChange={(e) => setTags(e.target.value)} rows={2} className="text-xs" placeholder="#hashtags" />
       </section>}
 
       {wizardStage==='deliver' && <div className="flex flex-wrap gap-2">{finalMedia.map((m,i)=><Button key={i} variant="outline" asChild><a href={m.url} download target="_blank" rel="noreferrer">Download {finalMedia.length>1?`file ${i+1}`:'file'}</a></Button>)}</div>}
       <div className="flex flex-wrap gap-2">
-        <Button onClick={toPublishing} disabled={!!busy || !finalMedia.length} className="gap-1.5">{busy === "publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Save to Publishing Center</Button>
+        <Button onClick={toPublishing} disabled={!!busy || !finalMedia.length} className="gap-1.5"><Send className="h-4 w-4" /> Save to Publishing Center</Button>
         <Button variant="outline" onClick={() => save().then(() => toast.success("Saved to project"))} disabled={!!busy}>Save to project</Button>
       </div>
     </div>
