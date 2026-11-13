@@ -61,12 +61,16 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
           for (const r of chars) { const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path); if (im) form.append('image[]', new File([im], r.filename, { type: im.type || 'image/png' })); }
           return editImage({ ...config, model: FRAME_MODEL, format: 'gemini-chat' }, form);
         };
-        upstream = await send(false);
-        if (!upstream.ok && [400, 422].includes(upstream.status)) {
+        // Buffer the stream so an in-stream safety refusal can trigger one outfit fallback before the browser sees it.
+        const attemptOnce = async (fb: boolean) => { const r = await send(fb); return { r, text: r.ok ? await r.text() : '' }; };
+        const refused = (x: { r: Response; text: string }) => ([400, 422].includes(x.r.status)) || (x.r.ok && !/_?completed/.test(x.text) && /safety|blocked|refus|policy/i.test(x.text));
+        let out = await attemptOnce(false);
+        if (refused(out)) {
           // Provider refusal on the source outfit: one retry with fitted athletic wear in the same colours.
-          fallback = true; upstream = await send(true);
+          fallback = true; out = await attemptOnce(true);
           await supabaseAdmin.from('scene_attempts').update({ outfit_fallback: true }).eq('id', claim.attempt.id);
         }
+        upstream = out.r.ok ? new Response(out.text, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }) : out.r;
       } else if (refs?.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'low');
         for (const r of refs) {
