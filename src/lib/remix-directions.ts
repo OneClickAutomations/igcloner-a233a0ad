@@ -88,3 +88,13 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
     return { ...base, stillPrompt: `${prompts.stillPrompt}${notes}`, motionPrompt: `${prompts.motionPrompt}${notes}`, sourceStart:start,sourceEnd:end,sourceTimingNote: end-start===duration ? 'Source shot timing retained' : `Source shot ${Math.round((end-start)*10)/10}s; clip ${duration}s (supported 4/6/8s length)` };
   });
 }
+/** Resumed drafts land on the faithful remake unless the owner clicked another card in the current flow. */
+export function pickActiveDirection(directions: Direction[], value: Record<string, unknown>): Direction | undefined {
+  const saved = directions.find(d => d.id === value.remixDirectionId);
+  return saved && (saved.faithful || value.remixDirectionPicked === true) ? saved : directions[0];
+}
+/** A saved storyboard from another direction, or a faithful one missing source keyframes, is replaced (history kept). */
+export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[]): boolean {
+  if (!active || !scenes.length) return false;
+  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && !i.keyframes?.first); });
+}
