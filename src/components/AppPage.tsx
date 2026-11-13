@@ -343,7 +343,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
-            {embedded && sourceAnalysisId ? <ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/> : <>
+            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><h2 className="text-xl font-bold">Verified video analysis</h2><p className="mt-2 text-review-muted">{dna?.videoVerification ? 'Two separate video passes checked the final shot list; the plain-English breakdown uses the corrected observations.' : 'This saved analysis predates the two-pass check. You can keep using it, or check the saved video without scraping again.'}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <Button className="mt-4 h-auto min-h-11 whitespace-normal" onClick={async()=>{try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}}}><Sparkles className="size-4 shrink-0"/>Analyse and verify saved video · {ACTION_COSTS.analysis} plan credits</Button>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always

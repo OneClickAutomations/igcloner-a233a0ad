@@ -35,7 +35,8 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     try {
       const { generateImage, editImage } = await import('@/lib/inspiration-image-gateway.server');
       const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: 'openai/gpt-image-2.5-sunburst', format: 'openai' as const };
-      const prompt = `${stripIdentity(scene.still_prompt)}. Compose a portrait 9:16 image, 720 by 1280 framing. Reference identity only; create the new scene, not a copy of reference setting.`;
+      const roles = (refs ?? []).map((r,i)=>`Reference image ${i+1}: ${r.kind==='setting'?'owner-supplied setting; use its environment, not its people':r.kind==='product'?'owner-supplied product identity':r.kind==='logo'?'owner-supplied logo':'owner-supplied character identity'}`).join('. ');
+      const prompt = `${stripIdentity(scene.still_prompt)}. Compose a portrait 9:16 image, 720 by 1280 framing. ${roles}. Identity comes only from selected reference images. Use an owner-selected setting reference when supplied; otherwise create the new setting described. Never reproduce the source person's likeness.`;
       let upstream: Response;
       if (refs?.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'low');
