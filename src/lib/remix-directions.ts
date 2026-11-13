@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SceneInput, buildScenePrompts, referencedActionObjects, stripIdentity, type SceneDraft } from './inspiration';
+import { sourceLookBrief } from './look-brief';
 import { ACTION_COSTS } from './credits';
 import { FAITHFUL_ID, cleanOnScreenText, faithfulScene } from './faithful-remake';
 
@@ -59,9 +60,10 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
     return shots.map((shot, i) => {
       const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8), duration = supportedShotDuration(end - start);
       const refs = (source?.evidence?.remakeRefs ?? {}) as any;
-      const scene = faithfulScene(shot, { appearance: refs.appearance, keyframes: (refs.keyframes ?? []).filter((k: any) => k.shot === i), edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
+      const brief = sourceLookBrief(source, i);
+      const scene = faithfulScene({...shot, openingPose: brief.openingPose !== 'unclear' ? brief.openingPose : shot.openingPose}, { appearance: refs.appearance, keyframes: (refs.keyframes ?? []).filter((k: any) => k.shot === i), edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
       const notes = instructions.trim() ? `\nOwner notes (new original person, never source likeness): ${cleanOnScreenText(instructions) && instructions.trim()}` : '';
-      return { ...scene, stillPrompt: `${scene.stillPrompt}${notes}`.slice(0, 5000), motionPrompt: `${scene.motionPrompt}${notes}`.slice(0, 5000), referenceIds, voiceover: '', sourceStart: start, sourceEnd: end,
+      return { ...scene, lookBrief: brief, openingPose: brief.openingPose, stillPrompt: `${scene.stillPrompt}${notes}`.slice(0, 5000), motionPrompt: `${scene.motionPrompt}${notes}`.slice(0, 5000), referenceIds, voiceover: '', sourceStart: start, sourceEnd: end,
         remakeEdits: direction.edits ?? {}, sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
     });
   }
