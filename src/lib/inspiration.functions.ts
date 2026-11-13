@@ -180,7 +180,7 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     if(snapshotError){await supabaseAdmin.rpc('fail_inspiration_attempt',{p_attempt:c.attempt.id,p_reason:'Shot instructions could not be saved.'});throw new Error('Shot instructions could not be saved. Credits refunded.');}
     try {
       const { submitApprovedAttempt } = await import('./inspiration.server');
-      await submitApprovedAttempt(c.attempt, key);
+      await submitApprovedAttempt({...c.attempt,prompt_snapshot:promptSnapshot}, key);
     } catch (e) {
       const status = (e as any).status;
       if ([402,403,404].includes(status)) await supabaseAdmin.from('video_inspiration_projects').update({ pause_reason: (e as Error).message }).eq('id', s.project_id);
