@@ -37,7 +37,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     return {
       projects: projects ?? [], selected: selected ?? null, analyses: analyses ?? [],
       references: await Promise.all((references ?? []).map(async r => ({ ...r, preview: await sign(r.storage_path) }))),
-      scenes: await Promise.all((scenes ?? []).map(async s => ({ ...s, preview: await sign(s.still_path) }))),
+      scenes: await Promise.all((scenes ?? []).map(async s => ({ ...s, preview: await sign(s.still_path), endPreview: await sign((s as any).end_still_path ?? null) }))),
       attempts: await Promise.all((attempts ?? []).map(async a => ({ ...a, preview: await sign(a.result_url) }))),
       assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
       narration: narrations?.[0] ?? null,
@@ -216,9 +216,14 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
     const path = `${context.userId}/${a.project_id}/stills/${a.id}.png`;
     const { error: up } = await supabaseAdmin.storage.from('video-inspiration').upload(path, bytes, { contentType: 'image/png', upsert: true }); if (up) throw new Error(up.message);
     await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null }).eq('id', a.id);
+    if ((a as any).frame === 'last') {
+      const { error } = await supabaseAdmin.from('storyboard_scenes').update({ end_still_path: path }).eq('id', a.scene_id);
+      if (error) throw new Error(error.message);
+      return { ok: true, outfitFallback: (a as any).outfit_fallback === true };
+    }
     const { error } = await supabaseAdmin.from('storyboard_scenes').update({ still_path: path, object_checks: [], approved_at: null, approved_revision: null, status: 'still_ready' }).eq('id', a.scene_id).eq('revision', a.scene_revision);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, outfitFallback: (a as any).outfit_fallback === true };
   });
 const WrittenScene = z.object({
   environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),
