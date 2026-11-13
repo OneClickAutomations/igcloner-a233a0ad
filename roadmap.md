@@ -112,3 +112,7 @@
 - [x] Resume after closing the tab (stage-per-request)
 - [x] Large videos: SD copy for Facebook, else transcript + cover with a labelled limitation
 - [x] Instagram reel with speech verified once
+
+## Current sign-in and reported reel bug
+- [x] Remove OAuth homepage detour and duplicate dashboard reads; signed-in navigation and dashboard tests checked
+- [ ] Diagnose/fix DfNangbBYRX scraper failure, normalization tests, attempt refund, and signed-in scrape-only verification
