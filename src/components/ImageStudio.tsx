@@ -645,7 +645,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
             <div className={`relative mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border bg-muted ${aspectClass}`}>
               {activeUrl ? (
                 <>
-                  <img src={activeUrl} alt="Generated post" className="h-full w-full object-cover" />
+                  <img id="image-result" src={activeUrl} alt="Generated post" className="h-full w-full object-cover" />
                   {(branding.showHandle || (branding.showLogo && branding.logoUrl)) && (
                     <div
                       className="absolute z-10 flex items-center gap-1.5 rounded-full bg-black/35 px-2.5 py-1 backdrop-blur-sm"
@@ -666,7 +666,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
                     </div>
                   )}
                 </>
-              ) : generating ? (
+              ) : (generating || gen.has("image")) ? (
                 <div className="flex h-full w-full items-center justify-center p-4">{gen.ring("image", false)}</div>
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -795,7 +795,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
               {(() => {
                 const r = platformCopy[activePlatform];
                 const profile = PLATFORM_VOICE_PROFILES[activePlatform];
-                const loading = !!platformLoading[activePlatform];
+                const loading = !!platformLoading[activePlatform] || gen.has("platforms");
                 if (loading) {
                   return (
                     <div className="py-4">{gen.ring("platforms")}<span className="sr-only">Generating {profile.platform}{" "}

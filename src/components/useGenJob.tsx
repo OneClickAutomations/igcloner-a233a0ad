@@ -42,5 +42,6 @@ export function useGenJob() {
     return <div className="mt-3" data-gen-slot={slot}><GenerationProgress compact={compact} status={j.status} stage={j.stage} startedAt={j.startedAt} expectedSeconds={j.opts.expectedSeconds} percent={j.percent} items={j.items} error={j.error} refunded={j.opts.paid} onRetry={j.retry}/></div>;
   };
   const isRunning = (slot?: string) => Object.entries(live).some(([k, j]) => j.status === 'running' && (!slot || k === slot));
-  return { run, ring, isRunning };
+  const has = (slot: string) => !!live[slot];
+  return { run, ring, isRunning, has };
 }
