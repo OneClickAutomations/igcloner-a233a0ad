@@ -36,22 +36,25 @@ export function startingDirections(source: any): Direction[] {
 /** One editable scene per saved shot; preserve source timing separately from provider-supported clip timing. */
 export function prefillRemixScenes(source: any, direction: Direction, instructions: string, referenceIds: string[], speech: 'voiceover'|'silent'): (SceneDraft & { sourceStart: number; sourceEnd: number; sourceTimingNote: string })[] {
   const shots = sourceShots(source);
+  const customSetting = instructions.match(/\b(?:in|at|use)\s+(?:a |an |the )?([^.;\n]*?\b(?:workshop|studio|garden|gym|kitchen|office|beach|park|classroom|store))\b/i)?.[1];
+  const customObject = instructions.match(/\band\s+(?:a |an |the )?([^,;.\n]+?)(?=;|,|\.|$)/i)?.[1];
   return shots.map((shot, i) => {
     const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8);
     const planned = direction.scenes?.[i];
-    const observedAction = stripIdentity(String(shot.action ?? shot.onScreen ?? shot.description ?? 'demonstrates the main idea'));
-    const action = planned?.action ?? `${direction.changes.subject} performs a new demonstration of ${direction.changes.message}: ${observedAction}. Use only the action pattern, not the source identity or source product.`;
+    const message = instructions.match(/\b(?:message|lesson)\s+(?:about|is)\s+([^.;\n]+)/i)?.[1] ?? direction.changes.message;
+    const action = planned?.action ?? `${direction.changes.subject} ${customObject ? `demonstrates a new practical use of ${customObject}` : 'demonstrates one concrete step'} to illustrate ${message}. ${i===0?'Begin with the hook reveal.':i===shots.length-1?'Finish with the visible payoff.':'Advance the demonstration by one clear beat.'}`;
     const objects = planned?.objects ? [...planned.objects] : [{ name: direction.changes.subject, state: 'visible in the new setting, ready to demonstrate' }];
+    if (customObject && !objects.some(o=>o.name===customObject)) objects.push({name:customObject,state:'clearly visible and ready for the demonstration'});
     for (const name of referencedActionObjects(action)) if (!objects.some(o => `${o.name} ${o.state}`.toLowerCase().includes(name))) objects.push({ name, state: 'visible in its starting position, ready for the action' });
     const duration = supportedShotDuration(end - start);
     const base = SceneInput.parse({
-      ...planned, environment: planned?.environment ?? direction.changes.setting, action,
+      ...planned, environment: customSetting ?? planned?.environment ?? direction.changes.setting, action,
       endState: planned?.endState ?? `The demonstration finishes with a visible result supporting: ${direction.changes.message}`,
       camera: planned?.camera ?? shot.framing ?? shot.camera ?? 'Static medium framing',
       audio: planned?.audio ?? (speech==='voiceover' ? 'Clear original spoken explanation; no source recording or song' : 'Natural ambience; no source recording or song'),
       duration, objects, referenceIds,
-      voiceover: speech==='silent' ? '' : planned?.voiceover ?? direction.changes.message,
-      onScreenText: planned?.onScreenText ?? direction.changes.message.slice(0,200),
+      voiceover: speech==='silent' ? '' : planned?.voiceover ?? message,
+      onScreenText: planned?.onScreenText ?? message.slice(0,200),
     });
     const prompts = buildScenePrompts({ ...base, stillPrompt: undefined, motionPrompt: undefined });
     const notes = instructions.trim() ? `\nAdditional owner direction (create original content; never source likeness): ${stripIdentity(instructions)}` : '';
