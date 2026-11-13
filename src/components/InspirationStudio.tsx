@@ -25,7 +25,8 @@ import { EMPTY_CREATION } from '@/lib/creation-draft';
 export const inspirationQuery = (projectId?: string) => queryOptions({ queryKey: ['inspiration-studio', projectId], queryFn: () => getInspirationStudio({ data: { projectId } }) });
 type StudioData = Awaited<ReturnType<typeof getInspirationStudio>>;
 type Scene = StudioData['scenes'][number];
-const blank: SceneDraft = { environment: 'A new sunlit garden table', action: 'A hand pours water from the open bottle into the cup', endState: 'The cup is half full and the bottle rests upright', camera: 'One slow push-in', audio: 'Water pouring and outdoor ambience', duration: 8, objects: [{ name: 'cup', state: 'empty, beside the bottle' }, { name: 'open bottle', state: 'open, hand gripping it; cap resting on the table' }] };
+const blank: SceneDraft = { environment: 'The same setting as the source shot', action: 'The new person performs the same action as the source shot', endState: 'The action finishes in the same final position as the source', camera: 'Static full shot at eye level', audio: 'Natural room ambience', duration: 8, objects: [{ name: 'person', state: 'in the starting position of the action' }] };
+const LEGACY_FIXTURE = /pours water|open bottle|into the cup/i;
 const kinds = [{ id: 'character_face', label: 'Face anchor' }, { id: 'character_body', label: 'Full body' }, { id: 'character_back', label: 'Back view' }, { id: 'product', label: 'Product' }, { id: 'logo', label: 'Logo' }, { id: 'setting', label: 'Setting' }] as const;
 
 export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wizardDraft, onWizardDraft, speechMode, initialDelivery }: { projectId?: string; wizardStage?: 'words'|'make'|'deliver'; wizardBrief?: string; wizardDraft?: Record<string, unknown>; onWizardDraft?: (draft: Record<string, unknown>) => void; speechMode?: 'voiceover'|'silent'; initialDelivery?: boolean }) {
@@ -42,7 +43,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   const create = useServerFn(createInspirationProject), save = useServerFn(saveInspirationScene), refs = useServerFn(manageInspirationReference), approve = useServerFn(approveInspirationStill), quote = useServerFn(inspirationQuote), animate = useServerFn(animateInspirationScene), recover = useServerFn(recoverInspirationClips), finish = useServerFn(finishInspirationStill), write = useServerFn(writeInspirationStoryboard);
   const [tab, setTab] = useState<'storyboard'|'references'|'observations'|'delivery'>(initialDelivery?'delivery':'storyboard');
   const [newProject, setNewProject] = useState(false), [title, setTitle] = useState(''), [analysisId, setAnalysisId] = useState('');
-  const [editing, setEditing] = useState<Scene | 'new' | null>(null), [draft, setDraft] = useState<SceneDraft>((wizardDraft?.sceneDraft as SceneDraft) ?? blank);
+  const [editing, setEditing] = useState<Scene | 'new' | null>(null), [draft, setDraft] = useState<SceneDraft>(() => { const d = wizardDraft?.sceneDraft as SceneDraft | undefined; return d && !LEGACY_FIXTURE.test(`${d.action} ${d.environment}`) ? d : blank; });
   const [busy, setBusy] = useState(false), [checks, setChecks] = useState<Record<string,ObjectCheck[]>>((wizardDraft?.checks as Record<string,ObjectCheck[]>)??{});
   const [model, setModel] = useState<(typeof STUDIO_MODELS)[number]['id']>((wizardDraft?.model as (typeof STUDIO_MODELS)[number]['id'])??'google/veo-3.1-fast');
   const [confirmation, setConfirmation] = useState<{ scene: Scene; operation: 'still'|'animate'; q: Awaited<ReturnType<typeof inspirationQuote>> } | null>(null);

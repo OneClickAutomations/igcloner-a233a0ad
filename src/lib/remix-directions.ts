@@ -58,8 +58,9 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
     const dna = source?.dna ?? source?.dna_analysis ?? {}; const video = source?.evidence?.video ?? dna.verifiedVideo ?? {};
     return shots.map((shot, i) => {
       const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8), duration = supportedShotDuration(end - start);
-      const scene = faithfulScene(shot, { edits: { ...direction.edits, ...(instructions.trim() && !direction.edits?.setting ? {} : {}) }, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
-      return { ...scene, referenceIds, voiceover: speech === 'silent' ? '' : '', sourceStart: start, sourceEnd: end,
+      const scene = faithfulScene(shot, { edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
+      const notes = instructions.trim() ? `\nOwner notes (new original person, never source likeness): ${cleanOnScreenText(instructions) && instructions.trim()}` : '';
+      return { ...scene, stillPrompt: `${scene.stillPrompt}${notes}`.slice(0, 5000), motionPrompt: `${scene.motionPrompt}${notes}`.slice(0, 5000), referenceIds, voiceover: '', sourceStart: start, sourceEnd: end,
         sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
     });
   }
