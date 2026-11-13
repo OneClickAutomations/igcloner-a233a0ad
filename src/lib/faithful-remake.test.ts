@@ -19,6 +19,7 @@ describe('faithful remake', () => {
     expect(s.stillPrompt).toMatch(/hexagonal ceiling lights/); expect(s.stillPrompt).toMatch(/treadmill/);
     expect(s.stillPrompt).toMatch(/behind a loaded barbell/); expect(s.stillPrompt).toMatch(/9:16/);
     expect(s.onScreenText).toBe('');
+    expect(s.motionPrompt).toMatch(/cleans it to the front of the shoulders.*presses it straight overhead.*lowers it under control back to the floor by 8s/);
   });
   it('blank outfit defaults to fitted athletic wear; owner edits override', () => {
     const [a] = prefillRemixScenes(gym, faithfulDirection(gym), '', [], 'silent');

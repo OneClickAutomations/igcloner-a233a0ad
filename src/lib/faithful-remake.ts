@@ -20,7 +20,7 @@ export function startPose(action: string): string {
   return `in the exact first position of this action, about to begin: ${action}`;
 }
 export function motionBeats(action: string, seconds: number): string {
-  if (/clean/i.test(action) && /press|overhead/i.test(action)) {
+  if (LIFT.test(action) && /overhead|press/i.test(action) && /floor/i.test(action)) {
     const t = (f: number) => `${Math.round(seconds * f * 10) / 10}s`;
     return `From 0s pulls the loaded barbell from the floor and cleans it to the front of the shoulders by ${t(0.3)}, presses it straight overhead to full lockout by ${t(0.55)}, holds it still overhead briefly until ${t(0.7)}, then lowers it under control back to the floor by ${t(1)}.`;
   }
@@ -56,7 +56,7 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   ].join(' ');
   const motionPrompt = [
     `Single continuous ${framing} shot in ${settingLine}.`,
-    `${person}, wearing ${outfit}: ${motionBeats(action, opts.duration)}`,
+    `${person}, wearing ${outfit}: ${motionBeats(`${action} ${stripIdentity(String(shot?.action ?? ''))}`, opts.duration)}`,
     liftPhysics(action),
     `Camera stays ${shot?.camera ?? 'static'}. Pacing: ${opts.pacing ?? 'as the source'}.`,
     `Audio: ${opts.speech === 'voiceover' ? 'clear original voiceover; ' : ''}${opts.audio ?? 'natural room ambience'}; no source recording or song.`,
