@@ -68,6 +68,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const [stepLabel, setStepLabel] = useState("");
   const [lastProgressAt, setLastProgressAt] = useState<string | null>(null);
   const [dna, setDna] = useState<any>(null);
+  const [analyzedAt, setAnalyzedAt] = useState<string | null>(null);
   const [scraped, setScraped] = useState<any>(null);
   const [instagramUrl, setInstagramUrl] = useState("");
   const [analysisId, setAnalysisId] = useState<string | null>(null);
@@ -108,6 +109,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
 
   const showPayload = (p: any) => {
     setDna(p.dna ?? null);
+    setAnalyzedAt(p.createdAt ?? null);
     setScraped(p.scraped ?? null);
     setInstagramUrl(p.instagramUrl ?? "");
     setAnalysisId(p.analysisId ?? null);
@@ -348,7 +350,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
-            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><h2 className="text-xl font-bold">Verified video analysis</h2><p className="mt-2 text-review-muted">{dna?.videoVerification ? 'Two separate video passes checked the final shot list; the plain-English breakdown uses the corrected observations.' : 'This saved analysis predates the two-pass check. You can keep using it, or check the saved video without scraping again.'}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <Button disabled={verificationStarting} className="mt-4 h-auto min-h-11 whitespace-normal" onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}><Sparkles className="size-4 shrink-0"/>{verificationStarting?'Starting saved-video check…':`Analyse and verify saved video · ${ACTION_COSTS.analysis} plan credits`}</Button>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
+            {embedded && sourceAnalysisId ? <><div className="review-card mb-6"><p className="flex flex-wrap items-center gap-2 text-base font-semibold"><span className="grid size-6 place-items-center rounded-full bg-status-success text-primary-foreground" aria-hidden>✓</span>Analyzed{analyzedAt ? ` ${new Date(analyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{!dna?.videoVerification && ['Reel','Video'].includes(dna?.postType??scraped?.type) && <span className="text-sm font-normal text-review-muted">· before our two-pass video check</span>}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <div className="mt-3"><Button variant="link" className="h-auto min-h-0 p-0 text-base" disabled={verificationStarting} onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}>{verificationStarting?<Loader2 className="size-4 animate-spin"/>:null}{verificationStarting?'Starting…':`Re-analyze for fresh metrics · ${ACTION_COSTS.analysis} credits`}</Button><p className="mt-1 text-sm text-review-muted">Use this if the post is older and you want updated views, likes and comments.</p></div>}</div><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/></> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always
