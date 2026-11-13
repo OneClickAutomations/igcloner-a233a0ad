@@ -110,7 +110,12 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     const c = confirmation; setConfirmation(null); const requestKey = crypto.randomUUID();
     await run(async () => {
       if (c.operation === 'animate') { await animate({ data: { sceneId: c.scene.id, model, requestKey, revision: c.q.revision, confirmedCredits: c.q.customerCredits ?? 0 } }); return; }
-      await makeStill(c.scene, c.q, c.frame ?? 'first', requestKey);
+      const jobId = `still-${c.scene.id}`; const label = `Scene ${c.scene.scene_order+1}`;
+      setBatch({ kind: 'stills', items: [{ label, state: 'running' }], startedAt: Date.now(), status: 'running' });
+      startJob({ id: jobId, kind: 'stills', title: 'Your still', href: window.location.pathname + window.location.search, expectedSeconds: 40, doneLabel: 'Your still is ready' });
+      try { await makeStill(c.scene, c.q, c.frame ?? 'first', requestKey); }
+      catch (e) { setBatch(b => b && { ...b, items: [{ label, state: 'failed' }], status: 'error', error: (e as Error).message, refunded: true }); finishJob(jobId, false, { error: (e as Error).message, refunded: true }); throw e; }
+      setBatch(b => b && { ...b, items: [{ label, state: 'done' }], status: 'done' }); finishJob(jobId, true, { resultSelector: '#make-scenes' }); setTimeout(() => setBatch(null), 2500);
     });
   };
   const downloadClips = async () => {
@@ -156,7 +161,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
         <p className="text-sm">{state==='locked'?st.lock:st.body}</p>
         {state!=='locked'&&st.action&&<div className="mt-3">{st.action}</div>}</div></li>;})}</ol>;
     })()}
-    {wizardStage==='make' && batch && <GenerationProgress status={batch.status} stage={batch.status==='error'?'':(()=>{const k=batch.items.findIndex(i=>i.state==='running');return k<0?'Finishing…':`Drawing scene ${k+1} of ${batch.items.length}…`;})()} startedAt={batch.startedAt} expectedSeconds={40*batch.items.length} items={batch.items} error={batch.error} refunded={batch.refunded} onRetry={()=>{setBatch(null);createStills();}}/>}
+    {wizardStage==='make' && batch && <GenerationProgress status={batch.status} stage={batch.status==='error'?'':(()=>{const k=batch.items.findIndex(i=>i.state==='running');return k<0?'Finishing…':`Drawing scene ${k+1} of ${batch.items.length}…`;})()} startedAt={batch.startedAt} expectedSeconds={40*batch.items.length} items={batch.items} error={batch.error} refunded={batch.refunded} onRetry={batch.items.length>1||data.scenes.some(x=>!x.preview)?()=>{setBatch(null);createStills();}:()=>setBatch(null)}/>}
     {wizardStage==='make' && (()=>{const live=data.attempts.filter(t=>t.operation==='animate'&&['claimed','queued','in_progress','collecting'].includes(t.status));if(!live.length)return null;const started=Math.min(...live.map(t=>new Date(t.created_at).getTime()));const items=data.scenes.filter(x=>data.attempts.some(t=>t.scene_id===x.id&&t.operation==='animate')).map(x=>{const t=data.attempts.find(t=>t.scene_id===x.id&&t.operation==='animate');return {label:`Scene ${x.scene_order+1}`,state:(t?.status==='completed'?'done':t?.status==='failed'||t?.status==='refunded'?'failed':'running') as JobItem['state']};});const k=items.findIndex(i=>i.state==='running');return <GenerationProgress stage={`Animating scene ${k+1}…`} startedAt={started} expectedSeconds={120} items={items} note="You can leave this page — we’ll tell you when it’s done"/>;})()}
     {data.videoBalance===0&&<div role="status" className="mb-5 flex flex-wrap items-center gap-4 border-b border-border pb-5"><div><p className="font-semibold">You need video credits to animate scenes, narrate and render.</p><p className="text-sm text-muted-foreground">Storyboards and stills use plan credits and still work. Everything you make stays saved; nothing is charged.</p></div><VideoPackAvailability/></div>}
     {data.selected?.pause_reason && <p role="alert" className="mb-5 text-destructive">Paused: {data.selected.pause_reason}</p>}
