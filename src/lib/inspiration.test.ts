@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { assertAnimationReady, buildScenePrompts, missingActionObjects, priceFromWorkspaceCost, splitCachedObservations, stripIdentity } from './inspiration';
+import { assertAnimationReady, buildScenePrompts, makeStage, missingActionObjects, priceFromWorkspaceCost, splitCachedObservations, stripIdentity } from './inspiration';
 import { buildMotionPrompt, PHYSICAL_NEGATIVES } from './video-motion';
 const draft = { environment: 'a new garden table', action: 'a hand pours from the open bottle into the cup', endState: 'cup half full, bottle upright', camera: 'one slow push-in', audio: 'pouring and birds', duration: 8 as const, objects: [{ name: 'cup', state: 'empty beside bottle' }, { name: 'open bottle', state: 'cap on table; hand gripping bottle' }] };
 describe('inspiration scene rules', () => {
+  it('does not mark an empty storyboard as stills completed', () => {
+    expect(makeStage(0, 0, 0, 0)).toBe(0);
+  });
+  it('unlocks approval after a still and review only after a clip', () => {
+    expect(makeStage(1, 0, 0, 0)).toBe(1);
+    expect(makeStage(1, 1, 0, 0)).toBe(2);
+    expect(makeStage(1, 1, 1, 0)).toBe(3);
+    expect(makeStage(1, 1, 1, 1)).toBe(4);
+  });
   it('puts cup, open bottle and hand state into every still including edited prompts', () => {
     const p = buildScenePrompts({ ...draft, stillPrompt: 'Garden table.' });
     expect(p.stillPrompt).toContain('cup: empty beside bottle');
