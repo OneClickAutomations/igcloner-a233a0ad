@@ -1519,11 +1519,13 @@ export type Database = {
           billing_balance: string
           created_at: string
           failure_reason: string | null
+          frame: string
           gateway_job_id: string | null
           id: string
           lease_until: string | null
           model: string
           operation: string
+          outfit_fallback: boolean
           project_id: string
           prompt_snapshot: string | null
           reference_ids: string[]
@@ -1545,11 +1547,13 @@ export type Database = {
           billing_balance?: string
           created_at?: string
           failure_reason?: string | null
+          frame?: string
           gateway_job_id?: string | null
           id?: string
           lease_until?: string | null
           model: string
           operation: string
+          outfit_fallback?: boolean
           project_id: string
           prompt_snapshot?: string | null
           reference_ids?: string[]
@@ -1571,11 +1575,13 @@ export type Database = {
           billing_balance?: string
           created_at?: string
           failure_reason?: string | null
+          frame?: string
           gateway_job_id?: string | null
           id?: string
           lease_until?: string | null
           model?: string
           operation?: string
+          outfit_fallback?: boolean
           project_id?: string
           prompt_snapshot?: string | null
           reference_ids?: string[]
@@ -1682,6 +1688,7 @@ export type Database = {
           approved_revision: number | null
           created_at: string
           duration: number
+          end_still_path: string | null
           id: string
           motion_prompt: string
           object_checks: Json
@@ -1703,6 +1710,7 @@ export type Database = {
           approved_revision?: number | null
           created_at?: string
           duration?: number
+          end_still_path?: string | null
           id?: string
           motion_prompt: string
           object_checks?: Json
@@ -1724,6 +1732,7 @@ export type Database = {
           approved_revision?: number | null
           created_at?: string
           duration?: number
+          end_still_path?: string | null
           id?: string
           motion_prompt?: string
           object_checks?: Json

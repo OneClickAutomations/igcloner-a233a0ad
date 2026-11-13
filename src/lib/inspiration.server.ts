@@ -34,7 +34,9 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   } else {
     // Veo rejects ingredient references beside a starting-frame image. Approval mode
     // must animate the approved frame; references are already used in that frame.
-    request = { instances: [{ prompt, image: start }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: PHYSICAL_NEGATIVES } };
+    const endPath = (scene as any).end_still_path as string | null;
+    const end = endPath && attempt.model !== 'google/veo-3.1-lite' ? await loadInspirationImage(endPath) : null;
+    request = { instances: [{ prompt, image: start, ...(end ? { lastFrame: end } : {}) }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: PHYSICAL_NEGATIVES } };
   }
   let job;
   try { job = await createVideo(config, request); }

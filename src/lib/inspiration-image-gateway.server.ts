@@ -98,6 +98,7 @@ export async function editImage(config: ImageConfig, form: FormData, signal?: Ab
           },
         ],
         modalities: ["image", "text"],
+        image_config: { aspect_ratio: "9:16" },
       };
   }
   return fetch(`${config.baseURL}/v1/images/generations`, {

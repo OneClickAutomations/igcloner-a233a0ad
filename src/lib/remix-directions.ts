@@ -58,7 +58,8 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
     const dna = source?.dna ?? source?.dna_analysis ?? {}; const video = source?.evidence?.video ?? dna.verifiedVideo ?? {};
     return shots.map((shot, i) => {
       const start = Number(shot.start ?? 0), end = Number(shot.end ?? start + 8), duration = supportedShotDuration(end - start);
-      const scene = faithfulScene(shot, { edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
+      const refs = (source?.evidence?.remakeRefs ?? {}) as any;
+      const scene = faithfulScene(shot, { appearance: refs.appearance, keyframes: (refs.keyframes ?? []).filter((k: any) => k.shot === i), edits: direction.edits, hasCharacterRef: referenceIds.length > 0, duration, pacing: video.pacing, audio: shot.audioSummary ?? video.audio?.description, speech });
       const notes = instructions.trim() ? `\nOwner notes (new original person, never source likeness): ${cleanOnScreenText(instructions) && instructions.trim()}` : '';
       return { ...scene, stillPrompt: `${scene.stillPrompt}${notes}`.slice(0, 5000), motionPrompt: `${scene.motionPrompt}${notes}`.slice(0, 5000), referenceIds, voiceover: '', sourceStart: start, sourceEnd: end,
         sourceTimingNote: end - start === duration ? 'Source shot timing retained' : `Source shot ${Math.round((end - start) * 10) / 10}s; clip ${duration}s (supported 4/6/8s length), beats scaled to fit` };
@@ -86,4 +87,14 @@ export function prefillRemixScenes(source: any, direction: Direction, instructio
     const notes = instructions.trim() ? `\nAdditional owner direction (create original content; never source likeness): ${stripIdentity(instructions)}` : '';
     return { ...base, stillPrompt: `${prompts.stillPrompt}${notes}`, motionPrompt: `${prompts.motionPrompt}${notes}`, sourceStart:start,sourceEnd:end,sourceTimingNote: end-start===duration ? 'Source shot timing retained' : `Source shot ${Math.round((end-start)*10)/10}s; clip ${duration}s (supported 4/6/8s length)` };
   });
+}
+/** Resumed drafts land on the faithful remake unless the owner clicked another card in the current flow. */
+export function pickActiveDirection(directions: Direction[], value: Record<string, unknown>): Direction | undefined {
+  const saved = directions.find(d => d.id === value.remixDirectionId);
+  return saved && (saved.faithful || value.remixDirectionPicked === true) ? saved : directions[0];
+}
+/** A saved storyboard from another direction, or a faithful one missing source keyframes, is replaced (history kept). */
+export function needsStoryboardReplace(active: Direction | undefined, scenes: { scene_input?: unknown }[], hasKeyframes = false): boolean {
+  if (!active || !scenes.length) return false;
+  return scenes.some(s => { const i = (s.scene_input ?? {}) as any; return i.remixDirectionId !== active.id || (active.faithful === true && hasKeyframes && !i.keyframes?.first); });
 }
