@@ -132,15 +132,15 @@ export function CreateProjectWizard() {
   const publishing=simpleVideo&&state.production?.publishPlaceholder===true;
   const changePublish=async(open:boolean)=>{const next={...current.current.state,production:{...current.current.state.production,publishPlaceholder:open}};setState(next);await persist(5,next);window.scrollTo({top:0,behavior:'instant'});};
   const production = (stage: 'make'|'deliver') => state.projectId ? <Suspense fallback={<p className="flex items-center gap-2 py-10"><Loader2 className="size-4 animate-spin"/>Loading saved content…</p>}>
-    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} speechMode={(state.production?.speechMode as 'voiceover'|'silent'|undefined)??state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
+    {(state.format==='film'||state.production?.simpleVideo) ? <InspirationStudio projectId={state.projectId} wizardStage={stage} onBackToMake={()=>move(4)} speechMode={(state.production?.speechMode as 'voiceover'|'silent'|undefined)??state.speechMode} wizardDraft={state.production} onWizardDraft={production => patch({ production })}/>
       : state.copyProject ? <CopyStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='image' ? <ImageStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : state.format==='carousel' ? <CarouselStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : <ReelStudio embeddedProjectId={state.projectId} wizardStage={stage} speechMode={state.speechMode}/>}
   </Suspense> : null;
   return <CreationWizardShell step={step} instructions={publishing&&step===5?'Choose accounts, edit your platform copy, then confirm publishing or scheduling.':simpleVideo&&step===5?'Review the video and each shot, adjust audio, then save your draft or continue to Publish.':[instructions[step], formatHints[state.format]?.[step]].filter(Boolean).join(' ')} saved={saved} busy={busy}
-    disabled={(step<2&&!sourceId)||(step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId)}
-    nextHint={step===0&&!sourceId?'Pick or analyze a post first':step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId?'Confirm permission first':undefined}
+    disabled={(step===4&&simpleVideo&&!(Number(state.production?.clipsReady)>0))||(step<2&&!sourceId)||(step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId)}
+    nextHint={step===4&&simpleVideo&&!(Number(state.production?.clipsReady)>0)?'Make and animate at least one scene first.':step===0&&!sourceId?'Pick or analyze a post first':step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId?'Confirm permission first':undefined}
     filmReview={simpleVideo&&step===5} publishing={publishing&&step===5}
     onBack={() => publishing&&step===5?changePublish(false):move(step-1)} onNext={() => step===5&&simpleVideo?publishing?close():changePublish(true):step===5?close(true):move(step+1)} onClose={() => close()}>
     

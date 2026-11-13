@@ -36,7 +36,7 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
       <footer className={`review-card ${publishing?'':'sticky bottom-3 z-30'} mt-6 flex items-center justify-between gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6`}>
         <Button variant="outline" size="lg" disabled={step === 0 || busy} onClick={filmReview&&!publishing?onClose:onBack}>{filmReview&&!publishing?<Save className="size-5"/>:<ChevronLeft className="size-5"/>}{filmReview&&!publishing?'Save as draft':'Back'}</Button>
         <div className="flex items-center gap-4">
-          {nextHint && <span className="hidden text-sm text-muted-foreground sm:inline">{nextHint}</span>}
+          {nextHint && <span className="max-w-[14rem] text-right text-sm font-medium text-muted-foreground">{nextHint}</span>}
           <Button size="lg" disabled={disabled || busy} onClick={onNext}>{busy ? 'Saving…' : filmReview&&!publishing?'Publish':publishing?'Save as draft':step === total - 1 ? 'Save and finish' : 'Next'}<ChevronRight className="size-5"/></Button>
         </div>
       </footer>
