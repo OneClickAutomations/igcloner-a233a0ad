@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ACTION_COSTS } from "./credits";
 import { PUBLISHING_PLATFORMS } from "./upload-post/shared";
+import { fitCard, cardLimit } from './film-publish';
 
 export const runHookLab=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid(),preferences:z.record(z.unknown()).optional(),regenerate:z.number().int().optional(),requestId:z.string().uuid().optional()}).parse(d)).handler(async({data,context})=>{
   const {buildCopyContext,hookLab}=await import("./copy-engine.server");
@@ -18,8 +19,8 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   const ctx=p.analysis_id ? await buildCopyContext(p.analysis_id,context.userId,undefined,p.user_preferences) : {source:{captionDNA:{},exactHook:"",caption:"",blueprint:null},voice:p.user_preferences,research:null};
   const made = (p.project_data ?? {}) as any;
   const artifact = { title:p.title, hook:made.hook, scenes:made.scenes, caption:made.caption, script:made.audioPlan?.script, changes:made.videoChanges };
-  const {data:film}=await context.supabase.from('video_inspiration_projects').select('id').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
-  if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);}
+  const {data:film}=await context.supabase.from('video_inspiration_projects').select('id,review_settings,remix_direction,remix_instructions').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+  if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);Object.assign(artifact,{direction:film.remix_direction,instructions:film.remix_instructions,review:film.review_settings});}
   const instruction = `${data.instruction ?? ''}\nWrite about the content ACTUALLY MADE, not the original subject. Ground captions in this artifact; preserve the source hook pattern and creator voice, not unrelated facts. Artifact data: ${JSON.stringify(artifact).slice(0,9000)}`;
   const platforms=[...new Set(data.platforms)].sort();
   const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,instruction,progress));

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { getRequest } from '@tanstack/react-start/server';
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import * as uploadPost from "@/lib/upload-post/api.server";
 import { UploadPostError } from "@/lib/upload-post/api.server";
@@ -142,6 +143,7 @@ export const createUploadPostProfile = createServerFn({ method: "POST" })
 const GenerateConnectInput = z
   .object({
     platforms: z.array(z.string()).optional(),
+    returnPath: z.string().regex(/^\/app\?draftId=[0-9a-f-]{36}&connected=true$/).optional(),
   })
   .optional();
 
@@ -153,13 +155,14 @@ export const generateConnectUrl = createServerFn({ method: "POST" })
 
     const { upload_post_username, apiKey } = await ensureProfile(supabase, userId);
     const siteUrl = process.env.SITE_URL || process.env.VITE_SITE_URL || "";
+    const returnUrl = data.returnPath ? new URL(data.returnPath, getRequest().url).href : siteUrl ? `${siteUrl}/publishing?tab=accounts&connected=true` : undefined;
 
     let jwtData: any;
     try {
       jwtData = await uploadPost.generateConnectJwt(
         {
           username: upload_post_username,
-          redirect_url: siteUrl ? `${siteUrl}/publishing?tab=accounts&connected=true` : undefined,
+          redirect_url: returnUrl,
           logo_image: siteUrl ? `${siteUrl}/favicon.ico` : undefined,
           redirect_button_text: "Return to IGCloner",
           connect_title: "Connect Your Social Accounts",
