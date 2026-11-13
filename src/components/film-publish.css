@@ -2,3 +2,6 @@
 .film-publish .ui-button:not(.gradient-accent) { color: var(--review-ink); }
 .film-publish .ui-button.gradient-text { background: none; -webkit-text-fill-color: currentColor; color: var(--review-accent); }
 .film-publish :is(input,textarea) { background: var(--review-panel); color: var(--review-ink); border-color: var(--review-border); }
+.film-publish .ui-button:not(.gradient-accent) svg { color: var(--review-ink) !important; stroke: currentColor; }
+.film-publish .ui-button.gradient-text { color: var(--review-accent) !important; }
+.film-publish > footer { margin-top: 24px; }

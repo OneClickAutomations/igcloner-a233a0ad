@@ -95,6 +95,7 @@ export function FilmPublishScreen({ projectId, draftId, onSaveDraft }: {projectI
   const canSubmit=checked.length===selected.length&&checked.length>0&&data.item.finished&&data.item.media.length>0;
   const validSchedule=date&&time&&new Date(`${date}T${time}`).getTime()>Date.now();
   return <div className="film-publish space-y-7">
+    {stage!==2&&data.item.media[0]&&<video className="hidden" preload="metadata" src={data.item.media[0].url} onLoadedMetadata={e=>{const v=e.currentTarget;setVideoInfo(old=>({...old,duration:v.duration,width:v.videoWidth,height:v.videoHeight}));}}/>}
     <nav aria-label="Publish steps" className="grid grid-cols-3 gap-2">{['Platforms','Copy','Publish'].map((label,i)=><Button key={label} variant={stage===i?'default':'outline'} disabled={i>0&&!checked.length} onClick={()=>setStage(i)} className="min-w-0"><span className="hidden sm:inline">{String.fromCharCode(65+i)} · </span>{label}</Button>)}</nav>
     {stage===0&&<section className="space-y-5"><h2 className="text-2xl font-bold">Where do you want to post?</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{PUBLISHING_PLATFORMS.map(p=>{
       const account=accountFor(p),reason=platformIncompatibilityReason(p,'video'),isSelected=selected.includes(p);
