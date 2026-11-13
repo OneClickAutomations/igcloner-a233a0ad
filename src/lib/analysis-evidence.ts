@@ -61,6 +61,12 @@ export const ShotSchema = z.object({
     .catch([]),
   speakerOnCamera: z.boolean().catch(false),
   shotType: z.string().catch(""),
+  subjects: z.array(z.object({ count: z.number().int().nonnegative().nullable(), position: z.string(), action: z.string() })).optional(),
+  setting: z.string().optional(),
+  framing: z.string().optional(),
+  action: z.string().optional(),
+  audioSummary: z.string().optional(),
+  uncertainty: z.array(z.string()).optional(),
 });
 export const VideoEvidenceSchema = z.object({
   durationSec: z.number().nullable().catch(null),
@@ -70,6 +76,9 @@ export const VideoEvidenceSchema = z.object({
   audio: z.object({ kind: z.string().catch("unknown"), energy: z.string().catch(""), description: z.string().catch("") }).catch({ kind: "unknown", energy: "", description: "" }),
   ctaFrame: z.string().catch(""),
   hasSpeech: z.boolean().catch(false),
+  structure: z.string().optional(),
+  pacing: z.string().optional(),
+  whyItWorks: z.array(z.string()).optional(),
 });
 export type VideoEvidence = z.infer<typeof VideoEvidenceSchema> & { analyzedWindow?: string };
 

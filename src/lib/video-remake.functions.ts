@@ -2,6 +2,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware';
 import { RemakeSuggestions } from './video-remake';
+import { RemixDirections, RemixDirection, REMIX_IDEAS_COST, prefillRemixScenes, sourceShots } from './remix-directions';
 
 /** An explicit, uncharged direction proposal; existing paid storyboard/clip actions remain separate. */
 export const suggestVideoRemakes = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
@@ -18,4 +19,39 @@ Script: adapt actual source language, hook pattern, familiar vocabulary, sentenc
 <SOURCE>${JSON.stringify(source).slice(0, 19000)}</SOURCE>` });
     const value = RemakeSuggestions.parse(extractJson(result.text));
     return { ...value, usage: result.usage, elapsedMs: Date.now() - started, charged: 0 };
+  });
+
+/** Owner-clicked ideas, cached by source + instructions; use existing attempt claims and refunds. */
+export const generateRemixDirections = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((v: unknown) => z.object({ analysisId:z.string().uuid(), instructions:z.string().max(2000).default(''), requestId:z.string().uuid() }).parse(v))
+  .handler(async ({ data, context }) => {
+    const { data: source, error } = await context.supabase.from('analyses').select('id,dna_analysis,evidence,blueprint,transcript,source_caption').eq('id',data.analysisId).eq('user_id',context.userId).single();
+    if (error || !source) throw new Error('Saved source not found.');
+    const { meteredCopy } = await import('./copy-meter.server');
+    return meteredCopy({userId:context.userId,analysisId:source.id,action:'remix_directions',key:{feature:'remix-directions-v1',analysis:source.id,verified:(source.evidence as any)?.videoVerification??null,instructions:data.instructions,request:data.requestId},cost:REMIX_IDEAS_COST,reason:'debit_caption'}, async () => {
+      const { copyJson } = await import('./copy-engine.server');
+      const { wrapData, DATA_RULE } = await import('./analysis-evidence');
+      const shots = sourceShots(source);
+      const prompt = `Propose 3–4 genuinely distinct original remix directions from the supplied saved video analysis. Each differs in subject, setting, angle AND message, while preserving shot order, hook PATTERN and relative pacing. Never reproduce source names, likeness, physical identity, original recording or full sentences. Identity comes only from owner reference images. Do not guess source facts. If verification is absent, label source observations as previously saved, not verified.\n${DATA_RULE}\n${wrapData('source', JSON.stringify({verified:(source.evidence as any)?.videoVerification??null,shots,dna:source.dna_analysis,transcript:source.transcript,caption:source.source_caption}).slice(0,20000))}\n${wrapData('owner_instructions',data.instructions)}\nReturn JSON {"directions":[{"id":"1","title":"short plain title","pitch":"one sentence","changes":{"subject":"concrete new subject","setting":"new environment","angle":"different treatment","message":"new message"},"stays":"hook pattern, structure and pacing retained","scenes":[{"environment":"new setting","action":"one clear new action","endState":"observable final state","camera":"one movement or static framing","audio":"original sound or narration","duration":4|6|8,"objects":[{"name":"every required object","state":"initial visible state"}],"voiceover":"new words","onScreenText":"new text"}]}]}. Exactly ${shots.length || 1} scenes per direction, one per source shot; no placeholders, unsupported testimonials or guaranteed claims. Subject identity is not described in text. Use new objects/settings where relevant and preserve only action structure. Scene durations use nearest 4/6/8 seconds. Every touched object is present initially.`;
+      const result = await copyJson(RemixDirections,prompt,'You are a source-grounded short-video remix director. Return distinct, editable original concepts, never a likeness clone.',12000);
+      if (shots.length && result.value.directions.some(d=>d.scenes?.length!==shots.length)) throw new Error('The ideas did not cover every saved shot. Your attempt will be refunded.');
+      return {...result.value,usage:result.usage};
+    });
+  });
+
+/** Free, explicitly clicked storyboard prefill, atomically inserted once without replacing edited scenes. */
+export const prefillRemixStoryboard = createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
+  .inputValidator((v:unknown)=>z.object({projectId:z.string().uuid(),direction:RemixDirection,instructions:z.string().max(2000).default(''),referenceIds:z.array(z.string().uuid()).max(5).default([]),speechMode:z.enum(['voiceover','silent']).default('voiceover')}).parse(v))
+  .handler(async({data,context})=>{
+    const {data:project}=await context.supabase.from('video_inspiration_projects').select('id,analysis_id').eq('id',data.projectId).eq('user_id',context.userId).single();
+    if(!project?.analysis_id)throw new Error('Choose a saved source analysis first.');
+    const {data:source}=await context.supabase.from('analyses').select('evidence,blueprint,dna_analysis').eq('id',project.analysis_id).eq('user_id',context.userId).single();
+    if(!source)throw new Error('Saved analysis not found.');
+    if(data.referenceIds.length){const {data:refs}=await context.supabase.from('reference_assets').select('id').in('id',data.referenceIds).eq('user_id',context.userId);if(refs?.length!==data.referenceIds.length)throw new Error('A reference is unavailable. Choose it again.');}
+    const scenes=prefillRemixScenes(source,data.direction,data.instructions,data.referenceIds,data.speechMode);
+    if(!scenes.length)throw new Error('No source shots were captured. You can add scenes in Advanced or run the priced verified analysis.');
+    const {supabaseAdmin}=await import('@/integrations/supabase/client.server');
+    const {data:count,error}=await supabaseAdmin.rpc('prefill_inspiration_storyboard',{p_user:context.userId,p_project:project.id,p_scenes:scenes.map((s,i)=>({duration:s.duration,still_prompt:s.stillPrompt,motion_prompt:s.motionPrompt,action_objects:s.objects,scene_input:{...s,sourceShotIndex:i,remixDirectionId:data.direction.id,ownerInstructions:data.instructions}})) as any});
+    if(error)throw new Error(error.message);
+    return {scenes:count,charged:0};
   });

@@ -1,6 +1,6 @@
 # Project architecture
 - Reel and film voices use shared browser-safe source-evidence matching and a curated ElevenLabs catalog; manual overrides persist and the server validates selected IDs so matching never requires a paid call or clones source identity.
-- New inspiration reels use the saved-analysis remake planner and existing film pipeline; selected reference IDs persist per scene so library defaults cannot override identity choices.
+- Inspiration reels and films use saved owner-private remix directions/instructions with atomic, free per-shot storyboard prefill; selected character/product/setting reference IDs persist per scene so library defaults cannot override identity choices.
 - Owner-authorized film proofs are imported offline with server-only credentials and provenance; narration is restricted to server-written proof metadata, preserving normal unpriced-generation blocks.
 - Film narration targets summed saved-scene duration using a measured voice rate; MP3 frame duration and speech alignment must pass coverage before saving, with at most one timing regeneration to prevent silent gaps and clipped speech.
 - Video inspiration is a separate authenticated studio with server-written owner-readable tables, revision-bound still approvals and atomic attempt/debit claims; unset verified cost configuration blocks paid generation rather than inventing prices.
@@ -25,4 +25,4 @@
 - The sidebar credit balance is a shared react-query key (CREDIT_BALANCE_KEY); invalidate it after any action that can move credits.
 - Post analysis runs one stage per request (client-driven advanceAnalysis with a stage_claimed_until lease, partial state in analyses.evidence.partial) because the edge runtime cancels work when the browser disconnects; a pg_cron + lazy sweep fails and refunds the pending attempt after 15 min idle.
 - Clone versions are generated on demand (generateCloneVersions, per-attempt charge + refund, free once rows exist), never inside the core analysis, and legacy *Forensics objects are derived in code from evidence to keep analysis output small.
-- Analysis reads saved source-media files (never expiring CDN links); Claude does vision + synthesis, Gemini is used only for video watching, and the blueprint is embedded in dna_analysis so studios get verbatim OCR/transcript via source-context without per-studio changes.
+- Analysis reads saved source-media files; video watching and verification are separate persisted Gemini stages, only corrected observations feed Claude synthesis, and first-pass evidence remains diagnostic so drafts can resume without repeating completed paid work.

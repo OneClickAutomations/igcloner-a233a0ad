@@ -2148,6 +2148,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      prefill_inspiration_storyboard: {
+        Args: { p_project: string; p_scenes: Json; p_user: string }
+        Returns: number
+      }
       refund_credits: {
         Args: {
           p_amount: number

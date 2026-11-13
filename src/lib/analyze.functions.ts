@@ -25,7 +25,7 @@ import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
 import { isWithinReuseWindow } from "@/lib/intel-analytics";
 import {
-  generateClonesFromEvidence, initialState, nextEvidenceStage, runSlidesStage, runSynthesisStage, runVideoStage,
+  generateClonesFromEvidence, initialState, nextEvidenceStage, runSlidesStage, runSynthesisStage, runVideoStage, runVideoVerificationStage,
   type AnalysisStage, type PipelineState,
 } from "@/lib/analysis-pipeline.server";
 
@@ -235,6 +235,7 @@ const STAGE_LABELS: Record<AnalysisStage, string> = {
   saving_media: "Saving the media",
   reading_slides: "Reading slides",
   watching_video: "Watching the video",
+  verifying_video: "Checking every shot against the video",
   transcribing: "Transcribing",
   building_blueprint: "Building the blueprint",
 };
@@ -298,6 +299,26 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
   });
 
 const CLAIM_MS = 4 * 60 * 1000;
+
+/** Re-analyse an owned saved video without scraping; one billed attempt covers both watches and the breakdown. */
+export const verifySavedVideo = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth])
+  .inputValidator((v: unknown) => z.object({ analysisId: z.string().uuid() }).parse(v))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: source } = await supabase.from("analyses").select("*").eq("id", data.analysisId).eq("user_id", userId).single();
+    if (!source) throw new Error("Saved analysis not found.");
+    const scraped = source.scraped_data as any;
+    if (!(scraped?.storedMedia ?? []).some((m: any) => m.kind === "video")) throw new Error("No saved video is available. Use the saved breakdown or analyse the post link again.");
+    const id = crypto.randomUUID(), attempt = crypto.randomUUID();
+    const state = { ...initialState(scraped), slidesDone: true };
+    const { error } = await supabase.from("analyses").insert({ id, user_id: userId, instagram_url: source.instagram_url, post_type: source.post_type, source_account: source.source_account, source_caption: source.source_caption, scraped_data: { ...scraped, attemptId: attempt }, evidence: { partial: state, sourceAnalysisId: source.id }, analysis_status: "processing", analysis_stage: "watching_video", last_progress_at: new Date().toISOString() } as any);
+    if (error) throw new Error("Couldn't start verified analysis.");
+    try { await debitCredits(userId, ACTION_COSTS.analysis, "debit_analysis", "analysis", attempt, attempt); }
+    catch (e) { await supabase.from("analyses").delete().eq("id", id); throw e; }
+    const { error: pendingError } = await supabase.from("analyses").update({ pending_attempt_id: attempt, pending_charge_amount: ACTION_COSTS.analysis } as any).eq("id", id);
+    if (pendingError) { await refundCredits(userId, ACTION_COSTS.analysis, "analysis", attempt, attempt); await supabase.from("analyses").delete().eq("id", id); throw new Error("Couldn't save the attempt; credits refunded."); }
+    return { analysisId: id, charged: ACTION_COSTS.analysis };
+  });
 
 /**
  * Run the next stage of a processing analysis. Single-flight per row via a
@@ -375,6 +396,7 @@ export const advanceAnalysis = createServerFn({ method: "POST" })
         await setStage(stage);
         state = stage === "reading_slides"
           ? await runSlidesStage(postType, scraped, state)
+          : stage === "verifying_video" ? await runVideoVerificationStage(scraped, state)
           : await runVideoStage(postType, scraped, state, setStage);
         const next = nextEvidenceStage(postType, scraped, state);
         const patch: any = { evidence: { ...ev, partial: state }, analysis_stage: next, stage_claimed_until: null, last_progress_at: new Date().toISOString() };
