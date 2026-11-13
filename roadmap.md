@@ -1,5 +1,10 @@
 # Roadmap
 
+## Pass 2 — film review
+- [x] Review player/shot strip, priced regeneration with saved history/snapshots, free completed-version switching, audio choices and private review drafts, Publish placeholder
+- [x] Signed-in desktop/390px light/dark, quotes without generation, version switching and save/resume verified; 19 focused tests
+- [ ] Paid regeneration, Claude script/narration and new assembly output — intentionally unverified; no paid generation authorized for this pass
+
 ## Topped-up Shotstack completion and quality — current
 - [x] Add measured-rate duration word target, MP3 frame/speech coverage gate and one timing regeneration; 15 focused tests pass
 - [ ] Corrected narration proof — Delivery produced 19.487s/41 words then 12.748s/32 words at Chris speed 0.787; bounded timing check failed. Needs more reliable duration control; no further synthesis in this turn
