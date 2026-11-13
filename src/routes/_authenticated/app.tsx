@@ -7,6 +7,7 @@ export const Route = createFileRoute("/_authenticated/app")({
     analysisId: z.string().uuid().optional(),
     draftId: z.string().uuid().optional(),
     format: z.enum(['image','carousel','reel','film']).optional(),
+    connected: z.coerce.boolean().optional(),
   }),
   head: () => ({
     meta: [

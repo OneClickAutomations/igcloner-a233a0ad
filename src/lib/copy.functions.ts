@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { ACTION_COSTS } from "./credits";
 import { PUBLISHING_PLATFORMS } from "./upload-post/shared";
+import { fitCard, cardLimit } from './film-publish';
 
 export const runHookLab=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid(),preferences:z.record(z.unknown()).optional(),regenerate:z.number().int().optional(),requestId:z.string().uuid().optional()}).parse(d)).handler(async({data,context})=>{
   const {buildCopyContext,hookLab}=await import("./copy-engine.server");
@@ -18,8 +19,11 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   const ctx=p.analysis_id ? await buildCopyContext(p.analysis_id,context.userId,undefined,p.user_preferences) : {source:{captionDNA:{},exactHook:"",caption:"",blueprint:null},voice:p.user_preferences,research:null};
   const made = (p.project_data ?? {}) as any;
   const artifact = { title:p.title, hook:made.hook, scenes:made.scenes, caption:made.caption, script:made.audioPlan?.script, changes:made.videoChanges };
-  const {data:film}=await context.supabase.from('video_inspiration_projects').select('id').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
-  if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);}
+  const {data:film}=await context.supabase.from('video_inspiration_projects').select('id,review_settings,observation_notes').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+  if(film){const {data:scenes}=await context.supabase.from('storyboard_scenes').select('scene_input').eq('project_id',film.id).eq('user_id',context.userId).order('scene_order');artifact.scenes=scenes?.map(s=>s.scene_input);Object.assign(artifact,{direction:film.observation_notes,review:film.review_settings});}
+  const {data:draft}=await context.supabase.from('creation_drafts').select('state').eq('user_id',context.userId).contains('state',{projectId:p.id}).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+  const production=(draft?.state as any)?.production;
+  if(production)Object.assign(artifact,{direction:production.remixDirection,instructions:production.remixInstructions,script:production.assembly?.script??artifact.script});
   const instruction = `${data.instruction ?? ''}\nWrite about the content ACTUALLY MADE, not the original subject. Ground captions in this artifact; preserve the source hook pattern and creator voice, not unrelated facts. Artifact data: ${JSON.stringify(artifact).slice(0,9000)}`;
   const platforms=[...new Set(data.platforms)].sort();
   const result=await meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:"caption",key:{projectId:p.id,context:ctx,platforms,instruction,regenerate:data.regenerate},cost:ACTION_COSTS.captionPack,reason:"debit_caption",requestId:data.requestId},progress=>nativeCaptionPack(ctx,platforms,instruction,progress));
@@ -28,6 +32,24 @@ export const generateCaptionPack=createServerFn({method:"POST"}).middleware([req
   if(saveErr) throw new Error(saveErr.message);
   return result;
 });
+export const rewritePublishCard=createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
+  .inputValidator((d:unknown)=>z.object({projectId:z.string().uuid(),platform:z.enum(PUBLISHING_PLATFORMS),field:z.enum(['title','description','caption','hashtags']),text:z.string().max(20000),instruction:z.string().max(2000),requestId:z.string().uuid()}).parse(d))
+  .handler(async({data,context})=>{
+    const {data:p,error}=await context.supabase.from('projects').select('*').eq('id',data.projectId).eq('user_id',context.userId).maybeSingle();
+    if(error||!p)throw new Error('Project not found');
+    const {buildCopyContext,copyJson,contextPrompt}=await import('./copy-engine.server');
+    const {meteredCopy}=await import('./copy-meter.server');
+    const ctx=p.analysis_id?await buildCopyContext(p.analysis_id,context.userId,data.platform,p.user_preferences):{voice:p.user_preferences,source:{}};
+    const {data:film}=await context.supabase.from('video_inspiration_projects').select('review_settings,observation_notes').eq('id',p.id).eq('user_id',context.userId).maybeSingle();
+    const {data:draft}=await context.supabase.from('creation_drafts').select('state').eq('user_id',context.userId).contains('state',{projectId:p.id}).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+    const production=(draft?.state as any)?.production;
+    return meteredCopy({userId:context.userId,analysisId:p.analysis_id??undefined,projectId:p.id,action:'caption',key:{card:data,context:ctx},cost:ACTION_COSTS.captionPack,reason:'debit_caption',requestId:data.requestId},async progress=>{
+      await progress('Rewriting your selected card…');
+      const r=await copyJson(z.object({text:z.string()}),`${contextPrompt(ctx)}\nRewrite ONLY the ${data.field} card for ${data.platform}. Limit: ${cardLimit(data.platform,data.field)??'concise relevant copy'}. Hashtags: space separated tags only. Ground in the newly made artifact, direction and script, not the original subject. Return JSON {"text":"..."}.\nArtifact data: ${JSON.stringify({project:p.project_data,film,direction:production?.remixDirection,instructions:production?.remixInstructions,script:production?.assembly?.script}).slice(0,12000)}\nCurrent card data: ${JSON.stringify(data.text)}\nUser editing instruction: ${data.instruction}`,undefined,2200);
+      return {text:fitCard(data.platform,data.field,r.value.text),usage:r.usage};
+    });
+  });
+
 export const listCopyHistory=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((d:unknown)=>z.object({analysisId:z.string().uuid()}).parse(d)).handler(async({data,context})=>{
   const {data:rows,error}=await context.supabase.from("copy_runs").select("id,action,status,output,error_message,created_at,project_id").eq("user_id",context.userId).eq("analysis_id",data.analysisId).order("created_at",{ascending:false}).limit(30);
   if(error) throw new Error(error.message);return {runs:rows??[]};

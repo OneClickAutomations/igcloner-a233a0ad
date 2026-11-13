@@ -62,7 +62,7 @@ function composeCaptions(
     const tags = (hashtagsPerPlatform[p] ?? []).map((t) => `#${t.replace(/^#/, "")}`);
     const text = tags.length ? `${caption}\n\n${tags.join(" ")}`.trim() : caption.trim();
     const max = captionLimitFor(p as PublishingPlatform, mediaKindForContentType(contentType));
-    if (max && text.length > max) throw new Error(`${p}: caption is ${text.length - max} characters over the limit. Edit it or save as a draft; nothing was truncated.`);
+    // UI warns about copy limits; the platform is the final acceptance authority.
     out[p] = text;
   }
   return out;

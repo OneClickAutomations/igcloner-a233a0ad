@@ -88,6 +88,9 @@ export const listProjects = createServerFn({ method: "GET" })
       .limit(100);
     if (error) throw new Error(error.message);
     const projects = data ?? [];
+    const {data:jobs}=await context.supabase.from('publishing_jobs').select('project_id,status').eq('user_id',context.userId).order('created_at',{ascending:false});
+    const publishedIds=new Set((jobs??[]).filter(j=>j.status==='published').map(j=>j.project_id));
+    for(const p of projects)if(publishedIds.has(p.id))p.status='published';
     if (projects.length === 0) return { projects };
 
     // Attach the most recent generated asset per project so the Projects

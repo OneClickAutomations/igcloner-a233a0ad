@@ -25,7 +25,7 @@ async function libraryRows(context: any, id?: string) {
   };
   const rows = [...(pr.data ?? []).filter((p: any) => !filmIds.includes(p.id)), ...films.map((f: any) => ({ ...(pr.data ?? []).find((p: any) => p.id === f.id), ...f, format: 'film' }))];
   return Promise.all(rows.map(async (p: any) => {
-    const pd = p.project_data ?? {};
+    const pd = { ...(pr.data ?? []).find((r: any) => r.id === p.id)?.project_data, ...p.project_data };
     let media: { url: string; type: string; path?: string }[] = [];
     let thumbnail = '';
     if (p.format === 'film') {
@@ -57,7 +57,7 @@ async function libraryRows(context: any, id?: string) {
       thumbnail = media.find(m => m.type === 'image')?.url ?? '';
     }
     const source = analyses?.find((a: any) => a.id === p.analysis_id);
-    return { ...p, media, thumbnail, source_url: p.source_url ?? source?.instagram_url, source_account: p.source_account ?? source?.source_account, job: jr.data?.find((j: any) => j.project_id === p.id) ?? null, finished: p.format !== 'film' || !!renders.data?.find((r: any) => r.project_id === p.id) };
+    return { ...p, project_data: pd, media, thumbnail, source_url: p.source_url ?? source?.instagram_url, source_account: p.source_account ?? source?.source_account, job: jr.data?.find((j: any) => j.project_id === p.id) ?? null, finished: p.format !== 'film' || !!renders.data?.find((r: any) => r.project_id === p.id) };
   }));
 }
 
