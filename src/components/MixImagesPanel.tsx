@@ -91,7 +91,7 @@ export function MixImagesPanel({ projectId, onCreated }: { projectId: string; on
           {result && (
             <div className="grid grid-cols-2 gap-2">
               <div><p className="text-[10px] text-muted-foreground">Before</p><div className="grid grid-cols-3 gap-1">{refs.map((r, i) => <img key={i} src={r.preview} alt={`Before ${i + 1}`} className="aspect-square w-full rounded object-cover" />)}</div></div>
-              <div><p className="text-[10px] text-muted-foreground">After</p><img src={result} alt="Mixed result" className="w-full rounded" /></div>
+              <div><p className="text-[10px] text-muted-foreground">After</p><img id="mix-result" src={result} alt="Mixed result" className="w-full rounded" /></div>
             </div>
           )}
           <p className="text-[10px] text-muted-foreground">Makes new media — don't use other people's faces or logos you don't have rights to.</p>
