@@ -34,7 +34,7 @@ describe('faithful remake', () => {
   });
 });
 
-import { pickActiveDirection, needsStoryboardReplace, startingDirections } from './remix-directions';
+import { pickActiveDirection, needsStoryboardReplace } from './remix-directions';
 import { keyframePlan } from './keyframes';
 import { frameReferencedPrompt } from './faithful-remake';
 describe('frame-referenced remakes', () => {
