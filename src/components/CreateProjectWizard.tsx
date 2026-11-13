@@ -93,6 +93,9 @@ export function CreateProjectWizard() {
   };
   useEffect(() => {
     if (!ready) return;
+    // Don't create a draft until the user has actually done something.
+    const st = current.current.state;
+    if (!search.draftId && step === 0 && !st.analysisId && !st.url?.trim() && !st.title.trim()) return;
     const timer = setTimeout(() => { if(!closing.current) persist().catch(e => toast.error(`Draft not saved: ${e.message}`)); }, 700);
     return () => clearTimeout(timer);
   }, [state, step, ready]);
