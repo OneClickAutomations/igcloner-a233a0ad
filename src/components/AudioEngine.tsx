@@ -1,3 +1,4 @@
+import { useGenJob } from "./useGenJob";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -93,6 +94,7 @@ export function AudioEngine({
   const voiceFn = useServerFn(generateSceneVoiceover);
   const musicFn = useServerFn(generateMusicBed);
   const sfxFn = useServerFn(generateSoundFx);
+  const gen = useGenJob();
 
   const update = (p: Partial<AudioPlan>, m?: Partial<AudioMixProfile>) => {
     const next = { ...plan, ...p };
@@ -112,7 +114,7 @@ export function AudioEngine({
   async function runDirector() {
     setBusy("plan");
     try {
-      const r: any = await planFn({
+      const r: any = await gen.run({ slot: "plan", title: "Your audio plan", stage: "Planning your audio…", expectedSeconds: 25, doneLabel: "Your audio plan is ready", paid: true }, () => planFn({
         data: {
           projectId,
           stylePreset,
@@ -120,7 +122,7 @@ export function AudioEngine({
           angle,
           platform: plan.platform,
         },
-      });
+      }));
       const p = r.plan;
       update({
         mode: p.mode || "voice-music",
@@ -135,7 +137,7 @@ export function AudioEngine({
         hookVariations: p.hookVariations,
         scriptMode: plan.scriptMode ?? "auto",
       });
-      toast.success("AI Creative Director ready");
+      
     } catch (e: any) {
       toast.error(e?.message || "Director failed");
     } finally {
@@ -162,11 +164,11 @@ export function AudioEngine({
     }
     setBusy("voice");
     try {
-      const r: any = await voiceFn({
+      const r: any = await gen.run({ slot: "voice", title: "Your voiceover", stage: "Recording your voiceover…", expectedSeconds: 25, doneLabel: "Your voiceover is ready", paid: true, resultSelector: "#audio-voice" }, () => voiceFn({
         data: { projectId, sceneIndex: 0, text, voiceId: plan.voiceId },
-      });
+      }));
       update({ voiceAssetUrl: r.audioUrl });
-      toast.success("Voiceover generated");
+      
     } catch (e: any) {
       toast.error(e?.message || "Voiceover failed");
     } finally {
@@ -179,16 +181,16 @@ export function AudioEngine({
     if (genre === "none") return;
     setBusy("music");
     try {
-      const r: any = await musicFn({
+      const r: any = await gen.run({ slot: "music", title: "Your music", stage: "Composing your music bed…", expectedSeconds: 40, doneLabel: "Your music is ready", paid: true, resultSelector: "#audio-music" }, () => musicFn({
         data: {
           projectId,
           genre,
           prompt: plan.musicPrompt || `${genre} bed for short-form social video`,
           durationSec: 20,
         },
-      });
+      }));
       update({ musicAssetUrl: r.url });
-      toast.success("Music bed ready");
+      
     } catch (e: any) {
       toast.error(e?.message || "Music generation failed");
     } finally {
@@ -203,7 +205,7 @@ export function AudioEngine({
     }
     setBusy("ambient");
     try {
-      const r: any = await sfxFn({
+      const r: any = await gen.run({ slot: "ambient", title: "Your ambient track", stage: "Building the ambience…", expectedSeconds: 30, doneLabel: "Your ambient track is ready", paid: true, resultSelector: "#audio-ambient" }, () => sfxFn({
         data: {
           projectId,
           prompt: plan.ambientPrompt,
@@ -211,9 +213,9 @@ export function AudioEngine({
           durationSec: 15,
           promptInfluence: 0.3,
         },
-      });
+      }));
       update({ ambientAssetUrl: r.url });
-      toast.success("Ambient track ready");
+      
     } catch (e: any) {
       toast.error(e?.message || "Ambient generation failed");
     } finally {
@@ -242,10 +244,11 @@ export function AudioEngine({
             </p>
           </div>
           <Button size="sm" onClick={runDirector} disabled={busy === "plan"} className="gradient-accent text-white border-0">
-            {busy === "plan" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            <Sparkles className="h-3.5 w-3.5" />
             Plan it
           </Button>
         </div>
+        {gen.ring("plan")}
         {plan.strategy && (
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {(["visual", "motion", "voice", "music", "sound", "hook"] as const).map((k) =>
@@ -313,10 +316,11 @@ export function AudioEngine({
               <div className="text-sm font-semibold">Voiceover Studio</div>
             </div>
             <Button size="sm" variant="outline" onClick={genVoice} disabled={busy === "voice"}>
-              {busy === "voice" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              <Play className="h-3.5 w-3.5" />
               {confirmVoice ? 'Generate voiceover · 1 video credit' : 'Add voiceover — review voice and script'}
             </Button>
           </div>
+          {gen.ring("voice")}
           {voiceNotice && <p role="status" className="mb-4 text-sm text-foreground">{voiceNotice}</p>}
           <AdvancedVoiceSettings voiceId={plan.voiceId ?? recommendation.voice.id} recommendation={recommendation} onChange={voiceId => update({ voiceId })}/>
           <div className="mt-3">
@@ -329,7 +333,7 @@ export function AudioEngine({
             />
           </div>
           {plan.voiceAssetUrl && (
-            <audio src={plan.voiceAssetUrl} controls className="mt-3 w-full" />
+            <audio id="audio-voice" src={plan.voiceAssetUrl} controls className="mt-3 w-full" />
           )}
         </div>
       )}
@@ -343,10 +347,11 @@ export function AudioEngine({
               <div className="text-sm font-semibold">Music Engine</div>
             </div>
             <Button size="sm" variant="outline" onClick={genMusic} disabled={busy === "music" || plan.musicGenre === "none"}>
-              {busy === "music" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              <Play className="h-3.5 w-3.5" />
               Generate
             </Button>
           </div>
+          {gen.ring("music")}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label className="text-xs">Genre / mood</Label>
@@ -368,7 +373,7 @@ export function AudioEngine({
             </div>
           </div>
           {plan.musicAssetUrl && (
-            <audio src={plan.musicAssetUrl} controls className="mt-3 w-full" />
+            <audio id="audio-music" src={plan.musicAssetUrl} controls className="mt-3 w-full" />
           )}
         </div>
       )}
@@ -382,10 +387,11 @@ export function AudioEngine({
               <div className="text-sm font-semibold">Ambient Engine</div>
             </div>
             <Button size="sm" variant="outline" onClick={genAmbient} disabled={busy === "ambient"}>
-              {busy === "ambient" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              <Play className="h-3.5 w-3.5" />
               Generate
             </Button>
           </div>
+          {gen.ring("ambient")}
           <Label className="text-xs">Describe the environment</Label>
           <Textarea
             className="mt-1 min-h-[64px]"
@@ -394,7 +400,7 @@ export function AudioEngine({
             placeholder="e.g. 'gentle ocean waves with distant seagulls and a soft breeze'"
           />
           {plan.ambientAssetUrl && (
-            <audio src={plan.ambientAssetUrl} controls className="mt-3 w-full" />
+            <audio id="audio-ambient" src={plan.ambientAssetUrl} controls className="mt-3 w-full" />
           )}
         </div>
       )}
