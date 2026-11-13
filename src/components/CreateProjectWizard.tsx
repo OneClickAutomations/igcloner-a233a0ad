@@ -137,7 +137,7 @@ export function CreateProjectWizard() {
       : state.format==='carousel' ? <CarouselStudio embeddedProjectId={state.projectId} wizardStage={stage}/>
       : <ReelStudio embeddedProjectId={state.projectId} wizardStage={stage} speechMode={state.speechMode}/>}
   </Suspense> : null;
-  return <CreationWizardShell step={step} instructions={[instructions[step], formatHints[state.format]?.[step]].filter(Boolean).join(' ')} saved={saved} busy={busy}
+  return <CreationWizardShell step={step} instructions={simpleVideo&&step===5?'Review the film and each shot, adjust audio, then save your draft or continue to Publish.':[instructions[step], formatHints[state.format]?.[step]].filter(Boolean).join(' ')} saved={saved} busy={busy}
     disabled={(step<2&&!sourceId)||(step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId)}
     nextHint={step===0&&!sourceId?'Pick or analyze a post first':step===2&&state.format!=='film'&&(state.mode==='A0'||state.mode==='A1')&&!state.projectId?'Confirm permission first':undefined}
     filmReview={simpleVideo&&step===5} publishing={publishing&&step===5}
