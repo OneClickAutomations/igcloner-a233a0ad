@@ -36,7 +36,7 @@ export const writeReviewNarration = createServerFn({method:'POST'}).middleware([
     const {data:source}=p.analysis_id?await context.supabase.from('analyses').select('evidence,dna_analysis').eq('id',p.analysis_id).eq('user_id',context.userId).maybeSingle():{data:null};
     const {meteredCopy}=await import('./copy-meter.server');
     const {writeFilmNarration}=await import('./film-narration.server');
-    return meteredCopy({userId:context.userId,projectId:p.id,action:'caption_pack',key:{reviewNarration:1,request:data.requestId},cost:ACTION_COSTS.captionPack,reason:'caption_pack',requestId:data.requestId},async()=>
+    return meteredCopy({userId:context.userId,projectId:p.id,action:'caption_pack',key:{reviewNarration:1,request:data.requestId},cost:ACTION_COSTS.captionPack,reason:'debit_caption',requestId:data.requestId},async()=>
       writeFilmNarration(Math.round((scenes??[]).reduce((n,s)=>n+s.duration,0)*2.7),{scenes,verifiedAnalysis:source,direction:data.direction},data.instructions));
   });
 

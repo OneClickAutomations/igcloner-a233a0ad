@@ -6,11 +6,11 @@ import {Textarea} from './ui/textarea';
 import {Select,SelectTrigger,SelectContent,SelectItem,SelectValue} from './ui/select';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from './ui/dialog';
 import {saveFilmShotReview} from '@/lib/film-review.functions';
-import {animateInspirationScene,inspirationQuote,recoverInspirationClips,type getInspirationStudio} from '@/lib/inspiration.functions';
+import {animateInspirationScene,inspirationQuote,recoverInspirationClips,getInspirationStudio} from '@/lib/inspiration.functions';
 import {STUDIO_PRICING,videoCreditsForWorkspace} from '@/lib/studio-pricing';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
 export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}:{data:Data;busy:boolean;run:(f:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;value:Record<string,unknown>;onChange:(v:Record<string,unknown>)=>void;onAssemble:()=>void}){
-  const save=useServerFn(saveFilmShotReview),quote=useServerFn(inspirationQuote),animate=useServerFn(animateInspirationScene),recover=useServerFn(recoverInspirationClips);
+  const save=useServerFn(saveFilmShotReview),quote=useServerFn(inspirationQuote),animate=useServerFn(animateInspirationScene),recover=useServerFn(recoverInspirationClips),load=useServerFn(getInspirationStudio);
   const [selected,setSelected]=useState(data.scenes[0]?.id??'');
   const [confirmation,setConfirmation]=useState<{items:{scene:Data['scenes'][number];q:Awaited<ReturnType<typeof inspirationQuote>>;instruction:string}[]}|null>(null);
   const [progress,setProgress]=useState('');
@@ -39,8 +39,7 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
         const deadline=Date.now()+15*60*1000;
         while(true){
           await new Promise(resolve=>setTimeout(resolve,8000));await recover();
-          const {getInspirationStudio}=await import('@/lib/inspiration.functions');
-          const latest=await getInspirationStudio({data:{projectId:item.scene.project_id}});
+          const latest=await load({data:{projectId:item.scene.project_id}});
           const a=latest.attempts.find(a=>a.id===started.attemptId);await refresh();
           if(a?.status==='completed')break;
           if(a?.status==='failed'||a?.status==='submission_unknown')throw new Error(a.failure_reason??'Shot stopped. Your previous versions are safe.');
