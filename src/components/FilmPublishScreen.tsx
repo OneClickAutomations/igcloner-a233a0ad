@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import './film-publish.css';
 import { useServerFn } from '@tanstack/react-start';
 import { useSearch } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
