@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import landingHtml from "@/assets/landing.html?raw";
+import creator0 from "@/assets/creator-portrait-0.jpg.asset.json";
+import creator1 from "@/assets/creator-portrait-1.jpg.asset.json";
+import creator2 from "@/assets/creator-portrait-2.jpg.asset.json";
+import creator3 from "@/assets/creator-portrait-3.jpg.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 
 // Inject a click delegator so links inside the srcdoc iframe work:
@@ -28,9 +32,13 @@ document.addEventListener('click', function(e) {
 
 // landing.html may be a fragment without a closing </body>; append the
 // delegator in that case so anchor smooth-scroll and link bubbling still work.
-const srcDoc = /<\/body>/i.test(landingHtml)
-  ? landingHtml.replace(/<\/body>/i, `${clickScript}</body>`)
-  : `${landingHtml}\n${clickScript}`;
+const landingWithPortraits = [creator0, creator1, creator2, creator3].reduce(
+  (html, portrait, index) => html.replace(`__CREATOR_PORTRAIT_${index}__`, portrait.url),
+  landingHtml,
+);
+const srcDoc = /<\/body>/i.test(landingWithPortraits)
+  ? landingWithPortraits.replace(/<\/body>/i, `${clickScript}</body>`)
+  : `${landingWithPortraits}\n${clickScript}`;
 
 export function LandingPage() {
   const navigate = useNavigate();
