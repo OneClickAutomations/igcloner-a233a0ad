@@ -359,18 +359,18 @@ img { max-width: 100%; display: block }
   background: var(--glass-bg); border: 1px solid var(--glass-border);
 }
 .trust-ava-row { display: flex; flex-shrink: 0; padding-left: 0 }
-.trust-ava { border-radius: 50%; width: 30px; height: 30px; object-fit: cover; border: 2px solid var(--surface); display: block }
-.trust-ava + .trust-ava { margin-left: -8px }
+.trust-ava { border-radius: 50%; width: 44px; height: 44px; object-fit: cover; border: 2px solid var(--surface); display: block }
+.trust-ava + .trust-ava { margin-left: -10px }
 .trust-text { font-size: 0.9375rem; line-height: 1.6; color: var(--text-1) }
 .url-platform-badge { gap: 10px }
 .url-platform-badge svg { width: 26px; height: 26px; flex-shrink: 0; color: var(--ig-rose) }
 .url-platform-badge:last-child svg { color: var(--ig-violet) }
-.hero-trust { background: var(--surface); border-color: var(--divider); gap: 20px; padding: 16px 24px; max-width: 100%; box-sizing: border-box }
+.hero-trust { background: var(--surface); border-color: var(--divider); gap: 12px; padding: 8px 14px; max-width: 100%; box-sizing: border-box }
 @media (max-width: 600px) {
   .url-platforms { display: grid; grid-template-columns: minmax(0,1fr); gap: 12px; width: 100%; justify-items: center }
   .url-platforms > span:not(.url-platform-badge) { display: none }
   .url-platform-badge { font-size: 0.9375rem; min-width: 0 }
-  .hero-trust { flex-direction: column; gap: 12px; border-radius: 20px; padding: 18px 20px; text-align: center; width: 100% }
+  .hero-trust { flex-direction: column; gap: 6px; border-radius: 16px; padding: 10px 14px; text-align: center; width: auto }
   .trust-text { font-size: 0.9375rem; max-width: 30ch }
 }
 .trust-text strong { color: var(--text-1) }
