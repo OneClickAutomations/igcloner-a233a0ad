@@ -81,7 +81,7 @@ describe("mode labels", () => {
     expect(CLONE_METHODS.map((m) => m.id)).toEqual(["A0", "A1", "A2", "A3"]);
     expect(CLONE_LABEL).toEqual({ A0: "Repost the original", A1: "Same post, your words", A2: "Remake it", A3: "New idea from it" });
     expect(Object.values(CLONE_LABEL)).not.toContain("Steal the Frame");
-    expect(cloneModeLabel("A0")).toBe("Exact copy");
+    expect(cloneModeLabel("A0")).toBe("Repost the original");
   });
 });
 

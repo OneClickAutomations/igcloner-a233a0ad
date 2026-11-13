@@ -54,7 +54,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   const project=data.selected;const jobs=data.assemblies;const active=jobs.some(j=>['claimed','submitting','queued','fetching','rendering','saving'].includes(j.status));
   useEffect(()=>{if(!project)return;recover({data:{projectId:project.id}}).then(refresh).catch(()=>{});},[project?.id]);
   useEffect(()=>{if(!active||!project)return;const timer=setInterval(()=>recover({data:{projectId:project.id}}).then(refresh).catch(()=>{}),8000);return()=>clearInterval(timer);},[active,project?.id,recover]);
-  useEffect(()=>{if(active)startJob({id:`assembly-${project.id}`,kind:'assembly',title:'Your video',href:window.location.pathname+window.location.search,expectedSeconds:60,doneLabel:'Your video is ready',long:true});else{const done=jobs.find(j=>j.status==='completed');if(done)finishJob(`assembly-${project.id}`,true,{resultSelector:`#assembly-${done.id}`});}},[active]);
+  useEffect(()=>{if(active)startJob({id:`assembly-${project?.id}`,kind:'assembly',title:'Your video',href:window.location.pathname+window.location.search,expectedSeconds:60,doneLabel:'Your video is ready',long:true});else{const done=jobs.find(j=>j.status==='completed');if(done)finishJob(`assembly-${project?.id}`,true,{resultSelector:`#assembly-${done.id}`});}},[active]);
   useEffect(()=>{if(jobs.some(j=>j.status==='completed'))window.dispatchEvent(new Event('content-generated'));},[jobs.filter(j=>j.status==='completed').map(j=>j.id).join(',')]);
   if(!project)return null;
   const uploadFile=async(file:File,kind:'voiceover'|'music'|'logo')=>{
