@@ -75,12 +75,14 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
 }
 
 /** Prompt for recreating a source keyframe: the image supplies composition only; the subject is a new person. */
-export function frameReferencedPrompt(input: { remakePerson?: string; remakeOutfit?: string; settingTweak?: string; remakeAction?: string; onScreenText?: string }, frame: 'first' | 'last', opts: { fallbackOutfit?: boolean; hasCharacterRef?: boolean } = {}) {
-  const outfit = opts.fallbackOutfit ? DEFAULT_OUTFIT : (input.remakeOutfit || DEFAULT_OUTFIT);
+export function frameReferencedPrompt(input: { remakePerson?: string; remakeOutfit?: string; settingTweak?: string; remakeAction?: string; onScreenText?: string }, frame: 'first' | 'last', opts: { fallbackOutfit?: boolean; hasCharacterRef?: boolean; lookLock?: string; correction?: string; outfitOverride?: string } = {}) {
+  const outfit = opts.outfitOverride || (opts.fallbackOutfit ? DEFAULT_OUTFIT : (input.remakeOutfit || DEFAULT_OUTFIT));
   const words = cleanOnScreenText(input.onScreenText ?? '');
   return [
     `Image 1 is a frame from a source video. Recreate it as a new photoreal vertical 9:16 photograph with the SAME composition: identical camera position, height and angle, lens and framing, the same pose and body position, the same background layout, every prop in the same place, the same lighting, walls and floor.`,
-    `Replace the person with ${input.remakePerson || 'a new original adult'}, wearing ${outfit}.`,
+    opts.lookLock && !opts.hasCharacterRef ? `MOST IMPORTANT — the new person's look: ${opts.lookLock}` : '',
+    opts.correction ? `Correction from the previous attempt: ${opts.correction}` : '',
+    `Image 1 is for composition only, not for skin tone or identity. Replace the person with ${input.remakePerson || 'a new original adult'}, wearing ${outfit}.`,
     opts.hasCharacterRef ? 'Additional images are the owner\'s own character reference: use that person\'s identity for the subject.' : `The face must be clearly different and original; it must NOT resemble the person in Image 1 in any way. Do not copy their face, facial features, tattoos, birthmarks, scars or other distinctive marks.`,
     frame === 'last' ? `This is the final frame of the action (${input.remakeAction ?? 'as in the source'}): match the pose shown in Image 1.` : `This is the starting frame of the action: match the starting pose in Image 1 exactly.`,
     input.settingTweak ? `Owner-requested setting change: ${input.settingTweak}.` : '',

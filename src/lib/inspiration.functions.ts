@@ -212,7 +212,7 @@ export const finishInspirationStill = createServerFn({ method: 'POST' }).middlew
     const { saveInspirationStill } = await import('./inspiration-still.server');
     const r = await saveInspirationStill(supabaseAdmin, a, bytes);
     if (!r.ok) throw new Error(r.error ?? 'Still could not be saved.');
-    return { ok: true, outfitFallback: r.outfitFallback };
+    return { ok: true, outfitFallback: r.outfitFallback, outfitUsed: r.outfitUsed };
   });
 const WrittenScene = z.object({
   environment: z.string(), action: z.string(), endState: z.string(), camera: z.string(), audio: z.string(),
