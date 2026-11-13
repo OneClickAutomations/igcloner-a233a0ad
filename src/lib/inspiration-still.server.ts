@@ -4,8 +4,8 @@ import { createParser } from 'eventsource-parser';
 
 type Admin = any;
 export async function saveInspirationStill(admin: Admin, a: any, bytes: Uint8Array): Promise<{ ok: boolean; outfitFallback: boolean; outfitUsed?: string; error?: string }> {
-  const { data: cur } = await admin.from('scene_attempts').select('status').eq('id', a.id).single();
-  if (cur?.status === 'completed') return { ok: true, outfitFallback: a.outfit_fallback === true, outfitUsed: cur?.outfit_used ?? a.outfit_used ?? undefined };
+  const { data: cur } = await admin.from('scene_attempts').select('status,outfit_fallback,outfit_used').eq('id', a.id).single();
+  if (cur?.status === 'completed') return { ok: true, outfitFallback: (cur?.outfit_fallback ?? a.outfit_fallback) === true, outfitUsed: cur?.outfit_used ?? a.outfit_used ?? undefined };
   if (cur?.status === 'failed') return { ok: false, outfitFallback: false, error: 'This attempt failed; start a fresh request.' };
   const { imageSize } = await import('./clone-rules'); const dims = imageSize(bytes);
   if (!dims || dims.width >= dims.height || bytes.length > 10 * 1024 * 1024) {
@@ -20,7 +20,7 @@ export async function saveInspirationStill(admin: Admin, a: any, bytes: Uint8Arr
   } else {
     const { error } = await admin.from('storyboard_scenes').update({ still_path: path, object_checks: [], approved_at: null, approved_revision: null, status: 'still_ready' }).eq('id', a.scene_id).eq('revision', a.scene_revision); if (error) throw new Error(error.message);
   }
-  return { ok: true, outfitFallback: a.outfit_fallback === true, outfitUsed: cur?.outfit_used ?? a.outfit_used ?? undefined };
+  return { ok: true, outfitFallback: (cur?.outfit_fallback ?? a.outfit_fallback) === true, outfitUsed: cur?.outfit_used ?? a.outfit_used ?? undefined };
 }
 
 /** Reads the image event stream to its final frame and saves it; never fails/refunds (the browser or sweep does that). */
