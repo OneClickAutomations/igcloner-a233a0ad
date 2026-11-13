@@ -42,6 +42,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
       assemblies: await Promise.all((assemblies ?? []).map(async a => ({ ...a, preview: await sign(a.result_path) }))),
       narration: narrations?.[0] ?? null,
       voiceRecommendation: matchSourceVoice(sourceAnalysis ?? selected),
+      narrationConfigured: Boolean(process.env['ELEVENLABS_API_KEY']),
       assemblyConfigured: Boolean(process.env['SHOTSTACK_API_KEY'] || process.env['SHOTSTACK_SANDBOX_API_KEY']),
       usdPerWorkspaceCredit: STUDIO_PRICING.workspaceCreditUsd, stillWorkspaceQuote: STUDIO_PRICING.stillWorkspaceCredits,
       monthlyAllowance: plan?.monthly ? plan.credits : null,
@@ -172,9 +173,14 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     const c = claim as any;
     if (c.busy) throw new Error('A scene is already generating. The queue is sequential.');
     if (c.existing) return { attemptId: c.attempt.id };
+    const history=Array.isArray(s.review_history)?s.review_history:[];
+    const last=history.at(-1) as {instruction?:string;revision?:number}|undefined;
+    const promptSnapshot=`${s.motion_prompt}${last?.revision===s.revision&&last.instruction?`\nRequested change: ${last.instruction}`:''}`;
+    const {error:snapshotError}=await supabaseAdmin.from('scene_attempts').update({prompt_snapshot:promptSnapshot}).eq('id',c.attempt.id).eq('status','claimed');
+    if(snapshotError){await supabaseAdmin.rpc('fail_inspiration_attempt',{p_attempt:c.attempt.id,p_reason:'Shot instructions could not be saved.'});throw new Error('Shot instructions could not be saved. Credits refunded.');}
     try {
       const { submitApprovedAttempt } = await import('./inspiration.server');
-      await submitApprovedAttempt(c.attempt, key);
+      await submitApprovedAttempt({...c.attempt,prompt_snapshot:promptSnapshot}, key);
     } catch (e) {
       const status = (e as any).status;
       if ([402,403,404].includes(status)) await supabaseAdmin.from('video_inspiration_projects').update({ pause_reason: (e as Error).message }).eq('id', s.project_id);

@@ -3,17 +3,17 @@ import { Check, ChevronLeft, ChevronRight, Save, BarChart3, Link2, LayoutGrid, P
 import { Button } from './ui/button';
 import { CREATION_STEPS } from '@/lib/creation-draft';
 
-export function CreationWizardShell({ step, instructions, children, onBack, onNext, onClose, disabled, busy, saved, nextHint }: {
+export function CreationWizardShell({ step, instructions, children, onBack, onNext, onClose, disabled, busy, saved, nextHint,filmReview,publishing }: {
   step: number; instructions: string; children: ReactNode; onBack: () => void; onNext: () => void;
-  onClose: () => void; disabled?: boolean; busy?: boolean; saved?: string; nextHint?: string;
+  onClose: () => void; disabled?: boolean; busy?: boolean; saved?: string; nextHint?: string;filmReview?:boolean;publishing?:boolean;
 }) {
   const total = CREATION_STEPS.length;
   const StepIcon = [Link2, BarChart3, LayoutGrid, Pencil, Wand2, Send][step] ?? BarChart3;
   return <div className="review-screen creation-wizard min-h-full">
     <div className="wizard-container mx-auto max-w-6xl px-4 py-6 text-base sm:px-8">
       <div className="wizard-heading mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0"><p className="mb-2 text-sm font-medium text-review-muted">Create a project <span aria-hidden="true">/</span> Step {step + 1} of {total}</p><div className="flex min-w-0 items-center gap-3"><span className="review-gradient grid size-11 shrink-0 place-items-center rounded-xl"><StepIcon className="size-6"/></span><h1 className="text-3xl font-bold sm:text-[40px] sm:leading-tight">{CREATION_STEPS[step]}</h1></div></div>
-        <Button variant="outline" disabled={busy} onClick={onClose}><Save className="size-4"/>Save and close</Button>
+        <div className="min-w-0"><p className="mb-2 text-sm font-medium text-review-muted">Create a project <span aria-hidden="true">/</span> Step {step + 1} of {total}</p><div className="flex min-w-0 items-center gap-3"><span className="review-gradient grid size-11 shrink-0 place-items-center rounded-xl"><StepIcon className="size-6"/></span><h1 className="text-3xl font-bold sm:text-[40px] sm:leading-tight">{publishing?'Publish':filmReview?'Review your film':CREATION_STEPS[step]}</h1></div></div>
+        <div className="flex flex-wrap justify-end gap-2">{filmReview&&!publishing&&<Button variant="outline" disabled={busy} onClick={onBack}><ChevronLeft className="size-4"/>Back to making</Button>}<Button variant="outline" disabled={busy} onClick={onClose}><Save className="size-4"/>Save and close</Button></div>
       </div>
 
       <nav aria-label="Progress" className="review-card wizard-progress mb-6">
@@ -34,10 +34,10 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
       </section>
 
       <footer className={`review-card sticky bottom-3 z-30 mt-6 flex items-center justify-between gap-3 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6`}>
-        <Button variant="outline" size="lg" disabled={step === 0 || busy} onClick={onBack}><ChevronLeft className="size-5"/>Back</Button>
+        <Button variant="outline" size="lg" disabled={step === 0 || busy} onClick={filmReview&&!publishing?onClose:onBack}>{filmReview&&!publishing?<Save className="size-5"/>:<ChevronLeft className="size-5"/>}{filmReview&&!publishing?'Save as draft':'Back'}</Button>
         <div className="flex items-center gap-4">
           {nextHint && <span className="hidden text-sm text-muted-foreground sm:inline">{nextHint}</span>}
-          <Button size="lg" disabled={disabled || busy} onClick={onNext}>{busy ? 'Saving…' : step === total - 1 ? 'Save and finish' : 'Next'}<ChevronRight className="size-5"/></Button>
+          <Button size="lg" disabled={disabled || busy} onClick={onNext}>{busy ? 'Saving…' : filmReview&&!publishing?'Publish':publishing?'Save as draft':step === total - 1 ? 'Save and finish' : 'Next'}<ChevronRight className="size-5"/></Button>
         </div>
       </footer>
       <p role="status" className="mt-3 text-right text-sm text-review-muted">{saved}</p>

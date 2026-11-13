@@ -27,7 +27,7 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model };
   const start = await loadInspirationImage(scene.still_path);
   let request: any;
-  const prompt = `${stripIdentity(scene.motion_prompt)} ${PHYSICAL_REALISM}`;
+  const prompt = `${stripIdentity(attempt.prompt_snapshot ?? scene.motion_prompt)} ${PHYSICAL_REALISM}`;
   if (attempt.model === 'google/gemini-omni-1.1-flash') {
     request = { input: [{ type: 'text', text: `${prompt} <FIRST_FRAME> is the approved starting frame. No teleporting objects. No changing product shape, colors or opacity.` }, { type: 'image', data: start.bytesBase64Encoded, mime_type: start.mimeType }], response_format: { type: 'video', resolution: '720p', duration: `${scene.duration}s`, aspect_ratio: '9:16' } };
   } else {
@@ -82,7 +82,7 @@ export async function collectAttempt(attempt: any, apiKey: string) {
     if (error) throw new Error(error.message);
     const { error: saved } = await supabaseAdmin.from('scene_attempts').update({ status: 'completed', result_url: path, lease_until: null, updated_at: new Date().toISOString() }).eq('id', attempt.id);
     if (saved) throw new Error(saved.message);
-    await supabaseAdmin.from('storyboard_scenes').update({ status: 'animated' }).eq('id', attempt.scene_id);
+    await supabaseAdmin.from('storyboard_scenes').update({ status: 'animated', selected_attempt_id:attempt.id }).eq('id', attempt.scene_id).eq('revision',attempt.scene_revision);
   } catch (e) {
     await supabaseAdmin.from('scene_attempts').update({ lease_until: null, failure_reason: `Clip generated; saving needs recovery: ${(e as Error).message}` }).eq('id', attempt.id);
     throw e;

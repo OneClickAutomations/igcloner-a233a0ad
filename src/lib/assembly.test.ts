@@ -2,6 +2,7 @@ import { describe,it,expect } from 'vitest';
 import { AssemblyOptions, assemblyConfigured, buildAssemblyTimeline, captionsToSrt, definitiveRenderRejection, parseSrt, renderQuote, refundAssemblyOnFailure, validateCaptions } from './assembly';
 const clips=Array.from({length:4},(_,i)=>({sceneId:`s${i}`,attemptId:`a${i}`,path:`p${i}`,revision:1,duration:8,url:`https://media.example/${i}.mp4`}));
 describe('hosted assembly',()=>{
+ it('respects the music volume slider and ducks below that level',()=>{const t=buildAssemblyTimeline(clips,AssemblyOptions.parse({musicVolume:0.2,voiceoverDuration:20}),{voiceover:'v',music:'m'});const volume=(t.timeline.tracks[1].clips[0].asset as any).volume;expect(volume[0].from).toBeCloseTo(0.2*0.12/0.35);expect(volume[1].to).toBe(0.2);});
  it('orders four 8-second clips and forces portrait MP4',()=>{const t=buildAssemblyTimeline(clips,AssemblyOptions.parse({}),{});expect(t.timeline.tracks[0].clips.map(c=>c.start)).toEqual([0,8,16,24]);expect(t.output).toEqual({format:'mp4',size:{width:720,height:1280},fps:30});});
  it('adds approved render cost to video credits, not plan credits',()=>{const q=renderQuote(32);expect(q.renderUsd).toBeCloseTo(0.1066666667);expect(q.customerCredits).toBe(1);expect(q.billingBalance).toBe('video');expect(q.proposed).toBe(false);expect(renderQuote(32,'stage').customerCredits).toBe(0);});
  it('keeps missing-key rendering unavailable',()=>{expect(assemblyConfigured()).toBe(false);expect(assemblyConfigured(undefined,'sandbox')).toBe(true);});
