@@ -1,0 +1,2 @@
+ALTER TABLE public.storyboard_scenes ADD COLUMN IF NOT EXISTS look_check jsonb, ADD COLUMN IF NOT EXISTS look_correction text;
+ALTER TABLE public.scene_attempts ADD COLUMN IF NOT EXISTS outfit_used text;

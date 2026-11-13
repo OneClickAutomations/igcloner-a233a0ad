@@ -1526,6 +1526,7 @@ export type Database = {
           model: string
           operation: string
           outfit_fallback: boolean
+          outfit_used: string | null
           project_id: string
           prompt_snapshot: string | null
           reference_ids: string[]
@@ -1554,6 +1555,7 @@ export type Database = {
           model: string
           operation: string
           outfit_fallback?: boolean
+          outfit_used?: string | null
           project_id: string
           prompt_snapshot?: string | null
           reference_ids?: string[]
@@ -1582,6 +1584,7 @@ export type Database = {
           model?: string
           operation?: string
           outfit_fallback?: boolean
+          outfit_used?: string | null
           project_id?: string
           prompt_snapshot?: string | null
           reference_ids?: string[]
@@ -1690,6 +1693,8 @@ export type Database = {
           duration: number
           end_still_path: string | null
           id: string
+          look_check: Json | null
+          look_correction: string | null
           motion_prompt: string
           object_checks: Json
           project_id: string
@@ -1712,6 +1717,8 @@ export type Database = {
           duration?: number
           end_still_path?: string | null
           id?: string
+          look_check?: Json | null
+          look_correction?: string | null
           motion_prompt: string
           object_checks?: Json
           project_id: string
@@ -1734,6 +1741,8 @@ export type Database = {
           duration?: number
           end_still_path?: string | null
           id?: string
+          look_check?: Json | null
+          look_correction?: string | null
           motion_prompt?: string
           object_checks?: Json
           project_id?: string

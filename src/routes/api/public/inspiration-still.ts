@@ -48,7 +48,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       // Faithful prompts are built only from verified non-identity shot fields plus owner-written person text.
       const prompt = `${faithful ? scene.still_prompt : stripIdentity(scene.still_prompt)}. Compose a portrait 9:16 image, 720 by 1280 framing. ${roles}. Identity comes only from selected reference images. Use an owner-selected setting reference when supplied; otherwise create the new setting described. Never reproduce the source person's likeness.`;
       let upstream: Response;
-      let fallback = false;
+      let fallback = false; let outfitUsed = '';
       await supabaseAdmin.from('scene_attempts').update({ frame }).eq('id', claim.attempt.id);
       if (sourceFrame) {
         // Frame-referenced faithful remake: the saved source keyframe fixes composition; the subject is a new person.
@@ -56,22 +56,28 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
         const { data: src } = await supabaseAdmin.storage.from('source-media').download(sourceFrame);
         if (!src) throw new Error('The saved source keyframe is missing. Extract keyframes again.');
         const chars = (refs ?? []).filter(r => r.kind.startsWith('character'));
-        const send = async (fallbackOutfit: boolean) => {
-          const form = new FormData(); form.set('prompt', frameReferencedPrompt(sceneInput, frame, { fallbackOutfit, hasCharacterRef: chars.length > 0 }));
+        const { lookLock, coveredOutfit } = await import('@/lib/keyframes');
+        const { data: proj } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).single();
+        const { data: an } = proj?.analysis_id ? await supabaseAdmin.from('analyses').select('evidence').eq('id', proj.analysis_id).maybeSingle() : { data: null };
+        const look = ((an?.evidence as any)?.remakeRefs?.appearance ?? null);
+        const covered = coveredOutfit(look);
+        const correction = (scene as any).look_correction ?? '';
+        const send = async (tier: 'source' | 'covered' | 'generic') => {
+          const form = new FormData(); form.set('prompt', frameReferencedPrompt(sceneInput, frame, { fallbackOutfit: tier === 'generic', outfitOverride: tier === 'covered' ? covered : undefined, hasCharacterRef: chars.length > 0, lookLock: lookLock(look), correction }));
           form.append('image[]', new File([src], 'source-frame.jpg', { type: 'image/jpeg' }));
           for (const r of chars) { const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path); if (im) form.append('image[]', new File([im], r.filename, { type: im.type || 'image/png' })); }
           form.set('size', '720x1280'); form.set('quality', 'low');
           return editImage({ ...config, model: FRAME_MODEL }, form);
         };
         // Buffer the stream so an in-stream safety refusal can trigger one outfit fallback before the browser sees it.
-        const attemptOnce = async (fb: boolean) => { const r = await send(fb); return { r, text: r.ok ? await r.text() : '' }; };
+        const attemptOnce = async (tier: 'source' | 'covered' | 'generic') => { const r = await send(tier); return { r, text: r.ok ? await r.text() : '' }; };
         const refused = (x: { r: Response; text: string }) => ([400, 422].includes(x.r.status)) || (x.r.ok && !/_?completed/.test(x.text) && /safety|blocked|refus|policy/i.test(x.text));
-        let out = await attemptOnce(false);
-        if (refused(out)) {
-          // Provider refusal on the source outfit: one retry with fitted athletic wear in the same colours.
-          fallback = true; out = await attemptOnce(true);
-          await supabaseAdmin.from('scene_attempts').update({ outfit_fallback: true }).eq('id', claim.attempt.id);
-        }
+        let out = await attemptOnce('source');
+        // Provider refusal on the source outfit: first the closest more-covered version in the same colour, then generic athletic wear.
+        if (refused(out) && covered) { fallback = true; outfitUsed = covered; out = await attemptOnce('covered'); }
+        if (refused(out)) { fallback = true; outfitUsed = 'fitted athletic wear in the same colours'; out = await attemptOnce('generic'); }
+        if (fallback) await supabaseAdmin.from('scene_attempts').update({ outfit_fallback: true, outfit_used: outfitUsed }).eq('id', claim.attempt.id);
+        if (correction) await supabaseAdmin.from('storyboard_scenes').update({ look_correction: null }).eq('id', scene.id);
         upstream = out.r.ok ? new Response(out.text, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }) : out.r;
       } else if (refs?.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'low');
@@ -97,7 +103,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
         const [toClient, toServer] = body.tee(); body = toClient;
         const { collectStillFromStream } = await import('@/lib/inspiration-still.server');
         const job = collectStillFromStream(supabaseAdmin, claim.attempt.id, toServer).catch(() => {});
-        try { const cf: any = await import(/* @vite-ignore */ 'cloudflare:workers'); cf?.waitUntil?.(job); } catch { /* dev server: the promise still runs */ }
+        try { const mod = 'cloudflare:workers'; const cf: any = await import(/* @vite-ignore */ mod); cf?.waitUntil?.(job); } catch { /* dev server: the promise still runs */ }
       }
       return new Response(body, { status: upstream.status, headers: { 'Content-Type': upstream.headers.get('Content-Type') ?? 'text/event-stream', 'Cache-Control': 'no-store', 'X-Studio-Attempt': claim.attempt.id, 'X-Outfit-Fallback': fallback ? '1' : '0', 'Access-Control-Expose-Headers': 'X-Outfit-Fallback' } });
     } catch (e) {
