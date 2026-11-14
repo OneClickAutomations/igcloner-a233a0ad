@@ -55,7 +55,7 @@ function GetAppPage() {
     <div className="mx-auto flex min-h-[80vh] max-w-lg flex-col items-center justify-center px-5 py-10 text-center">
       <img src="/icon-192.png" alt="IG-Cloner app icon" className="h-24 w-24 rounded-[22px] shadow-lg" />
       <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-muted-foreground">One more step</p>
-      <h1 className="mt-2 font-display text-3xl font-black tracking-tight text-foreground sm:text-4xl">Get the app</h1>
+      <h1 style={{ fontFamily: "'Archivo Black', sans-serif" }} className="mt-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl">Get the app</h1>
       <p className="mt-3 text-base text-muted-foreground">Put IG-Cloner on your {platform === "desktop" ? "desktop" : "home screen"} and open it with one tap. It's free and takes seconds.</p>
 
       <div className="mt-8 w-full rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
