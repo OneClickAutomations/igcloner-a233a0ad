@@ -1,10 +1,11 @@
+import { requestedPromptChanges } from './prompt-magic';
 export function selectedShotVersion<T extends {id:string;scene_id:string;scene_revision:number;operation:string;status:string;result_url:string|null}>(scene:{id:string;revision:number;selected_attempt_id?:string|null},attempts:T[]):T|undefined {
   const versions=attempts.filter(a=>a.scene_id===scene.id&&a.scene_revision===scene.revision&&a.operation==='animate'&&a.status==='completed'&&a.result_url);
   return versions.find(a=>a.id===scene.selected_attempt_id)??versions[0];
 }
 
 export function changesShotAppearance(instruction: string): boolean {
-  return /\b(?:vitiligo|pigmentation|patch(?:es)?|skin|complexion|hair|blond|blonde|dreadlocks?|outfit|bikini|clothing|dress|wear|wearing|hat|glasses|physique|build|muscular)\b/i.test(instruction);
+  return /\b(?:vitiligo|pigmentation|patch(?:es)?|skin|complexion|hair|blond|blonde|dreadlocks?|outfit|bikini|clothing|dress|wear|wearing|hat|glasses|physique|build|muscular)\b/i.test(requestedPromptChanges(instruction));
 }
 export function shotReviewInstruction(scene: { revision: number; review_history?: unknown }): string {
   const history = Array.isArray(scene.review_history) ? scene.review_history : [];
