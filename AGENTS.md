@@ -13,6 +13,7 @@
 - Studio remake generation receives written verified look briefs and approved character-library images only, never source-media pixels; three-view original sheets use durable owner-private attempts so refresh and approval preserve character consistency.
 - Video inspiration motion prompts use a browser-safe action/end-state builder; model defaults remain provisional until live action/identity gates pass, avoiding camera-only success claims.
 - Creator writing uses copy-engine.server.ts (native streamed Claude Messages, local Zod validation and one repair); media observation and image/audio/video providers remain separate.
+- Studio prompt enhancement reuses the metered copy engine and separates requested changes from technical guidance in either format, so continuity language cannot falsely trigger appearance regeneration.
 - Copy quality is judged per artifact with task-specific criteria and at most two regenerations; failures are withheld and flow through attempt refunds, and cache version changes when the quality contract changes.
 - Carousel deterministic text compositing executes only in the browser on a generated background; server OCR re-verifies before marking it ready, avoiding native image dependencies in the deployed runtime.
 - Copy run history/cache is owner-readable and server-written; an atomic claim precedes debit, failure refunds its attempt, and stale sweeping checks actual debits before refunding.
