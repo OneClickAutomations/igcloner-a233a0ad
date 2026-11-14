@@ -1,4 +1,5 @@
 import { PromptMagic } from './PromptMagic';
+import { saveFilmShotReview } from '@/lib/film-review.functions';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
@@ -39,6 +40,9 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
   const { data } = useSuspenseQuery(inspirationQuery(projectId));
   const navigate = useNavigate(); const qc = useQueryClient();
   const saveCreation=useServerFn(saveCreationDraft);
+  const saveRevision=useServerFn(saveFilmShotReview);
+  const [regenerationPrompt,setRegenerationPrompt]=useState('');
+  useEffect(()=>{setRegenerationPrompt('');},[confirmation?.scene.id,confirmation?.operation,confirmation?.frame]);
   const lookCheck=useServerFn(checkStillLook), correct=useServerFn(setLookCorrection);
   const reviewAction=async(publish:boolean)=>{
     if(!data.selected)return;
@@ -145,10 +149,16 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
     const c = confirmation; setConfirmation(null); const requestKey = crypto.randomUUID();
     await run(async () => {
       if (c.operation === 'animate') { await animate({ data: { sceneId: c.scene.id, model, requestKey, revision: c.q.revision, confirmedCredits: c.q.customerCredits ?? 0 } }); return; }
+      let stillQuote=c.q;
+      if(regenerationPrompt.trim()){
+        await saveRevision({data:{sceneId:c.scene.id,instruction:regenerationPrompt.trim()}});
+        stillQuote=await quote({data:{sceneId:c.scene.id,model,operation:'still'}});
+        if(stillQuote.customerCredits!==c.q.customerCredits)throw new Error('The price changed. Open regeneration again to review the updated quote; nothing was charged.');
+      }
       const jobId = `still-${c.scene.id}`; const label = `Scene ${c.scene.scene_order+1}`;
       setBatch({ kind: 'stills', items: [{ label, state: 'running' }], startedAt: Date.now(), status: 'running' });
       startJob({ id: jobId, kind: 'stills', title: 'Your still', href: window.location.pathname + window.location.search, expectedSeconds: 40, doneLabel: 'Your still is ready' });
-      try { await makeStill(c.scene, c.q, c.frame ?? 'first', requestKey); }
+      try { await makeStill(c.scene, stillQuote, c.frame ?? 'first', requestKey); }
       catch (e) { setBatch(b => b && { ...b, items: [{ label, state: 'failed' }], status: 'error', error: (e as Error).message, refunded: true }); finishJob(jobId, false, { error: (e as Error).message, refunded: true }); throw e; }
       setBatch(b => b && { ...b, items: [{ label, state: 'done' }], status: 'done' }); finishJob(jobId, true, { resultSelector: '#make-scenes' }); setTimeout(() => setBatch(null), 2500);
     });
