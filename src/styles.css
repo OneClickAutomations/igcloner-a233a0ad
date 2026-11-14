@@ -837,8 +837,19 @@
 .review-score-disc { width: 132px; height: 132px; border-radius: 50%; background: linear-gradient(var(--review-page), var(--review-page)) padding-box, linear-gradient(135deg,var(--review-ring-start),var(--review-ring-end)) border-box; border: 7px solid transparent; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .review-score-disc > span { font-size: 40px; font-weight: 700; line-height: 1.15; }
 .review-score-disc > small { color: var(--review-muted); font-size: 14px; }
-.review-decision > div:last-child { gap: 24px; padding-top: 24px; }
-.review-decision > div:last-child > div + div { border-left: 1px solid var(--review-border); padding-left: 24px; }
+.review-verdict-card { min-width: 0; border: 1px solid var(--review-border); border-radius: 12px; padding: 20px; background: var(--review-panel); box-shadow: var(--review-metric-shadow); display: flex; flex-direction: column; }
+.review-verdict-card > h3 { font-size: 15px; }
+.review-verdict-icon { box-sizing: content-box; display: grid; place-items: center; width: 22px; height: 22px; padding: 8px; border-radius: 10px; flex-shrink: 0; }
+.review-verdict-icon-keep { background: var(--review-keep-bg); color: var(--review-keep-ink); }
+.review-verdict-icon-plan { background: var(--review-change-bg); color: var(--review-change-ink); }
+.review-verdict-icon-outlier { background: var(--review-icon-gradient); color: var(--primary-foreground); }
+.review-verdict-row { border-radius: 8px; padding: 10px 12px; background: var(--review-surface-alt); border: 1px solid var(--review-border); }
+.review-verdict-outlier .review-research-action { margin-top: auto; }
+.review-verdict-outlier > p { margin-bottom: 16px; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .review-verdict-card { transition: box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease; }
+  .review-verdict-card:hover { border-color: var(--review-accent); box-shadow: var(--review-shadow); transform: translateY(-2px); }
+}
 .review-report .review-keep, .review-report .review-change { background: var(--review-panel); }
 .review-report .review-keep > header h3 { color: var(--review-keep-ink); }
 .review-report .review-change > header h3 { color: var(--review-change-ink); }
