@@ -30,3 +30,11 @@ export function durationScenes(seconds: number): (4 | 6 | 8)[] {
 export function remakeClipCredits(seconds: number, model: 'google/veo-3.1-fast' | 'google/veo-3.1-lite') {
   return durationScenes(seconds).reduce((total, duration) => total + videoCreditsForWorkspace(duration * STUDIO_PRICING.rates[model]), 0);
 }
+export type RemakeFormat = 'quick' | 'storyboard';
+/** Source reels of 10s or less default to a single-take Quick Reel; longer or unknown default to a storyboard. */
+export function sourceSeconds(analysis: any): number | null {
+  const v = Number(analysis?.evidence?.video?.durationSec ?? analysis?.scraped_data?.videoDuration ?? analysis?.scrapedData?.videoDuration ?? analysis?.videoDuration);
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+export function defaultRemakeFormat(seconds: number | null): RemakeFormat { return seconds != null && seconds <= 10 ? 'quick' : 'storyboard'; }
+export const QUICK_REEL_SECONDS = 8;

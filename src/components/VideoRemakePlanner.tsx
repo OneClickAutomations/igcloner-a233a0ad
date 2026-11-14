@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useServerFn } from '@tanstack/react-start';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, Film, ImagePlus, Loader2, Minus, Plus, Mic } from 'lucide-react';
+import { Check, Zap, LayoutGrid, Film, ImagePlus, Loader2, Minus, Plus, Mic } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
@@ -10,7 +10,7 @@ import { ReviewCard } from './ReviewPostPrimitives';
 import { InspirationStudio } from './InspirationStudio';
 import { getInspirationStudio, manageInspirationReference, writeInspirationStoryboard } from '@/lib/inspiration.functions';
 import { suggestVideoRemakes } from '@/lib/video-remake.functions';
-import { referenceKinds, remakeClipCredits, sourceAudioProposal, type ReferenceChoice, type RemakeChoice } from '@/lib/video-remake';
+import { referenceKinds, remakeClipCredits, sourceSeconds, defaultRemakeFormat, QUICK_REEL_SECONDS, type RemakeFormat, sourceAudioProposal, type ReferenceChoice, type RemakeChoice } from '@/lib/video-remake';
 import { STUDIO_PRICING } from '@/lib/studio-pricing';
 import { CREDIT_BALANCE_KEY } from '@/lib/credits';
 import { VideoChangeList } from './VideoChangeList';
@@ -36,14 +36,17 @@ export function VideoRemakePlanner({ analysis, projectId, value = {}, onChange, 
   const active = approaches.find(a => a.id === selected) ?? approaches[0];
   const referenceChoice = (value.referenceChoice as ReferenceChoice) ?? 'design-both';
   const ids = (value.referenceIds as string[]) ?? [];
-  const seconds = Number(value.duration ?? 20);
+  const srcSeconds = sourceSeconds(analysis);
+  const format = (value.format as RemakeFormat | undefined) ?? defaultRemakeFormat(srcSeconds);
+  const quick = format === 'quick';
+  const seconds = quick ? QUICK_REEL_SECONDS : Number(value.duration ?? 20);
   const model = (value.model === 'google/veo-3.1-lite' ? 'google/veo-3.1-lite' : 'google/veo-3.1-fast');
   const background = String(value.background ?? audio.background);
   const speech = (value.speechMode as 'voiceover'|'silent') ?? audio.speechMode;
   const script = String(value.script ?? active?.script ?? starting);
   useEffect(() => {
     if (value.speechMode !== undefined) return;
-    patch({speechMode:audio.speechMode,background:audio.background,duration:seconds,script,brief:active?.brief});
+    patch({format,speechMode:audio.speechMode,background:audio.background,duration:seconds,script,brief:active?.brief});
   }, [projectId]);
   const run = async (fn: () => Promise<void>) => { setBusy(true); try { await fn(); } catch(e) { toast.error((e as Error).message); } finally { setBusy(false); } };
   const upload = async (file: File, kind: 'character_face' | 'product') => {
@@ -55,6 +58,10 @@ export function VideoRemakePlanner({ analysis, projectId, value = {}, onChange, 
     await qc.invalidateQueries({ queryKey: ['remake-references', projectId] });
   };
   return <div className="space-y-6">
+    <ReviewCard title="How long is your remake?" icon={Film}>
+      <p className="mb-4 text-review-muted">{srcSeconds ? `The original runs about ${Math.round(srcSeconds)} seconds. ` : ''}{defaultRemakeFormat(srcSeconds) === 'quick' ? 'We picked Quick Reel because it is a single short take.' : 'We picked Full Storyboard because longer reels are several cuts.'} You can switch.</p>
+      <div className="grid gap-4 sm:grid-cols-2">{([{ id:'quick', icon:Zap, name:'Quick Reel · 8 seconds', body:'One still, one clip. Approve the still, animate it, download. Fastest way to a finished reel.' },{ id:'storyboard', icon:LayoutGrid, name:'Full Storyboard · 10–60 seconds', body:'Several shots planned scene by scene, each approved and animated, then joined with voiceover and captions.' }] as const).map(o => <Button key={o.id} variant="outline" aria-pressed={format===o.id} className={`wizard-choice ${format===o.id ? 'wizard-selected' : ''}`} onClick={() => patch({ format:o.id, duration: o.id==='quick' ? QUICK_REEL_SECONDS : Math.max(Number(value.duration ?? 20), 10) })}><span className="flex w-full items-center justify-between gap-2 text-lg font-semibold"><span className="flex items-center gap-2"><o.icon className="size-5 shrink-0"/>{o.name}</span>{format===o.id && <Check className="size-5 shrink-0"/>}</span><span className="whitespace-normal text-left text-sm font-normal text-review-muted">{o.body}</span></Button>)}</div>
+    </ReviewCard>
     <ReviewCard title="Five ways to remake this" icon={Film}>
       <p className="mb-4 text-review-muted">From this post: {detail}</p>
       <div className="grid gap-4 sm:grid-cols-2">{approaches.map(a => <Button key={a.id} variant="outline" aria-pressed={selected === a.id} className={`wizard-choice ${selected === a.id ? 'wizard-selected' : ''}`} onClick={() => patch({ approachId: a.id, script: a.script, brief: a.brief })}><span className="flex w-full justify-between text-lg font-semibold">{a.name}{selected === a.id && <Check className="size-5 shrink-0"/>}</span><span className="whitespace-normal text-left text-sm font-normal text-review-muted">{a.summary}</span><span className="whitespace-normal text-left text-sm font-normal">{a.sourceDetail}</span></Button>)}</div>
@@ -69,10 +76,10 @@ export function VideoRemakePlanner({ analysis, projectId, value = {}, onChange, 
     <ReviewCard title="Your script" icon={Mic}><Textarea aria-label="Proposed reel script" className="min-h-48 text-base" value={script} onChange={e => patch({ script: e.target.value })}/><p className="mt-3 text-sm text-review-muted">Source hook and rhythm: {String(starting).slice(0,220)}</p>{speech==='voiceover' && script.split(/\s+/).length > seconds*3 && <p role="status" className="mt-3 text-status-warning">This script may need more time. Increase the duration or shorten the words; you can still continue.</p>}</ReviewCard>
     <ReviewCard title="Audio and length" icon={Film}>
       <div className="grid gap-5 sm:grid-cols-2"><label className="font-medium">Spoken words<select aria-label="Reel speech" className="mt-2 w-full rounded-md border border-input bg-background p-3" value={speech} onChange={e => { const mode = e.target.value as 'voiceover'|'silent'; patch({ speechMode: mode }); onSpeech(mode); }}><option value="voiceover">Voiceover</option><option value="silent">No talking</option></select></label><label className="font-medium">Background audio<select aria-label="Reel background audio" className="mt-2 w-full rounded-md border border-input bg-background p-3" value={background} onChange={e => patch({ background:e.target.value })}><option value="instrumental">Original instrumental</option><option value="ambience">Ambience</option><option value="none">None</option></select></label></div><p className="mt-3 text-sm text-review-muted">{audio.note}</p>
-      <div className="mt-5 flex flex-wrap items-center gap-4"><span className="font-medium">Duration</span><Button variant="outline" size="icon" aria-label="Decrease reel duration" disabled={seconds<=8} onClick={() => patch({ duration:seconds-2 })}><Minus className="size-4"/></Button><output aria-label="Reel duration" className="min-w-24 text-center font-semibold">{seconds} seconds</output><Button variant="outline" size="icon" aria-label="Increase reel duration" disabled={seconds>=60} onClick={() => patch({ duration:seconds+2 })}><Plus className="size-4"/></Button><select aria-label="Reel model" value={model} onChange={e => patch({ model:e.target.value })} className="rounded-md border border-input bg-background p-3"><option value="google/veo-3.1-fast">Veo Fast</option><option value="google/veo-3.1-lite">Veo Lite</option></select></div>
+      <div className="mt-5 flex flex-wrap items-center gap-4">{quick ? <span className="font-medium">Length: one {QUICK_REEL_SECONDS}-second clip</span> : <><span className="font-medium">Duration</span><Button variant="outline" size="icon" aria-label="Decrease reel duration" disabled={seconds<=10} onClick={() => patch({ duration:seconds-2 })}><Minus className="size-4"/></Button><output aria-label="Reel duration" className="min-w-24 text-center font-semibold">{seconds} seconds</output><Button variant="outline" size="icon" aria-label="Increase reel duration" disabled={seconds>=60} onClick={() => patch({ duration:seconds+2 })}><Plus className="size-4"/></Button></>}<select aria-label="Reel model" value={model} onChange={e => patch({ model:e.target.value })} className="rounded-md border border-input bg-background p-3"><option value="google/veo-3.1-fast">Veo Fast</option><option value="google/veo-3.1-lite">Veo Lite</option></select></div>
       <p role="status" className="mt-4 font-semibold">Clips: {remakeClipCredits(seconds,model)} video credits · {seconds}s. Stills, narration and assembly quoted separately.</p>
-      <Button className="mt-5" disabled={busy} onClick={() => run(async () => { if(data?.scenes.length) { toast.info('Scenes already prepared. Edit them under Advanced.'); return; } const result = await write({ data:{ projectId, brief:`${active?.brief ?? ''}\n${videoChangeBrief(observedVideoChanges(analysis),(value.changes as Record<string,string>)??{})}`.slice(0,600), speechMode:speech, remake:{ script, duration:seconds, referenceIds:referenceChoice === 'design-both' ? [] : ids, background, mood:audio.mood } } }); onSpeech(speech); patch({ prepared:true }); await qc.invalidateQueries({queryKey:['inspiration-studio']}); await qc.invalidateQueries({queryKey:['remake-references',projectId]}); await qc.invalidateQueries({queryKey:CREDIT_BALANCE_KEY}); toast.success(`${result.scenes} scenes prepared`); })}>{busy ? <Loader2 className="size-4 animate-spin"/> : <Check className="size-4"/>} Prepare my video · {STUDIO_PRICING.storyboardPlanCredits} plan credits</Button>
+      <Button className="mt-5" disabled={busy} onClick={() => run(async () => { if(data?.scenes.length) { toast.info('Scenes already prepared. Edit them under Advanced.'); return; } const result = await write({ data:{ projectId, brief:`${active?.brief ?? ''}\n${videoChangeBrief(observedVideoChanges(analysis),(value.changes as Record<string,string>)??{})}`.slice(0,600), speechMode:speech, remake:{ script, duration:seconds, referenceIds:referenceChoice === 'design-both' ? [] : ids, background, mood:audio.mood } } }); onSpeech(speech); patch({ prepared:true }); await qc.invalidateQueries({queryKey:['inspiration-studio']}); await qc.invalidateQueries({queryKey:['remake-references',projectId]}); await qc.invalidateQueries({queryKey:CREDIT_BALANCE_KEY}); toast.success(quick ? 'Your quick reel shot is ready to make its still' : `${result.scenes} scenes prepared`); })}>{busy ? <Loader2 className="size-4 animate-spin"/> : <Check className="size-4"/>} {quick ? 'Prepare my quick reel' : 'Prepare my storyboard'} · {STUDIO_PRICING.storyboardPlanCredits} plan credits</Button>
     </ReviewCard>
-    <details className="review-card"><summary className="cursor-pointer text-base font-semibold">Advanced — storyboard and scene editing</summary><div className="mt-5"><InspirationStudio projectId={projectId} wizardStage="words" speechMode={speech} wizardBrief={active?.brief}/></div></details>
+    <details className="review-card"><summary className="cursor-pointer text-base font-semibold">{quick ? 'Advanced — edit the shot' : 'Advanced — storyboard and scene editing'}</summary><div className="mt-5"><InspirationStudio projectId={projectId} wizardStage="words" speechMode={speech} wizardBrief={active?.brief}/></div></details>
   </div>;
 }
