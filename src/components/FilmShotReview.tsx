@@ -1,3 +1,4 @@
+import { friendlyVideoError } from '@/lib/friendly-errors';
 import { PromptMagic } from './PromptMagic';
 import { ContentComparison } from './ContentComparison';
 import { useGenJob } from './useGenJob';
@@ -53,7 +54,7 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble,
           const a=latest.attempts.find(a=>a.id===started.attemptId);await refresh();
           if(a?.status==='completed'){items[i].state='done';ctx.setItems([...items]);break;}
           if(a?.status==='failed'||a?.status==='submission_unknown'){items[i].state='failed';ctx.setItems([...items]);}
-          if(a?.status==='failed'||a?.status==='submission_unknown')throw new Error(a.failure_reason??'Shot stopped. Your previous versions are safe.');
+          if(a?.status==='failed'||a?.status==='submission_unknown')throw new Error(friendlyVideoError(a.failure_reason)??'Shot stopped. Your previous versions are safe.');
           if(Date.now()>deadline)throw new Error('Shot is still processing. Reopen this video to collect it; remaining shots were not charged.');
         }
       }

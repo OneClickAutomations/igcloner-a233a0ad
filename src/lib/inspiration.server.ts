@@ -3,6 +3,7 @@ import { PHYSICAL_NEGATIVES, realismGuidance } from './video-motion';
 import { stripIdentity } from './inspiration';
 import { toBase64 } from './analysis-ai.server';
 import { CHARACTER_CONTINUITY } from './film-review';
+import { friendlyVideoError } from './friendly-errors';
 
 export const INSPIRATION_BUCKET = 'video-inspiration';
 export class StudioGatewayError extends Error { constructor(public status: number, message: string) { super(message); } }
@@ -67,7 +68,7 @@ export async function collectAttempt(attempt: any, apiKey: string) {
   try { job = await pollVideo({ baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model }, attempt.gateway_job_id); }
   catch (e) { await supabaseAdmin.from('scene_attempts').update({ lease_until: null }).eq('id', attempt.id); throw e; }
   if (job.status === 'failed') {
-    await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: attempt.id, p_reason: job.error?.message ?? 'Animation failed.' });
+    await supabaseAdmin.rpc('fail_inspiration_attempt', { p_attempt: attempt.id, p_reason: friendlyVideoError(job.error?.message) ?? 'Animation failed.' });
     return;
   }
   if (job.status !== 'completed') {
