@@ -1,4 +1,5 @@
 import { PromptMagic } from './PromptMagic';
+import { ContentComparison } from './ContentComparison';
 import { useGenJob } from './useGenJob';
 import {useState} from 'react';
 import {useServerFn} from '@tanstack/react-start';
@@ -62,10 +63,12 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble,
   const film=data.assemblies.find(j=>j.status==='completed'&&j.preview);
   return <section className="space-y-5 border-b border-border pb-6">
     <h2 className="text-2xl font-bold">Review your video</h2>
+    {film?.preview && <ContentComparison analysisId={data.sourceAnalysis?.id} sourceUrl={data.sourceAnalysis?.instagram_url} generated={[{url:film.preview,type:'video'}]}/>}
     {film?.preview?<video aria-label="Assembled film" controls playsInline src={film.preview} className="mx-auto aspect-[9/16] max-h-[640px] w-full bg-muted object-contain"/>:<p className="text-muted-foreground">Your assembled film will appear here. Your saved shots are below.</p>}
     <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Shot strip">{data.scenes.map(s=><Button key={s.id} variant="outline" aria-label={`Review shot ${s.scene_order+1}`} aria-pressed={s.id===selected} onClick={()=>setSelected(s.id)} className="h-auto w-24 shrink-0 flex-col gap-2 p-2">{s.preview?<img src={s.preview} alt={`Shot ${s.scene_order+1}`} className="aspect-[9/16] w-full object-cover"/>:<Film className="size-8"/>}<span>Shot {s.scene_order+1} · {s.duration}s</span></Button>)}</div>
     {scene&&<div className="space-y-4 border-t border-border pt-5">
       <h3 className="text-lg font-semibold">Shot {scene.scene_order+1}</h3>
+      {current?.preview && !film?.preview && <ContentComparison analysisId={data.sourceAnalysis?.id} sourceUrl={data.sourceAnalysis?.instagram_url} generated={[{url:current.preview,type:'video'}]}/>}
       {current?.preview&&<video aria-label="Selected shot version" controls playsInline src={current.preview} className="aspect-[9/16] max-h-80 w-full bg-muted object-contain"/>}
       <label className="block text-sm font-medium">Saved versions · free to switch<Select value={current?.id??''} onValueChange={attemptId=>run(async()=>{await save({data:{sceneId:scene.id,attemptId}});await refresh();setProgress('Version selected. Re-assemble to update the film.');})}><SelectTrigger aria-label="Shot version" className="mt-2"><SelectValue placeholder="No completed versions yet"/></SelectTrigger><SelectContent>{versions.map((a,i)=><SelectItem value={a.id} key={a.id}>Version {versions.length-i} · {new Date(a.created_at).toLocaleDateString()}</SelectItem>)}</SelectContent></Select></label>
       <label className="block text-sm font-medium">Changes for this shot (optional)<Textarea aria-label="Shot regeneration instructions" className="mt-2" placeholder="Make the wave bigger, or slow the camera push" value={notes[scene.id]??''} onChange={e=>onChange({...value,shotInstructions:{...notes,[scene.id]:e.target.value}})}/></label>

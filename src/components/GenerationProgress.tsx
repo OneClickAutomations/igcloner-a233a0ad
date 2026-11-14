@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Check, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from './ui/button';
 import { estimatePercent, remainingLabel, type JobItem } from '@/lib/generation-jobs';
@@ -19,14 +20,17 @@ export function GenerationProgress({ status = 'running', stage, startedAt, expec
   items?: JobItem[]; error?: string; refunded?: boolean; onRetry?: () => void; compact?: boolean; note?: string;
 }) {
   const [now, setNow] = useState(() => Date.now());
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => { if (status !== 'running') return; const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, [status]);
   const elapsed = Math.max(0, (now - startedAt) / 1000);
   const itemPct = items?.length ? (items.filter(i => i.state === 'done').length / items.length) * 100 : undefined;
   const real = percent ?? itemPct;
   const pct = status === 'done' ? 100 : status === 'error' ? Math.round(real ?? 0) : estimatePercent(elapsed, expectedSeconds, real);
-  const size = compact ? 64 : 120, r = compact ? 26 : 52, c = 2 * Math.PI * r, sw = compact ? 6 : 10;
-  return (
-    <div className={`gen-progress ${compact ? 'gen-progress-compact' : ''}`} data-status={status} role="status" aria-live="polite">
+  const small = compact && status !== 'running';
+  const size = small ? 64 : 120, r = small ? 26 : 52, c = 2 * Math.PI * r, sw = small ? 6 : 10;
+  const display = (
+    <div className={`gen-progress ${small ? 'gen-progress-compact' : ''}`} data-status={status} role="status" aria-live="polite">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg viewBox={`0 0 ${size} ${size}`} className="-rotate-90" width={size} height={size} aria-hidden>
           <defs><linearGradient id="gp-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--color-accent-primary)"/><stop offset="100%" stopColor="var(--color-accent-secondary)"/></linearGradient></defs>
@@ -45,4 +49,6 @@ export function GenerationProgress({ status = 'running', stage, startedAt, expec
       </div>
     </div>
   );
+  if (status === 'running') return mounted ? createPortal(<div className="generation-focus" aria-label="Generation in progress">{display}</div>, document.body) : null;
+  return display;
 }

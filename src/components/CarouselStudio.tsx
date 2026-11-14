@@ -1,4 +1,5 @@
 import { useGenJob } from "./useGenJob";
+import { ContentComparison } from './ContentComparison';
 import { QualityNote } from "@/components/QualityNote";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -352,6 +353,7 @@ export function CarouselStudio({ embeddedProjectId, wizardStage }: { embeddedPro
         </div>
       </div>}
 
+      {doc && doc.slides.some(s=>s.imageUrl) && <ContentComparison analysisId={project?.analysis_id} sourceThumbnail={project?.source_thumbnail} sourceUrl={project?.source_url} generated={doc.slides.flatMap(s=>s.imageUrl?[{url:s.imageUrl,type:'image' as const}]:[])}/>}
       {doc && (
         <PostScheduleModal
           open={postOpen}
