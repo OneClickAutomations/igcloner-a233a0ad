@@ -25,8 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, t1: "purple", t2: "pink" },
   { title: "Research", url: "/research", icon: Search, t1: "teal", t2: "green" },
-  { title: "Create Content", url: "/app", icon: Copy, t1: "pink", t2: "rose" },
-  { title: "Video Studio", url: "/studio/inspiration", icon: Film, t1: "purple", t2: "pink" },
+  { title: "Clone Studio", url: "/app", icon: Copy, t1: "pink", t2: "rose" },
+  { title: "Reel Cloner", url: "/studio/inspiration", icon: Film, t1: "purple", t2: "pink" },
   { title: "Projects", url: "/projects", icon: FolderOpen, t1: "purple", t2: "pink" },
   { title: "Content Library", url: "/library", icon: FolderOpen, t1: "purple", t2: "pink" },
   { title: "Content Calendar", url: "/calendar", icon: CalendarIcon, t1: "amber", t2: "orange" },
@@ -75,7 +75,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.url === '/studio/inspiration' ? `${item.title} · Beta` : item.title}>
                     <Link
                       to={item.url}
                       onClick={closeMobile}
@@ -96,7 +96,7 @@ export function AppSidebar() {
                       >
                         <item.icon className="h-3.5 w-3.5" />
                       </span>
-                      {!collapsed && <span className="text-[15px]">{item.title}</span>}
+                      {(!collapsed || isMobile) && <><span className="min-w-0 truncate text-[15px]">{item.title}</span>{item.url === '/studio/inspiration' && <span className={`ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold leading-none ${isActive(item.url) ? 'border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground' : 'border-accent-primary/25 bg-accent-primary/10 text-accent-primary'}`}>Beta</span>}</>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
