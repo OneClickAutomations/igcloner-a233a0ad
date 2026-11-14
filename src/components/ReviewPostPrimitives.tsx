@@ -8,7 +8,7 @@ export function ReviewCard({ title, icon: Icon, children, trailing, tone = '' }:
 }
 
 export function ReviewMetric({ label, value, icon: Icon, help, highlight = false }: { label: string; value: ReactNode; icon: LucideIcon; help: string; highlight?: boolean }) {
-  return <div className={`review-metric ${highlight ? 'review-highlight' : ''}`}><div className="flex items-center justify-between gap-1"><Icon className="size-5 text-review-accent"/><MetricHelp label={label}>{help}</MetricHelp></div><p className={`mt-2 break-words font-bold leading-tight ${label === 'Account type' || label === 'Posted' ? 'text-base' : 'text-xl'}`}>{value}</p><p className="mt-2 text-sm text-review-muted">{label}</p></div>;
+  return <div className={`review-metric ${highlight ? 'review-highlight' : ''}`}><div className="flex items-center justify-between gap-1"><span className="review-metric-icon"><Icon className="size-5"/></span><MetricHelp label={label}>{help}</MetricHelp></div><p className={`mt-2 break-words font-bold leading-tight ${label === 'Account type' || label === 'Posted' ? 'text-base' : 'text-xl'}`}>{value}</p><p className="mt-2 text-sm text-review-muted">{label}</p></div>;
 }
 
 export function ReviewAccordion({ title, description, icon: Icon, children }: { title: string; description: string; icon: LucideIcon; children: ReactNode }) {

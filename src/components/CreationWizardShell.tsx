@@ -13,12 +13,12 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
     <div className="wizard-container mx-auto max-w-6xl px-4 py-6 text-base sm:px-8">
       <div className="wizard-heading mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <div className="min-w-0"><p className="mb-2 text-sm font-medium text-review-muted">Create a project <span aria-hidden="true">/</span> Step {step + 1} of {total}</p><div className="flex min-w-0 items-center gap-3"><span className="review-gradient grid size-11 shrink-0 place-items-center rounded-xl"><StepIcon className="size-6"/></span><h1 className="text-3xl font-bold sm:text-[40px] sm:leading-tight">{publishing?'Publish':filmReview?'Review your video':CREATION_STEPS[step]}</h1></div></div>
-        <div className="flex flex-wrap justify-end gap-2">{filmReview&&!publishing&&<Button variant="outline" disabled={busy} onClick={onBack}><ChevronLeft className="size-4"/>Back to making</Button>}<Button variant="outline" disabled={busy} onClick={onClose}><Save className="size-4"/>Save and close</Button></div>
+        <div className="flex flex-wrap justify-end gap-2">{filmReview&&!publishing&&<Button variant="outline" disabled={busy} onClick={onBack}><ChevronLeft className="size-4"/>Back to making</Button>}<Button variant="outline" aria-label="Save and close" title="Save and close" disabled={busy} onClick={onClose}><Save className="size-4"/><span className="hidden sm:inline">Save and close</span></Button></div>
       </div>
 
       <nav aria-label="Progress" className="review-card wizard-progress mb-6">
         <div className="mb-3 flex items-center justify-between text-sm sm:hidden"><span className="font-semibold">{CREATION_STEPS[step]}</span><span className="text-review-muted">{step + 1} / {total}</span></div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted sm:hidden"><div className="h-full rounded-full bg-review-accent" style={{ width: `${((step + 1) / total) * 100}%` }}/></div>
+        <div className="wizard-progress-track sm:hidden" role="progressbar" aria-label="Project progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={step + 1}><div className="wizard-progress-fill" style={{ width: `${((step + 1) / total) * 100}%` }}/></div>
         <ol aria-label="Creation steps" className="hidden grid-cols-6 gap-3 sm:grid">{CREATION_STEPS.map((name, i) => {
           const done = i < step, cur = i === step;
           return <li key={name} aria-current={cur ? 'step' : undefined} className="flex flex-col items-start gap-2">
@@ -29,7 +29,7 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
       </nav>
 
       <section>
-        <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? 'See what caught people’s attention and what is worth keeping. Use the evidence below to shape a stronger version of your own.' : instructions}</p></header>
+        <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? 'Explore the subject, execution and results. Use the evidence to decide what to adapt, improve or leave behind.' : instructions}</p></header>
         <div className="min-h-64">{children}</div>
       </section>
 
