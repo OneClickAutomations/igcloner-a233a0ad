@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, tryParseJson, normalizeMediumId, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics,
+  CloneSetSchema, SynthesisSchema, buildBlueprint, dedupeLimitations, deriveLegacyForensics, tryParseJson, normalizeMediumId, sanitizeSlides, SlideEvidenceSchema, computePerformance, deriveLimitations, normalizeForensics, reviewAttentionDrivers,
   parseWithRepair, textInWindow, wordsPerMinute, wrapData,
 } from "./analysis-evidence";
 import { buildSourceContextBlock, extractSourceText } from "./source-context";
@@ -20,6 +20,24 @@ const validSynthesis = {
   analysisConfidence: 80, limitations: [],
 };
 const clones5 = { clones: ["direct", "contrarian", "story", "authority", "curiosity"].map((t, i) => clone(i + 1, t)) };
+
+describe('visual attention evidence', () => {
+  it('exposes verified saved action without inventing dominant attribution', () => {
+    const result = reviewAttentionDrivers({ verifiedVideo: { shots: [{ start: 0, end: 4, action: 'Barbell clean and press', setting: 'Home gym' }] } });
+    expect(result?.subjectAction).toBe('Barbell clean and press');
+    expect(result?.primaryDriver).toBe('unclear');
+    expect(result?.legacy).toBe(true);
+  });
+  it('does not treat unverified first-pass video as verified evidence', () => {
+    expect(reviewAttentionDrivers({ videoPass1: { shots: [{ start: 0, end: 4, action: 'Invented action' }] } })).toBeNull();
+  });
+  it('persists structured visual judgement in synthesis', () => {
+    const attentionDrivers = { primaryDriver: 'visual', visualHook: 'Barbell overhead', subjectAction: 'Athlete lifting', settingContrast: 'Gym', subjectAppeal: 'May convey skill', drivers: [{ driver: 'Action', observation: 'Barbell overhead', evidence: '0:01', interpretation: 'May earn attention' }], cloneAdvice: 'Use original subject and a comparable physical action' };
+    const result = SynthesisSchema.parse({ ...validSynthesis, dna: { ...validSynthesis.dna, attentionDrivers } });
+    expect(result.dna.attentionDrivers).toEqual(attentionDrivers);
+    expect(reviewAttentionDrivers(result.dna)?.legacy).toBe(false);
+  });
+});
 
 describe("prompt-injection delimiting", () => {
   it("wraps data and neutralises embedded delimiters", () => {

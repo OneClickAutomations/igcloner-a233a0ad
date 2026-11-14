@@ -31,5 +31,6 @@
 - Post analysis runs one stage per request (client-driven advanceAnalysis with a stage_claimed_until lease, partial state in analyses.evidence.partial) because the edge runtime cancels work when the browser disconnects; a pg_cron + lazy sweep fails and refunds the pending attempt after 15 min idle.
 - Clone versions are generated on demand (generateCloneVersions, per-attempt charge + refund, free once rows exist), never inside the core analysis, and legacy *Forensics objects are derived in code from evidence to keep analysis output small.
 - Analysis reads saved source-media files; video watching and verification are separate persisted Gemini stages, only corrected observations feed Claude synthesis, and first-pass evidence remains diagnostic so drafts can resume without repeating completed paid work.
+- Attention-driver reports store qualitative hypotheses separately from cited observations; old reports expose only saved verified evidence to avoid fabricated engagement attribution.
 - Every AI generation shows the shared GenerationProgress ring and registers in generation-jobs (localStorage) so completion toasts, slide-to-result and refresh re-attach behave the same everywhere.
 - Wizard Next on "Make the content" for videos is locked until a finished clip exists (navigation, not a paid gate); the review step has an empty state for old drafts.

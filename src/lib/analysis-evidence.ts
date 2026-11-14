@@ -88,6 +88,40 @@ export type VideoEvidence = z.infer<typeof VideoEvidenceSchema> & { analyzedWind
 // ---------- Stage 3: synthesis ----------
 export const Provenance = z.enum(["observed", "inferred"]);
 
+export const AttentionDriversSchema = z.object({
+  primaryDriver: z.enum(["visual", "topic", "audio", "mixed", "unclear"]),
+  visualHook: z.string(),
+  subjectAction: z.string(),
+  settingContrast: z.string(),
+  subjectAppeal: z.string(),
+  drivers: z.array(z.object({
+    driver: z.string(), observation: z.string(), evidence: z.string(),
+    interpretation: z.string(),
+  })).max(5),
+  cloneAdvice: z.string(),
+});
+
+/** Older reports expose saved observations without inventing a new AI judgement. */
+export function reviewAttentionDrivers(dna: unknown) {
+  const report = z.object({ attentionDrivers: AttentionDriversSchema.optional(), verifiedVideo: VideoEvidenceSchema.nullable().optional() }).passthrough().safeParse(dna);
+  if (!report.success) return null;
+  if (report.data.attentionDrivers) return { ...report.data.attentionDrivers, legacy: false };
+  const video = report.data.verifiedVideo;
+  const shot = video?.shots[0];
+  if (!shot) return null;
+  const appearance = shot.lookBriefs?.map((look) => Object.entries(look).filter(([key, value]) => typeof value === 'string' && value && !/face|identity|confidence|evidence|id$/i.test(key)).map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1')}: ${value}`).join(' · ')).filter(Boolean).join('; ');
+  const action = shot.action || shot.onScreen || shot.subjects?.map(s => s.action).join('; ') || 'Action not captured.';
+  return {
+    primaryDriver: 'unclear' as const, legacy: true,
+    visualHook: video.hookWindow || shot.onScreen || 'Opening not captured.',
+    subjectAction: [appearance, action].filter(Boolean).join(' — '),
+    settingContrast: shot.setting || 'Setting not captured.',
+    subjectAppeal: 'Appearance, styling and physical performance can contribute to attention; their effect on this post has not been measured.',
+    drivers: [],
+    cloneAdvice: 'Recreate the visible action, framing and styling with an original subject. Copying the caption alone may miss the appeal; this saved report has not assessed which driver dominates.',
+  };
+}
+
 export const CloneSchema = z.object({
   versionNumber: z.number(),
   angleType: z.enum(["direct", "contrarian", "story", "authority", "curiosity"]),
@@ -147,6 +181,7 @@ export const SynthesisSchema = z.object({
         .passthrough(),
       visualStyle: z.object({ colorMood: z.string().catch(""), composition: z.string().catch(""), textOverlay: z.string().catch("None"), editStyle: z.string().catch(""), score: num }).catch({ colorMood: "", composition: "", textOverlay: "None", editStyle: "", score: 0 }),
       engagementDrivers: z.array(z.string()).catch([]),
+      attentionDrivers: AttentionDriversSchema.optional(),
       monetizationPotential: z.string().catch(""),
       channelIntelligence: z.any().optional(),
       videoVisualDNA: z.any().optional(),
