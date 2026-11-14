@@ -608,7 +608,7 @@
 .dashboard-url input { flex: 1; min-width: 0; width: 100%; outline: none; background: transparent; color: var(--foreground); font-size: 14px; }
 .dashboard-url input::placeholder { color: var(--dash-muted); opacity: 1; }
 .dashboard-url:focus-within { outline: 2px solid var(--dash-accent); outline-offset: 3px; }
-.dashboard-screen button.dashboard-analyze { height: 50px; border-radius: 999px; padding: 0 20px; flex-shrink: 0; background-image: linear-gradient(105deg, #ED6648, #C72D85) !important; color: #FFFFFF; font-weight: 800; font-size: 16px; box-shadow: 0 8px 20px -10px rgba(199,45,133,.6); }
+.dashboard-screen button.dashboard-analyze { height: 50px; border-radius: 999px; padding: 0 20px; flex-shrink: 0; background-image: var(--workspace-gradient) !important; color: var(--workspace-on-accent); font-weight: 800; font-size: 16px; box-shadow: var(--dash-input-shadow); }
 .dashboard-screen button.dashboard-analyze:hover { filter: brightness(1.06); }
 .dashboard-hero-art { position: absolute; right: 0; bottom: 0; width: 36%; height: 100%; pointer-events: none; }
 .dashboard-hero-art img { position: absolute; right: -8px; bottom: -6px; height: 96%; max-width: 100%; object-fit: contain; object-position: bottom; filter: drop-shadow(var(--dash-mascot-shadow)); }
@@ -800,6 +800,7 @@
 .creation-wizard .wizard-heading .ui-button { font-size: 13px; }
 .ui-button { border-radius: 8px; word-break: normal; overflow-wrap: anywhere; }
 .workspace-screen .ui-button.gradient-accent { border-radius: 8px; }
+.workspace-screen .dashboard-screen .dashboard-url .ui-button.dashboard-analyze { border-radius:999px; align-self:center; white-space:nowrap; }
 .saved-post-trigger { border-radius: 8px; }
 .saved-post-menu { --accent: #F2E9F8; --accent-foreground: #6B21A8; --muted-foreground: #655773; border-color: var(--input); border-radius: 8px; max-width: calc(100vw - 32px); box-shadow: 0 12px 32px rgba(16,17,22,.14); }
 .dark .saved-post-menu { --popover: #1E152B; --accent: #352044; --accent-foreground: #F1A3D2; --muted-foreground: #C9C3D3; }

@@ -25,8 +25,8 @@ import { supabase } from "@/integrations/supabase/client";
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, t1: "purple", t2: "pink" },
   { title: "Research", url: "/research", icon: Search, t1: "teal", t2: "green" },
-  { title: "Clone Studio", url: "/app", icon: Copy, t1: "pink", t2: "rose" },
-  { title: "Video Inspiration", url: "/studio/inspiration", icon: Film, t1: "teal", t2: "green" },
+  { title: "Create Content", url: "/app", icon: Copy, t1: "pink", t2: "rose" },
+  { title: "Video Studio", url: "/studio/inspiration", icon: Film, t1: "purple", t2: "pink" },
   { title: "Projects", url: "/projects", icon: FolderOpen, t1: "purple", t2: "pink" },
   { title: "Content Library", url: "/library", icon: FolderOpen, t1: "purple", t2: "pink" },
   { title: "Content Calendar", url: "/calendar", icon: CalendarIcon, t1: "amber", t2: "orange" },
@@ -75,10 +75,11 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.url}>
-                  <SidebarMenuButton asChild isActive={isActive(item.url)}>
+                  <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={item.title}>
                     <Link
                       to={item.url}
                       onClick={closeMobile}
+                      title={item.url === '/app' ? 'Start an image, carousel or video' : item.url === '/studio/inspiration' ? 'Continue video scenes, references and delivery' : item.title}
                       className={`flex items-center gap-2.5 rounded-xl transition-colors ${
                         isActive(item.url)
                           ? "nav-active font-semibold"
