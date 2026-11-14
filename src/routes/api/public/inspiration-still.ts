@@ -49,16 +49,24 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       const brief = sheet?.brief ?? sceneInput.lookBrief ?? sourceLookBrief(analysis, sceneInput.sourceShotIndex ?? 0);
       const roles = safeRefs.map((r,i)=>`Reference image ${i+1}: ${r.kind==='setting'?'approved environment reference':r.kind==='product'?'approved product':r.kind==='logo'?'approved logo':'approved original character; preserve skin shade, pigmentation, hair and build'}`).join('. ');
       const { realismGuidance } = await import('@/lib/video-motion');
-      const prompt = `${textOnlyStillPrompt(scene, brief as any, roles, frame)}\nStill-frame realism: ${realismGuidance(`${JSON.stringify(sceneInput)} ${JSON.stringify(scene.action_objects ?? [])}`)} Depict only the requested ${frame === 'last' ? 'ending' : 'opening'} pose in this image; no motion trails or blended action phases.`;
+      let prompt = `${textOnlyStillPrompt(scene, brief as any, roles, frame)}\nStill-frame realism: ${realismGuidance(`${JSON.stringify(sceneInput)} ${JSON.stringify(scene.action_objects ?? [])}`)} Depict only the requested ${frame === 'last' ? 'ending' : 'opening'} pose in this image; no motion trails or blended action phases.`;
+      // Composition guide: the matching source keyframe (owner's own saved analysis) locks camera, pose and
+      // setting geometry; the prompt orders a completely different, original person.
+      const shotIdx = Number(sceneInput.sourceShotIndex ?? 0);
+      const keyframes = ((analysis?.evidence as any)?.remakeRefs?.keyframes ?? []) as { shot: number; pos: string; path: string }[];
+      const guide = keyframes.find(k => k.shot === shotIdx && k.pos === (frame === 'last' ? 'end' : 'start')) ?? keyframes.find(k => k.shot === shotIdx) ?? keyframes[0];
+      const guideImage = guide && guide.path.startsWith(`${auth.user.id}/`) ? (await supabaseAdmin.storage.from('source-media').download(guide.path)).data : null;
+      if (guideImage) prompt += `\nCOMPOSITION GUIDE: the LAST attached image is a frame from the inspiration reel. Match its camera angle, framing, lens height, body pose, grip, equipment placement, lighting direction and setting layout as closely as possible. It is NOT an identity reference: generate a completely different, original person with different facial features and face shape, using only the written look and any approved character references above. Never copy the face, tattoos, logos or on-screen text from that frame.`;
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
       let upstream: Response;
-      if (safeRefs.length) {
+      if (safeRefs.length || guideImage) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'medium');
         for (const r of safeRefs) {
           const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path);
           if (!im || im.size > 10 * 1024 * 1024) throw new Error('Reference unavailable or too large.');
           form.append('image[]', im, r.filename);
         }
+        if (guideImage) form.append('image[]', guideImage, 'composition-guide.jpg');
         upstream = await editImage(config, form);
       } else {
         upstream = await fetch('https://ai.gateway.lovable.dev/v1/images/generations', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: config.model, prompt, size: '720x1280', quality: 'medium', stream: true, partial_images: 1 }) });
