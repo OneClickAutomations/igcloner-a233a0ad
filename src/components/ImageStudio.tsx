@@ -1,4 +1,5 @@
 import { useGenJob } from "./useGenJob";
+import { ContentComparison } from './ContentComparison';
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -641,6 +642,7 @@ export function ImageStudio({ embeddedProjectId, wizardStage }: { embeddedProjec
 
         {/* Right — preview + caption */}
         <div className="space-y-4">
+          {activeUrl && <ContentComparison analysisId={project?.analysis_id} sourceThumbnail={project?.source_thumbnail} sourceUrl={project?.source_url} generated={[{url:activeUrl,type:'image'}]}/>}
           <div className="rounded-2xl border border-border bg-card p-4 shadow-ig">
             <div className={`relative mx-auto w-full max-w-md overflow-hidden rounded-xl border border-border bg-muted ${aspectClass}`}>
               {activeUrl ? (

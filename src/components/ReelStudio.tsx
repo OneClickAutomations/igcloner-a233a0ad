@@ -1,4 +1,5 @@
 import { GenerationProgress } from "./GenerationProgress";
+import { ContentComparison } from './ContentComparison';
 import { useGenJob } from "./useGenJob";
 import { QualityNote } from "@/components/QualityNote";
 import { VideoChangeList } from './VideoChangeList';
@@ -532,6 +533,7 @@ export function ReelStudio({ embeddedProjectId, wizardStage, speechMode }: { emb
         </ol>
       </div>
 
+      {videoUrl && <ContentComparison analysisId={project.data?.analysis_id} sourceThumbnail={sourceThumb} sourceUrl={project.data?.source_url} generated={[{url:videoUrl,type:'video'}]}/>}
       {/* 3-panel layout */}
       <div className={wizardStage ? "grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" : "grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)_320px]"}>
         {/* LEFT — Context */}
