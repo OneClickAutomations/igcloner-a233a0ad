@@ -13,14 +13,14 @@ export const saveOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     niche: z.string().trim().max(80).optional(),
-    goal: z.string().trim().max(80).optional(),
-    platform: z.string().trim().max(30).optional(),
+    goals: z.array(z.string().trim().max(40)).max(12).optional(),
+    platforms: z.array(z.string().trim().max(30)).max(12).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("profiles").update({
       onboarding: data, default_niche: data.niche || null, onboarding_completed_at: new Date().toISOString(),
     }).eq("id", context.userId);
     if (error) throw new Error("Your answers could not be saved.");
-    if (data.platform) await context.supabase.from("user_preferences").upsert({ user_id: context.userId, default_platform: data.platform });
+    if (data.platforms?.[0]) await context.supabase.from("user_preferences").upsert({ user_id: context.userId, default_platform: data.platforms[0] });
     return { ok: true };
   });
