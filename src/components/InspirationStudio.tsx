@@ -1,3 +1,4 @@
+import { friendlyVideoError } from '@/lib/friendly-errors';
 import { PromptMagic } from './PromptMagic';
 import { saveFilmShotReview } from '@/lib/film-review.functions';
 import { useEffect, useRef, useState } from 'react';
@@ -233,7 +234,7 @@ export function InspirationStudio({ projectId, wizardStage, wizardBrief = '', wi
           {!s.approved_at && s.preview && (!wizardStage || wizardStage==='make') && <Button size="sm" disabled={busy} onClick={() => run(() => approve({ data: { sceneId: s.id, checks: checked.map(c => ({ ...c, present: c.present === true })) } }))}><Check className="size-3"/> Approve still</Button>}
           {s.approved_at && (!wizardStage || wizardStage==='make') && <Button size="sm" variant={wizardStage?'outline':'default'} disabled={busy} onClick={() => run(async () => setConfirmation({ scene: s, operation: 'animate', q: await quote({ data: { sceneId: s.id, model, operation: 'animate' } }) }))}><Play className="size-3"/> Quote animation{wizardStage ? ` · ${videoCreditsForWorkspace(s.duration*(STUDIO_PRICING.rates[model]??0))} video credits` : ''}</Button>}</div>
           {(()=>{const lc=(s as any).look_check;if(!lc?.checked||!lc.drifts?.length||lc.stillPath!==s.still_path||(!wizardStage||wizardStage==='make')===false)return null;return <div role="status" className="rounded-md border border-status-warning/40 bg-status-warning/10 p-3 text-sm"><p className="flex gap-2 font-semibold"><AlertTriangle className="size-4 shrink-0 text-status-warning"/>Look check: this frame differs from the written brief</p><ul className="mt-1 list-disc pl-6 text-xs">{lc.drifts.map((d:string)=><li key={d}>{d}</li>)}</ul><Button size="sm" variant="outline" className="mt-2" disabled={busy} onClick={()=>run(async()=>{await correct({data:{sceneId:s.id,correction:`${lc.drifts.join(' ')} Fix this: follow the requested skin depth, undertone, build, hair and outfit colour exactly.`}});setConfirmation({scene:s,operation:'still',q:await quote({data:{sceneId:s.id,model,operation:'still'}})});})}><ImagePlus className="size-3"/>Redo with correction · {data.stillWorkspaceQuote===null?'view quote':priceFromWorkspaceCost(data.stillWorkspaceQuote,data.usdPerWorkspaceCredit)} plan credits</Button><p className="mt-1 text-xs text-muted-foreground">You can still approve this still as it is.</p></div>;})()}
-          {clip?.failure_reason && <p className="break-words text-xs text-destructive">{clip.failure_reason}</p>}</div>
+          {clip?.failure_reason && <p className="break-words text-xs text-destructive">{friendlyVideoError(clip.failure_reason)}</p>}</div>
         </article>;
       })}</div>
     </>}
