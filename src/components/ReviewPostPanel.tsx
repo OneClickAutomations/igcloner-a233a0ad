@@ -39,6 +39,18 @@ export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcrip
   const keeps: string[] = dna?.whyItWorks ?? [];
   const attention = reviewAttentionDrivers(dna);
   const changes: string[] = [hook.scoreReasoning, hook.improvement].filter(Boolean);
+  const firstText = (...v: unknown[]) => v.find(x => typeof x === 'string' && x.trim()) as string | undefined;
+  const whyRows = ([
+    ['What stops the scroll', firstText(attention?.subjectAppeal && !attention?.legacy ? attention.subjectAppeal : undefined, dna?.targetAudience?.desire, attention?.subjectAction) && `${firstText(attention?.subjectAction, attention?.visualHook) ?? ''}${firstText(attention?.subjectAction, attention?.visualHook) ? '. ' : ''}${firstText(attention?.legacy ? undefined : attention?.subjectAppeal, dna?.targetAudience?.desire) ?? ''}`.trim()],
+    ['Why people keep watching', firstText(attention?.drivers?.[0] && `${attention.drivers[0].observation} ${attention.drivers[0].interpretation}`, dna?.targetAudience?.trigger, keeps[0], hook.whyItWorks)],
+    ['Why it’s repeatable', firstText(keeps[1], hook.whatWorks, dna?.verifiedVideo?.structure)],
+  ] as [string, string | undefined][]).filter((r): r is [string, string] => !!r[1]);
+  if (!whyRows.length) whyRows.push(['What stops the scroll', 'No clear strength was captured. Watch the original and judge the first 3 seconds yourself.']);
+  const planRows: [string, string][] = [
+    ['Open with your version of the pull', firstText(hook.improvement, attention?.visualHook && `Recreate the same kind of opening: ${attention.visualHook}`) ?? 'Show the most striking moment in the first second, before any text or intro.'],
+    ['Match what made it watchable', firstText(attention?.cloneAdvice, dna?.verifiedVideo?.pacing && `Keep the pacing: ${dna.verifiedVideo.pacing}`) ?? 'Keep the same framing and pacing, with your own subject, setting and words.'],
+    ['End with a reason to act', firstText(cap.ctaLine && `Adapt the call to action: “${cap.ctaLine}”`) ?? 'Finish on a clear payoff, then ask viewers to save, share or comment with one specific prompt.'],
+  ];
   const timestamp = scraped?.timestamp ? new Date(scraped.timestamp) : null;
   const metricRows = [
     { label: 'Followers', value: count(followers), icon: Users, help: 'Public followers when the post was saved. Compare this post with similar-sized accounts, not celebrities.' },
@@ -60,8 +72,8 @@ export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcrip
         <div className="review-verdict-score"><div className="review-score-disc"><span>{score === null ? '—' : Math.round(score / 10)}</span></div><span className="text-lg font-bold">{score === null ? 'Not scored' : `${Math.round(score / 10)}/10`}</span><span className="text-sm text-review-muted">Engagement score</span></div>
       </div>
       <div className="mt-6 grid gap-5 border-t border-review-border pt-5 sm:grid-cols-3">
-        <div><h3 className="flex items-center gap-2 font-bold text-review-keep-ink"><CircleCheck className="size-5"/>Why consider it</h3><p className="mt-2 text-sm leading-relaxed">{attention?.primaryDriver === 'visual' ? attention.visualHook : keeps[0] || attention?.visualHook || hook.whyItWorks || hook.whatWorks || 'No specific strength was captured. Inspect the opening and payoff below.'}</p></div>
-        <div><h3 className="flex items-center gap-2 font-bold text-review-change-ink"><TriangleAlert className="size-5"/>Before you clone</h3><p className="mt-2 text-sm leading-relaxed">{attention?.cloneAdvice || hook.improvement || hook.scoreReasoning || 'Validate the idea with your audience; replace the subject, examples and claims.'}</p></div>
+        <div><h3 className="flex items-center gap-2 font-bold text-review-keep-ink"><CircleCheck className="size-5"/>Why it’s worth a look</h3><ul className="mt-3 space-y-3 text-sm leading-relaxed">{whyRows.map(([label, text]) => <li key={label}><span className="font-semibold">{label}</span><p className="text-review-muted">{text}</p></li>)}</ul></div>
+        <div><h3 className="flex items-center gap-2 font-bold text-review-change-ink"><Zap className="size-5"/>Your remake plan</h3><ol className="mt-3 space-y-3 text-sm leading-relaxed">{planRows.map(([label, text], i) => <li key={label} className="flex gap-3"><span className="grid size-6 shrink-0 place-items-center rounded-full bg-review-tint text-xs font-bold text-review-accent">{i + 1}</span><div><span className="font-semibold">{label}</span><p className="text-review-muted">{text}</p></div></li>)}</ol></div>
         <div><h3 className="flex items-center gap-2 font-bold"><TrendingUp className="size-5 text-review-accent"/>Account outlier?</h3><p className="mt-2 text-sm leading-relaxed">One post can’t prove it. Scan @{username}’s recent posts to see if this one beats their normal results.</p><Button asChild size="sm" className="review-research-action mt-3 min-h-10"><Link to="/research" search={{ competitor: username }}>Scan channel · {ACTION_COSTS.report} credits<ArrowRight className="size-4"/></Link></Button></div>
       </div>
     </section>

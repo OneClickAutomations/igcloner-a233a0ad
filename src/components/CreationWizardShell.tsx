@@ -29,7 +29,7 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
       </nav>
 
       <section>
-        <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? 'Explore the subject, execution and results. Use the evidence to decide what to adapt, improve or leave behind.' : instructions}</p></header>
+        {step !== 1 && <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? '' : instructions}</p></header>}
         <div className="min-h-64">{children}</div>
       </section>
 
