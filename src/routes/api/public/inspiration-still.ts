@@ -54,7 +54,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       // setting geometry; the prompt orders a completely different, original person.
       const shotIdx = Number(sceneInput.sourceShotIndex ?? 0);
       const keyframes = ((analysis?.evidence as any)?.remakeRefs?.keyframes ?? []) as { shot: number; pos: string; path: string }[];
-      const guide = keyframes.find(k => k.shot === shotIdx && k.pos === (frame === 'last' ? 'end' : 'start')) ?? keyframes.find(k => k.shot === shotIdx) ?? keyframes[0];
+      const guide = keyframes.find(k => k.shot === shotIdx && k.pos === frame) ?? keyframes.find(k => k.shot === shotIdx) ?? keyframes[0];
       const guideImage = guide && guide.path.startsWith(`${auth.user.id}/`) ? (await supabaseAdmin.storage.from('source-media').download(guide.path)).data : null;
       if (guideImage) prompt += `\nCOMPOSITION GUIDE: the LAST attached image is a frame from the inspiration reel. Match its camera angle, framing, lens height, body pose, grip, equipment placement, lighting direction and setting layout as closely as possible. It is NOT an identity reference: generate a completely different, original person with different facial features and face shape, using only the written look and any approved character references above. Never copy the face, tattoos, logos or on-screen text from that frame.`;
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
