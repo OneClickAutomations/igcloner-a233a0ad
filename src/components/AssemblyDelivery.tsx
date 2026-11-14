@@ -25,7 +25,7 @@ import { saveFilmReviewSettings,writeReviewNarration,getFilmVoicePreview } from 
 import { ACTION_COSTS } from '@/lib/credits';
 function DeliveryCard({wizard,title,icon,trailing,children}:React.ComponentProps<typeof ReviewCard>&{wizard:boolean}) {return wizard?<ReviewCard title={title} icon={icon} trailing={trailing}>{children}</ReviewCard>:<section className="border-b border-border pb-6"><h2 className="text-xl font-semibold">{title}</h2>{children}</section>;}
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
-export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraft,onWizardDraft,speechMode='voiceover',wizard=false,direction}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>;wizardDraft?:Record<string,unknown>;onWizardDraft?:(draft:Record<string,unknown>)=>void;speechMode?:'voiceover'|'silent';wizard?:boolean;direction?:unknown}) {
+export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraft,onWizardDraft,speechMode='voiceover',wizard=false,direction,onEditStills}:{data:Data;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;downloadClips:()=>Promise<void>;wizardDraft?:Record<string,unknown>;onWizardDraft?:(draft:Record<string,unknown>)=>void;speechMode?:'voiceover'|'silent';wizard?:boolean;direction?:unknown;onEditStills:()=>void}) {
   wizardDraft=wizardDraft??(data.selected?.review_settings as Record<string,unknown>|undefined);
   const quote=useServerFn(quoteAssembly),start=useServerFn(startAssembly),recover=useServerFn(recoverAssembly),upload=useServerFn(uploadAssemblyMedia),narrate=useServerFn(generateProofNarration);
   const gen=useGenJob();
@@ -74,7 +74,7 @@ export function AssemblyDelivery({data,busy,run,refresh,downloadClips,wizardDraf
   };
 
   return <>
-    <FilmShotReview data={data} busy={busy} run={run} refresh={refresh} value={review} onChange={setReview} onAssemble={()=>run(renderQuote)}/>
+    <FilmShotReview data={data} busy={busy} run={run} refresh={refresh} value={review} onChange={setReview} onAssemble={()=>run(renderQuote)} onEditStills={onEditStills}/>
     {jobs.some(j=>j.status==='completed')&&<p className="mb-5 text-base">Your finished video is saved to your content library. <Link to="/library" search={{projectId:project.id}} className="text-primary underline">Open video in library</Link></p>}
     <DeliveryCard wizard={wizard} title="Narration" icon={Mic} trailing={wizard?<span data-state={settings.voiceoverPath?'done':undefined} className="wizard-score">{busy?'In progress':settings.voiceoverPath?'Done':'Not started'}</span>:undefined}>
       <label className="mt-4 flex items-center gap-3 font-medium"><Switch aria-label="Add voiceover" checked={addVoice} onCheckedChange={setAddVoice}/>Add voiceover</label>

@@ -6,11 +6,12 @@ import {Button} from './ui/button';
 import {Textarea} from './ui/textarea';
 import {Select,SelectTrigger,SelectContent,SelectItem,SelectValue} from './ui/select';
 import {Dialog,DialogContent,DialogHeader,DialogTitle} from './ui/dialog';
+import {changesShotAppearance} from '@/lib/film-review';
 import {saveFilmShotReview} from '@/lib/film-review.functions';
 import {animateInspirationScene,inspirationQuote,recoverInspirationClips,getInspirationStudio} from '@/lib/inspiration.functions';
 import {STUDIO_PRICING,videoCreditsForWorkspace} from '@/lib/studio-pricing';
 type Data=Awaited<ReturnType<typeof getInspirationStudio>>;
-export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}:{data:Data;busy:boolean;run:(f:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;value:Record<string,unknown>;onChange:(v:Record<string,unknown>)=>void;onAssemble:()=>void}){
+export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble,onEditStills}:{data:Data;busy:boolean;run:(f:()=>Promise<unknown>)=>Promise<void>;refresh:()=>Promise<void>;value:Record<string,unknown>;onChange:(v:Record<string,unknown>)=>void;onAssemble:()=>void;onEditStills:()=>void}){
   const save=useServerFn(saveFilmShotReview),quote=useServerFn(inspirationQuote),animate=useServerFn(animateInspirationScene),recover=useServerFn(recoverInspirationClips),load=useServerFn(getInspirationStudio);
   const gen=useGenJob();
   const [selected,setSelected]=useState(data.scenes[0]?.id??'');
@@ -29,7 +30,9 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
       await save({data:{sceneId:s.id,instruction}});
       items.push({scene:s,instruction,q:await quote({data:{sceneId:s.id,model,operation:'animate'}})});
     }
-    await refresh();setConfirmation({items});
+    await refresh();
+    if(items.some(i=>changesShotAppearance(i.instruction))){setProgress('Appearance changes need a new still first. Your changes are saved. Regenerate and approve the still with the requested look, then animate it. No video credits were spent.');return;}
+    setConfirmation({items});
   };
   const execute=async()=>{
     const batch=confirmation;if(!batch)return;setConfirmation(null);
@@ -71,7 +74,7 @@ export function FilmShotReview({data,busy,run,refresh,value,onChange,onAssemble}
     </div>}
     <label className="block text-sm font-medium">Changes for the whole video (optional)<Textarea aria-label="Whole video regeneration instructions" className="mt-2" value={whole} onChange={e=>onChange({...value,wholeInstruction:e.target.value})}/></label>
     <div className="flex flex-wrap gap-3"><Button disabled={busy||!data.scenes.length} onClick={()=>run(()=>prepare(true))}><RefreshCw className="size-4"/>Regenerate whole video · {data.scenes.reduce((n,s)=>n+cost(s.duration),0)} video credits</Button><Button variant="outline" disabled={busy} onClick={onAssemble}><Film className="size-4"/>Re-assemble · view video-credit quote</Button></div>
-    {gen.ring('shots',false)}{progress&&<p role="status" className="text-sm text-muted-foreground">{progress}</p>}
+    {progress.includes('Appearance changes')&&<Button variant="outline" onClick={onEditStills}>Update starting still · view plan-credit quote</Button>}{gen.ring('shots',false)}{progress&&<p role="status" className="text-sm text-muted-foreground">{progress}</p>}
     <Dialog open={!!confirmation} onOpenChange={open=>{if(!open)setConfirmation(null);}}><DialogContent className="max-h-[85vh] overflow-y-auto"><DialogHeader><DialogTitle>Confirm shot regeneration</DialogTitle></DialogHeader><p>{confirmation?.items.length} shot(s) · {confirmation?.items.reduce((n,i)=>n+(i.q.customerCredits??0),0)} video credits. Re-assembly is quoted separately. No plan credits.</p>{confirmation?.items.map(i=><div key={i.scene.id} className="space-y-2 border-t border-border pt-3"><p>Shot {i.scene.scene_order+1}: {i.q.customerCredits} video credits</p>{i.instruction&&<p className="whitespace-pre-wrap text-sm">{i.instruction}</p>}{i.q.reason&&<p className="text-sm text-status-warning">{i.q.reason}</p>}</div>)}{confirmation?.items.some(i=>!i.scene.approved_at)?<><p className="text-sm text-status-warning">Approve the saved stills before regenerating. Your instructions are already saved; no credits were charged.</p><Button onClick={()=>setConfirmation(null)}>Return to saved shots</Button></>:<Button disabled={busy||!!confirmation&&confirmation.items.reduce((n,i)=>n+(i.q.customerCredits??0),0)>data.videoBalance} onClick={()=>run(execute)}>Confirm regeneration</Button>}<p className="text-sm text-muted-foreground">Previously paid versions stay available. Failed attempts are refunded; unstarted shots are not charged.</p></DialogContent></Dialog>
   </section>;
 }
