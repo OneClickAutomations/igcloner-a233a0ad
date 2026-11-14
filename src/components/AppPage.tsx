@@ -8,7 +8,8 @@ import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp,
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnalysisProgress } from "./AnalysisProgress";
-import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus, verifySavedVideo } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { startFreshAnalysis } from "@/lib/analysis-refresh";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { CopyWorkbench } from "@/components/CopyWorkbench";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
@@ -48,7 +49,6 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
-  const verifyFn = useServerFn(verifySavedVideo);
   const loadFn = useServerFn(getAnalysisById);
   const advanceFn = useServerFn(advanceAnalysis);
   const statusFn = useServerFn(getAnalysisStatus);
