@@ -4,7 +4,7 @@ export function selectedShotVersion<T extends {id:string;scene_id:string;scene_r
 }
 
 export function changesShotAppearance(instruction: string): boolean {
-  return /\b(?:vitiligo|pigmentation|patch(?:es)?|skin|complexion|hair|blond|blonde|dreadlocks?|outfit|bikini|clothing|dress|wear|wearing|hat|glasses|physique|build|muscular)\b/i.test(instruction);
+  return /\b(?:vitiligo|pigmentation|patch(?:es)?|skin|complexion|hair|blond|blonde|dreadlocks?|outfit|bikini|clothing|dress|wear|wearing|hat|glasses|physique|build|muscular)\b/i.test(requestedPromptChanges(instruction));
 }
 export function shotReviewInstruction(scene: { revision: number; review_history?: unknown }): string {
   const history = Array.isArray(scene.review_history) ? scene.review_history : [];
