@@ -18,7 +18,7 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
 
       <nav aria-label="Progress" className="review-card wizard-progress mb-6">
         <div className="mb-3 flex items-center justify-between text-sm sm:hidden"><span className="font-semibold">{CREATION_STEPS[step]}</span><span className="text-review-muted">{step + 1} / {total}</span></div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted sm:hidden"><div className="h-full rounded-full bg-review-accent" style={{ width: `${((step + 1) / total) * 100}%` }}/></div>
+        <div className="wizard-progress-track sm:hidden" role="progressbar" aria-label="Project progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={step + 1}><div className="wizard-progress-fill" style={{ width: `${((step + 1) / total) * 100}%` }}/></div>
         <ol aria-label="Creation steps" className="hidden grid-cols-6 gap-3 sm:grid">{CREATION_STEPS.map((name, i) => {
           const done = i < step, cur = i === step;
           return <li key={name} aria-current={cur ? 'step' : undefined} className="flex flex-col items-start gap-2">
@@ -29,7 +29,7 @@ export function CreationWizardShell({ step, instructions, children, onBack, onNe
       </nav>
 
       <section>
-        <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? 'See what caught people’s attention and what is worth keeping. Use the evidence below to shape a stronger version of your own.' : instructions}</p></header>
+        <header className="wizard-step-heading mb-5"><p className="max-w-3xl text-base leading-relaxed text-review-muted">{step === 0 ? 'Start with a post you like. Paste its Instagram or Facebook link, or choose an analysis you have already saved.' : step === 1 ? 'Explore the subject, execution and results. Use the evidence to decide what to adapt, improve or leave behind.' : instructions}</p></header>
         <div className="min-h-64">{children}</div>
       </section>
 

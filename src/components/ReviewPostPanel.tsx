@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ACTION_COSTS } from '@/lib/credits';
 import { useServerFn } from '@tanstack/react-start';
@@ -15,6 +15,7 @@ function clock(value: number) { return `${Math.floor(value / 60)}:${String(Math.
 
 export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcript, analysisConfidence, url }: { analysisId: string | null; scraped: any; dna: any; blueprint: any; transcript: string | null; analysisConfidence: number | null; url: string }) {
   const signFn = useServerFn(getSourceMediaSignedUrls);
+  const ringId = useId();
   const [media, setMedia] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<string | null>(null);
   const [captionOpen, setCaptionOpen] = useState(false);
@@ -55,9 +56,9 @@ export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcrip
   const thumbnail = (small = false) => <div className={`relative shrink-0 overflow-hidden rounded-xl bg-review-tint ${small ? 'h-32 w-24' : 'aspect-[4/5] w-28 sm:w-36'}`}>{thumb ? <img src={thumb} alt={`Source post by @${username}`} className="size-full object-cover"/> : <div className="grid size-full place-items-center text-review-muted"><ImageIcon className="size-8"/></div>}{!small && <span className="absolute inset-x-0 bottom-0 truncate bg-review-overlay px-3 py-2 text-sm font-semibold text-review-on-overlay">@{username}</span>}</div>;
   return <div className="review-report space-y-6">
     <section className="review-decision" aria-label="Cloning verdict">
-      <div className="review-eyebrow"><ScanSearch className="size-4"/> POST INTELLIGENCE <span>Strategy, not identity</span></div>
+      <div className="review-eyebrow"><ScanSearch className="size-4"/> POST INTELLIGENCE <span>Understand the post. Choose your next move.</span></div>
       <div className="mt-4 grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div><h2 className="review-verdict-heading">{score === null ? <>Review the idea.<br/><span>Then make your move.</span></> : score >= 70 ? <>Worth adapting.<br/><span>Make it your own.</span></> : score >= 55 ? <>Keep the mechanism.<br/><span>Elevate the execution.</span></> : <>Rethink the message.<br/><span>Not the opportunity.</span></>}</h2><p className="mt-4 max-w-2xl text-base leading-relaxed text-review-muted">{verdict} This is a starting-point assessment, not a promise of views.</p></div>
+        <div><h2 className="review-verdict-heading">{score === null ? <>Review the idea.<br/><span>Then make your move.</span></> : score >= 70 ? <>Worth adapting.<br/><span>Make it your own.</span></> : score >= 55 ? <>Keep the mechanism.<br/><span>Elevate the execution.</span></> : <>Rethink the message.<br/><span>Not the opportunity.</span></>}</h2><p className="mt-4 max-w-2xl text-base leading-relaxed text-review-muted">{verdict}</p></div>
         <div className="review-verdict-score"><div className="review-score-disc"><span>{score === null ? '—' : (score / 10).toFixed(1)}</span><small>/ 10</small></div><span className="text-sm text-review-muted">Saved performance score</span></div>
       </div>
       <div className="mt-6 grid gap-5 border-t border-review-border pt-5 sm:grid-cols-3">
@@ -72,7 +73,8 @@ export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcrip
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-review-border pt-4"><Button asChild variant="outline" size="sm"><a href={url || undefined} target="_blank" rel="noreferrer"><ExternalLink className="size-4"/>View original</a></Button><span className="text-sm text-review-muted">{dna?.postType || scraped?.type || 'Format not captured'}</span></div>
       </ReviewCard>
       <ReviewCard title="Performance Snapshot" tone="review-performance" icon={BarChart3}>
-        <div className="grid grid-cols-2 gap-2 2xl:grid-cols-4">{metricRows.map(m => <ReviewMetric key={m.label} {...m}/>)}</div>
+        <div className="review-metric-group"><h4 className="review-metric-heading">Account context</h4><div className="grid grid-cols-2 gap-3 2xl:grid-cols-4">{metricRows.slice(0, 4).map(m => <ReviewMetric key={m.label} {...m}/>)}</div></div>
+        <div className="review-metric-group mt-6"><h4 className="review-metric-heading">Post performance</h4><div className="grid grid-cols-2 gap-3 2xl:grid-cols-4">{metricRows.slice(4).map(m => <ReviewMetric key={m.label} {...m}/>)}</div></div>
         <div className="mt-5 grid grid-cols-3 gap-3 border-t border-review-border pt-4">{[['Post type', dna?.postType || scraped?.type || '—', 'The source format. Preserve it only when it suits your message and production capacity.'], ['Hashtags', Array.isArray(hashtags) ? hashtags.length : '—', 'Tags captured in the post. Use relevant tags, not the same count as the source.'], ['Mentions', Array.isArray(mentions) ? mentions.length : '—', 'Accounts tagged in the source. Only mention people genuinely involved in your version.']].map(([label, value, help]) => <div key={String(label)}><div className="flex flex-wrap items-center gap-1 text-sm text-review-muted">{label}<MetricHelp label={String(label)}>{help}</MetricHelp></div><p className="break-words font-semibold">{value}</p></div>)}</div>
         <p className="mt-4 border-t border-review-border pt-4 text-sm leading-relaxed text-review-muted">{rate === '—' ? 'Engagement cannot be calculated from the saved data.' : 'Engagement = likes + comments ÷ followers. It can exceed 100% when a post reaches non-followers.'} No verified account or niche benchmark is available. Likes do not measure retention, saves or sales.</p>
       </ReviewCard>
