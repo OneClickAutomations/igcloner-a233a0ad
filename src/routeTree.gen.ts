@@ -20,6 +20,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedGetAppRouteImport } from './routes/_authenticated/get-app'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedPublishingRouteImport } from './routes/_authenticated/publishing'
@@ -91,6 +92,11 @@ const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedGetAppRoute = AuthenticatedGetAppRouteImport.update({
+  id: '/get-app',
+  path: '/get-app',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/get-app': typeof AuthenticatedGetAppRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/publishing': typeof AuthenticatedPublishingRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/get-app': typeof AuthenticatedGetAppRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/publishing': typeof AuthenticatedPublishingRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/get-app': typeof AuthenticatedGetAppRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/publishing': typeof AuthenticatedPublishingRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/calendar'
     | '/dashboard'
+    | '/get-app'
     | '/library'
     | '/projects'
     | '/publishing'
@@ -328,6 +338,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/calendar'
     | '/dashboard'
+    | '/get-app'
     | '/library'
     | '/projects'
     | '/publishing'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/_authenticated/calendar'
     | '/_authenticated/dashboard'
+    | '/_authenticated/get-app'
     | '/_authenticated/library'
     | '/_authenticated/projects'
     | '/_authenticated/publishing'
@@ -472,6 +484,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/get-app': {
+      id: '/_authenticated/get-app'
+      path: '/get-app'
+      fullPath: '/get-app'
+      preLoaderRoute: typeof AuthenticatedGetAppRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/library': {
@@ -608,6 +627,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppRoute: typeof AuthenticatedAppRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedGetAppRoute: typeof AuthenticatedGetAppRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRoute
   AuthenticatedPublishingRoute: typeof AuthenticatedPublishingRoute
@@ -627,6 +647,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppRoute: AuthenticatedAppRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedGetAppRoute: AuthenticatedGetAppRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRoute,
   AuthenticatedPublishingRoute: AuthenticatedPublishingRoute,
