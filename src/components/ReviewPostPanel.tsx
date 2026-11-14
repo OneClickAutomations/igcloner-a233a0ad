@@ -55,7 +55,7 @@ export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcrip
     <section className="review-decision" aria-label="Cloning verdict">
       <div className="review-eyebrow"><ScanSearch className="size-4"/> POST INTELLIGENCE <span>Strategy, not identity</span></div>
       <div className="mt-4 grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div><h2 className="review-verdict-heading">{score === null ? <>Review the idea.<br/><span>Then make your move.</span></> : score >= 70 ? <>Worth adapting.<br/><span>Make it your own.</span></> : score >= 55 ? <>Keep the mechanism.<br/><span>Elevate the execution.</span></> : <>Rethink the message.<br/><span>Not the opportunity.</span>}</h2><p className="mt-4 max-w-2xl text-base leading-relaxed text-review-muted">{verdict} This is a starting-point assessment, not a promise of views.</p></div>
+        <div><h2 className="review-verdict-heading">{score === null ? <>Review the idea.<br/><span>Then make your move.</span></> : score >= 70 ? <>Worth adapting.<br/><span>Make it your own.</span></> : score >= 55 ? <>Keep the mechanism.<br/><span>Elevate the execution.</span></> : <>Rethink the message.<br/><span>Not the opportunity.</span></>}</h2><p className="mt-4 max-w-2xl text-base leading-relaxed text-review-muted">{verdict} This is a starting-point assessment, not a promise of views.</p></div>
         <div className="review-verdict-score"><div className="review-score-disc"><span>{score === null ? '—' : (score / 10).toFixed(1)}</span><small>/ 10</small></div><span className="text-sm text-review-muted">Saved performance score</span></div>
       </div>
       <div className="mt-6 grid gap-5 border-t border-review-border pt-5 sm:grid-cols-3">
