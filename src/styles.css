@@ -871,7 +871,7 @@
   .review-verdict-score { flex-direction: row; justify-content: flex-start; text-align: left; }
   .review-score-disc { width: 88px; height: 88px; border-width: 5px; flex-shrink: 0; }
   .review-score-disc > span { font-size: 28px; }
-  .review-decision > div:last-child > div + div { border-left: 0; border-top: 1px solid var(--review-border); padding-left: 0; padding-top: 20px; }
+  .review-verdict-card { padding: 16px; }
   .creation-wizard .review-report .review-card { padding: 20px; }
   .review-eyebrow > span { margin-left: 0; width: 100%; }
   .review-report .review-card > header { flex-wrap: wrap; }
