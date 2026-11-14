@@ -48,7 +48,8 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       const sceneInput = (scene.scene_input ?? {}) as any;
       const brief = sheet?.brief ?? sceneInput.lookBrief ?? sourceLookBrief(analysis, sceneInput.sourceShotIndex ?? 0);
       const roles = safeRefs.map((r,i)=>`Reference image ${i+1}: ${r.kind==='setting'?'approved environment reference':r.kind==='product'?'approved product':r.kind==='logo'?'approved logo':'approved original character; preserve skin shade, pigmentation, hair and build'}`).join('. ');
-      const prompt = textOnlyStillPrompt(scene, brief as any, roles, frame);
+      const { realismGuidance } = await import('@/lib/video-motion');
+      const prompt = `${textOnlyStillPrompt(scene, brief as any, roles, frame)}\nStill-frame realism: ${realismGuidance(`${JSON.stringify(sceneInput)} ${JSON.stringify(scene.action_objects ?? [])}`)} Depict only the requested ${frame === 'last' ? 'ending' : 'opening'} pose in this image; no motion trails or blended action phases.`;
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
       let upstream: Response;
       if (safeRefs.length) {
