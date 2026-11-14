@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ResearchPage } from "@/components/ResearchPage";
 
 export const Route = createFileRoute("/_authenticated/research")({
-  validateSearch: z.object({ reportId: z.string().uuid().optional() }),
+  validateSearch: z.object({ reportId: z.string().uuid().optional(), competitor: z.string().trim().max(150).optional() }),
   head: () => ({
     meta: [
       { name: "description", content: "Research for your IG-Cloner content workspace." },

@@ -159,9 +159,9 @@ export function ResearchPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [ideasBusy, setIdeasBusy] = useState(false);
 
-  const [tab, setTab] = useState<"niche" | "competitor" | "topic">("niche");
+  const [tab, setTab] = useState<"niche" | "competitor" | "topic">(search.competitor ? "competitor" : "niche");
   const [niche, setNiche] = useState<string>("");
-  const [competitor, setCompetitor] = useState("");
+  const [competitor, setCompetitor] = useState(search.competitor ?? "");
   const [topic, setTopic] = useState("");
   const [preferences, setPreferences] = useState({ goal: "", niche: "", toneOfVoice: "", keywords: "" });
   const [insufficient, setInsufficient] = useState<InsufficientCreditsInfo | null>(null);
