@@ -204,6 +204,13 @@
       "when": 1794611897902,
       "tag": "0028_studio_character_sheets",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794681775953,
+      "tag": "0029_plan_trial_and_onboarding",
+      "breakpoints": true
     }
   ]
 }

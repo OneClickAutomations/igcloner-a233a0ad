@@ -953,6 +953,8 @@ export type Database = {
           id: string
           language: string | null
           last_login_at: string | null
+          onboarding: Json | null
+          onboarding_completed_at: string | null
           plan: Database["public"]["Enums"]["plan_type"] | null
           role: Database["public"]["Enums"]["app_role"] | null
           stripe_customer_id: string | null
@@ -972,6 +974,8 @@ export type Database = {
           id: string
           language?: string | null
           last_login_at?: string | null
+          onboarding?: Json | null
+          onboarding_completed_at?: string | null
           plan?: Database["public"]["Enums"]["plan_type"] | null
           role?: Database["public"]["Enums"]["app_role"] | null
           stripe_customer_id?: string | null
@@ -991,6 +995,8 @@ export type Database = {
           id?: string
           language?: string | null
           last_login_at?: string | null
+          onboarding?: Json | null
+          onboarding_completed_at?: string | null
           plan?: Database["public"]["Enums"]["plan_type"] | null
           role?: Database["public"]["Enums"]["app_role"] | null
           stripe_customer_id?: string | null
@@ -2191,6 +2197,7 @@ export type Database = {
         }
         Returns: Json
       }
+      ensure_plan_trial: { Args: { p_user: string }; Returns: boolean }
       fail_assembly_job: {
         Args: { p_job: string; p_reason: string }
         Returns: undefined
