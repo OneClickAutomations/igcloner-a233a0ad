@@ -8,7 +8,8 @@ import { Sparkles, Loader2, Link2, AlertCircle, X, Plus, ChevronDown, ChevronUp,
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AnalysisProgress } from "./AnalysisProgress";
-import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus, verifySavedVideo } from "@/lib/analyze.functions";
+import { analyzeInstagramPost, advanceAnalysis, getAnalysisById, getAnalysisStatus } from "@/lib/analyze.functions";
+import { startFreshAnalysis } from "@/lib/analysis-refresh";
 import { CloneVersionsPanel } from "@/components/CloneVersionsPanel";
 import { CopyWorkbench } from "@/components/CopyWorkbench";
 import { AnalysisEvidencePanel } from "@/components/AnalysisEvidencePanel";
@@ -48,7 +49,6 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app" });
   const analyzeFn = useServerFn(analyzeInstagramPost);
-  const verifyFn = useServerFn(verifySavedVideo);
   const loadFn = useServerFn(getAnalysisById);
   const advanceFn = useServerFn(advanceAnalysis);
   const statusFn = useServerFn(getAnalysisStatus);
@@ -353,7 +353,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
             </div>}
 
             {/* Post Intelligence Card */}
-            {embedded && sourceAnalysisId ? <><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/><div className="review-card review-refresh"><p className="flex flex-wrap items-center gap-2 text-base font-semibold"><span className="grid size-6 place-items-center rounded-full bg-status-success text-primary-foreground" aria-hidden>✓</span>Analyzed{analyzedAt ? ` ${new Date(analyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{!dna?.videoVerification && ['Reel','Video'].includes(dna?.postType??scraped?.type) && <span className="text-sm font-normal text-review-muted">· before our two-pass video check</span>}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <div className="mt-3"><Button variant="link" className="h-auto min-h-0 p-0 text-base" disabled={verificationStarting} onClick={async()=>{setVerificationStarting(true);try{const result=await verifyFn({data:{analysisId:analysisId??sourceAnalysisId}});refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(result.analysisId);else await runJob(result.analysisId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}>{verificationStarting?<Loader2 className="size-4 animate-spin"/>:null}{verificationStarting?'Starting…':`Re-analyze for fresh metrics · ${ACTION_COSTS.analysis} credits`}</Button><p className="mt-1 text-sm text-review-muted">Use this if the post is older and you want updated views, likes and comments.</p></div>}</div></> : <>
+            {embedded && sourceAnalysisId ? <><ReviewPostPanel analysisId={analysisId} scraped={scraped} dna={dna} blueprint={observed.blueprint} transcript={observed.transcript} analysisConfidence={observed.analysisConfidence} url={instagramUrl || url}/><div className="review-card review-refresh"><p className="flex flex-wrap items-center gap-2 text-base font-semibold"><span className="grid size-6 place-items-center rounded-full bg-status-success text-primary-foreground" aria-hidden>✓</span>Analyzed{analyzedAt ? ` ${new Date(analyzedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}{!dna?.videoVerification && ['Reel','Video'].includes(dna?.postType??scraped?.type) && <span className="text-sm font-normal text-review-muted">· before our two-pass video check</span>}</p>{['Reel','Video'].includes(dna?.postType??scraped?.type) && <div className="mt-3"><Button variant="link" className="h-auto min-h-0 p-0 text-base" disabled={verificationStarting} onClick={async()=>{setVerificationStarting(true);try{const freshId=await startFreshAnalysis(analyzeFn,instagramUrl || url);refreshCredits();if(onAnalysisStarted)await onAnalysisStarted(freshId);else await runJob(freshId);}catch(e){toast.error((e as Error).message);}finally{setVerificationStarting(false);}}}>{verificationStarting?<Loader2 className="size-4 animate-spin"/>:null}{verificationStarting?'Starting…':`Re-analyze for fresh metrics · ${ACTION_COSTS.analysis} credits`}</Button><p className="mt-1 text-sm text-review-muted">Use this if the post is older and you want updated views, likes and comments.</p></div>}</div></> : <>
             <ChannelIntelHeader scraped={scraped} dna={dna} url={instagramUrl || url} />
 
             {/* What we captured — the honesty layer: the user must always
