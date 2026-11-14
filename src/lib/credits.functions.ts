@@ -9,6 +9,7 @@ export const getCreditBalance = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.rpc("ensure_plan_trial", { p_user: context.userId }).then(() => {}, () => {});
     const [total, plan, purchased] = await Promise.all([
       supabaseAdmin.rpc("credit_balance", { p_user_id: context.userId }),
       supabaseAdmin.rpc("credit_balance", { p_user_id: context.userId, p_kind: "plan" }),

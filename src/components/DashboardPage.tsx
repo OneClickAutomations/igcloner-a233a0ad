@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -120,7 +121,7 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export function DashboardPage() {
-  return <DashboardPageInner />;
+  return (<><OnboardingDialog /><DashboardPageInner /></>);
 }
 
 type Tone = { t1: string; t2: string };
