@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ACTION_COSTS } from '@/lib/credits';
 import { useServerFn } from '@tanstack/react-start';
@@ -15,7 +15,6 @@ function clock(value: number) { return `${Math.floor(value / 60)}:${String(Math.
 
 export function ReviewPostPanel({ analysisId, scraped, dna, blueprint, transcript, analysisConfidence, url }: { analysisId: string | null; scraped: any; dna: any; blueprint: any; transcript: string | null; analysisConfidence: number | null; url: string }) {
   const signFn = useServerFn(getSourceMediaSignedUrls);
-  const ringId = useId();
   const [media, setMedia] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<string | null>(null);
   const [captionOpen, setCaptionOpen] = useState(false);
