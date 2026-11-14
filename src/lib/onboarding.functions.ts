@@ -17,10 +17,12 @@ export const saveOnboarding = createServerFn({ method: "POST" })
     platforms: z.array(z.string().trim().max(30)).max(12).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("profiles").update({
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("profiles").update({
       onboarding: data, default_niche: data.niche || null, onboarding_completed_at: new Date().toISOString(),
     }).eq("id", context.userId);
+    if (error) console.error("saveOnboarding", error.message);
     if (error) throw new Error("Your answers could not be saved.");
-    if (data.platforms?.[0]) await context.supabase.from("user_preferences").upsert({ user_id: context.userId, default_platform: data.platforms[0] });
+    if (data.platforms?.[0]) await supabaseAdmin.from("user_preferences").upsert({ user_id: context.userId, default_platform: data.platforms[0] });
     return { ok: true };
   });
