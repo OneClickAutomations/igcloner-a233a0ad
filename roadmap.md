@@ -3,7 +3,7 @@
 ## Generation-engine overhaul — current request
 - [x] Visual-first, subject-agnostic still conditioning with shot-specific source frames, stable continuity and explicit user changes
 - [x] Rebuild submitted motion from saved action/end-state rather than stacked legacy rulebooks; preserve provider, price, approval, debit and refund paths
-- [ ] Focused regression tests and signed-in no-spend flow verification
+- [x] 54 focused regressions pass; signed-in existing project → regenerate still → editable instructions/AI Magic → 6-plan-credit quote verified, no runtime errors or spend
 - [ ] Real generated-output quality and timing benchmark — needs an explicit priced generation click; no media spend authorized
 
 ## Pass 2 — film review
