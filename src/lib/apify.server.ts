@@ -41,7 +41,7 @@ export async function checkApifyToken(token: string): Promise<number> {
 
 /** Run an actor synchronously and return its dataset items. */
 export async function apifyRun(actor: string, input: unknown, token: string): Promise<any[]> {
-  if (!token) throw new Error("APIFY_TOKEN not configured");
+  if (!token) { console.error("[scrape] platform token missing"); throw new Error("We couldn't reach Instagram right now. Please try again in a few minutes."); }
   const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items`;
   const res = await fetch(url, {
     method: "POST",
@@ -51,7 +51,7 @@ export async function apifyRun(actor: string, input: unknown, token: string): Pr
   if (!res.ok) {
     const text = await res.text();
     console.error("[Apify]", actor, res.status, text.slice(0, 300));
-    const err = new Error(`Apify ${actor} failed (${res.status})`) as Error & { status?: number };
+    const err = new Error("We couldn't reach Instagram right now. Please try again in a few minutes.") as Error & { status?: number };
     err.status = res.status;
     throw err;
   }

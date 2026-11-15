@@ -30,7 +30,7 @@ function parseJsonish<T = any>(text: string): T {
 }
 
 async function apifyRun(actor: string, input: unknown, token: string): Promise<any[]> {
-  if (!token) throw new Error("APIFY_TOKEN not configured");
+  if (!token) { console.error("[scrape] platform token missing"); throw new Error("We couldn't reach Instagram right now. Please try again in a few minutes."); }
   const url = `https://api.apify.com/v2/acts/${actor}/run-sync-get-dataset-items?token=${token}`;
   const res = await fetch(url, {
     method: "POST",
@@ -40,7 +40,7 @@ async function apifyRun(actor: string, input: unknown, token: string): Promise<a
   if (!res.ok) {
     const text = await res.text();
     console.error("[Apify]", actor, res.status, text.slice(0, 300));
-    throw new Error(`Apify ${actor} failed (${res.status})`);
+    throw Object.assign(new Error("We couldn't reach Instagram right now. Please try again in a few minutes."), { status: res.status });
   }
   const data = await res.json();
   return Array.isArray(data) ? data : [];
@@ -349,7 +349,7 @@ export const createResearchReport = createServerFn({ method: "POST" })
           const { decryptApiKey } = await import("@/lib/encryption.server");
           apifyToken = decryptApiKey(keyRow.encrypted_key);
         }
-        if (!apifyToken) throw new Error("Connect your Apify API key before running research.");
+        if (!apifyToken) { console.error("[research] platform token missing"); throw new Error("We couldn't reach Instagram right now. Please try again in a few minutes."); }
         const { scrapedUsable, ...collected } = await collectSignals(data.mode, data.subject, apifyToken);
         signals = collected;
         // Posts came back but filtering ate all of them: a bug, not a result.
@@ -431,7 +431,9 @@ export const createResearchReport = createServerFn({ method: "POST" })
           .eq("id", row.id);
         throw e;
       }
-      const msg = e instanceof Error ? e.message : String(e);
+      const raw = e instanceof Error ? e.message : String(e);
+      const msg = /apify|api key|token|scraper/i.test(raw) ? "We couldn't reach Instagram right now. Please try again in a few minutes. No credits were taken." : raw;
+      if (msg !== raw) console.error("[research] hidden provider error:", raw);
       await supabase
         .from("research_reports")
         .update({ status: "failed", error_message: msg })
