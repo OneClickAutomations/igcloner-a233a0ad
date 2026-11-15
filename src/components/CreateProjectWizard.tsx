@@ -61,6 +61,7 @@ export function CreateProjectWizard() {
   const [state, setState] = useState<CreationState>({ ...EMPTY_CREATION, analysisId: search.analysisId, format:search.format??'image' });
   const [step, setStep] = useState(search.analysisId ? 1 : 0), [id, setId] = useState('');
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [saved, setSaved] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
   const {data: writingSource} = useQuery({queryKey:['writing-source',state.analysisId],queryFn:()=>analysisFn({data:{id:state.analysisId ?? ''}}),enabled:!!state.analysisId && (step===1||step===3)});
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const closing = useRef(false);
