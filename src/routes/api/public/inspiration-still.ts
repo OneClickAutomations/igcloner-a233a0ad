@@ -31,7 +31,12 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     else referenceQuery = referenceQuery.eq('enabled', true);
     const { data: refs } = await referenceQuery.order('created_at').limit(5);
     const frame = input.data.frame;
-    const stillModel = 'openai/gpt-image-2.5-sunburst';
+    const { data: project } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).eq('user_id', auth.user.id).single();
+    // Exact clone: the owner confirmed they own or may use the source, so the source frame is edited directly.
+    const { RIGHTS_STATEMENT_VERSION } = await import('@/lib/clone-rules');
+    const { data: rights } = project?.analysis_id ? await supabaseAdmin.from('rights_confirmations').select('mode,statement_version').eq('user_id', auth.user.id).eq('analysis_id', project.analysis_id) : { data: [] };
+    const exact = (rights ?? []).some(r => r.mode === 'A0' && r.statement_version === RIGHTS_STATEMENT_VERSION);
+    const stillModel = exact ? 'google/gemini-3.1-flash-image' : 'openai/gpt-image-2.5-sunburst';
     const { allowedStudioReference } = await import('@/lib/look-brief');
     const safeRefs = (refs ?? []).filter(r => allowedStudioReference(r.storage_path, auth.user.id));
     const { data: claimed, error } = await supabaseAdmin.rpc('claim_inspiration_attempt', { p_user: auth.user.id, p_scene: scene.id, p_request: input.data.requestKey, p_operation: 'still', p_model: stillModel, p_billed: price ?? 0, p_workspace: cost, p_references: safeRefs.map(r => r.id) });
@@ -40,10 +45,9 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     if (!claim.claimed) return Response.json({ message: 'This request already exists or a scene is generating. No duplicate generation was started.' }, { status: 409 });
     try {
       const { editImage } = await import('@/lib/inspiration-image-gateway.server');
-      const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: stillModel, format: 'openai' as const };
+      const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: stillModel, format: exact ? 'gemini-chat' as const : 'openai' as const };
       const { sourceLookBrief, continuityStillPath } = await import('@/lib/look-brief');
-      const { sourceFramePath, visualStillPrompt } = await import('@/lib/visual-generation');
-      const { data: project } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).eq('user_id', auth.user.id).single();
+      const { sourceFramePath, visualStillPrompt, exactClonePrompt } = await import('@/lib/visual-generation');
       const { data: analysis } = project?.analysis_id ? await supabaseAdmin.from('analyses').select('evidence').eq('id', project.analysis_id).eq('user_id', auth.user.id).maybeSingle() : { data: null };
       const { data: sheet } = await supabaseAdmin.from('studio_character_sheets').select('brief').eq('project_id', scene.project_id).eq('user_id', auth.user.id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle();
       const sceneInput = (scene.scene_input ?? {}) as any;
@@ -65,13 +69,17 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
         return { kind: (['product','setting','logo'].includes(r.kind) ? r.kind : 'character') as 'product' | 'setting' | 'logo' | 'character', blob: im, filename: r.filename };
       }));
       images.push(...loadedRefs);
-      const prompt = visualStillPrompt(scene, brief as any, images.map((im, i) => ({ kind: im.kind, image: i + 1 })), frame);
+      const roles = images.map((im, i) => ({ kind: im.kind, image: i + 1 }));
+      const prompt = exact && guideImage ? exactClonePrompt(scene, roles, frame) : visualStillPrompt(scene, brief as any, roles, frame);
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
       let upstream: Response;
       if (images.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'medium');
         for (const image of images) form.append('image[]', image.blob, image.filename);
         upstream = await editImage(config, form);
+      } else if (exact) {
+        const { generateImage } = await import('@/lib/inspiration-image-gateway.server');
+        upstream = await generateImage(config, prompt);
       } else {
         upstream = await fetch('https://ai.gateway.lovable.dev/v1/images/generations', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: config.model, prompt, size: '720x1280', quality: 'medium', stream: true, partial_images: 1 }) });
       }
