@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 import "./auth-page.css";
+import character from "@/assets/auth-character.png";
 
 const GoogleIcon = () => (
   <svg className="g-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -13,6 +14,13 @@ const GoogleIcon = () => (
     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
   </svg>
 );
+
+
+const MailIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>);
+const LockIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/></svg>);
+const UserIcon = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>);
+const EyeIcon = ({ off }: { off: boolean }) => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>{off && <path d="M3 3l18 18"/>}</svg>);
+const LogoTile = () => (<span className="ac-logo-tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg></span>);
 
 export function AuthPage() {
   const navigate = useNavigate();
@@ -69,287 +77,88 @@ export function AuthPage() {
 
   const isSignin = mode === "signin";
 
+  const pw = (id: string, ph: string, ac: string, min?: number) => (
+    <div className="ac-field">
+      <span className="ac-ficon"><LockIcon /></span>
+      <input id={id} className="ac-input" type={showPw ? "text" : "password"} placeholder={ph} autoComplete={ac}
+        minLength={min} value={password} onChange={(e) => setPassword(e.target.value)} required aria-label="Password" />
+      <button type="button" className="ac-eye" onClick={() => setShowPw((s) => !s)}
+        aria-label={showPw ? "Hide password" : "Show password"} aria-pressed={showPw}><EyeIcon off={!showPw} /></button>
+    </div>
+  );
+  const emailField = (id: string) => (
+    <div className="ac-field">
+      <span className="ac-ficon"><MailIcon /></span>
+      <input id={id} className="ac-input" type="email" placeholder="Email Address" autoComplete="email"
+        value={email} onChange={(e) => setEmail(e.target.value)} required aria-label="Email address" />
+    </div>
+  );
+
   return (
-    <div className="auth-layout">
-      {/* LEFT — form */}
-      <div className="panel-left">
-        <div className="panel-left-inner">
-          <Link to="/" className="back-home">
-            <span className="back-arrow">←</span> Back to IG-Cloner
-          </Link>
-
-          <div className="auth-logo"><span className="grad-text">IG-Cloner</span></div>
-
-          <div className="auth-toggle" style={{ marginTop: 16 }}>
-            <button
-              type="button"
-              className={`toggle-btn ${isSignin ? "active" : ""}`}
-              onClick={() => setMode("signin")}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${!isSignin ? "active" : ""}`}
-              onClick={() => setMode("signup")}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {isSignin ? (
-            <form className="form-page active" onSubmit={handleLogin}>
-              <h1 className="form-headline">Welcome back. 👋<br />Ready to clone smarter?</h1>
-              <p className="form-sub">
-                Sign in and <strong>keep growing.</strong>
-              </p>
-
-              <button type="button" className="btn-google" onClick={handleGoogle}>
-                <GoogleIcon /> Continue with Google
-              </button>
-
-              <div className="divider">
-                <div className="div-line" />
-                <span className="div-text">or sign in with email</span>
-                <div className="div-line" />
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="si-email">Email address</label>
-                <div className="field-wrap">
-                  <input
-                    id="si-email"
-                    className="field-input"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="si-password">Password</label>
-                <div className="field-wrap">
-                  <input
-                    id="si-password"
-                    className="field-input"
-                    type={showPw ? "text" : "password"}
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                    style={{ paddingRight: 48 }}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="field-icon"
-                    onClick={() => setShowPw((s) => !s)}
-                    aria-label={showPw ? "Hide password" : "Show password"}
-                    aria-pressed={showPw}
-                  >
-                    {showPw ? "🙈" : "👁"}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" className={`btn-primary ${loading ? "loading" : ""}`} disabled={loading}>
-                {loading ? "Signing in…" : "Sign In to IG-Cloner →"}
-              </button>
-
-              <div className="switch-link">
-                Don't have an account?{" "}
-                <a onClick={() => setMode("signup")}>Create one free →</a>
-              </div>
-
-              <div className="legal-text">
-                By signing in you agree to our <a href="/terms">Terms of Service</a> and{" "}
-                <a href="/privacy">Privacy Policy</a>
-              </div>
-            </form>
-          ) : (
-            <form className="form-page active" onSubmit={handleRegister}>
-              <h1 className="form-headline">
-                Turn scrolling into <span className="grad-text">income. 💸</span>
-              </h1>
-              <p className="form-sub">
-                Join 8,400+ creators who stopped guessing and started growing.{" "}
-                <strong>Your first 3 analyses are free.</strong>
-              </p>
-
-              <div className="signup-value-pills">
-                <span className="val-pill">✦ No credit card</span>
-                <span className="val-pill">🔥 3 free analyses</span>
-                <span className="val-pill">⚡ Ready in 2 min</span>
-              </div>
-
-              <button type="button" className="btn-google" onClick={handleGoogle}>
-                <GoogleIcon /> Sign up with Google — it's free
-              </button>
-
-              <div className="divider">
-                <div className="div-line" />
-                <span className="div-text">or use your email</span>
-                <div className="div-line" />
-              </div>
-
-              <div className="field-row">
-                <div className="field">
-                  <label className="field-label" htmlFor="su-first">First name</label>
-                  <input
-                    id="su-first"
-                    className="field-input"
-                    type="text"
-                    placeholder="Alex"
-                    autoComplete="given-name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label className="field-label" htmlFor="su-last">Last name</label>
-                  <input
-                    id="su-last"
-                    className="field-input"
-                    type="text"
-                    placeholder="Rivera"
-                    autoComplete="family-name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="su-email">Email address</label>
-                <input
-                  id="su-email"
-                  className="field-input"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="field">
-                <label className="field-label" htmlFor="su-password">Create a password</label>
-                <div className="field-wrap">
-                  <input
-                    id="su-password"
-                    className="field-input"
-                    type={showPw ? "text" : "password"}
-                    placeholder="Min. 8 characters"
-                    autoComplete="new-password"
-                    style={{ paddingRight: 48 }}
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="field-icon"
-                    onClick={() => setShowPw((s) => !s)}
-                    aria-label={showPw ? "Hide password" : "Show password"}
-                    aria-pressed={showPw}
-                  >
-                    {showPw ? "🙈" : "👁"}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" className={`btn-primary ${loading ? "loading" : ""}`} disabled={loading}>
-                {loading ? "Creating account…" : "Create My Free Account →"}
-              </button>
-
-              <div className="switch-link">
-                Already have an account?{" "}
-                <a onClick={() => setMode("signin")}>Sign in →</a>
-              </div>
-
-              <div className="legal-text">
-                By creating an account you agree to our <a href="/terms">Terms of Service</a> and{" "}
-                <a href="/privacy">Privacy Policy</a>.
-              </div>
-            </form>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT — marketing panel */}
-      <div className="panel-right">
-        <div className="panel-right-inner">
-          <div className="rp-eyebrow">What you unlock today</div>
-          <h2 className="rp-headline">
-            {isSignin ? <>Welcome back.<br />Your growth awaits.</> : <>Your content starts<br />working for you.</>}
-          </h2>
-          <p className="rp-sub">
+    <div className="ac-page">
+      <div className="ac-bg" aria-hidden="true"><span className="ac-streak s1" /><span className="ac-streak s2" /><span className="ac-streak s3" /></div>
+      <div className="ac-shell">
+        <div className="ac-hero">
+          <Link to="/" className="ac-brand"><LogoTile /><span>IGCloner</span></Link>
+          <Link to="/" className="ac-back"><span aria-hidden="true">←</span> Back to IG-Cloner</Link>
+          <img className="ac-character" src={character} alt="IGCloner character holding floating Instagram and Facebook icons" />
+          <div className="ac-copy">
             {isSignin ? (
-              <>Your content calendar is scheduled, your clones are ready. <strong>Pick up right where you left off.</strong></>
+              <>
+                <p className="ac-welcome">Welcome back. <span aria-hidden="true">👋</span></p>
+                <h1 className="ac-title">Ready to clone <span className="ac-accent">smarter?</span></h1>
+                <p className="ac-sub">Sign in and <strong>keep growing.</strong></p>
+              </>
             ) : (
-              <>Creators using IG-Cloner don't just grow faster — they <strong>get paid more</strong>. More engagement means more brand deals, more sales, more freedom.</>
+              <>
+                <p className="ac-welcome">Join free. <span aria-hidden="true">✨</span></p>
+                <h1 className="ac-title">Start cloning <span className="ac-accent">smarter.</span></h1>
+                <p className="ac-sub">Your first 3 analyses are <strong>free.</strong></p>
+              </>
             )}
-          </p>
-
-          <div className="dash-card float-2">
-            <div className="dash-card-header">
-              <span className="dash-card-title">Your Content Dashboard</span>
-              <span className="dash-badge">✦ Live</span>
-            </div>
-            <div className="stats-row">
-              <div className="stat-box"><div className="stat-box-num">94</div><div className="stat-box-label">Avg. Performance Score</div></div>
-              <div className="stat-box"><div className="stat-box-num">3.4×</div><div className="stat-box-label">Engagement Lift</div></div>
-              <div className="stat-box"><div className="stat-box-num">50</div><div className="stat-box-label">Analyses / mo</div></div>
-            </div>
-            <div className="post-cards-row">
-              <div className="post-mini">
-                <div className="post-mini-top"><span className="post-mini-type type-reel">Reel</span><span className="post-mini-score">94/100</span></div>
-                <div className="post-mini-hook">"Nobody tells you this about…"</div>
-                <div className="post-mini-bar"><div className="post-mini-fill" style={{ width: "94%" }} /></div>
-              </div>
-              <div className="post-mini">
-                <div className="post-mini-top"><span className="post-mini-type type-carousel">Carousel</span><span className="post-mini-score">88/100</span></div>
-                <div className="post-mini-hook">"5 things I wish I knew…"</div>
-                <div className="post-mini-bar"><div className="post-mini-fill" style={{ width: "88%" }} /></div>
-              </div>
-              <div className="post-mini">
-                <div className="post-mini-top"><span className="post-mini-type type-post">Post</span><span className="post-mini-score">79/100</span></div>
-                <div className="post-mini-hook">"Hot take: this changes…"</div>
-                <div className="post-mini-bar"><div className="post-mini-fill" style={{ width: "79%" }} /></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="cal-strip float-3">
-            <div className="cal-strip-header">
-              <span className="cal-strip-title">30-Day Auto-Schedule</span>
-              <span className="cal-strip-badge">Auto-Publishing ON</span>
-            </div>
-            <div className="cal-days">
-              {[
-                { n: 9, c: "has-post" },
-                { n: 10, c: "has-post" },
-                { n: 11, c: "today" },
-                { n: 12, c: "" },
-                { n: 13, c: "has-post" },
-                { n: 14, c: "has-post" },
-                { n: 15, c: "" },
-              ].map((d) => (
-                <div key={d.n} className={`cal-day-item ${d.c}`}>
-                  <div className="cal-day-num">{d.n}</div>
-                  <div className="cal-dot" />
-                </div>
-              ))}
-            </div>
           </div>
         </div>
+
+        <form className="ac-form" onSubmit={isSignin ? handleLogin : handleRegister}>
+          <button type="button" className="ac-google" onClick={handleGoogle}>
+            <GoogleIcon /> {isSignin ? "Continue with Google" : "Sign up with Google"}
+          </button>
+          <div className="ac-or"><span /><em>or</em><span /></div>
+          <p className="ac-with">{isSignin ? "Sign in with email" : "Sign up with email"}</p>
+
+          {!isSignin && (
+            <div className="ac-row">
+              <div className="ac-field">
+                <span className="ac-ficon"><UserIcon /></span>
+                <input className="ac-input" placeholder="First name" autoComplete="given-name" aria-label="First name"
+                  value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+              </div>
+              <div className="ac-field">
+                <input className="ac-input ac-noicon" placeholder="Last name" autoComplete="family-name" aria-label="Last name"
+                  value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+            </div>
+          )}
+          {emailField(isSignin ? "si-email" : "su-email")}
+          {isSignin
+            ? pw("si-password", "Enter your password", "current-password")
+            : pw("su-password", "Create a password (8+ characters)", "new-password", 8)}
+
+          <button type="submit" className="ac-primary" disabled={loading}>
+            {loading ? (isSignin ? "Signing in…" : "Creating account…") : isSignin ? "Sign In to IG-Cloner" : "Create My Free Account"}
+            {!loading && <span aria-hidden="true"> →</span>}
+          </button>
+
+          <p className="ac-switch">
+            {isSignin ? "Don't have an account? " : "Already have an account? "}
+            <button type="button" onClick={() => setMode(isSignin ? "signup" : "signin")}>
+              {isSignin ? "Create one free →" : "Sign in →"}
+            </button>
+          </p>
+          <p className="ac-legal">
+            By {isSignin ? "signing in" : "creating an account"} you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
+          </p>
+        </form>
       </div>
     </div>
   );
