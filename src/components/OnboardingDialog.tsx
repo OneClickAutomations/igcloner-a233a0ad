@@ -1,3 +1,4 @@
+import { STUDIO_PRICING } from "@/lib/studio-pricing";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -123,7 +124,7 @@ export function OnboardingDialog() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Plan credits</p><p className="mt-1 text-3xl font-bold">40</p><p className="text-xs text-muted-foreground">Analyses, hooks, captions, images</p></div>
-              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Video credits</p><p className="mt-1 text-3xl font-bold">20</p><p className="text-xs text-muted-foreground">Video clips</p></div>
+              <div className="rounded-2xl border border-border bg-card p-4"><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Video credits</p><p className="mt-1 text-3xl font-bold">{STUDIO_PRICING.video.trialCredits}</p><p className="text-xs text-muted-foreground">Enough for one 1-minute draft video</p></div>
             </div>
             <p className="text-sm text-muted-foreground">Paste an Instagram or Facebook post link on your dashboard to start. An analysis costs 3 plan credits.</p>
             <div className="flex justify-between"><Button variant="ghost" className="rounded-full" onClick={() => setStep(1)}>Back</Button><GradientButton size="lg" disabled={busy} onClick={finish}>Analyze my first post</GradientButton></div>
