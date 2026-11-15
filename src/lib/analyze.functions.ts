@@ -19,7 +19,7 @@ import {
   type ClassifiedUrl,
   type ScrapedPost,
 } from "@/lib/source-ingest";
-import { resolveApifyToken, checkApifyToken, apifyRun } from "@/lib/apify.server";
+import { resolveApifyToken, checkApifyToken, apifyRun, hasOwnApifyKey } from "@/lib/apify.server";
 import { persistSourceMedia } from "@/lib/source-media.server";
 import { ACTION_COSTS, InsufficientCreditsError } from "@/lib/credits";
 import { debitCredits, refundCredits } from "@/lib/credits.server";
@@ -281,9 +281,14 @@ export const analyzeInstagramPost = createServerFn({ method: "POST" })
     // A bad platform/user key must not start a paid attempt that cannot scrape.
     try {
       const token = await resolveApifyToken(supabase, userId);
-      if (!token) return { ok: false, limitReached: false, status: "failed", error: "Add an Apify scraper key in Settings → API Keys, then try again. No credits were taken.", data: null };
+      const ownKey = await hasOwnApifyKey(supabase, userId);
+      const unavailable = "We couldn't reach the post right now. Please try again in a few minutes. No credits were taken.";
+      if (!token) { console.error("[analyze] platform scraper token missing"); return { ok: false, limitReached: false, status: "failed", error: unavailable, data: null }; }
       const status = await checkApifyToken(token);
-      if (status >= 400) return { ok: false, limitReached: false, status: "failed", error: `${scrapeFailure({ status, platform: classified.platform }).message} No credits were taken.`, data: null };
+      if (status >= 400) {
+        if (!ownKey) { console.error("[analyze] platform scraper token rejected", status); return { ok: false, limitReached: false, status: "failed", error: unavailable, data: null }; }
+        return { ok: false, limitReached: false, status: "failed", error: `${scrapeFailure({ status, platform: classified.platform }).message} No credits were taken.`, data: null };
+      }
     } catch {
       return { ok: false, limitReached: false, status: "failed", error: "The scraper connection was slow — Retry. No credits were taken.", data: null };
     }
@@ -379,7 +384,7 @@ export const advanceAnalysis = createServerFn({ method: "POST" })
         const classified = classifySourceUrl(r.instagram_url);
         if (!classified) throw new Error("This link type isn't supported.");
         const token = await resolveApifyToken(supabase, userId);
-        if (!token) throw new Error("Connect your Apify API key in Settings before analyzing posts.");
+        if (!token) throw new Error("We couldn't reach the post right now. Please try again in a few minutes.");
         const post = await scrapeSource(r.instagram_url, token, classified);
         await setStage("saving_media");
         scraped = { ...post, attemptId, originalUrl: ev.originalUrl ?? r.instagram_url };
