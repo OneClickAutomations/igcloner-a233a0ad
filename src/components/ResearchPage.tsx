@@ -1199,7 +1199,7 @@ function formatMeta(f?: string) {
 }
 
 function ScoreBar({ label, value, tone }: { label: string; value: number; tone: Tone }) {
-  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const pct = Math.round(Math.max(0, Math.min(100, Number(value) || 0)));
   const barTone =
     tone === "green"  ? "bg-emerald-500" :
     tone === "amber"  ? "bg-amber-500"   :
@@ -1220,7 +1220,7 @@ function ScoreBar({ label, value, tone }: { label: string; value: number; tone: 
 }
 
 function ConfidenceRing({ value }: { value: number }) {
-  const pct = Math.max(0, Math.min(100, Number(value) || 0));
+  const pct = Math.round(Math.max(0, Math.min(100, Number(value) || 0)));
   const data = [{ v: pct }];
   const color = pct >= 75 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
   return (
