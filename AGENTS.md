@@ -34,3 +34,4 @@
 - Attention-driver reports store qualitative hypotheses separately from cited observations; old reports expose only saved verified evidence to avoid fabricated engagement attribution.
 - Every AI generation shows the shared GenerationProgress ring and registers in generation-jobs (localStorage) so completion toasts, slide-to-result and refresh re-attach behave the same everywhere.
 - Wizard Next on "Make the content" for videos is locked until a finished clip exists (navigation, not a paid gate); the review step has an empty state for old drafts.
+- Exact clone: once the owner records the A0 rights confirmation for a project's source analysis, Reel Cloner stills edit the saved source frame directly with a Gemini image model and keep its subjects; without it, stills use the new-person composition-guide path.
