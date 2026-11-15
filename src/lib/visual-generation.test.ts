@@ -49,3 +49,12 @@ describe('visual-first generation', () => {
     expect(prompt.split(/\s+/).length).toBeLessThan(100);
   });
 });
+import { exactClonePrompt } from './visual-generation';
+describe('exact clone still prompt', () => {
+  it('keeps the original subjects and applies only owner changes', () => {
+    const p = exactClonePrompt({ revision: 1, scene_input: { ownerInstructions: 'red bikini' } }, [{ kind: 'source', image: 1 }], 'first');
+    expect(p).toMatch(/same people/);
+    expect(p).not.toMatch(/different facial features/);
+    expect(p).toMatch(/Change only this: red bikini/);
+  });
+});

@@ -78,3 +78,22 @@ export function visualMotionPrompt(scene: Scene, snapshot?: string | null, durat
     i.audio ? `Audio: ${i.audio}.` : '',
   ].filter(Boolean).join(' ');
 }
+/**
+ * Exact clone (owner confirmed rights): edit the real source frame itself, like a manual
+ * screenshot-to-image workflow. Everything is kept unless the owner names a change.
+ */
+export function exactClonePrompt(scene: Scene, references: VisualReference[], frame: 'first' | 'last'): string {
+  const source = references.find(r => r.kind === 'source')?.image ?? 1;
+  const continuity = references.find(r => r.kind === 'continuity');
+  const others = references.filter(r => r.kind !== 'source' && r.kind !== 'continuity');
+  const userChanges = changes(scene);
+  return [
+    `Recreate image ${source} exactly as a clean, sharp, high-resolution 9:16 photograph of the same moment.`,
+    'Keep everything identical: the same people or subjects, their faces, bodies, size, weight and proportions, hair, skin, outfits, pose, objects, setting, camera angle, framing, lens and lighting.',
+    'Do not restyle, slim, idealize, swap or reinterpret anything. Remove only on-screen captions, text overlays, usernames, stickers and watermarks.',
+    frame === 'last' ? 'This is the ending moment of the shot.' : '',
+    continuity ? `Image ${continuity.image} is an earlier frame already made for this same video; keep any details that were changed there (such as outfit or hair) consistent.` : '',
+    ...others.map(r => `Image ${r.image}: approved ${r.kind} reference; use it for the ${r.kind} only.`),
+    userChanges ? `Change only this: ${userChanges}. Everything not mentioned stays exactly as in image ${source}.` : '',
+  ].filter(Boolean).join('\n');
+}
