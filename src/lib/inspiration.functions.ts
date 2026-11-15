@@ -18,7 +18,7 @@ export const getInspirationStudio = createServerFn({ method: 'POST' }).middlewar
     if (error) throw new Error(error.message);
     const selected = data.projectId ? projects?.find(p => p.id === data.projectId) : projects?.[0];
     if (data.projectId && !selected) throw new Error('Project not found.');
-    const { data: references } = await supabase.from('reference_assets').select('*').eq('user_id', userId).order('created_at');
+    const { data: references } = await supabase.from('reference_assets').select('*').eq('user_id', userId).or(selected ? `project_id.is.null,project_id.eq.${selected.id}` : 'project_id.is.null').order('created_at');
     const { data: analyses } = await supabase.from('analyses').select('id,instagram_url,source_account,post_type').eq('user_id', userId).eq('analysis_status', 'ready').in('post_type', ['Reel', 'Video']).order('created_at', { ascending: false }).limit(50);
     const { data: scenes } = selected ? await supabase.from('storyboard_scenes').select('*').eq('project_id', selected.id).order('scene_order') : { data: [] };
     const { data: attempts } = selected ? await supabase.from('scene_attempts').select('*').eq('project_id', selected.id).order('created_at', { ascending: false }) : { data: [] };
@@ -169,7 +169,7 @@ export const animateInspirationScene = createServerFn({ method: 'POST' }).middle
     const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
     const referenceIds = (s.scene_input as {referenceIds?:string[]})?.referenceIds;
     let referenceQuery = context.supabase.from('reference_assets').select('id').eq('user_id', context.userId);
-    referenceQuery = Array.isArray(referenceIds) ? referenceQuery.in('id', referenceIds) : referenceQuery.eq('enabled', true);
+    referenceQuery = Array.isArray(referenceIds) ? referenceQuery.in('id', referenceIds) : referenceQuery.eq('enabled', true).or(`project_id.is.null,project_id.eq.${s.project_id}`);
     const { data: refs } = await referenceQuery;
     const { data: claim, error } = await supabaseAdmin.rpc('claim_inspiration_attempt', { p_user: context.userId, p_scene: s.id, p_request: data.requestKey, p_operation: 'animate', p_model: data.model, p_billed: price, p_workspace: (rate ?? 0) * s.duration, p_references: (refs ?? []).map(r => r.id) });
     if (error) throw new Error(error.message);
