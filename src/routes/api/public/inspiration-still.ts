@@ -36,7 +36,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     const { RIGHTS_STATEMENT_VERSION } = await import('@/lib/clone-rules');
     const { data: rights } = project?.analysis_id ? await supabaseAdmin.from('rights_confirmations').select('mode,statement_version').eq('user_id', auth.user.id).eq('analysis_id', project.analysis_id) : { data: [] };
     const exact = (rights ?? []).some(r => r.mode === 'A0' && r.statement_version === RIGHTS_STATEMENT_VERSION);
-    const stillModel = exact ? 'google/gemini-3.1-flash-image' : 'openai/gpt-image-2.5-sunburst';
+    const stillModel = exact ? 'google/gemini-3-pro-image' : 'openai/gpt-image-2.5-sunburst';
     const { allowedStudioReference } = await import('@/lib/look-brief');
     const safeRefs = (refs ?? []).filter(r => allowedStudioReference(r.storage_path, auth.user.id));
     const { data: claimed, error } = await supabaseAdmin.rpc('claim_inspiration_attempt', { p_user: auth.user.id, p_scene: scene.id, p_request: input.data.requestKey, p_operation: 'still', p_model: stillModel, p_billed: price ?? 0, p_workspace: cost, p_references: safeRefs.map(r => r.id) });
