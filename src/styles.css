@@ -921,7 +921,7 @@
 .creation-wizard footer .wizard-nav-hint { min-width: 0; }
 @media (max-width: 639px) {
   .creation-wizard footer { gap: 10px; }
-  .creation-wizard footer .wizard-nav { min-height: 42px; padding: 8px 14px; font-size: 14px; gap: 5px; }
+  .creation-wizard footer .wizard-nav { min-height: 42px; padding: 8px 14px; font-size: 14px; gap: 5px; border-radius: 999px; }
   .creation-wizard footer .wizard-nav-hint { max-width: 8.5rem; font-size: 12px; line-height: 1.35; }
 }
 
