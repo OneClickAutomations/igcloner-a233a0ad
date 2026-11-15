@@ -49,12 +49,14 @@ export function visualStillPrompt(scene: Scene, brief: LookBrief, references: Vi
     ? `Image ${r.image}: keep this generated subject's appearance, colours, proportions and materials; use the target scene's pose and layout.`
     : `Image ${r.image}: approved ${r.kind} reference; use it for ${r.kind} only.`);
   const userChanges = changes(scene);
+  const customStill = scene.still_prompt && !/Photoreal vertical 9:16 photograph|Written look brief|Required initial objects and states|COMPOSITION GUIDE/i.test(scene.still_prompt) ? requestedPromptChanges(scene.still_prompt) : '';
   return [base, ...roles,
     source && scene.scene_input?.faithful !== true ? `New scene direction: ${anchor.action}. Environment: ${anchor.environment}. Camera: ${anchor.camera}.` : '',
     !source && !continuity && !references.length ? scene.still_prompt : '',
     source && frame === 'last' ? `Ending pose: ${pose || 'the target image pose'}.` : '',
     anchor.objects.length ? `Required objects: ${anchor.objects.map(o => `${o.name}: ${o.state}`).join('; ')}.` : '',
     userChanges ? `User changes (override conflicting references; keep unmentioned details): ${userChanges}. Apply now, not during animation.` : '',
+    customStill ? `Custom still direction: ${safeLookText(customStill)}.` : '',
     'Natural surface texture, clear detail and coherent lighting. Remove source captions, handles and watermarks.',
   ].filter(Boolean).join('\n');
 }
