@@ -240,6 +240,8 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
       if (result.label) setStepLabel(`${result.label}…`);
       setProgress(5);
       jobRef.current = result.analysisId;
+      // Tell the wizard right away so a reopen resumes this job instead of starting a duplicate paid analysis.
+      if (onAnalysisStarted) await onAnalysisStarted(result.analysisId);
       // Put the job in the URL so a reload or reopened tab resumes it.
       if (!embedded) navigate({ to: "/app", search: { analysisId: result.analysisId } as any, replace: true });
       await runJob(result.analysisId);
