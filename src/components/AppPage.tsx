@@ -329,7 +329,7 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
                   </div>
                 </div>
               )}
-              {scrapeError && <div role="alert" className="mt-3 rounded-lg border border-status-error/30 bg-card p-4 text-sm"><p>{scrapeError}</p><div className="mt-3 flex flex-wrap gap-2">{/Apify|API Keys/i.test(scrapeError) ? <Button size="sm" onClick={() => navigate({ to: "/settings", search: { section: "api-keys" } })}>Settings → API Keys</Button> : <Button size="sm" onClick={handleAnalyze}>Retry · {ACTION_COSTS.analysis} plan credits if started</Button>}<Button size="sm" variant="outline" onClick={() => { setScrapeError(null); inputRef.current?.focus(); }}>Try another link</Button></div></div>}
+              {scrapeError && <div role="alert" className="mt-3 rounded-lg border border-status-error/30 bg-card p-4 text-sm"><p>{scrapeError}</p><div className="mt-3 flex flex-wrap gap-2">{/scraper key in Settings/i.test(scrapeError) ? <Button size="sm" onClick={() => navigate({ to: "/settings", search: { section: "api-keys" } })}>Settings → API Keys</Button> : <Button size="sm" onClick={handleAnalyze}>Retry · {ACTION_COSTS.analysis} plan credits if started</Button>}<Button size="sm" variant="outline" onClick={() => { setScrapeError(null); inputRef.current?.focus(); }}>Try another link</Button></div></div>}
               {postType && (
                 <div className="mt-2 flex items-center gap-2 text-sm text-emerald-500 dark:text-emerald-400 font-semibold animate-in fade-in slide-in-from-top-1 duration-300">
                   <span className="inline-block text-xl animate-bounce" style={{ animationDuration: '1.5s' }}>👍</span>

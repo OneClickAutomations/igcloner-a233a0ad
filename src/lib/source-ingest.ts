@@ -631,8 +631,8 @@ export function scrapeFailure(reason: {
 }): ScrapeError {
   const err = `${reason.itemError ?? ""} ${reason.itemErrorDescription ?? ""}`.toLowerCase();
   const name = reason.platform === "instagram" ? "Instagram" : "Facebook";
-  if (reason.status === 401) return new ScrapeError("The Apify scraper key is invalid or expired. Update it in Settings → API Keys, then try again.", "credentials");
-  if (reason.status === 402 || reason.status === 403) return new ScrapeError("Apify could not authorize this scrape. Check your key, account access and Apify balance in Settings → API Keys, then try again.", "credits");
+  if (reason.status === 401) return new ScrapeError("We couldn't reach the post right now. Please try again in a few minutes. (If you saved your own scraper key in Settings, check it.)", "credentials");
+  if (reason.status === 402 || reason.status === 403) return new ScrapeError("We couldn't reach the post right now. Please try again in a few minutes. (If you saved your own scraper key in Settings, check it.)", "credits");
   if (reason.status === 400) return new ScrapeError("That doesn't look like a reel/post link. Copy the public post link and try again.", "unsupported");
   if (reason.status === 408 || reason.status === 504) {
     return new ScrapeError(`${name} was slow — Retry in a moment.`, "timeout");
@@ -649,7 +649,7 @@ export function scrapeFailure(reason: {
     return new ScrapeError(`This ${name} post is unavailable in the scraper's region — try another link.`, "region_blocked");
   }
   if (reason.status && reason.status >= 400) {
-    return new ScrapeError(`The ${name} scraper failed (HTTP ${reason.status}). Try again shortly.`, "upstream");
+    return new ScrapeError(`We couldn't load this ${name} post right now. Try again shortly.`, "upstream");
   }
   return new ScrapeError(`No data came back for this ${name} link. It may be private, deleted, or an unsupported link type.`, "empty");
 }

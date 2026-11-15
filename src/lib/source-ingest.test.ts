@@ -315,7 +315,7 @@ describe("scrapeFailure", () => {
   it("identifies invalid credentials and provides recovery", () => {
     const error = scrapeFailure({ status: 401, platform: "instagram" });
     expect(error.code).toBe("credentials");
-    expect(error.message).toContain("Settings → API Keys");
+    expect(error.message).not.toMatch(/Apify|API Keys/);
   });
   it("maps failures to specific human messages", () => {
     expect(scrapeFailure({ status: 504, platform: "instagram" }).code).toBe("timeout");

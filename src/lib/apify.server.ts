@@ -24,6 +24,12 @@ export async function resolveApifyToken(
   return process.env.APIFY_TOKEN ?? null;
 }
 
+/** True when the user has their own saved scraper key (not the platform account). */
+export async function hasOwnApifyKey(supabase: { from: (t: string) => any }, userId: string): Promise<boolean> {
+  const { data } = await supabase.from("user_api_keys").select("encrypted_key, status").eq("user_id", userId).eq("provider", "apify").maybeSingle();
+  return Boolean(data?.encrypted_key && data.status !== "invalid");
+}
+
 /** Cheap, read-only credential check before taking analysis credits. */
 export async function checkApifyToken(token: string): Promise<number> {
   const res = await fetch("https://api.apify.com/v2/users/me", {
