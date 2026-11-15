@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LookBrief, allowedStudioReference, characterSheetPrompt, sourceLookBrief, textOnlyStillPrompt } from './look-brief';
+import { LookBrief, allowedStudioReference, characterSheetPrompt, sourceLookBrief, textOnlyStillPrompt, continuityStillPath, stillContinuityPrompt } from './look-brief';
 import { stripIdentity } from './inspiration';
 import { prefillRemixScenes, faithfulDirection } from './remix-directions';
 
@@ -35,5 +35,24 @@ describe('text-only look matching', () => {
   });
   it('reads verified look rather than older inaccurate style', () => {
     expect(sourceLookBrief({ evidence: { ...source.evidence, remakeRefs: { appearance: { skinTone: 'light' } } } }).skinTone).toBe('deep brown');
+  });
+  it('uses the first generated still for the second scene rather than its mismatched still', () => {
+    const first = { id: 'first', scene_order: 0, still_path: 'owner/project/first.png', scene_input: { referenceIds: [] } };
+    const second = { id: 'second', scene_order: 1, still_path: 'owner/project/second.png', scene_input: { referenceIds: [] } };
+    expect(continuityStillPath(second, [second, first], 'owner')).toBe(first.still_path);
+  });
+  it('reuses the opening still for its ending frame or regeneration', () => {
+    const scene = { id: 'first', scene_order: 0, still_path: 'owner/project/first.png' };
+    expect(continuityStillPath(scene, [scene], 'owner')).toBe(scene.still_path);
+  });
+  it('respects different selected references and excludes other owners', () => {
+    const scene = { id: 'second', scene_order: 1, still_path: 'owner/second.png', scene_input: { referenceIds: ['new-character'] } };
+    expect(continuityStillPath(scene, [{ id: 'first', scene_order: 0, still_path: 'owner/first.png', scene_input: { referenceIds: ['other-character'] } }], 'owner')).toBe(scene.still_path);
+    expect(continuityStillPath({ ...scene, still_path: 'other/second.png' }, [], 'owner')).toBeNull();
+  });
+  it('preserves hair and outfit while allowing explicit owner edits', () => {
+    expect(stillContinuityPrompt(1)).toContain('hair length and hairstyle');
+    expect(stillContinuityPrompt(1)).toContain('exact outfit cut, colour, trim');
+    expect(stillContinuityPrompt(1)).toContain('Explicit latest owner appearance changes');
   });
 });

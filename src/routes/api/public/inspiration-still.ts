@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
-// Remake generators receive only written briefs and approved library references, never source media.
+// Generated stills lock character continuity; source frames supply composition only.
 
 export const Route = createFileRoute('/api/public/inspiration-still')({
   server: { handlers: { POST: async ({ request }) => {
@@ -41,15 +41,20 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     try {
       const { editImage } = await import('@/lib/inspiration-image-gateway.server');
       const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: stillModel, format: 'openai' as const };
-      const { sourceLookBrief, textOnlyStillPrompt } = await import('@/lib/look-brief');
+      const { sourceLookBrief, textOnlyStillPrompt, continuityStillPath, stillContinuityPrompt } = await import('@/lib/look-brief');
       const { data: project } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).eq('user_id', auth.user.id).single();
       const { data: analysis } = project?.analysis_id ? await supabaseAdmin.from('analyses').select('evidence').eq('id', project.analysis_id).eq('user_id', auth.user.id).maybeSingle() : { data: null };
       const { data: sheet } = await supabaseAdmin.from('studio_character_sheets').select('brief').eq('project_id', scene.project_id).eq('user_id', auth.user.id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle();
       const sceneInput = (scene.scene_input ?? {}) as any;
+      const { data: siblings } = await supabaseAdmin.from('storyboard_scenes').select('id,scene_order,still_path,scene_input').eq('project_id', scene.project_id).eq('user_id', auth.user.id).order('scene_order');
+      const continuityPath = continuityStillPath(scene, siblings ?? [], auth.user.id);
+      const { data: continuityImage, error: continuityError } = continuityPath ? await supabaseAdmin.storage.from('video-inspiration').download(continuityPath) : { data: null, error: null };
+      if (continuityPath && (continuityError || !continuityImage || continuityImage.size > 10 * 1024 * 1024)) throw new Error('The saved character reference could not be loaded. Your existing stills are unchanged. Please try again.');
       const brief = sheet?.brief ?? sceneInput.lookBrief ?? sourceLookBrief(analysis, sceneInput.sourceShotIndex ?? 0);
-      const roles = safeRefs.map((r,i)=>`Reference image ${i+1}: ${r.kind==='setting'?'approved environment reference':r.kind==='product'?'approved product':r.kind==='logo'?'approved logo':'approved original character; preserve skin shade, pigmentation, hair and build'}`).join('. ');
+      const roles = safeRefs.map((r,i)=>`Reference image ${i+1+(continuityImage?1:0)}: ${r.kind==='setting'?'approved environment reference':r.kind==='product'?'approved product':r.kind==='logo'?'approved logo':'approved original character; preserve skin shade, pigmentation, hair and build'}`).join('. ');
       const { realismGuidance } = await import('@/lib/video-motion');
       let prompt = `${textOnlyStillPrompt(scene, brief as any, roles, frame)}\nStill-frame realism: ${realismGuidance(`${JSON.stringify(sceneInput)} ${JSON.stringify(scene.action_objects ?? [])}`)} Depict only the requested ${frame === 'last' ? 'ending' : 'opening'} pose in this image; no motion trails or blended action phases.`;
+      if (continuityImage) prompt += `\n${stillContinuityPrompt(1)}`;
       // Composition guide: the matching source keyframe (owner's own saved analysis) locks camera, pose and
       // setting geometry; the prompt orders a completely different, original person.
       const shotIdx = Number(sceneInput.sourceShotIndex ?? 0);
@@ -59,8 +64,9 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       if (guideImage) prompt += `\nCOMPOSITION GUIDE: the LAST attached image is a frame from the inspiration reel. Match its camera angle, framing, lens height, body pose, grip, equipment placement, lighting direction and setting layout as closely as possible. It is NOT an identity reference: generate a completely different, original person with different facial features and face shape, using only the written look and any approved character references above. Never copy the face, tattoos, logos or on-screen text from that frame.`;
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
       let upstream: Response;
-      if (safeRefs.length || guideImage) {
+      if (safeRefs.length || guideImage || continuityImage) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'medium');
+        if (continuityImage) form.append('image[]', continuityImage, 'generated-character-continuity.png');
         for (const r of safeRefs) {
           const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path);
           if (!im || im.size > 10 * 1024 * 1024) throw new Error('Reference unavailable or too large.');
