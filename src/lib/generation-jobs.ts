@@ -14,7 +14,7 @@ export function subscribeJobs(fn: () => void) { listeners.add(fn); return () => 
 export function estimatePercent(elapsedSec: number, expectedSec: number, real?: number): number {
   const eased = 95 * (1 - Math.exp(-elapsedSec / Math.max(1, expectedSec / 2)));
   const creep = elapsedSec > expectedSec ? Math.min(4, (elapsedSec - expectedSec) / 30) : 0;
-  return Math.min(99, Math.max(real ?? 0, Math.round(eased + creep)));
+  return Math.round(Math.min(99, Math.max(real ?? 0, eased + creep)));
 }
 export function remainingLabel(elapsedSec: number, expectedSec: number): string {
   const left = expectedSec - elapsedSec;

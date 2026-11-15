@@ -26,7 +26,7 @@ export function GenerationProgress({ status = 'running', stage, startedAt, expec
   const elapsed = Math.max(0, (now - startedAt) / 1000);
   const itemPct = items?.length ? (items.filter(i => i.state === 'done').length / items.length) * 100 : undefined;
   const real = percent ?? itemPct;
-  const pct = status === 'done' ? 100 : status === 'error' ? Math.round(real ?? 0) : estimatePercent(elapsed, expectedSeconds, real);
+  const pct = Math.round(status === 'done' ? 100 : status === 'error' ? (real ?? 0) : estimatePercent(elapsed, expectedSeconds, real));
   const small = compact && status !== 'running';
   const size = small ? 64 : 120, r = small ? 26 : 52, c = 2 * Math.PI * r, sw = small ? 6 : 10;
   const display = (
