@@ -82,7 +82,7 @@
 .ac-form { margin-top: 26px; }
 .ac-google {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 14px;
-  height: 56px; border-radius: 999px; font: 700 17px/1 inherit; font-family: inherit; color: var(--ac-ink);
+  height: 56px; border-radius: 999px; font-weight: 700; font-size: 17px; font-family: inherit; color: var(--ac-ink);
   background: var(--ac-google-bg); border: 1.5px solid var(--ac-google-border); box-shadow: var(--ac-shadow); cursor: pointer;
 }
 .ac-google .g-icon { width: 24px; height: 24px; }
@@ -95,7 +95,7 @@
 .ac-ficon { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: var(--ac-muted); pointer-events: none; }
 .ac-ficon svg, .ac-eye svg { width: 100%; height: 100%; }
 .ac-input {
-  width: 100%; height: 56px; padding: 0 52px 0 52px; border-radius: 16px; font: 500 16px inherit; font-family: inherit;
+  width: 100%; height: 56px; padding: 0 52px 0 52px; border-radius: 16px; font-weight: 500; font-size: 16px; font-family: inherit;
   color: var(--ac-ink); background: var(--ac-input); border: 1px solid var(--ac-input-border);
   box-shadow: var(--ac-shadow); outline: none; transition: border-color .2s;
 }
@@ -105,13 +105,13 @@
 .ac-eye { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; padding: 7px; border: 0; background: transparent; color: var(--ac-muted); cursor: pointer; }
 .ac-primary {
   width: 100%; height: 58px; margin-top: 8px; border: 0; border-radius: 16px; cursor: pointer;
-  font: 800 18px inherit; font-family: inherit; color: #fff; background: var(--ac-primary);
+  font-weight: 800; font-size: 18px; font-family: inherit; color: #fff; background: var(--ac-primary);
   box-shadow: 0 14px 30px -14px rgba(199,45,133,.6); transition: transform .15s;
 }
 .ac-primary:hover { transform: translateY(-1px); }
 .ac-primary:disabled { opacity: .75; cursor: default; }
 .ac-switch { text-align: center; margin: 22px 0 0; font-size: 15px; color: var(--ac-text2); }
-.ac-switch button { border: 0; background: none; padding: 0; font: 800 15px inherit; font-family: inherit; color: var(--ac-switch); cursor: pointer; }
+.ac-switch button { border: 0; background: none; padding: 0; font-weight: 800; font-size: 15px; font-family: inherit; color: var(--ac-switch); cursor: pointer; }
 .ac-legal { text-align: center; margin: 18px 0 0; padding-top: 16px; font-size: 13px; line-height: 1.6; color: var(--ac-muted); }
 .dark .ac-legal { border-top: 1px solid var(--ac-line); }
 .ac-legal a { color: var(--ac-link); font-weight: 700; }
