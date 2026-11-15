@@ -18,8 +18,8 @@ export const STUDIO_PRICING = {
     voiceoverUsdPerCharacter: 0.0002 as number | null,
     /** Measured 2026-11-08 (12.4s take): 116 ElevenLabs chars ≈ $0.023 + Claude writing 0.033 workspace credits ≈ $0.010 = ~$0.033 → ceil($/0.12) = 1 video credit. */
     narrationCredits: 1,
-    /** One-time free trial grant for new accounts. */
-    trialCredits: 20,
+    /** One-time free trial: exactly one 60s draft — 60s Veo Lite (30) + render (2) + narration (1) = 33 credits ≈ $3.96 max cost. */
+    trialCredits: 33,
     /** Accounts created on/after this date receive the trial. */
     trialStartsAt: '2026-11-08T00:00:00Z',
     packs: [
