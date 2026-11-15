@@ -319,7 +319,7 @@ export function ChannelIntelHeader({
       {confidence.level === "limited" && (
         <div className="mx-5 mb-4 flex items-start gap-2 rounded-lg border border-status-warning/30 bg-status-warning/10 p-3 text-xs text-status-warning">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Limited data mode — most metrics unavailable without a successful Apify scrape.</span>
+          <span>Limited data mode — most metrics unavailable because the account's posts could not be loaded.</span>
         </div>
       )}
 
