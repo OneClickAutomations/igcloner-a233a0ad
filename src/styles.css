@@ -631,8 +631,9 @@
 .dashboard-grade { width: 48px; height: 48px; padding: 4px; border-radius: 50%; background: conic-gradient(var(--dash-gold),var(--dash-orange),var(--dash-gold)); }
 .dashboard-grade span { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; border-radius: 50%; background: var(--dash-panel); color: var(--foreground); font-size: 24px; font-weight: 800; }
 .dashboard-thumb-fallback { background: var(--dash-tint); }
-.dashboard-help > [role="tooltip"] { display: none; position: absolute; right: 0; top: 26px; width: 220px; z-index: 20; padding: 12px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-panel); color: var(--foreground); font-size: 14px; line-height: 1.6; }
-.dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"] { display: block; }
+.dashboard-help > [role="tooltip"] { display: none; position: absolute; right: 0; top: 26px; width: 220px; z-index: 60; padding: 12px; border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-panel); color: var(--foreground); font-size: 14px; line-height: 1.6; box-shadow: 0 12px 32px rgba(16,17,22,.22); }
+.dashboard-help:hover, .dashboard-help:focus, .dashboard-help:focus-within { z-index: 60; }
+.dashboard-help:hover > [role="tooltip"], .dashboard-help:focus > [role="tooltip"], .dashboard-help:focus-within > [role="tooltip"] { display: block; }
 .dashboard-screen button[data-slot="button"] { color: var(--foreground) !important; }
 .dashboard-screen button.dashboard-analyze, .dashboard-screen button.dashboard-analyze svg { color: #FFFFFF !important; }
 .dashboard-screen button.dashboard-detail,.dashboard-screen button.text-accent-primary { color: var(--dash-accent) !important; }
