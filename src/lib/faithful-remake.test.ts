@@ -5,7 +5,7 @@ import { prefillRemixScenes, startingDirections, withFaithfulFirst, faithfulDire
 const gym = { evidence: { video: { pacing: 'slow', audio: { description: 'Breathing and barbell handling' }, shots: [{ start: 0, end: 9.8, camera: 'static', framing: 'full shot', setting: 'Indoor gym with hexagonal ceiling lights',
   openingPose: 'standing with arms raised behind a loaded barbell',
   onScreen: 'Barbell, weights, treadmill, skeleton prop, geometric overhead lights',
-  subjects: [{ count: 1, position: 'center', action: 'Lifts a barbell from the floor overhead, pauses, and lowers it back down.' }],
+  subjects: [{ type: 'person', count: 1, position: 'center', action: 'Lifts a barbell from the floor overhead, pauses, and lowers it back down.' }],
   onScreenText: [{ text: 'helena_mendes12' }], audioSummary: 'Breathing, barbell settling' }] } } };
 
 describe('faithful remake', () => {

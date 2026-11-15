@@ -46,8 +46,9 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   const opening = shot?.openingPose && shot.openingPose !== 'unclear' ? String(shot.openingPose) : `in the described opening position for ${action}; do not substitute a generic lifting pose`;
   const brief = shot?.lookBriefs?.[0] ? LookBrief.parse(shot.lookBriefs[0]) : null;
   const styled = brief ? `${brief.skinTone} skin, ${brief.pigmentation}, ${brief.hair}, ${brief.build}, ${brief.accessories}` : personFromAppearance(opts.appearance);
-  const person = e.person?.trim() || (opts.hasCharacterRef ? 'the person from the supplied character reference image' : styled ? `a new original adult with ${styled} (a different face from the source person)` : 'a new original adult athlete (not the source person)');
-  const outfit = e.outfit?.trim() || (brief?.outfit !== 'unclear' ? brief?.outfit : undefined) || outfitFromAppearance(opts.appearance) || DEFAULT_OUTFIT;
+  const isPerson = Boolean(brief || opts.appearance || /\b(person|woman|man|girl|boy|athlete|performer|human|adult)\b/i.test(`${JSON.stringify(subject)} ${shot?.action ?? ''}`));
+  const person = e.person?.trim() || (opts.hasCharacterRef ? 'the subject from the supplied reference image' : isPerson ? styled ? `a new original adult with ${styled} (a different face from the source person)` : 'a new original adult with the source subject’s proportions' : 'the same subject type, scale and proportions as the source');
+  const outfit = e.outfit?.trim() || (brief?.outfit !== 'unclear' ? brief?.outfit : undefined) || outfitFromAppearance(opts.appearance) || (isPerson ? DEFAULT_OUTFIT : 'the original visible materials and colours');
   const frames = Object.fromEntries((opts.keyframes ?? []).map(k => [k.pos, k.path])) as Partial<Record<'first'|'mid'|'last', string>>;
   const words = cleanOnScreenText(e.words ?? '');
   const settingLine = `${setting}${propList.length ? `, with ${propList.join(', ')} visible` : ''}`;
@@ -71,7 +72,7 @@ export function faithfulScene(shot: any, opts: { edits?: RemakeEdits; hasCharact
   return {
     environment: settingLine.slice(0, 500), action: `${person} ${action}`.slice(0, 800), endState: 'Same final position as the source shot'.slice(0, 300),
     camera: framing.slice(0, 160), audio: (opts.audio ?? 'Natural room ambience').slice(0, 300), duration: opts.duration,
-    objects: [{ name: 'person', state: opening.slice(0, 160) }, ...propList.slice(0, 11).map(p => ({ name: p.slice(0, 80), state: 'visible in the scene as in the source' }))],
+    objects: [{ name: isPerson ? 'person' : String(subject.type ?? subject.description ?? 'main subject').slice(0,80), state: opening.slice(0, 160) }, ...propList.slice(0, 11).map(p => ({ name: p.slice(0, 80), state: 'visible in the scene as in the source' }))],
     onScreenText: words.slice(0, 200), stillPrompt: stillPrompt.slice(0, 5000), motionPrompt: motionPrompt.slice(0, 5000), faithful: true as const,
     keyframes: frames, openingPose: opening, remakePerson: person.slice(0, 400), remakeOutfit: outfit.slice(0, 300), settingTweak: (e.setting ?? '').trim().slice(0, 300), remakeAction: action.slice(0, 400),
   };
