@@ -253,6 +253,17 @@ export function AppPage({ embedded = false, initialUrl = '', sourceAnalysisId, o
     }
   };
 
+  // A URL carried in from the dashboard hero (or a restored draft) means the user already
+  // asked for the analysis — start it instead of showing "Detected" and waiting for a second click.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !embedded || sourceAnalysisId || analysisId) return;
+    if (!isSupportedUrl(initialUrl)) return;
+    autoStarted.current = true;
+    handleAnalyze();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const reset = () => {
     setUrl("");
     setDna(null);
