@@ -111,7 +111,7 @@ function timeAgo(iso: string | null): string {
 }
 
 function ScoreRing({ score }: { score: number }) {
-  const pct = Math.max(0, Math.min(100, score));
+  const pct = Math.round(Math.max(0, Math.min(100, score)));
   const grade = pct >= 90 ? "A" : pct >= 80 ? "B" : pct >= 70 ? "C" : pct >= 60 ? "D" : "F";
   return (
     <div className="dashboard-grade" aria-label={`Grade ${grade}, score ${pct} out of 100`} title={`Score: ${pct}/100`}>
