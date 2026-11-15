@@ -50,6 +50,7 @@ export function visualStillPrompt(scene: Scene, brief: LookBrief, references: Vi
     : `Image ${r.image}: approved ${r.kind} reference; use it for ${r.kind} only.`);
   const userChanges = changes(scene);
   return [base, ...roles,
+    source && scene.scene_input?.faithful !== true ? `New scene direction: ${anchor.action}. Environment: ${anchor.environment}. Camera: ${anchor.camera}.` : '',
     !source && !continuity && !references.length ? scene.still_prompt : '',
     source && frame === 'last' ? `Ending pose: ${pose || 'the target image pose'}.` : '',
     anchor.objects.length ? `Required objects: ${anchor.objects.map(o => `${o.name}: ${o.state}`).join('; ')}.` : '',
@@ -63,7 +64,8 @@ export function visualMotionPrompt(scene: Scene, snapshot?: string | null, durat
   const a = visualAnchor(scene);
   const i = scene.scene_input ?? {};
   const instruction = requestedPromptChanges(shotReviewInstruction(scene));
-  const action = a.action || snapshot || scene.motion_prompt || 'Animate the visible action setup';
+  const custom = scene.motion_prompt && !/Single continuous|The action starts immediately|Keep the product shape|Pacing:|By the end of/i.test(scene.motion_prompt) ? scene.motion_prompt : '';
+  const action = custom || a.action || snapshot || 'Animate the visible action setup';
   const contact = /\b(barbell|deadlift|weightlift|clean and press)\b/i.test(action)
     ? 'Keep the bar rigid and grips attached; move it around the body, never through it, with controlled effort.' : '';
   return [action, `Start immediately; ${duration}s, ${i.speed || 'source-like pace'}, one continuous shot.`,
