@@ -38,3 +38,18 @@ export function textOnlyStillPrompt(scene: any, brief: LookBrief, roles: string,
 export function allowedStudioReference(path: string, userId: string) {
   return path.startsWith(`${userId}/references/`) || path.startsWith(`${userId}/character-sheets/`);
 }
+
+/** Reuse the earliest generated character for scenes with the same selected references. */
+export function continuityStillPath(scene: { id: string; scene_order: number; still_path?: string | null; scene_input?: unknown }, scenes: { id: string; scene_order: number; still_path?: string | null; scene_input?: unknown }[], userId: string): string | null {
+  const ids = (input: unknown) => {
+    const refs = (input as { referenceIds?: string[] } | null)?.referenceIds;
+    return JSON.stringify(Array.isArray(refs) ? [...refs].sort() : []);
+  };
+  const earlier = scenes.filter(s => s.scene_order < scene.scene_order && ids(s.scene_input) === ids(scene.scene_input)).sort((a,b) => a.scene_order-b.scene_order);
+  const candidates = [...earlier, scene];
+  return candidates.find(s => s.still_path?.startsWith(`${userId}/`))?.still_path ?? null;
+}
+
+export function stillContinuityPrompt(imageNumber: number): string {
+  return `CHARACTER CONTINUITY: Reference image ${imageNumber} is a previously generated still from THIS video, not the source person. Use the SAME generated adult character(s): preserve facial features, skin shade, pigmentation placement, hair colour, hair length and hairstyle, build, exact outfit cut, colour, trim and accessories. This image takes priority over conflicting per-shot appearance descriptions and the composition guide. Change only the requested pose, action, camera and environment for this scene; wet hair or clothing must not become a different hairstyle or garment. Explicit latest owner appearance changes are the only styling exception; unmentioned details stay unchanged. Do not copy this reference's pose or setting when this scene calls for different ones.`;
+}
