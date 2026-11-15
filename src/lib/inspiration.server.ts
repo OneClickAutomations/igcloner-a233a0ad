@@ -1,8 +1,6 @@
 import { createVideo, pollVideo } from './inspiration-video-gateway.server';
-import { PHYSICAL_NEGATIVES, realismGuidance } from './video-motion';
-import { stripIdentity } from './inspiration';
+import { visualMotionPrompt } from './visual-generation';
 import { toBase64 } from './analysis-ai.server';
-import { CHARACTER_CONTINUITY } from './film-review';
 import { friendlyVideoError } from './friendly-errors';
 
 export const INSPIRATION_BUCKET = 'video-inspiration';
@@ -30,16 +28,16 @@ export async function submitApprovedAttempt(attempt: any, apiKey: string) {
   const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey, model: attempt.model };
   const start = await loadInspirationImage(scene.still_path);
   let request: any;
-  const rawMotion = attempt.prompt_snapshot ?? scene.motion_prompt;
-  const prompt = `${(scene.scene_input as {faithful?:boolean})?.faithful === true ? rawMotion : stripIdentity(rawMotion)} ${CHARACTER_CONTINUITY} ${realismGuidance(`${rawMotion} ${JSON.stringify(scene.scene_input ?? {})} ${JSON.stringify(scene.action_objects ?? [])}`)}`;
+  const prompt = visualMotionPrompt(scene, attempt.prompt_snapshot, scene.duration);
+  await supabaseAdmin.from('scene_attempts').update({ prompt_snapshot: prompt }).eq('id', attempt.id);
   if (attempt.model === 'google/gemini-omni-1.1-flash') {
-    request = { input: [{ type: 'text', text: `${prompt} <FIRST_FRAME> is the approved starting frame. No teleporting objects. No changing product shape, colors or opacity.` }, { type: 'image', data: start.bytesBase64Encoded, mime_type: start.mimeType }], response_format: { type: 'video', resolution: '720p', duration: `${scene.duration}s`, aspect_ratio: '9:16' } };
+    request = { input: [{ type: 'text', text: prompt }, { type: 'image', data: start.bytesBase64Encoded, mime_type: start.mimeType }], response_format: { type: 'video', resolution: '720p', duration: `${scene.duration}s`, aspect_ratio: '9:16' } };
   } else {
     // Veo rejects ingredient references beside a starting-frame image. Approval mode
     // must animate the approved frame; references are already used in that frame.
     const endPath = (scene as any).end_still_path as string | null;
     const end = endPath?.startsWith(`${attempt.user_id}/${attempt.project_id}/stills/`) && attempt.model !== 'google/veo-3.1-lite' ? await loadInspirationImage(endPath) : null;
-    request = { instances: [{ prompt, image: start, ...(end ? { lastFrame: end } : {}) }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: PHYSICAL_NEGATIVES } };
+    request = { instances: [{ prompt, image: start, ...(end ? { lastFrame: end } : {}) }], parameters: { durationSeconds: scene.duration, resolution: '720p', sampleCount: 1, generateAudio: true, negativePrompt: 'unintended morphing, interpenetration, teleportation, unintended cuts' } };
   }
   let job;
   try { job = await createVideo(config, request); }

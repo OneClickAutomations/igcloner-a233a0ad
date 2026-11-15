@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 
-// Generated stills lock character continuity; source frames supply composition only.
+// Source images retain visual/action geometry; generated references preserve continuity.
 
 export const Route = createFileRoute('/api/public/inspiration-still')({
   server: { handlers: { POST: async ({ request }) => {
@@ -18,7 +18,7 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     const { STUDIO_PRICING } = await import('@/lib/studio-pricing');
     const usd = STUDIO_PRICING.workspaceCreditUsd; const cost = STUDIO_PRICING.stillWorkspaceCredits;
     if (cost === null) return Response.json({ message: 'Still cost has not been verified yet; no credits charged.' }, { status: 409 });
-    const { priceFromWorkspaceCost, stripIdentity } = await import('@/lib/inspiration');
+    const { priceFromWorkspaceCost } = await import('@/lib/inspiration');
     const price = priceFromWorkspaceCost(cost, usd);
     if (price !== input.data.confirmedCredits) return Response.json({ message: 'Price changed. Review a new quote.' }, { status: 409 });
     const key = process.env['LOVABLE_API_KEY']; if (!key) return Response.json({ message: 'AI connection not configured.' }, { status: 503 });
@@ -41,7 +41,8 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
     try {
       const { editImage } = await import('@/lib/inspiration-image-gateway.server');
       const config = { baseURL: 'https://ai.gateway.lovable.dev', apiKey: key, model: stillModel, format: 'openai' as const };
-      const { sourceLookBrief, textOnlyStillPrompt, continuityStillPath, stillContinuityPrompt } = await import('@/lib/look-brief');
+      const { sourceLookBrief, continuityStillPath } = await import('@/lib/look-brief');
+      const { sourceFramePath, visualStillPrompt } = await import('@/lib/visual-generation');
       const { data: project } = await supabaseAdmin.from('video_inspiration_projects').select('analysis_id').eq('id', scene.project_id).eq('user_id', auth.user.id).single();
       const { data: analysis } = project?.analysis_id ? await supabaseAdmin.from('analyses').select('evidence').eq('id', project.analysis_id).eq('user_id', auth.user.id).maybeSingle() : { data: null };
       const { data: sheet } = await supabaseAdmin.from('studio_character_sheets').select('brief').eq('project_id', scene.project_id).eq('user_id', auth.user.id).eq('status', 'approved').order('created_at', { ascending: false }).limit(1).maybeSingle();
@@ -51,28 +52,25 @@ export const Route = createFileRoute('/api/public/inspiration-still')({
       const { data: continuityImage, error: continuityError } = continuityPath ? await supabaseAdmin.storage.from('video-inspiration').download(continuityPath) : { data: null, error: null };
       if (continuityPath && (continuityError || !continuityImage || continuityImage.size > 10 * 1024 * 1024)) throw new Error('The saved character reference could not be loaded. Your existing stills are unchanged. Please try again.');
       const brief = sheet?.brief ?? sceneInput.lookBrief ?? sourceLookBrief(analysis, sceneInput.sourceShotIndex ?? 0);
-      const roles = safeRefs.map((r,i)=>`Reference image ${i+1+(continuityImage?1:0)}: ${r.kind==='setting'?'approved environment reference':r.kind==='product'?'approved product':r.kind==='logo'?'approved logo':'approved original character; preserve skin shade, pigmentation, hair and build'}`).join('. ');
-      const { realismGuidance } = await import('@/lib/video-motion');
-      let prompt = `${textOnlyStillPrompt(scene, brief as any, roles, frame)}\nStill-frame realism: ${realismGuidance(`${JSON.stringify(sceneInput)} ${JSON.stringify(scene.action_objects ?? [])}`)} Depict only the requested ${frame === 'last' ? 'ending' : 'opening'} pose in this image; no motion trails or blended action phases.`;
-      if (continuityImage) prompt += `\n${stillContinuityPrompt(1)}`;
-      // Composition guide: the matching source keyframe (owner's own saved analysis) locks camera, pose and
-      // setting geometry; the prompt orders a completely different, original person.
-      const shotIdx = Number(sceneInput.sourceShotIndex ?? 0);
       const keyframes = ((analysis?.evidence as any)?.remakeRefs?.keyframes ?? []) as { shot: number; pos: string; path: string }[];
-      const guide = keyframes.find(k => k.shot === shotIdx && k.pos === frame) ?? keyframes.find(k => k.shot === shotIdx) ?? keyframes[0];
-      const guideImage = guide && guide.path.startsWith(`${auth.user.id}/`) ? (await supabaseAdmin.storage.from('source-media').download(guide.path)).data : null;
-      if (guideImage) prompt += `\nCOMPOSITION GUIDE: the LAST attached image is a frame from the inspiration reel. Match its camera angle, framing, lens height, body pose, grip, equipment placement, lighting direction and setting layout as closely as possible. It is NOT an identity reference: generate a completely different, original person with different facial features and face shape, using only the written look and any approved character references above. Never copy the face, tattoos, logos or on-screen text from that frame.`;
+      const guidePath = sourceFramePath(scene, keyframes, auth.user.id, frame);
+      const { data: guideImage, error: guideError } = guidePath ? await supabaseAdmin.storage.from('source-media').download(guidePath) : { data: null, error: null };
+      if (guidePath && (guideError || !guideImage || guideImage.size > 10 * 1024 * 1024)) throw new Error('The saved inspiration frame could not be loaded. No replacement was generated; please reload your source frames.');
+      const images: { kind: 'source' | 'continuity' | 'character' | 'product' | 'setting' | 'logo'; blob: Blob; filename: string }[] = [];
+      if (guideImage) images.push({ kind: 'source', blob: guideImage, filename: 'source-action-guide.jpg' });
+      if (continuityImage) images.push({ kind: 'continuity', blob: continuityImage, filename: 'generated-continuity.png' });
+      const loadedRefs = await Promise.all(safeRefs.map(async r => {
+        const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path);
+        if (!im || im.size > 10 * 1024 * 1024) throw new Error('Reference unavailable or too large.');
+        return { kind: (['product','setting','logo'].includes(r.kind) ? r.kind : 'character') as 'product' | 'setting' | 'logo' | 'character', blob: im, filename: r.filename };
+      }));
+      images.push(...loadedRefs);
+      const prompt = visualStillPrompt(scene, brief as any, images.map((im, i) => ({ kind: im.kind, image: i + 1 })), frame);
       await supabaseAdmin.from('scene_attempts').update({ frame, prompt_snapshot: prompt }).eq('id', claim.attempt.id);
       let upstream: Response;
-      if (safeRefs.length || guideImage || continuityImage) {
+      if (images.length) {
         const form = new FormData(); form.set('prompt', prompt); form.set('size', '720x1280'); form.set('quality', 'medium');
-        if (continuityImage) form.append('image[]', continuityImage, 'generated-character-continuity.png');
-        for (const r of safeRefs) {
-          const { data: im } = await supabaseAdmin.storage.from('video-inspiration').download(r.storage_path);
-          if (!im || im.size > 10 * 1024 * 1024) throw new Error('Reference unavailable or too large.');
-          form.append('image[]', im, r.filename);
-        }
-        if (guideImage) form.append('image[]', guideImage, 'composition-guide.jpg');
+        for (const image of images) form.append('image[]', image.blob, image.filename);
         upstream = await editImage(config, form);
       } else {
         upstream = await fetch('https://ai.gateway.lovable.dev/v1/images/generations', { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: config.model, prompt, size: '720x1280', quality: 'medium', stream: true, partial_images: 1 }) });
