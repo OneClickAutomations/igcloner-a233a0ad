@@ -27,7 +27,8 @@ function GetAppPage() {
   const [platform, setPlatform] = useState<"ios" | "android" | "desktop" | null>(null);
   const [deferred, setDeferred] = useState<Deferred | null>(null);
   const [installed, setInstalled] = useState(false);
-  const go = () => { try { localStorage.setItem(KEY, "1"); } catch {} navigate({ to: "/dashboard", replace: true }); };
+  const [dontShow, setDontShow] = useState(false);
+  const go = () => { try { if (dontShow || installed) localStorage.setItem(KEY, "1"); } catch {} navigate({ to: "/dashboard", replace: true }); };
 
   useEffect(() => {
     const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -36,7 +37,7 @@ function GetAppPage() {
     const ios = /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
     setPlatform(ios ? "ios" : /Android/.test(ua) ? "android" : "desktop");
     const onPrompt = (e: Event) => { e.preventDefault(); setDeferred(e as Deferred); };
-    const onInstalled = () => setInstalled(true);
+    const onInstalled = () => { setInstalled(true); try { localStorage.setItem(KEY, "1"); } catch {} };
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
     return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
@@ -47,7 +48,7 @@ function GetAppPage() {
     await deferred.prompt();
     const { outcome } = await deferred.userChoice;
     setDeferred(null);
-    if (outcome === "accepted") setInstalled(true);
+    if (outcome === "accepted") { setInstalled(true); try { localStorage.setItem(KEY, "1"); } catch {} }
   };
 
   if (!platform) return null;
@@ -77,7 +78,11 @@ function GetAppPage() {
         )}
       </div>
 
-      <Button variant="ghost" onClick={go} className="mt-6 rounded-full">{installed ? "Continue to dashboard" : "Skip for now"}</Button>
+      <label className="mt-6 flex cursor-pointer items-center gap-3 text-base text-foreground">
+        <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} className="h-5 w-5 accent-primary" />
+        Don't show this again
+      </label>
+      <Button variant="ghost" onClick={go} className="mt-3 rounded-full">{installed ? "Continue to dashboard" : "Skip for now"}</Button>
     </div>
   );
 }
