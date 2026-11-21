@@ -40,6 +40,14 @@ async function libraryRows(context: any, id?: string) {
     } else {
       const assets = (ar.data ?? []).filter((a: any) => a.project_id === p.id && ['image', 'video'].includes(a.asset_type));
       const videoAsset = assets.find((a: any) => a.asset_type === 'video');
+      // Creator Studio finished pictures (exact text layer baked in) replace their plain backgrounds.
+      const finals = assets.filter((a: any) => a.metadata?.final);
+      if (!pd.videoUrl && !videoAsset && finals.length) {
+        const newest = [...finals].sort((x: any, y: any) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')));
+        const bySlide = new Map<number, any>(); const batch = newest[0]?.metadata?.batch; for (const a of newest) if ((!batch || a.metadata?.batch === batch) && a.metadata?.slide && !bySlide.has(a.metadata.slide)) bySlide.set(a.metadata.slide, a);
+        const pick = p.format === 'carousel' && bySlide.size ? [...bySlide.entries()].sort((x, y) => x[0] - y[0]).map(e => e[1]) : [newest[0]];
+        media = await Promise.all(pick.map(async (a: any) => ({ url: await sign('project-assets', a.filename ?? '', a.url), type: 'image' })));
+      } else
       if (pd.videoUrl || videoAsset) {
         const match = typeof pd.videoUrl === 'string' ? pd.videoUrl.match(/\/project-assets\/([^?]+)/) : null;
         const path = videoAsset?.filename ?? (match ? decodeURIComponent(match[1]) : '');

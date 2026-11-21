@@ -211,6 +211,20 @@
       "when": 1794681775953,
       "tag": "0029_plan_trial_and_onboarding",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795248759564,
+      "tag": "0030_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795248991447,
+      "tag": "0031_migration",
+      "breakpoints": true
     }
   ]
 }

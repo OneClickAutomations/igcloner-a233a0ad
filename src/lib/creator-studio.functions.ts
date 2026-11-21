@@ -159,3 +159,41 @@ export const generateStudioImage = createServerFn({ method: 'POST' }).middleware
       throw new Error(`${(e as Error).message} Your ${cost} credit was refunded.`);
     }
   });
+
+const BrandKitSchema = z.object({ name: z.string().max(80).optional(), handle: z.string().max(40).optional(), colors: z.array(z.string().regex(/^#[0-9a-fA-F]{6}$/)).max(3).optional(), font: z.string().max(40).optional(), tone: z.string().max(200).optional() });
+
+export const getBrandKit = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase.from('profiles').select('brand_kit').eq('id', context.userId).maybeSingle();
+    const parsed = BrandKitSchema.safeParse((data as any)?.brand_kit ?? {});
+    return parsed.success ? parsed.data : {};
+  });
+
+export const saveBrandKit = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BrandKitSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from('profiles').update({ brand_kit: data as any }).eq('id', context.userId);
+    if (error) throw new Error('Your brand kit could not be saved.');
+    return data;
+  });
+
+/** Free: stores a browser-composited picture (generated background + exact text layer) as a new version. */
+export const saveStudioComposite = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: Id, base64: z.string().max(16_000_000), baseOf: z.string().max(500), text: z.string().max(400), slide: z.number().int().min(1).max(10).optional(), batch: z.string().uuid().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const p = await ownedProject(supabase, userId, data.projectId);
+    if (!data.baseOf.startsWith(`${userId}/${p.id}/`)) throw new Error('Not allowed.');
+    const bin = atob(data.base64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const filename = `${userId}/${p.id}/studio-final-${Date.now()}${data.slide ? `-s${data.slide}` : ''}.png`;
+    const { error: upErr } = await supabase.storage.from('project-assets').upload(filename, bytes, { contentType: 'image/png' });
+    if (upErr) throw new Error('Saving the finished picture failed.');
+    const { data: signed } = await supabase.storage.from('project-assets').createSignedUrl(filename, 60 * 60 * 24 * 7);
+    const { data: asset, error } = await supabase.from('project_assets').insert({
+      project_id: p.id, user_id: userId, asset_type: 'image', source: 'generated', url: signed?.signedUrl ?? '', filename,
+      metadata: { studio: true, final: true, baseOf: data.baseOf, overlayText: data.text, slide: data.slide ?? null, batch: data.batch ?? null } as any,
+    }).select('*').single();
+    if (error) throw new Error(error.message);
+    return { asset };
+  });

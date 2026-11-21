@@ -3,7 +3,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useServerFn } from '@tanstack/react-start';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Check, ChevronDown, Download, Image as ImageIcon, Film, LayoutGrid, Loader2, RefreshCw, Sparkles, Upload, Wand2, Lightbulb, Shuffle, PenLine, ArrowLeft, ArrowRight, Settings2, History, Star } from 'lucide-react';
+import { Check, ChevronDown, Download, Image as ImageIcon, Film, LayoutGrid, Loader2, RefreshCw, Sparkles, Upload, Wand2, Lightbulb, Shuffle, PenLine, ArrowLeft, ArrowRight, Settings2, History, Star, Palette, Plus, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
@@ -14,7 +14,8 @@ import { getAnalysisById } from '@/lib/analyze.functions';
 import { createProject } from '@/lib/projects.functions';
 import { creationSources } from '@/lib/creation-drafts.functions';
 import { listProjectImages } from '@/lib/image.functions';
-import { generateStudioIdeas, generateStudioImage, loadStudioProject, saveStudioState, uploadStudioSource } from '@/lib/creator-studio.functions';
+import { generateStudioIdeas, generateStudioImage, loadStudioProject, saveStudioState, uploadStudioSource, getBrandKit, saveBrandKit, saveStudioComposite } from '@/lib/creator-studio.functions';
+import { BRAND_FONTS, canvasBase64, composeOverlay, hexOk, type BrandKit, type OverlayPosition } from '@/lib/text-overlay';
 import { DIRECTIONS, EDIT_TARGETS, GROUP_LABEL, STUDIO_STEPS, dnaSummary, shortlist, type StudioAspect, type StudioDirection, type StudioFormat, type StudioIdea } from '@/lib/creator-studio';
 import { ACTION_COSTS, CREDIT_BALANCE_KEY } from '@/lib/credits';
 
@@ -22,8 +23,9 @@ type State = {
   step: number; analysisId?: string; sourcePath?: string; sourcePreview?: string; format: StudioFormat; direction: StudioDirection;
   ideas: StudioIdea[]; recommended: number; recommendedWhy: string; idea?: StudioIdea; own: string;
   keep: string; change: string[]; newText: string; textOnImage: boolean; aspect: StudioAspect; style: string; brandColors: string; notes: string; activeAsset?: string;
+  textMode: 'overlay' | 'ai'; textPos: OverlayPosition; slides: { text: string; asset?: string }[];
 };
-const EMPTY: State = { step: 0, format: 'image', direction: 'refresh', ideas: [], recommended: 0, recommendedWhy: '', own: '', keep: '', change: [], newText: '', textOnImage: true, aspect: '4:5', style: '', brandColors: '', notes: '' };
+const EMPTY: State = { step: 0, format: 'image', direction: 'refresh', ideas: [], recommended: 0, recommendedWhy: '', own: '', keep: '', change: [], newText: '', textOnImage: true, aspect: '4:5', style: '', brandColors: '', notes: '', textMode: 'overlay', textPos: 'bottom', slides: [] };
 const FORMAT_CARDS = [{ id: 'image', label: 'Image', icon: ImageIcon, note: 'One scroll-stopping picture' }, { id: 'reel', label: 'Reel', icon: Film, note: 'Short video, scene by scene' }, { id: 'carousel', label: 'Carousel', icon: LayoutGrid, note: 'Swipeable multi-slide post' }] as const;
 const STYLES = ['Photoreal', 'Cinematic', 'Editorial', 'Bold & vibrant', 'Minimal', 'Illustration'];
 
@@ -40,6 +42,9 @@ export function CreatorStudio() {
   const [ideaMode, setIdeaMode] = useState<'ideas' | 'own' | 'surprise'>('ideas');
   const sourcesFn = useServerFn(creationSources);
   const { data: sources = [] } = useQuery({ queryKey: ['studio-sources'], queryFn: () => sourcesFn() });
+  const kitFn = useServerFn(getBrandKit), saveKitFn = useServerFn(saveBrandKit), compositeFn = useServerFn(saveStudioComposite);
+  const { data: kit = {} as BrandKit } = useQuery({ queryKey: ['brand-kit'], queryFn: () => kitFn() as Promise<BrandKit> });
+  const [kitOpen, setKitOpen] = useState(false);
   const loaded = useRef(false);
   const patch = (p: Partial<State>) => setS(v => ({ ...v, ...p }));
 
@@ -58,7 +63,8 @@ export function CreatorStudio() {
 
   const { data: analysis } = useQuery({ queryKey: ['studio-analysis', s.analysisId], enabled: Boolean(s.analysisId), queryFn: () => analysisFn({ data: { id: s.analysisId! } }) as Promise<any> });
   const { data: versions, refetch: refetchVersions } = useQuery({ queryKey: ['studio-versions', projectId], enabled: Boolean(projectId) && s.step >= 3, queryFn: () => listFn({ data: { projectId: projectId! } }) });
-  const studioImages = (versions?.images ?? []).filter((v: any) => (v.metadata as any)?.studio);
+  const studioImages = (versions?.images ?? []).filter((v: any) => (v.metadata as any)?.studio && !(v.metadata as any)?.final);
+  const byFile = (f?: string) => studioImages.find((v: any) => v.filename === f);
   const active = studioImages.find((v: any) => v.filename === s.activeAsset) ?? studioImages[0];
   const summary = dnaSummary(analysis?.dna);
 
@@ -97,19 +103,48 @@ export function CreatorStudio() {
     patch({ idea: { group: 'fresh', title: s.own.slice(0, 60), angle: 'Your idea', visual: s.own, hook: s.newText || '', reaction: '', why: 'Your own concept.', format: s.format }, step: 3 });
   };
 
-  const generate = (edit?: string) => run(edit ? 'edit' : 'image', async () => {
+  useEffect(() => {
+    if (s.step === 3 && s.format === 'carousel' && s.idea && !s.slides.length) { const i = s.idea; patch({ slides: [i.hook || i.title, i.angle, i.reaction || i.why, i.why, 'Save this for later'].filter(t => t && t !== 'Your idea' && t !== 'Your own concept.').map(text => ({ text })).concat(i.hook ? [] : [{ text: 'Swipe for more' }]) }); }
+  }, [s.step, s.format, s.idea, s.slides.length]);
+  const overlayText = s.textOnImage ? (s.newText || s.idea?.hook || '') : '';
+  const brandColors = s.brandColors || (kit.colors ?? []).join(', ');
+  const generate = (edit?: string, slide?: number) => run(edit ? 'edit' : slide !== undefined ? `slide-${slide}` : 'image', async () => {
     if (!s.idea) throw new Error('Pick an idea first.');
     const id = await ensureProject();
-    const r: any = await imageFn({ data: { projectId: id, requestKey: crypto.randomUUID(), aspect: s.aspect, direction: s.direction, idea: { title: s.idea.title, visual: s.idea.visual, hook: s.idea.hook }, keep: s.keep || undefined, change: s.change as any, newText: s.newText || undefined, textOnImage: s.textOnImage, style: s.style || undefined, brandColors: s.brandColors || undefined, notes: s.notes || undefined, sourcePath: s.sourcePath, ...(edit && active ? { editOf: active.filename, editRequest: edit } : {}) } });
-    patch({ activeAsset: r.asset.filename }); setEditReq('');
+    const ai = s.textMode === 'ai' && s.format === 'image';
+    const visual = slide !== undefined ? `${s.idea.visual} This is slide ${slide + 1} of a carousel about: ${s.slides[slide]?.text ?? ''}. Leave clear empty space for a headline.` : s.idea.visual;
+    const r: any = await imageFn({ data: { projectId: id, requestKey: crypto.randomUUID(), aspect: s.format === 'carousel' ? '4:5' : s.aspect, direction: s.direction, idea: { title: s.idea.title, visual, hook: ai ? s.idea.hook : '' }, keep: s.keep || undefined, change: s.change as any, newText: ai ? (s.newText || undefined) : undefined, textOnImage: ai && s.textOnImage, style: s.style || undefined, brandColors: brandColors || undefined, notes: [s.notes, kit.tone ? `Brand mood: ${kit.tone}` : ''].filter(Boolean).join(' ') || undefined, sourcePath: s.sourcePath, ...(edit && active ? { editOf: active.filename, editRequest: edit } : {}) } });
+    if (slide !== undefined) setS(v => ({ ...v, slides: v.slides.map((x, i) => i === slide ? { ...x, asset: r.asset.filename } : x) }));
+    else patch({ activeAsset: r.asset.filename });
+    setEditReq('');
     await refetchVersions();
   });
-
-  const goReelOrCarousel = () => navigate({ to: '/app', search: { advanced: true, format: s.format === 'reel' ? 'film' : 'carousel', ...(s.analysisId ? { analysisId: s.analysisId } : {}) } as any });
-  const canNext = [Boolean(s.analysisId || s.sourcePath), true, Boolean(s.idea), Boolean(active), false][s.step];
+  const overlaySpec = (text: string, slideLabel?: string) => ({ text, position: s.textPos, color: hexOk(kit.colors?.[0]) ? kit.colors![0]! : '#FFFFFF', font: kit.font || 'Plus Jakarta Sans', ...(kit.handle ? { handle: kit.handle } : {}), ...(slideLabel ? { slideLabel } : {}) });
+  /** Bakes the exact text layer into new free versions before publishing or download. */
+  const bake = async (): Promise<string | undefined> => {
+    const id = await ensureProject();
+    if (s.format === 'carousel') {
+      let first: string | undefined; const batch = crypto.randomUUID();
+      for (let i = 0; i < s.slides.length; i++) {
+        const base = byFile(s.slides[i]!.asset) ?? active; if (!base) continue;
+        const c = await composeOverlay(base.url, overlaySpec(s.slides[i]!.text, `${i + 1}/${s.slides.length}`));
+        const r: any = await compositeFn({ data: { projectId: id, base64: canvasBase64(c), baseOf: base.filename, text: s.slides[i]!.text, slide: i + 1, batch } });
+        first ??= r.asset.url;
+      }
+      return first;
+    }
+    if (!active) return;
+    if (s.textMode === 'ai') return active.url;
+    const c = await composeOverlay(active.url, overlaySpec(overlayText));
+    const r: any = await compositeFn({ data: { projectId: id, base64: canvasBase64(c), baseOf: active.filename, text: overlayText } });
+    return r.asset.url;
+  };
+  const goReel = () => navigate({ to: '/app', search: { advanced: true, format: 'film', ...(s.analysisId ? { analysisId: s.analysisId } : {}) } as any });
+  const canNext = [Boolean(s.analysisId || s.sourcePath), true, Boolean(s.idea), s.format === 'reel' ? Boolean(s.idea) : Boolean(active), false][s.step];
   const next = async () => {
-    if (s.step === 1 && s.format !== 'image') return goReelOrCarousel();
+    if (s.step === 3 && s.format === 'reel') return goReel();
     if (s.step === 1) await run('save', async () => { await ensureProject(); });
+    if (s.step === 3) { let ok = false; await run('bake', async () => { await bake(); ok = true; }); if (!ok) return; }
     patch({ step: Math.min(4, s.step + 1) }); window.scrollTo({ top: 0 });
   };
   const visibleIdeas = showAll ? s.ideas.filter(i => i.group === tab) : shortlist(s.ideas, s.recommended);
@@ -120,8 +155,10 @@ export function CreatorStudio() {
       <div><h1 className="text-[28px] font-extrabold tracking-tight sm:text-[34px]">Create High-Performing Content</h1>
         <p className="mt-1 text-base text-muted-foreground">Analyze a post, discover better ideas, and create content ready to publish.</p></div>
       <div className="flex items-center gap-3">{saved && <span className="text-sm text-muted-foreground" aria-live="polite">{saved}</span>}
+        <Button variant="outline" size="sm" onClick={() => setKitOpen(v => !v)} aria-expanded={kitOpen}><Palette className="size-4" />Brand kit</Button>
         <Button variant="outline" size="sm" onClick={() => navigate({ to: '/app', search: { advanced: true } as any })}><Settings2 className="size-4" />Advanced Studio</Button></div>
     </header>
+    {kitOpen && <BrandKitPanel kit={kit} onSave={async k => { try { await saveKitFn({ data: k }); qc.setQueryData(['brand-kit'], k); toast.success('Brand kit saved'); setKitOpen(false); } catch (e) { toast.error((e as Error).message); } }} />}
 
     <ol className="cs-progress mb-8" aria-label="Progress">{STUDIO_STEPS.map((label, i) => <li key={label}>
       <button type="button" disabled={i > s.step} onClick={() => patch({ step: i })} aria-current={i === s.step ? 'step' : undefined} className={`cs-step ${i < s.step ? 'is-done' : ''} ${i === s.step ? 'is-current' : ''}`}>
@@ -162,8 +199,8 @@ export function CreatorStudio() {
         <div role="radiogroup" aria-label="Format" className="mt-4 grid gap-4 sm:grid-cols-3">{FORMAT_CARDS.map(f => <button key={f.id} type="button" role="radio" aria-checked={s.format === f.id} onClick={() => patch({ format: f.id })} className={`cs-card ${s.format === f.id ? 'is-selected' : ''}`}>
           <span className="cs-icon"><f.icon className="size-5" /></span><span className="cs-card-title">{f.label}</span><span className="text-sm text-muted-foreground">{f.note}</span>
           {(analysis?.dna?.postType ?? '').toLowerCase().includes(f.id === 'image' ? 'image' : f.id) && <span className="cs-pill">Matches source</span>}</button>)}</div>
-        {s.format !== 'image' && <p className="mt-3 text-sm text-muted-foreground">Reels and carousels open in the Advanced Studio with this post selected. The guided flow for them is coming next.</p>}</div>
-      {s.format === 'image' && <div><h2 className="cs-h2">How should we recreate the idea?</h2>
+        {s.format === 'reel' && <p className="mt-3 text-sm text-muted-foreground">You'll pick a video idea here for free. Scenes and clips are made in the video creator, which shows the video-credit cost before anything runs.</p>}</div>
+      {s.format !== 'reel' && <div><h2 className="cs-h2">How should we recreate the idea?</h2>
         <div role="radiogroup" aria-label="Creative direction" className="mt-4 grid gap-4 md:grid-cols-3">{DIRECTIONS.map((d, i) => <button key={d.id} type="button" role="radio" aria-checked={s.direction === d.id} onClick={() => patch({ direction: d.id })} className={`cs-card cs-direction ${s.direction === d.id ? 'is-selected' : ''}`}>
           <span className={`cs-illus cs-illus-${i}`} aria-hidden><span /><span /><span /></span>
           <span className="cs-card-title">{d.title}</span><span className="text-[15px]">{d.tagline}</span><span className="text-sm text-muted-foreground">e.g. {d.example}</span>
@@ -196,30 +233,47 @@ export function CreatorStudio() {
       </div>}
     </section>}
 
-    {s.step === 3 && s.idea && <section className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
+    {s.step === 3 && s.idea && s.format === 'reel' && <section className="cs-panel max-w-2xl"><p className="cs-eyebrow">Your video idea</p><h2 className="cs-h2 mt-2">{s.idea.title}</h2>
+      <p className="mt-3 text-[15px] font-semibold">Opening line: “{s.idea.hook}”</p><p className="mt-2 text-[15px]">{s.idea.visual}</p><p className="mt-2 text-sm text-muted-foreground">{s.idea.why}</p>
+      <div className="mt-5 flex flex-wrap gap-3"><Button size="lg" onClick={goReel}>Build the scenes<ArrowRight className="size-4" /></Button><Button variant="outline" onClick={() => { navigator.clipboard?.writeText(`${s.idea!.title}\n${s.idea!.hook}\n${s.idea!.visual}`); toast.success('Idea copied'); }}>Copy idea</Button></div>
+      <p className="mt-3 text-sm text-muted-foreground">Your analyzed post comes with you. Paste the idea into the video creator's instructions to steer it.</p></section>}
+    {s.step === 3 && s.idea && s.format !== 'reel' && <section className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
       <div className="cs-panel cs-preview">
         {busy === 'image' || busy === 'edit' ? <div className="cs-preview-empty"><Loader2 className="size-8 animate-spin text-primary" /><p className="mt-3 font-semibold">{busy === 'edit' ? 'Applying your change…' : 'Creating your picture…'}</p><p className="text-sm text-muted-foreground">This usually takes under a minute. Keep this page open.</p></div>
-          : active ? <img src={active.url} alt={`Generated: ${s.idea.title}`} className="mx-auto max-h-[70vh] w-auto rounded-xl" />
+          : active ? <div className="relative mx-auto w-fit"><img src={active.url} alt={`Generated: ${s.idea.title}`} className="max-h-[70vh] w-auto rounded-xl" />
+            {s.format === 'image' && s.textMode === 'overlay' && overlayText && <OverlayPreview text={overlayText} pos={s.textPos} kit={kit} />}</div>
           : <div className="cs-preview-empty"><ImageIcon className="size-10 text-muted-foreground" /><p className="mt-3 font-semibold">Your picture will appear here</p></div>}
         {active && !busy && <div className="mt-5 space-y-3">
           <div className="flex gap-2"><Input value={editReq} onChange={e => setEditReq(e.target.value)} placeholder="Ask for a change, e.g. make the background darker" aria-label="Describe a change" onKeyDown={e => { if (e.key === 'Enter' && editReq.trim()) generate(editReq.trim()); }} />
             <Button className="shrink-0 whitespace-nowrap" variant="secondary" disabled={!editReq.trim()} onClick={() => generate(editReq.trim())}><Wand2 className="size-4" />Apply · {ACTION_COSTS.imageGeneration} credit</Button></div>
           <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => generate()}><RefreshCw className="size-4" />Try another version · {ACTION_COSTS.imageGeneration}</Button>
-            <Button variant="outline" asChild><a href={active.url} download target="_blank" rel="noreferrer"><Download className="size-4" />Download</a></Button></div>
+            {s.format === 'image' && <Button variant="outline" disabled={!!busy} onClick={() => run('bake', async () => { const u = await bake(); if (u) window.open(u, '_blank', 'noopener'); })}><Download className="size-4" />Download</Button>}</div>
         </div>}
+        {s.format === 'carousel' && active && <div className="mt-6 space-y-3"><p className="cs-dt">Slides · the selected picture is used unless a slide has its own</p>
+          {s.slides.map((sl, i) => { const img = byFile(sl.asset) ?? active; return <div key={i} className="flex gap-3 rounded-xl border border-border p-2">
+            <div className="relative w-20 shrink-0 overflow-hidden rounded-lg"><img src={img.url} alt="" className="w-full" /><OverlayPreview text={sl.text} pos={s.textPos} kit={kit} small /></div>
+            <div className="min-w-0 flex-1 space-y-2"><Textarea rows={2} value={sl.text} aria-label={`Slide ${i + 1} text`} onChange={e => setS(v => ({ ...v, slides: v.slides.map((x, j) => j === i ? { ...x, text: e.target.value } : x) }))} />
+              <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={!!busy} onClick={() => generate(undefined, i)}>{busy === `slide-${i}` ? <Loader2 className="size-4 animate-spin" /> : <ImageIcon className="size-4" />}New picture · {ACTION_COSTS.imageGeneration} credit</Button>
+                {s.slides.length > 2 && <Button size="sm" variant="ghost" aria-label={`Remove slide ${i + 1}`} onClick={() => setS(v => ({ ...v, slides: v.slides.filter((_, j) => j !== i) }))}><Trash2 className="size-4" /></Button>}</div></div></div>; })}
+          {s.slides.length < 10 && <Button size="sm" variant="ghost" onClick={() => patch({ slides: [...s.slides, { text: '' }] })}><Plus className="size-4" />Add slide</Button>}</div>}
         {studioImages.length > 1 && <div className="mt-5"><p className="cs-dt mb-2 flex items-center gap-1"><History className="size-3.5" />Versions</p><div className="flex gap-2 overflow-x-auto pb-1">{studioImages.map((v: any) => <button key={v.id} type="button" onClick={() => patch({ activeAsset: v.filename })} aria-label="Show this version" aria-pressed={v.filename === active?.filename} className={`cs-thumb ${v.filename === active?.filename ? 'is-on' : ''}`}><img src={v.url} alt="" /></button>)}</div></div>}
       </div>
       <aside className="space-y-4">
         <div className="cs-panel"><p className="cs-eyebrow">Selected idea</p><h3 className="cs-card-title mt-2">{s.idea.title}</h3><p className="mt-1 text-sm text-muted-foreground">{DIRECTIONS.find(d => d.id === s.direction)?.title}</p>
           <label className="mt-4 block"><span className="cs-dt">What the picture shows</span><Textarea className="mt-1" rows={3} value={s.idea.visual} onChange={e => patch({ idea: { ...s.idea!, visual: e.target.value } })} /></label>
-          <label className="mt-3 block"><span className="cs-dt">Text on the picture</span><Input className="mt-1" value={s.newText || s.idea.hook} onChange={e => patch({ newText: e.target.value })} disabled={!s.textOnImage} /></label>
+          {s.format === 'image' && <><label className="mt-3 block"><span className="cs-dt">Text on the picture</span><Input className="mt-1" value={s.newText || s.idea.hook} onChange={e => patch({ newText: e.target.value })} disabled={!s.textOnImage} /></label>
           <label className="mt-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={s.textOnImage} onChange={e => patch({ textOnImage: e.target.checked })} />Put text on the picture</label>
-          <div className="mt-4"><span className="cs-dt">Shape</span><div className="mt-1 flex gap-2">{(['4:5', '1:1', '9:16'] as const).map(a => <button key={a} type="button" aria-pressed={s.aspect === a} onClick={() => patch({ aspect: a })} className={`cs-chip ${s.aspect === a ? 'is-on' : ''}`}>{a}</button>)}</div></div>
+          {s.textOnImage && <div className="mt-3"><span className="cs-dt">How the text is added</span><div className="mt-1 flex flex-wrap gap-2">
+            <button type="button" aria-pressed={s.textMode === 'overlay'} onClick={() => patch({ textMode: 'overlay' })} className={`cs-chip ${s.textMode === 'overlay' ? 'is-on' : ''}`}>Exact text layer</button>
+            <button type="button" aria-pressed={s.textMode === 'ai'} onClick={() => patch({ textMode: 'ai' })} className={`cs-chip ${s.textMode === 'ai' ? 'is-on' : ''}`}>Painted by AI</button></div>
+            <p className="mt-1 text-xs text-muted-foreground">{s.textMode === 'overlay' ? 'Always spelled exactly. Edit the words any time for free.' : 'Blends into the scene, but spelling isn\'t guaranteed and changes cost a credit.'}</p></div>}</>}
+          {(s.format === 'carousel' || (s.textOnImage && s.textMode === 'overlay')) && <div className="mt-4"><span className="cs-dt">Text position</span><div className="mt-1 flex gap-2">{(['top', 'center', 'bottom'] as const).map(p => <button key={p} type="button" aria-pressed={s.textPos === p} onClick={() => patch({ textPos: p })} className={`cs-chip capitalize ${s.textPos === p ? 'is-on' : ''}`}>{p}</button>)}</div></div>}
+          {s.format === 'image' && <div className="mt-4"><span className="cs-dt">Shape</span><div className="mt-1 flex gap-2">{(['4:5', '1:1', '9:16'] as const).map(a => <button key={a} type="button" aria-pressed={s.aspect === a} onClick={() => patch({ aspect: a })} className={`cs-chip ${s.aspect === a ? 'is-on' : ''}`}>{a}</button>)}</div></div>}
           <button type="button" className="mt-4 flex w-full items-center justify-between text-sm font-semibold" aria-expanded={advanced} onClick={() => setAdvanced(v => !v)}>Advanced Creative Settings<ChevronDown className={`size-4 transition-transform ${advanced ? 'rotate-180' : ''}`} /></button>
           {advanced && <div className="mt-3 space-y-3"><div className="flex flex-wrap gap-2">{STYLES.map(st => <button key={st} type="button" aria-pressed={s.style === st} onClick={() => patch({ style: s.style === st ? '' : st })} className={`cs-chip ${s.style === st ? 'is-on' : ''}`}>{st}</button>)}</div>
-            <Input value={s.brandColors} onChange={e => patch({ brandColors: e.target.value })} placeholder="Brand colors, e.g. black and gold" aria-label="Brand colors" />
+            <Input value={s.brandColors} onChange={e => patch({ brandColors: e.target.value })} placeholder={kit.colors?.length ? `Brand kit colors: ${kit.colors.join(', ')}` : 'Brand colors, e.g. black and gold'} aria-label="Brand colors" />
             <Textarea rows={2} value={s.notes} onChange={e => patch({ notes: e.target.value })} placeholder="Anything else? e.g. outdoor, golden hour" aria-label="Extra instructions" /></div>}
-          <Button size="lg" className="mt-5 w-full" disabled={!!busy} onClick={() => generate()}>{busy === 'image' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{active ? 'Generate a new version' : 'Generate image'} · {ACTION_COSTS.imageGeneration} credit</Button>
+          <Button size="lg" className="mt-5 w-full" disabled={!!busy} onClick={() => generate()}>{busy === 'image' ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}{active ? 'Generate a new version' : s.format === 'carousel' ? 'Generate the slide picture' : 'Generate image'} · {ACTION_COSTS.imageGeneration} credit</Button>
           <p className="mt-2 text-center text-xs text-muted-foreground">Failed pictures are refunded automatically.</p>
         </div>
       </aside>
@@ -229,7 +283,29 @@ export function CreatorStudio() {
 
     <nav className="cs-nav mt-10" aria-label="Step navigation">
       <Button variant="outline" disabled={s.step === 0} onClick={() => patch({ step: Math.max(0, s.step - 1) })}><ArrowLeft className="size-4" />Back</Button>
-      {s.step < 4 && <Button disabled={!canNext || !!busy} onClick={next}>{s.step === 1 && s.format !== 'image' ? 'Open in Advanced Studio' : s.step === 3 ? 'Continue to Publish' : 'Continue'}<ArrowRight className="size-4" /></Button>}
+      {s.step < 4 && <Button disabled={!canNext || !!busy} onClick={next}>{busy === 'bake' && <Loader2 className="size-4 animate-spin" />}{s.step === 3 && s.format === 'reel' ? 'Build the scenes' : s.step === 3 ? 'Continue to Publish' : 'Continue'}<ArrowRight className="size-4" /></Button>}
     </nav>
   </div>;
+}
+
+
+function OverlayPreview({ text, pos, kit, small }: { text: string; pos: OverlayPosition; kit: BrandKit; small?: boolean }) {
+  const color = hexOk(kit.colors?.[0]) ? kit.colors![0] : '#FFFFFF';
+  return <div aria-hidden className={`cs-overlay is-${pos} ${small ? 'is-small' : ''}`}><span style={{ color, fontFamily: `"${kit.font || 'Plus Jakarta Sans'}", sans-serif` }}>{text}</span></div>;
+}
+
+function BrandKitPanel({ kit, onSave }: { kit: BrandKit; onSave: (k: BrandKit) => Promise<void> }) {
+  const [k, setK] = useState<BrandKit>({ name: kit.name ?? '', handle: kit.handle ?? '', colors: kit.colors?.length ? kit.colors : ['#FFFFFF', '#C31E6A', '#F59E0B'], font: kit.font ?? 'Plus Jakarta Sans', tone: kit.tone ?? '' });
+  const [saving, setSaving] = useState(false);
+  const colors = k.colors ?? [];
+  return <section className="cs-panel mb-8" aria-label="Brand kit"><h2 className="cs-h2">Brand kit</h2><p className="cs-sub">Used for the text layer, colors and mood of everything you create here.</p>
+    <div className="mt-5 grid gap-5 md:grid-cols-2">
+      <label className="block"><span className="cs-h3">Brand name</span><Input className="mt-2" value={k.name} onChange={e => setK({ ...k, name: e.target.value })} placeholder="e.g. Street Lit" /></label>
+      <label className="block"><span className="cs-h3">Handle shown on pictures</span><Input className="mt-2" value={k.handle} onChange={e => setK({ ...k, handle: e.target.value.replace(/\s/g, '') })} placeholder="@yourhandle (optional)" /></label>
+      <div><span className="cs-h3">Colors</span><p className="text-sm text-muted-foreground">The first color is used for text.</p><div className="mt-2 flex gap-3">{colors.map((c, i) => <label key={i} className="flex flex-col items-center gap-1 text-xs"><input type="color" value={c} aria-label={`Brand color ${i + 1}`} className="h-11 w-14 cursor-pointer rounded-lg border border-border bg-card" onChange={e => setK({ ...k, colors: colors.map((x, j) => j === i ? e.target.value.toUpperCase() : x) })} />{c}</label>)}</div></div>
+      <div><span className="cs-h3">Headline font</span><div className="mt-2 flex flex-wrap gap-2">{BRAND_FONTS.map(f => <button key={f} type="button" aria-pressed={k.font === f} onClick={() => setK({ ...k, font: f })} style={{ fontFamily: `"${f}", sans-serif` }} className={`cs-chip ${k.font === f ? 'is-on' : ''}`}>{f}</button>)}</div></div>
+      <label className="block md:col-span-2"><span className="cs-h3">Look and mood</span><Input className="mt-2" value={k.tone} onChange={e => setK({ ...k, tone: e.target.value })} placeholder="e.g. gritty urban, warm golden light" /></label>
+    </div>
+    <Button className="mt-5" disabled={saving} onClick={async () => { setSaving(true); await onSave({ ...k, colors: colors.filter(c => /^#[0-9a-fA-F]{6}$/.test(c)) }); setSaving(false); }}>{saving && <Loader2 className="size-4 animate-spin" />}Save brand kit</Button>
+  </section>;
 }

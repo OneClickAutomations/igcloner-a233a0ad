@@ -1,0 +1,1 @@
+GRANT UPDATE (brand_kit) ON public.profiles TO authenticated;

@@ -35,4 +35,4 @@
 - Every AI generation shows the shared GenerationProgress ring and registers in generation-jobs (localStorage) so completion toasts, slide-to-result and refresh re-attach behave the same everywhere.
 - Wizard Next on "Make the content" for videos is locked until a finished clip exists (navigation, not a paid gate); the review step has an empty state for old drafts.
 - Exact clone: once the owner records the A0 rights confirmation for a project's source analysis, Reel Cloner stills edit the saved source frame directly with a Gemini image model and keep its subjects; without it, stills use the new-person composition-guide path.
-- Creator Studio is default /app; drafts/formats keep the wizard. It reuses existing engines and autosaves to project preferences, avoiding a second engine.
+- Creator Studio is default /app; drafts/formats keep the wizard. It reuses existing engines, autosaves to project preferences, and draws on-picture words as a browser text layer saved as free "final" assets that publishing prefers, so spelling never depends on the image model.

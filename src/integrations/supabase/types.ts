@@ -946,6 +946,7 @@ export type Database = {
           analyses_limit: number | null
           analyses_used: number | null
           avatar_url: string | null
+          brand_kit: Json
           country: string | null
           created_at: string | null
           default_niche: string | null
@@ -967,6 +968,7 @@ export type Database = {
           analyses_limit?: number | null
           analyses_used?: number | null
           avatar_url?: string | null
+          brand_kit?: Json
           country?: string | null
           created_at?: string | null
           default_niche?: string | null
@@ -988,6 +990,7 @@ export type Database = {
           analyses_limit?: number | null
           analyses_used?: number | null
           avatar_url?: string | null
+          brand_kit?: Json
           country?: string | null
           created_at?: string | null
           default_niche?: string | null
