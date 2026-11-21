@@ -163,7 +163,7 @@ export const generateConnectUrl = createServerFn({ method: "POST" })
         {
           username: upload_post_username,
           redirect_url: returnUrl,
-          logo_image: siteUrl ? `${siteUrl}/favicon.ico` : undefined,
+          logo_image: siteUrl ? `${siteUrl}/favicon.png` : undefined,
           redirect_button_text: "Return to IGCloner",
           connect_title: "Connect Your Social Accounts",
           connect_description:
