@@ -28,7 +28,7 @@ export const loadStudioProject = createServerFn({ method: 'POST' }).middleware([
   .inputValidator((d: unknown) => z.object({ projectId: Id }).parse(d))
   .handler(async ({ data, context }) => {
     const p = await ownedProject(context.supabase, context.userId, data.projectId);
-    return { id: p.id as string, analysisId: (p.analysis_id ?? null) as string | null, state: ((p.user_preferences as any)?.creatorStudio ?? {}) as Record<string, unknown> };
+    return { id: p.id as string, analysisId: (p.analysis_id ?? null) as string | null, stateJson: JSON.stringify((p.user_preferences as any)?.creatorStudio ?? {}) };
   });
 
 /** Uploaded image becomes the project's private source picture. */

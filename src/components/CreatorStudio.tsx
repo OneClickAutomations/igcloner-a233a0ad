@@ -12,6 +12,7 @@ import { ReviewPostPanel } from './ReviewPostPanel';
 import { ReviewAndPublish } from './ReviewAndPublish';
 import { getAnalysisById } from '@/lib/analyze.functions';
 import { createProject } from '@/lib/projects.functions';
+import { creationSources } from '@/lib/creation-drafts.functions';
 import { listProjectImages } from '@/lib/image.functions';
 import { generateStudioIdeas, generateStudioImage, loadStudioProject, saveStudioState, uploadStudioSource } from '@/lib/creator-studio.functions';
 import { DIRECTIONS, EDIT_TARGETS, GROUP_LABEL, STUDIO_STEPS, dnaSummary, shortlist, type StudioAspect, type StudioDirection, type StudioFormat, type StudioIdea } from '@/lib/creator-studio';
@@ -37,12 +38,14 @@ export function CreatorStudio() {
   const [showAll, setShowAll] = useState(false); const [tab, setTab] = useState<StudioIdea['group']>('engagement');
   const [advanced, setAdvanced] = useState(false); const [fullDna, setFullDna] = useState(false); const [editReq, setEditReq] = useState('');
   const [ideaMode, setIdeaMode] = useState<'ideas' | 'own' | 'surprise'>('ideas');
+  const sourcesFn = useServerFn(creationSources);
+  const { data: sources = [] } = useQuery({ queryKey: ['studio-sources'], queryFn: () => sourcesFn() });
   const loaded = useRef(false);
   const patch = (p: Partial<State>) => setS(v => ({ ...v, ...p }));
 
   useEffect(() => {
     if (loaded.current || !search.studio) return; loaded.current = true;
-    loadFn({ data: { projectId: search.studio } }).then(r => setS({ ...EMPTY, ...(r.state as Partial<State>), analysisId: r.analysisId ?? (r.state as any).analysisId })).catch(() => toast.error('That project could not be opened.'));
+    loadFn({ data: { projectId: search.studio } }).then(r => { const st = JSON.parse(r.stateJson) as Partial<State>; setS({ ...EMPTY, ...st, analysisId: r.analysisId ?? st.analysisId }); }).catch(() => toast.error('That project could not be opened.'));
   }, [search.studio, loadFn]);
 
   // Autosave once a project exists.
@@ -64,7 +67,7 @@ export function CreatorStudio() {
     const fmt = s.format === 'carousel' ? 'carousel' : s.format === 'reel' ? 'reel' : 'image';
     const r: any = await createFn({ data: { analysisId: s.analysisId ?? null, format: fmt, title: analysis?.dna?.sourceAccount ? `From @${String(analysis.dna.sourceAccount).replace(/^@/, '')}` : 'Creator Studio project' } });
     const id = r?.project?.id ?? r?.id;
-    setProjectId(id); navigate({ to: '/app', search: { studio: id } as any, replace: true });
+    loaded.current = true; setProjectId(id); navigate({ to: '/app', search: { studio: id } as any, replace: true });
     return id;
   };
   const run = async (label: string, fn: () => Promise<void>) => {
@@ -130,6 +133,9 @@ export function CreatorStudio() {
       {!s.analysisId && <div className="cs-panel">
         <h2 className="cs-h2">Paste a URL</h2><p className="cs-sub mb-5">A public Instagram or Facebook post, Reel or carousel. Analysis costs {ACTION_COSTS.analysis} credits.</p>
         <AppPage embedded onAnalysisReady={id => { patch({ analysisId: id }); setProjectId(undefined); }} />
+        {sources.length > 0 && <label className="mt-6 block"><span className="cs-h3">Or reuse a post you already analyzed</span><span className="block text-sm text-muted-foreground">No new charge.</span>
+          <select aria-label="Saved analyzed post" className="mt-2 h-12 w-full rounded-xl border border-border bg-card px-3 text-base" value="" onChange={e => { if (e.target.value) { patch({ analysisId: e.target.value }); setProjectId(undefined); } }}>
+            <option value="">Choose a saved post</option>{sources.map((src: any) => <option key={src.id} value={src.id}>{src.source_account ? `@${String(src.source_account).replace(/^@/, '')} — ` : ''}{src.instagram_url}</option>)}</select></label>}
         <div className="my-6 flex items-center gap-3 text-sm text-muted-foreground"><span className="h-px flex-1 bg-border" />OR<span className="h-px flex-1 bg-border" /></div>
         <label className="cs-upload"><Upload className="size-5" /><span><b>Upload your own picture</b><span className="block text-sm text-muted-foreground">PNG, JPG or WebP up to 10 MB — best for editing text or details</span></span>
           <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" disabled={busy === 'upload'} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); }} />{busy === 'upload' && <Loader2 className="ml-auto size-5 animate-spin" />}</label>
@@ -197,7 +203,7 @@ export function CreatorStudio() {
           : <div className="cs-preview-empty"><ImageIcon className="size-10 text-muted-foreground" /><p className="mt-3 font-semibold">Your picture will appear here</p></div>}
         {active && !busy && <div className="mt-5 space-y-3">
           <div className="flex gap-2"><Input value={editReq} onChange={e => setEditReq(e.target.value)} placeholder="Ask for a change, e.g. make the background darker" aria-label="Describe a change" onKeyDown={e => { if (e.key === 'Enter' && editReq.trim()) generate(editReq.trim()); }} />
-            <Button disabled={!editReq.trim()} onClick={() => generate(editReq.trim())}><Wand2 className="size-4" />Edit · {ACTION_COSTS.imageGeneration}</Button></div>
+            <Button className="shrink-0 whitespace-nowrap" variant="secondary" disabled={!editReq.trim()} onClick={() => generate(editReq.trim())}><Wand2 className="size-4" />Apply · {ACTION_COSTS.imageGeneration} credit</Button></div>
           <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => generate()}><RefreshCw className="size-4" />Try another version · {ACTION_COSTS.imageGeneration}</Button>
             <Button variant="outline" asChild><a href={active.url} download target="_blank" rel="noreferrer"><Download className="size-4" />Download</a></Button></div>
         </div>}
