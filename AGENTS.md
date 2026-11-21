@@ -27,7 +27,7 @@
 - Intel-to-Studio handoff creates ordinary saved projects using existing project fields and routes, so other studio modules need no changes.
 - Research PDF generation stays client-side with jsPDF and nine fixed editorial pages, avoiding server-only rendering dependencies.
 - UGC motion uses equal-width repeated groups and a CSS transform loop; visibility arbitration pauses every nonselected copy before playing at most one copy per creator to avoid duplicate playback.- In-flight research reports carry a last_progress_at heartbeat; a DB sweep (hourly pg_cron + lazy on list) fails and refunds stale runs, and every success update is conditional on the row still being in-flight so swept runs never flip back to ready.
-- The sidebar credit balance is a shared react-query key (CREDIT_BALANCE_KEY); invalidate it after any action that can move credits.
+- Invalidate CREDIT_BALANCE_KEY after any action that can move credits.
 - Post analysis runs one stage per request (client-driven advanceAnalysis with a stage_claimed_until lease, partial state in analyses.evidence.partial) because the edge runtime cancels work when the browser disconnects; a pg_cron + lazy sweep fails and refunds the pending attempt after 15 min idle.
 - Clone versions are generated on demand (generateCloneVersions, per-attempt charge + refund, free once rows exist), never inside the core analysis, and legacy *Forensics objects are derived in code from evidence to keep analysis output small.
 - Analysis reads saved source-media files; video watching and verification are separate persisted Gemini stages, only corrected observations feed Claude synthesis, and first-pass evidence remains diagnostic so drafts can resume without repeating completed paid work.
