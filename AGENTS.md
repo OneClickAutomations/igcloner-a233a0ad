@@ -18,7 +18,7 @@
 - Carousel deterministic text compositing executes only in the browser on a generated background; server OCR re-verifies before marking it ready, avoiding native image dependencies in the deployed runtime.
 - Copy run history/cache is owner-readable and server-written; an atomic claim precedes debit, failure refunds its attempt, and stale sweeping checks actual debits before refunding.
 - A2/A3 carousel rendering reads slide 1 and previous slide from saved assets and verifies exact intended text; free retries are bounded at two and flagged final output refunds its slide.
-- The A1 + image quick-generate shortcut still exists in IntentFlow.tsx (one-click clone panel calling quickGenerate); the editable rights-checked slide flow is the alternative for reviewing text before paid generation.
+- IntentFlow.tsx keeps the A1 quick-generate shortcut; the rights-checked slide flow lets text be reviewed before paid generation.
 - Clone mode names and summaries share a browser-safe display mapping keyed by unchanged A0–A3 IDs, preserving saved preferences and generation behavior when labels change.
 - Modes that reuse source media (A0/A1) require a versioned rights_confirmations row, checked server-side in every entry point (enforceRights), never only in the UI.
 - Same-look slide edits use gateway image edits with source-matched size, then a Claude vision gate (exact normalized text, no residual text, same composition) with free retries and a per-attempt refund when flagged.
@@ -35,4 +35,4 @@
 - Every AI generation shows the shared GenerationProgress ring and registers in generation-jobs (localStorage) so completion toasts, slide-to-result and refresh re-attach behave the same everywhere.
 - Wizard Next on "Make the content" for videos is locked until a finished clip exists (navigation, not a paid gate); the review step has an empty state for old drafts.
 - Exact clone: once the owner records the A0 rights confirmation for a project's source analysis, Reel Cloner stills edit the saved source frame directly with a Gemini image model and keep its subjects; without it, stills use the new-person composition-guide path.
-- Creator Studio is default /app; drafts/formats keep the wizard. It reuses existing engines, autosaves to project preferences, and draws on-picture words as a browser text layer saved as free "final" assets that publishing prefers, so spelling never depends on the image model.
+- Creator Studio (default /app) reuses existing engines; on-picture words are a browser text layer saved as free "final" assets that publishing prefers.
