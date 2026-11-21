@@ -67,11 +67,33 @@ export function CopyModePicker({ analysisId, value, onChange, preferences, onCre
               type="button"
               disabled={disabled}
               onClick={() => onChange(m.id)}
-              className={`${wizard ? "wizard-mode-choice" : ""} flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`${wizard ? "wizard-mode-choice" : ""} flex w-full items-start gap-3 rounded-xl border p-3 h-auto whitespace-normal text-left transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
                 active ? "border-transparent ring-2 ring-accent-primary bg-accent-primary/5" : "border-border bg-card hover:border-strong"
               }`}
             >
-              {wizard && <span className="text-review-accent">{m.id==='A0'?<Copy className="size-5"/>:m.id==='A1'?<Pencil className="size-5"/>:m.id==='A2'?<Image className="size-5"/>:<Sparkles className="size-5"/>}</span>}
+              {wizard ? (
+                <div className="flex w-full flex-col gap-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${active ? "bg-gradient-to-br from-accent-primary to-review-accent text-primary-foreground" : "bg-accent-primary/12 text-review-accent"}`}>
+                      {m.id==='A0'?<Copy className="size-5"/>:m.id==='A1'?<Pencil className="size-5"/>:m.id==='A2'?<Image className="size-5"/>:<Sparkles className="size-5"/>}
+                    </span>
+                    <span className={`flex size-6 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-accent-primary bg-accent-primary text-primary-foreground" : "border-muted-foreground/40"}`}>
+                      {active && <Check className="size-3.5" strokeWidth={3} />}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-base font-bold leading-snug">{m.title}</p>
+                    {(m.id === "A2" || requiresRights(m.id)) && (
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {m.id === "A2" && <span className="rounded-full bg-accent-primary/12 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-accent-primary">Recommended</span>}
+                        {requiresRights(m.id) && <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"><Lock className="h-3 w-3" /> Needs permission</span>}
+                      </div>
+                    )}
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{m.blurb}</p>
+                    {a?.reason && <p className={`mt-1 text-xs ${disabled ? "text-status-error" : "text-muted-foreground"}`}>{a.reason}</p>}
+                  </div>
+                </div>
+              ) : (<>
               <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${active ? "border-accent-primary" : "border-muted-foreground/40"}`}>
                 {active && <span className="h-2 w-2 rounded-full bg-accent-primary" />}
               </span>
@@ -84,6 +106,7 @@ export function CopyModePicker({ analysisId, value, onChange, preferences, onCre
                 <p className="mt-0.5 text-xs text-muted-foreground">{m.blurb}</p>
                 {a?.reason && <p className={`mt-1 text-xs ${disabled ? "text-status-error" : "text-muted-foreground"}`}>{a.reason}</p>}
               </div>
+              </>)}
             </Button>
           );
         })}
