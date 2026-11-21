@@ -4,7 +4,7 @@
   --ac-accent: #C31E6A; --ac-link: #6B21A8; --ac-line: rgba(16,17,22,.10);
   --ac-input: #FFFFFF; --ac-input-border: rgba(107,33,168,.14);
   --ac-shadow: 0 18px 40px -18px rgba(90,20,80,.22);
-  --ac-google-bg: #FFFFFF; --ac-google-border: rgba(16,17,22,.06);
+  --ac-google-bg: #FFFFFF; --ac-google-border: rgba(107,33,168,.45);
   --ac-primary: linear-gradient(90deg,#FBA91B 0%,#EC2C8C 45%,#7B2FF0 100%);
   --ac-switch: #C31E6A;
   position: relative; min-height: 100vh; overflow: hidden;
@@ -18,6 +18,7 @@
   --ac-shadow: 0 18px 40px -20px rgba(0,0,0,.6);
   --ac-google-bg: linear-gradient(#17121F,#17121F) padding-box, linear-gradient(90deg,#9B3BF0,#F59E0B) border-box;
   --ac-google-border: transparent;
+  --ac-google-ring: 0 0 0 1px rgba(155,59,240,.35), 0 14px 34px -12px rgba(155,59,240,.5);
   --ac-primary: linear-gradient(90deg,#B62BE8 0%,#EC2C8C 50%,#F7A93A 100%);
   --ac-switch: #F59E0B;
 }
@@ -61,10 +62,16 @@
 .ac-back {
   position: relative; z-index: 2; display: flex; width: max-content; align-items: center; gap: 10px; margin-top: 18px;
   padding: 9px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--ac-ink);
-  border: 1px solid var(--ac-input-border); background: color-mix(in srgb, var(--ac-input) 70%, transparent);
+  border: 1.5px solid rgba(107,33,168,.45); background: var(--ac-input);
+  box-shadow: 0 8px 20px -10px rgba(90,20,80,.35);
   transition: border-color .2s;
 }
 .ac-back:hover { border-color: var(--ac-accent); }
+.dark .ac-back {
+  border-color: rgba(255,255,255,.35); background: rgba(255,255,255,.07);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 10px 24px -12px rgba(0,0,0,.8);
+}
+.dark .ac-back:hover { border-color: #F0379A; }
 .ac-character {
   position: absolute; z-index: 0; top: -10px; right: -40px; width: 74%; max-width: 330px; height: auto;
   filter: drop-shadow(0 20px 30px rgba(60,10,60,.25)); pointer-events: none; user-select: none;
@@ -83,8 +90,9 @@
 .ac-google {
   width: 100%; display: flex; align-items: center; justify-content: center; gap: 14px;
   height: 56px; border-radius: 999px; font-weight: 700; font-size: 17px; font-family: inherit; color: var(--ac-ink);
-  background: var(--ac-google-bg); border: 1.5px solid var(--ac-google-border); box-shadow: var(--ac-shadow); cursor: pointer;
+  background: var(--ac-google-bg); border: 2px solid var(--ac-google-border); box-shadow: var(--ac-shadow); cursor: pointer;
 }
+.dark .ac-google { box-shadow: var(--ac-google-ring); }
 .ac-google .g-icon { width: 24px; height: 24px; }
 .ac-or { display: flex; align-items: center; gap: 14px; margin: 22px 0 10px; }
 .ac-or span { flex: 1; height: 1px; background: var(--ac-line); }
